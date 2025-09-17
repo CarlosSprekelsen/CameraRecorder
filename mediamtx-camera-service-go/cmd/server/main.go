@@ -1,3 +1,28 @@
+// Package main implements the MediaMTX Camera Service entry point.
+//
+// This service provides real-time video sensor management with streaming,
+// recording, and snapshot capabilities. It operates as a containerized service
+// that manages USB V4L2 cameras and external RTSP feeds within a coordinated
+// sensor ecosystem.
+//
+// Architecture follows the layered approach:
+//   - Foundation: Configuration and logging
+//   - Core Services: MediaMTX client and camera monitoring
+//   - Managers: Path, stream, and recording management
+//   - Business Logic: Recording and snapshot orchestration
+//   - Orchestration: MediaMTX controller coordination
+//   - API: WebSocket JSON-RPC 2.0 server
+//
+// The startup sequence follows architectural compliance:
+// 1. Load and validate configuration
+// 2. Initialize logging with structured output
+// 3. Create camera monitor with real hardware interfaces
+// 4. Initialize MediaMTX controller (single source of truth)
+// 5. Setup security framework with JWT authentication
+// 6. Start WebSocket server (protocol layer only)
+// 7. Connect event notification system
+//
+// Graceful shutdown reverses the startup order to ensure clean resource cleanup.
 package main
 
 import (
@@ -18,8 +43,10 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
 )
 
+// main implements the application entry point following the progressive readiness pattern.
+// The system accepts connections immediately while features become available as components initialize.
 func main() {
-	// Load configuration
+	// Layer 1: Foundation - Load and validate configuration
 	configManager := config.CreateConfigManager()
 	if err := configManager.LoadConfig("config/default.yaml"); err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
@@ -30,12 +57,12 @@ func main() {
 		log.Fatalf("Configuration not available")
 	}
 
-	// CRITICAL: Validate paths at startup
+	// Validate path configuration at startup to prevent runtime errors
 	if err := config.ValidatePathConfiguration(cfg); err != nil {
 		log.Fatalf("Path configuration validation failed: %v", err)
 	}
 
-	// Setup logging from validated config
+	// Initialize structured logging with JSON formatting for production
 	_ = logging.SetupLogging(&logging.LoggingConfig{
 		Level:          cfg.Logging.Level,
 		Format:         cfg.Logging.Format,
@@ -46,26 +73,27 @@ func main() {
 		ConsoleEnabled: cfg.Logging.ConsoleEnabled,
 	})
 
-	// Register automatic logging configuration updates
+	// Enable dynamic logging configuration updates without restart
 	configManager.RegisterLoggingConfigurationUpdates()
 
 	logger := logging.GetLogger("camera-service")
 	logger.Info("Starting MediaMTX Camera Service (Go)")
 
-	// Initialize path validator for runtime checks
+	// Initialize runtime path validation for MediaMTX configuration
 	pathValidator := mediamtx.NewPathValidator(cfg, logger)
 
-	// Start periodic validation
+	// Start continuous path validation to detect configuration drift
 	ctx := context.Background()
 	pathValidator.StartPeriodicValidation(ctx)
 
-	// Initialize real implementations for camera monitor dependencies
+	// Layer 2: Core Services - Initialize hardware abstraction layer
+	// Use real implementations for production hardware access
 	deviceChecker := &camera.RealDeviceChecker{}
 	commandExecutor := &camera.RealV4L2CommandExecutor{}
 	infoParser := &camera.RealDeviceInfoParser{}
 
-	// Initialize camera monitor with real implementations
-	// Monitor will acquire its own device event source reference
+	// Initialize camera monitor with event-driven device discovery
+	// Uses udev/fsnotify for real-time device lifecycle events with polling fallback
 	cameraMonitor, err := camera.NewHybridCameraMonitor(
 		configManager,
 		logger,
@@ -77,26 +105,26 @@ func main() {
 		logger.WithError(err).Fatal("Failed to create camera monitor")
 	}
 
-	// Initialize MediaMTX controller first (without event notifier for now)
+	// Layer 5: Orchestration - Initialize MediaMTX controller as single source of truth
+	// Controller coordinates all managers and provides API abstraction (camera0 ↔ /dev/video0)
 	mediaMTXController, err := mediamtx.ControllerWithConfigManager(configManager, cameraMonitor, logger)
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to create MediaMTX controller")
 	}
 
-	// Get configuration (already loaded above)
-
-	// Initialize JWT handler with configuration
+	// Security Framework - Initialize JWT authentication with role-based access control
 	jwtHandler, err := security.NewJWTHandler(cfg.Security.JWTSecretKey, logger)
 	if err != nil {
 		logger.WithError(err).Fatal("Failed to create JWT handler")
 	}
 
-	// Update rate limiting configuration if specified
+	// Configure rate limiting for security protection
 	if cfg.Security.RateLimitRequests > 0 {
 		jwtHandler.SetRateLimit(int64(cfg.Security.RateLimitRequests), cfg.Security.RateLimitWindow)
 	}
 
-	// Initialize WebSocket server
+	// Layer 6: API - Initialize WebSocket server (protocol layer only, no business logic)
+	// Server delegates all operations to MediaMTX controller following architectural constraints
 	wsServer, err := websocket.NewWebSocketServer(
 		configManager,
 		logger,
@@ -107,23 +135,22 @@ func main() {
 		logger.WithError(err).Fatal("Failed to create WebSocket server")
 	}
 
-	// Connect MediaMTX controller to event system (MediaMTX manages camera events internally)
-	// MediaMTX Controller implements DeviceToCameraIDMapper interface for abstraction
+	// Event System Integration - Connect MediaMTX controller to WebSocket event notifications
+	// Controller implements DeviceToCameraIDMapper for API abstraction layer
 	mediaMTXEventNotifier := websocket.NewMediaMTXEventNotifier(wsServer.GetEventManager(), mediaMTXController, logger)
 
-	// Connect the event notifier to MediaMTX controller
-	// Note: SetEventNotifier method needs to be added to MediaMTXController interface
+	// Connect event notifier to controller for real-time client notifications
 	if setterController, ok := mediaMTXController.(interface {
 		SetEventNotifier(mediamtx.MediaMTXEventNotifier)
 	}); ok {
 		setterController.SetEventNotifier(mediaMTXEventNotifier)
 	}
 
-	// Connect system events to event system
+	// Initialize system-level event notifications for service lifecycle
 	systemEventNotifier := websocket.NewSystemEventNotifier(wsServer.GetEventManager(), logger)
 	systemEventNotifier.NotifySystemStartup("1.0.0", "Go implementation")
 
-	// Connect SystemEventNotifier to controller for unified health notifications
+	// Connect system events to controller for unified health monitoring
 	if controllerWithNotifier, ok := mediaMTXController.(interface {
 		SetSystemEventNotifier(notifier mediamtx.SystemEventNotifier)
 	}); ok {
@@ -131,20 +158,20 @@ func main() {
 		logger.Info("Connected SystemEventNotifier to controller for unified health notifications")
 	}
 
-	// ARCHITECTURAL COMPLIANCE: Start MediaMTX Controller first (orchestrates all services)
+	// Service Startup - Follow architectural compliance with controller orchestration
 	logger.Info("Starting MediaMTX Controller orchestration...")
 
-	// Start the MediaMTX controller (this orchestrates all other services)
+	// Start controller first - it orchestrates all managed services (camera monitor, managers)
 	if err := mediaMTXController.Start(ctx); err != nil {
 		logger.WithError(err).Fatal("Failed to start MediaMTX controller")
 	}
 	logger.Info("MediaMTX Controller started successfully")
 
-	// Wait for controller readiness using event-driven approach
+	// Progressive Readiness Pattern - Wait for controller readiness using event-driven approach
 	logger.Info("Waiting for controller readiness...")
 	readinessChan := mediaMTXController.SubscribeToReadiness()
 
-	// Wait for readiness event with timeout
+	// Apply readiness timeout to prevent indefinite blocking
 	readinessCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 
@@ -155,14 +182,14 @@ func main() {
 		logger.Warn("Controller readiness timeout - proceeding anyway")
 	}
 
-	// Verify controller is actually ready
+	// Verify actual readiness state from controller
 	if mediaMTXController.IsReady() {
 		logger.Info("Controller reports ready - all services operational")
 	} else {
 		logger.Warn("Controller not ready - some services may not be operational")
 	}
 
-	// Start WebSocket server (after controller is ready)
+	// Start WebSocket server after controller readiness (accepts connections immediately)
 	logger.Info("Starting WebSocket server...")
 	if err := wsServer.Start(); err != nil {
 		logger.WithError(err).Fatal("Failed to start WebSocket server")
@@ -171,14 +198,14 @@ func main() {
 
 	logger.Info("Camera service started successfully - all components operational")
 
-	// Wait for shutdown signal
+	// Graceful Shutdown - Wait for termination signal
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, syscall.SIGINT, syscall.SIGTERM)
 
 	<-sigChan
 	logger.Info("Received shutdown signal, stopping services...")
 
-	// Graceful shutdown with configurable timeout
+	// Configure graceful shutdown timeout from configuration
 	shutdownTimeout := 30 * time.Second // Default fallback
 	if cfg.ServerDefaults.ShutdownTimeout > 0 {
 		shutdownTimeout = time.Duration(cfg.ServerDefaults.ShutdownTimeout * float64(time.Second))
@@ -188,11 +215,11 @@ func main() {
 
 	logger.Info("Starting graceful shutdown...")
 
-	// ARCHITECTURAL COMPLIANCE: Stop services in reverse order of startup
+	// Reverse Shutdown Order - Stop services in reverse order of startup for clean resource cleanup
 	var wg sync.WaitGroup
 	errorChan := make(chan error, 3)
 
-	// Stop WebSocket server first (stops accepting new connections)
+	// Stop WebSocket server first - prevents new client connections
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -205,7 +232,7 @@ func main() {
 		}
 	}()
 
-	// Stop MediaMTX controller (orchestrates shutdown of all managed services)
+	// Stop MediaMTX controller - orchestrates shutdown of all managed services
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -218,7 +245,7 @@ func main() {
 		}
 	}()
 
-	// Stop camera monitor (managed by controller, but ensure cleanup)
+	// Stop camera monitor - ensure hardware resources are properly released
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
@@ -231,7 +258,7 @@ func main() {
 		}
 	}()
 
-	// Wait for all services to stop with overall timeout
+	// Wait for all services to stop gracefully with timeout protection
 	done := make(chan struct{})
 	go func() {
 		wg.Wait()
@@ -243,10 +270,10 @@ func main() {
 		logger.Info("All services stopped cleanly")
 	case <-shutdownCtx.Done():
 		logger.Error("Shutdown timeout - forcing exit")
-		os.Exit(1) // Force exit on timeout
+		os.Exit(1) // Force exit on timeout to prevent hanging
 	}
 
-	// Check for errors
+	// Collect and report shutdown errors for monitoring
 	close(errorChan)
 	var errors []error
 	for err := range errorChan {

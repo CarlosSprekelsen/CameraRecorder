@@ -26,7 +26,22 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
-// SimpleHealthMonitor represents the simplified MediaMTX health monitor
+// SimpleHealthMonitor manages MediaMTX service health monitoring and connectivity.
+//
+// RESPONSIBILITIES:
+// - MediaMTX service connectivity monitoring and circuit breaker functionality
+// - Service-specific health status tracking (MediaMTX availability)
+// - Success/failure rate tracking for MediaMTX operations
+// - Health status API responses for service availability
+//
+// SCOPE:
+// - Focused on MediaMTX service health only
+// - Does NOT handle system-wide metrics (CPU, memory, disk)
+// - Does NOT handle storage operations or file system monitoring
+//
+// API INTEGRATION:
+// - Returns JSON-RPC API-ready responses for health queries
+// - Provides real-time health status for MediaMTX connectivity
 type SimpleHealthMonitor struct {
 	client MediaMTXClient
 	config *config.MediaMTXConfig
@@ -408,4 +423,48 @@ func (h *SimpleHealthMonitor) RecordFailure() {
 			}
 		}
 	}
+}
+
+// GetHealthAPI returns MediaMTX health status in API-ready format
+func (h *SimpleHealthMonitor) GetHealthAPI(ctx context.Context, startTime time.Time) (*GetHealthResponse, error) {
+	// Get current health status
+	status := h.GetStatus()
+
+	// Calculate uptime
+	uptime := time.Since(startTime).String()
+
+	// Build components map for MediaMTX-specific health
+	components := map[string]interface{}{
+		"mediamtx": map[string]interface{}{
+			"status":        status.Status,
+			"failure_count": status.ErrorCount,
+			"last_check":    status.LastCheck.Format(time.RFC3339),
+			"circuit_state": status.CircuitBreakerState,
+		},
+	}
+
+	// Determine overall status
+	overallStatus := "healthy"
+	if !h.IsHealthy() {
+		overallStatus = "unhealthy"
+	}
+
+	// Build API-ready response
+	response := &GetHealthResponse{
+		Status:       overallStatus,
+		Uptime:       uptime,
+		Version:      "1.0.0", // TODO-IMPL: Get from build info
+		Components:   components,
+		Checks:       []interface{}{}, // TODO-IMPL: Add health checks
+		Timestamp:    time.Now().Format(time.RFC3339),
+		ResponseTime: 0.0, // TODO-IMPL: Add response time calculation
+	}
+
+	h.logger.WithFields(logging.Fields{
+		"overall_status":   overallStatus,
+		"uptime":           uptime,
+		"mediamtx_healthy": h.IsHealthy(),
+	}).Debug("Health status collected successfully")
+
+	return response, nil
 }

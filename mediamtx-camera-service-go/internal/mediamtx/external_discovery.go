@@ -485,3 +485,180 @@ func (esd *ExternalStreamDiscovery) GetLastScanTime() time.Time {
 	defer esd.mu.RUnlock()
 	return esd.lastScanTime
 }
+
+// DiscoverExternalStreamsAPI performs discovery and returns API-ready response
+func (esd *ExternalStreamDiscovery) DiscoverExternalStreamsAPI(ctx context.Context, options DiscoveryOptions) (*DiscoverExternalStreamsResponse, error) {
+	// Get internal discovery result
+	result, err := esd.DiscoverExternalStreams(ctx, options)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to API-ready format
+	discoveredStreams := make([]ExternalStreamInfo, len(result.DiscoveredStreams))
+	for i, stream := range result.DiscoveredStreams {
+		discoveredStreams[i] = ExternalStreamInfo{
+			URL:          stream.URL,
+			Type:         stream.Type,
+			Name:         stream.Name,
+			Status:       stream.Status,
+			DiscoveredAt: stream.DiscoveredAt.Format(time.RFC3339),
+			LastSeen:     stream.LastSeen.Format(time.RFC3339),
+			Capabilities: stream.Capabilities,
+			Metadata:     stream.Metadata,
+		}
+	}
+
+	skydioStreams := make([]ExternalStreamInfo, len(result.SkydioStreams))
+	for i, stream := range result.SkydioStreams {
+		skydioStreams[i] = ExternalStreamInfo{
+			URL:          stream.URL,
+			Type:         stream.Type,
+			Name:         stream.Name,
+			Status:       stream.Status,
+			DiscoveredAt: stream.DiscoveredAt.Format(time.RFC3339),
+			LastSeen:     stream.LastSeen.Format(time.RFC3339),
+			Capabilities: stream.Capabilities,
+			Metadata:     stream.Metadata,
+		}
+	}
+
+	genericStreams := make([]ExternalStreamInfo, len(result.GenericStreams))
+	for i, stream := range result.GenericStreams {
+		genericStreams[i] = ExternalStreamInfo{
+			URL:          stream.URL,
+			Type:         stream.Type,
+			Name:         stream.Name,
+			Status:       stream.Status,
+			DiscoveredAt: stream.DiscoveredAt.Format(time.RFC3339),
+			LastSeen:     stream.LastSeen.Format(time.RFC3339),
+			Capabilities: stream.Capabilities,
+			Metadata:     stream.Metadata,
+		}
+	}
+
+	// Build API-ready response
+	response := &DiscoverExternalStreamsResponse{
+		DiscoveredStreams: discoveredStreams,
+		SkydioStreams:     skydioStreams,
+		GenericStreams:    genericStreams,
+		ScanTimestamp:     result.ScanTimestamp,
+		TotalFound:        result.TotalFound,
+		DiscoveryOptions: DiscoveryOptionsInfo{
+			SkydioEnabled:  result.DiscoveryOptions.SkydioEnabled,
+			GenericEnabled: result.DiscoveryOptions.GenericEnabled,
+			ForceRescan:    result.DiscoveryOptions.ForceRescan,
+			IncludeOffline: result.DiscoveryOptions.IncludeOffline,
+		},
+		ScanDuration: result.ScanDuration.String(),
+		Errors:       result.Errors,
+	}
+
+	return response, nil
+}
+
+// GetExternalStreamsAPI returns all discovered streams in API-ready format
+func (esd *ExternalStreamDiscovery) GetExternalStreamsAPI(ctx context.Context) (*GetExternalStreamsResponse, error) {
+	esd.mu.RLock()
+	streams := make(map[string]*ExternalStream)
+	for url, stream := range esd.discoveredStreams {
+		streams[url] = stream
+	}
+	esd.mu.RUnlock()
+
+	// Convert to API-ready format
+	allStreams := make([]ExternalStreamInfo, 0, len(streams))
+	skydioStreams := make([]ExternalStreamInfo, 0)
+	genericStreams := make([]ExternalStreamInfo, 0)
+
+	for _, stream := range streams {
+		streamInfo := ExternalStreamInfo{
+			URL:          stream.URL,
+			Type:         stream.Type,
+			Name:         stream.Name,
+			Status:       stream.Status,
+			DiscoveredAt: stream.DiscoveredAt.Format(time.RFC3339),
+			LastSeen:     stream.LastSeen.Format(time.RFC3339),
+			Capabilities: stream.Capabilities,
+			Metadata:     stream.Metadata,
+		}
+
+		allStreams = append(allStreams, streamInfo)
+
+		if strings.Contains(stream.Type, "skydio") {
+			skydioStreams = append(skydioStreams, streamInfo)
+		} else {
+			genericStreams = append(genericStreams, streamInfo)
+		}
+	}
+
+	// Build API-ready response
+	response := &GetExternalStreamsResponse{
+		ExternalStreams: allStreams,
+		SkydioStreams:   skydioStreams,
+		GenericStreams:  genericStreams,
+		TotalCount:      len(allStreams),
+		Timestamp:       time.Now().Unix(),
+	}
+
+	return response, nil
+}
+
+// AddExternalStreamAPI adds an external stream and returns API-ready response
+func (esd *ExternalStreamDiscovery) AddExternalStreamAPI(ctx context.Context, stream *ExternalStream) (*AddExternalStreamResponse, error) {
+	esd.mu.Lock()
+	defer esd.mu.Unlock()
+
+	// Check if stream already exists
+	if _, exists := esd.discoveredStreams[stream.URL]; exists {
+		return nil, fmt.Errorf("external stream already exists: %s", stream.URL)
+	}
+
+	// Add stream to discovered streams
+	stream.DiscoveredAt = time.Now()
+	stream.LastSeen = time.Now()
+	stream.Status = "added"
+	esd.discoveredStreams[stream.URL] = stream
+
+	// Build API-ready response
+	response := &AddExternalStreamResponse{
+		StreamURL:  stream.URL,
+		StreamName: stream.Name,
+		StreamType: stream.Type,
+		Status:     "added",
+		Timestamp:  time.Now().Unix(),
+	}
+
+	esd.logger.WithFields(logging.Fields{
+		"stream_url":  stream.URL,
+		"stream_name": stream.Name,
+		"stream_type": stream.Type,
+	}).Info("External stream added successfully")
+
+	return response, nil
+}
+
+// RemoveExternalStreamAPI removes an external stream and returns API-ready response
+func (esd *ExternalStreamDiscovery) RemoveExternalStreamAPI(ctx context.Context, streamURL string) (*RemoveExternalStreamResponse, error) {
+	esd.mu.Lock()
+	defer esd.mu.Unlock()
+
+	// Check if stream exists
+	if _, exists := esd.discoveredStreams[streamURL]; !exists {
+		return nil, fmt.Errorf("external stream not found: %s", streamURL)
+	}
+
+	// Remove stream
+	delete(esd.discoveredStreams, streamURL)
+
+	// Build API-ready response
+	response := &RemoveExternalStreamResponse{
+		StreamURL: streamURL,
+		Status:    "removed",
+		Timestamp: time.Now().Unix(),
+	}
+
+	esd.logger.WithField("stream_url", streamURL).Info("External stream removed successfully")
+
+	return response, nil
+}

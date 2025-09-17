@@ -146,7 +146,15 @@ func (kr *RTSPKeepaliveReader) startReader(ctx context.Context, session *keepali
 
 // monitorReader monitors the reader process and restarts if needed
 func (kr *RTSPKeepaliveReader) monitorReader(ctx context.Context, session *keepaliveSession) {
-	defer close(session.done)
+	defer func() {
+		// Only close the channel if it hasn't been closed already
+		select {
+		case <-session.done:
+			// Channel already closed, do nothing
+		default:
+			close(session.done)
+		}
+	}()
 
 	for {
 		select {

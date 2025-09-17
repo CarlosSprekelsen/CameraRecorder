@@ -131,7 +131,7 @@ func (pi *PathIntegration) CreatePathForCamera(ctx context.Context, device strin
 			"device": device,
 			"path":   existingPath,
 		}).Debug("Path already exists for camera")
-		return nil // Idempotent success - path already exists
+		return nil // Idempotent success - path exists
 	}
 
 	// Get configuration
@@ -141,20 +141,15 @@ func (pi *PathIntegration) CreatePathForCamera(ctx context.Context, device strin
 	}
 
 	// Create path options using config values
-	options := map[string]interface{}{
-		"sourceOnDemand":             true,
-		"sourceOnDemandStartTimeout": cfg.MediaMTX.RunOnDemandStartTimeout,
-		"sourceOnDemandCloseAfter":   cfg.MediaMTX.RunOnDemandCloseAfter,
+	options := &PathConf{
+		SourceOnDemand:             true,
+		SourceOnDemandStartTimeout: cfg.MediaMTX.RunOnDemandStartTimeout,
+		SourceOnDemandCloseAfter:   cfg.MediaMTX.RunOnDemandCloseAfter,
 	}
 
-	// Add camera-specific options
-	if len(cameraDevice.Formats) > 0 {
-		format := cameraDevice.Formats[0]
-		options["resolution"] = fmt.Sprintf("%dx%d", format.Width, format.Height)
-		if len(format.FrameRates) > 0 {
-			options["fps"] = format.FrameRates[0]
-		}
-	}
+	// Note: resolution and fps are not standard PathConf fields
+	// These camera-specific options would need to be handled differently
+	// TODO: Implement comprehensive path configuration with all MediaMTX options
 
 	// Create the path
 	if err := pi.pathManager.CreatePath(ctx, pathName, device, options); err != nil {

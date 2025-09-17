@@ -57,6 +57,7 @@ const (
 	TopicMediaMTXError            EventTopic = "mediamtx.error"
 	TopicMediaMTXRecordingStarted EventTopic = "mediamtx.recording_started"
 	TopicMediaMTXRecordingStopped EventTopic = "mediamtx.recording_stopped"
+	TopicMediaMTXRecordingFailed  EventTopic = "mediamtx.recording_failed"
 	TopicMediaMTXStreamStarted    EventTopic = "mediamtx.stream_started"
 	TopicMediaMTXStreamStopped    EventTopic = "mediamtx.stream_stopped"
 )
@@ -194,7 +195,7 @@ func (em *EventManager) Unsubscribe(clientID string, topics []EventTopic) error 
 
 	_, exists := em.subscriptions[clientID]
 	if !exists {
-		// Client has no subscriptions - this is already the desired state
+		// Client has no subscriptions - this is the desired state
 		em.logger.WithField("client_id", clientID).Debug("Client has no subscriptions to remove")
 		return nil
 	}
@@ -377,7 +378,7 @@ func (em *EventManager) isValidTopic(topic EventTopic) bool {
 		TopicSnapshotTaken, TopicSnapshotError,
 		TopicSystemHealth, TopicSystemError, TopicSystemStartup, TopicSystemShutdown,
 		TopicMediaMTXStream, TopicMediaMTXPath, TopicMediaMTXError,
-		TopicMediaMTXRecordingStarted, TopicMediaMTXRecordingStopped,
+		TopicMediaMTXRecordingStarted, TopicMediaMTXRecordingStopped, TopicMediaMTXRecordingFailed,
 		TopicMediaMTXStreamStarted, TopicMediaMTXStreamStopped,
 	}
 

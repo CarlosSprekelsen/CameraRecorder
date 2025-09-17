@@ -92,9 +92,9 @@ func TestEventSystemIntegration(t *testing.T) {
 		)
 		require.NoError(t, err, "Failed to create WebSocket server")
 
-		// Connect camera monitor to event system
-		cameraEventNotifier := websocket.NewCameraEventNotifier(wsServer.GetEventManager(), logger.Logger)
-		cameraMonitor.SetEventNotifier(cameraEventNotifier)
+		// Connect camera monitor to Controller (proper architecture)
+		// Camera Monitor → Controller → WebSocket Event System
+		cameraMonitor.AddEventHandler(mediaMTXController)
 
 		// Start camera monitor
 		ctx := context.Background()

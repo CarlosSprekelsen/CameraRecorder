@@ -233,3 +233,25 @@ func (p *PermissionChecker) RemoveMethodPermission(method string) error {
 	p.logger.WithField("method", method).Info("Method permission removed")
 	return nil
 }
+
+// GetPermissionsForRole returns permission categories for a role
+// Used by authentication responses to inform clients of their capabilities
+func (p *PermissionChecker) GetPermissionsForRole(roleStr string) []string {
+	// Convert string role to security.Role
+	role, err := p.ValidateRole(roleStr)
+	if err != nil {
+		return []string{} // Invalid role gets no permissions
+	}
+
+	// Map role to permission categories
+	switch role {
+	case RoleAdmin:
+		return []string{"view", "control", "admin"}
+	case RoleOperator:
+		return []string{"view", "control"}
+	case RoleViewer:
+		return []string{"view"}
+	default:
+		return []string{}
+	}
+}

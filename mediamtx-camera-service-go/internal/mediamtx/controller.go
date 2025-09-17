@@ -1,15 +1,33 @@
-/*
-MediaMTX Controller Implementation
-
-Requirements Coverage:
-- REQ-MTX-001: MediaMTX service integration
-- REQ-MTX-002: Stream management capabilities
-- REQ-MTX-003: Path creation and deletion
-- REQ-MTX-004: Health monitoring
-
-Test Categories: Unit/Integration
-API Documentation Reference: docs/api/json_rpc_methods.md
-*/
+// Package mediamtx implements the MediaMTX controller as the single source of truth
+// for all video operations and business logic coordination.
+//
+// The controller serves as Layer 5 (Orchestration) in the component hierarchy,
+// coordinating all managers and providing API abstraction between external
+// identifiers (camera0, camera1) and internal device paths (/dev/videoN).
+//
+// Architecture Compliance:
+//   - Single Source of Truth: All business logic resides in the controller
+//   - No Business Logic in WebSocket: Server delegates all operations to controller
+//   - Interface-based Design: Uses dependency injection for all components
+//   - Optional Component Pattern: Some components may be nil based on configuration
+//   - Stateless Recording: MediaMTX API is the source of truth for recording state
+//
+// Key Responsibilities:
+//   - Camera operations coordination and abstraction layer management
+//   - Stream lifecycle management with path reuse optimization
+//   - Recording orchestration using stateless MediaMTX API queries
+//   - Snapshot capture with multi-tier fallback (V4L2 → FFmpeg → RTSP)
+//   - Health monitoring and system readiness coordination
+//   - Event notification for real-time client updates
+//
+// Requirements Coverage:
+//   - REQ-MTX-001: MediaMTX service integration with REST API
+//   - REQ-MTX-002: Stream management with on-demand FFmpeg processes
+//   - REQ-MTX-003: Path creation, deletion, and lifecycle management
+//   - REQ-MTX-004: Health monitoring with circuit breaker pattern
+//
+// Test Categories: Unit/Integration
+// API Documentation Reference: docs/api/json_rpc_methods.md
 
 package mediamtx
 
@@ -28,72 +46,85 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/disk"
-	"golang.org/x/sys/unix"
 )
 
-// controller represents the main MediaMTX controller
+// controller implements the MediaMTX controller as the central orchestration component.
+// It serves as the single source of truth for all video operations, coordinating
+// between hardware abstraction (camera monitor), MediaMTX integration (client/managers),
+// and API abstraction (camera0 ↔ /dev/video0 mapping).
+//
+// Thread Safety: This struct is designed for concurrent access with appropriate
+// synchronization primitives protecting all shared state.
 type controller struct {
-	client            MediaMTXClient
-	healthMonitor     HealthMonitor
-	pathManager       PathManager
-	pathIntegration   *PathIntegration
-	streamManager     StreamManager
-	ffmpegManager     FFmpegManager
-	recordingManager  *RecordingManager
-	snapshotManager   *SnapshotManager
-	rtspManager       RTSPConnectionManager
-	cameraMonitor     camera.CameraMonitor
-	config            *config.MediaMTXConfig
-	configIntegration *ConfigIntegration
-	logger            *logging.Logger
+	// Layer 2: Core Services - MediaMTX integration and hardware monitoring
+	client               MediaMTXClient        // HTTP REST API client for MediaMTX server
+	healthMonitor        HealthMonitor         // MediaMTX service health monitoring with circuit breaker
+	cameraMonitor        camera.CameraMonitor  // Hardware abstraction with event-driven discovery
+	systemMetricsManager *SystemMetricsManager // System-wide resource monitoring and metrics collection
 
-	// Health notification management
-	healthNotificationManager *HealthNotificationManager
+	// Layer 3: Managers - Specialized operation handlers
+	pathManager     PathManager           // MediaMTX path lifecycle management
+	pathIntegration *PathIntegration      // Optional: Auto-path creation (may be nil)
+	streamManager   StreamManager         // Stream lifecycle and FFmpeg coordination
+	ffmpegManager   FFmpegManager         // On-demand FFmpeg process management
+	rtspManager     RTSPConnectionManager // RTSP connection pooling and keepalive
 
-	// External stream discovery for UAVs
-	externalDiscovery *ExternalStreamDiscovery
+	// Layer 4: Business Logic - High-level operation orchestration
+	recordingManager *RecordingManager // Stateless recording via MediaMTX API
+	snapshotManager  *SnapshotManager  // Multi-tier snapshot capture (V4L2→FFmpeg→RTSP)
 
-	// State management
-	mu        sync.RWMutex
-	isRunning int32 // Use int32 for atomic operations (0 = false, 1 = true)
-	startTime time.Time
-	ctx       context.Context
+	// Configuration and Integration
+	config            *config.MediaMTXConfig // MediaMTX-specific configuration
+	configIntegration *ConfigIntegration     // Centralized configuration access pattern
+	logger            *logging.Logger        // Structured logging with context
+
+	// Health and Event Notification
+	healthNotificationManager *HealthNotificationManager // Health event coordination
+	eventNotifier             MediaMTXEventNotifier      // Real-time client notifications
+
+	// Optional Components (may be nil based on configuration)
+	externalDiscovery *ExternalStreamDiscovery // Optional: UAV/UGV stream discovery
+
+	// Concurrency and State Management
+	mu        sync.RWMutex    // Protects shared state during configuration changes
+	isRunning int32           // Atomic boolean for thread-safe running state (0=false, 1=true)
+	startTime time.Time       // Service startup timestamp for metrics
+	ctx       context.Context // Root context for graceful shutdown coordination
 	cancel    context.CancelFunc
 
-	// No local recording state - query MediaMTX directly
-
-	// Event-driven readiness system
-	readinessEventChan chan struct{}
-	readinessMutex     sync.RWMutex
+	// Event-Driven Readiness System
+	readinessEventChan chan struct{} // Readiness notification channel
+	readinessMutex     sync.RWMutex  // Protects readiness event channel access
 }
 
-// Race condition protection helper
-// checkRunningState safely checks if the controller is running using atomic operations
+// checkRunningState safely checks if the controller is running using atomic operations.
+// This prevents race conditions during concurrent access to the running state.
 func (c *controller) checkRunningState() bool {
 	return atomic.LoadInt32(&c.isRunning) == 1
 }
 
-// Optional component availability helpers
-// These methods provide consistent checking for optional components
+// hasExternalDiscovery checks if external stream discovery is configured and available.
+// Returns false if the component is nil (not configured) following the optional component pattern.
 func (c *controller) hasExternalDiscovery() bool {
 	return c.externalDiscovery != nil
 }
 
-// IsReady returns whether the controller is fully operational
+// IsReady returns whether the controller is fully operational and ready to handle requests.
+// This implements the progressive readiness pattern where the system becomes ready
+// as components complete their initialization.
 func (c *controller) IsReady() bool {
 	if !c.checkRunningState() {
 		c.logger.Debug("Controller not ready: not running")
 		return false
 	}
 
-	// Check if camera monitor has completed at least one discovery cycle
+	// Camera monitor must complete at least one discovery cycle for hardware readiness
 	if c.cameraMonitor != nil && !c.cameraMonitor.IsReady() {
 		c.logger.Debug("Controller not ready: camera monitor not ready")
 		return false
 	}
 
-	// Health monitor is optional - if nil, consider healthy by default
-	// If present, check if it's healthy
+	// Health monitor is optional - if nil, consider healthy by default following optional component pattern
 	if c.healthMonitor != nil && !c.healthMonitor.IsHealthy() {
 		c.logger.Debug("Controller not ready: health monitor not healthy")
 		return false
@@ -195,8 +226,8 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 			globalConfig := map[string]interface{}{
 				"recordPath":   recordPath,
 				"recordFormat": cfg.Recording.RecordFormat,
-				// Note: MediaMTX doesn't have a global snapshot path setting
-				// Snapshots are handled per-path or via FFmpeg directly
+				// MediaMTX handles snapshots per-path or via direct FFmpeg capture
+				// Global snapshot configuration is not supported by MediaMTX API
 			}
 
 			// Convert to JSON for API call
@@ -258,6 +289,9 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 	// Create health notification manager (will be connected to SystemEventNotifier later)
 	healthNotificationManager := NewHealthNotificationManager(fullConfig, logger, nil)
 
+	// Create system metrics manager
+	systemMetricsManager := NewSystemMetricsManager(fullConfig, recordingConfig, configIntegration, logger)
+
 	return &controller{
 		client:                    client,
 		healthMonitor:             healthMonitor,
@@ -273,6 +307,7 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 		configIntegration:         configIntegration,
 		logger:                    logger,
 		healthNotificationManager: healthNotificationManager,
+		systemMetricsManager:      systemMetricsManager,
 		// externalDiscovery: nil - intentionally not initialized (optional component)
 		// No local recording state - query MediaMTX directly
 		readinessEventChan: make(chan struct{}, 10), // Buffered channel for readiness events
@@ -298,9 +333,14 @@ func (c *controller) Start(ctx context.Context) error {
 		return fmt.Errorf("failed to start health monitor: %w", err)
 	}
 
-	// Start camera monitor (only if not already running)
+	// Wire SystemMetricsManager dependencies
+	if c.systemMetricsManager != nil {
+		c.systemMetricsManager.SetDependencies(c.recordingManager, c.cameraMonitor, c.streamManager)
+	}
+
+	// Start camera monitor with startup coordination
 	if c.cameraMonitor != nil {
-		// Check if camera monitor is already running
+		// Check camera monitor running state to avoid duplicate starts
 		if cameraMonitor, ok := c.cameraMonitor.(interface{ IsRunning() bool }); ok && cameraMonitor.IsRunning() {
 			c.logger.Info("Camera monitor already running, skipping start")
 		} else {
@@ -319,6 +359,12 @@ func (c *controller) Start(ctx context.Context) error {
 			return fmt.Errorf("failed to start path integration: %w", err)
 		}
 		c.logger.Info("Path integration started successfully")
+	}
+
+	// Register Controller as camera event handler (CRITICAL MISSING WIRING)
+	if c.cameraMonitor != nil {
+		c.cameraMonitor.AddEventHandler(c) // Controller implements CameraEventHandler
+		c.logger.Info("Controller registered as camera event handler")
 	}
 
 	atomic.StoreInt32(&c.isRunning, 1)
@@ -373,7 +419,7 @@ func (c *controller) monitorReadiness() {
 
 // Stop stops the MediaMTX controller
 func (c *controller) Stop(ctx context.Context) error {
-	// Use atomic check instead of holding main lock
+	// Use atomic operation for thread-safe state check
 	if !atomic.CompareAndSwapInt32(&c.isRunning, 1, 0) {
 		return fmt.Errorf("controller is not running")
 	}
@@ -431,228 +477,68 @@ func (c *controller) Stop(ctx context.Context) error {
 }
 
 // GetHealth returns the current health status
-func (c *controller) GetHealth(ctx context.Context) (*HealthStatus, error) {
+func (c *controller) GetHealth(ctx context.Context) (*GetHealthResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	// Get base health status from health monitor
-	status := c.healthMonitor.GetStatus()
-
-	// Add camera monitor status
-	if status.ComponentStatus == nil {
-		status.ComponentStatus = make(map[string]string)
-	}
-
-	if c.cameraMonitor != nil {
-		if c.cameraMonitor.IsRunning() {
-			if c.cameraMonitor.IsReady() {
-				status.ComponentStatus["camera_monitor"] = "healthy"
-			} else {
-				status.ComponentStatus["camera_monitor"] = "starting"
-				if status.Status == "healthy" {
-					status.Status = "starting"
-				}
-			}
-		} else {
-			status.ComponentStatus["camera_monitor"] = "starting"
-			if status.Status == "healthy" {
-				status.Status = "starting"
-			}
-		}
-	} else {
-		status.ComponentStatus["camera_monitor"] = "starting"
-		if status.Status == "healthy" {
-			status.Status = "starting"
-		}
-	}
-
-	// Include storage component health
-	if storage, err := c.GetStorageInfo(ctx); err == nil {
-		if storage.LowSpaceWarning {
-			status.ComponentStatus["storage"] = "warning"
-			if status.Status == "healthy" {
-				status.Status = "degraded"
-			}
-		} else {
-			status.ComponentStatus["storage"] = "healthy"
-		}
-	} else {
-		status.ComponentStatus["storage"] = "unknown"
-	}
-
-	return &status, nil
+	// Pure delegation to HealthMonitor - returns API-ready response with health status
+	return c.healthMonitor.GetHealthAPI(ctx, c.startTime)
 }
 
 // GetMetrics returns the current metrics
-func (c *controller) GetMetrics(ctx context.Context) (*Metrics, error) {
+func (c *controller) GetMetrics(ctx context.Context) (*GetMetricsResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	// Get streams for metrics
-	streams, err := c.GetStreams(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get streams for metrics: %w", err)
-	}
-
-	// Calculate metrics
-	activeStreams := 0
-	for _, stream := range streams {
-		if stream.Ready {
-			activeStreams++
-		}
-	}
-
-	// Get health status for additional metrics
-	healthStatus := c.healthMonitor.GetStatus()
-
-	metrics := &Metrics{
-		ActiveStreams: activeStreams,
-		TotalStreams:  len(streams),
-		CPUUsage:      0.0, // Will be overridden by GetSystemMetrics() if available
-		MemoryUsage:   0.0, // Will be overridden by GetSystemMetrics() if available
-		Uptime:        int64(time.Since(c.startTime).Seconds()),
-	}
-
-	// Add health metrics if available
-	if healthStatus.Metrics.ActiveStreams > 0 {
-		metrics.ActiveStreams = healthStatus.Metrics.ActiveStreams
-		metrics.TotalStreams = healthStatus.Metrics.TotalStreams
-		metrics.CPUUsage = healthStatus.Metrics.CPUUsage
-		metrics.MemoryUsage = healthStatus.Metrics.MemoryUsage
-		metrics.Uptime = healthStatus.Metrics.Uptime
-	}
-
-	// Camera metrics are now included in GetSystemMetrics() method
-	return metrics, nil
+	// Pure delegation to SystemMetricsManager - returns API-ready response with comprehensive metrics aggregation
+	return c.systemMetricsManager.GetMetricsAPI(ctx)
 }
 
 // GetSystemMetrics returns comprehensive system performance metrics
-// Following Python PerformanceMetrics.get_metrics() implementation
-func (c *controller) GetSystemMetrics(ctx context.Context) (*SystemMetrics, error) {
+func (c *controller) GetSystemMetrics(ctx context.Context) (*GetSystemMetricsResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	// Get enhanced health monitor metrics (Phase 1 enhancement)
-	healthMetrics := c.healthMonitor.GetMetrics()
-
-	// Get health status for component information
-	healthStatus := c.healthMonitor.GetStatus()
-
-	// Calculate component status
-	componentStatus := make(map[string]string)
-	componentStatus["mediamtx_controller"] = "running"
-	componentStatus["health_monitor"] = healthStatus.Status
-	componentStatus["path_manager"] = "running"
-	componentStatus["stream_manager"] = "running"
-	componentStatus["recording_manager"] = "running"
-	componentStatus["snapshot_manager"] = "running"
-
-	// Get RTSP connection health
-	rtspHealth, err := c.rtspManager.GetConnectionHealth(ctx)
-	if err != nil {
-		componentStatus["rtsp_connection_manager"] = "error"
-		c.logger.WithError(err).Error("Failed to get RTSP connection health")
-	} else {
-		componentStatus["rtsp_connection_manager"] = rtspHealth.Status
-	}
-
-	// Simplified error counts - only track basic failure count
-	errorCounts := make(map[string]int64)
-	if failureCount, ok := healthMetrics["failure_count"].(int64); ok {
-		errorCounts["health_check"] = failureCount
-	}
-
-	// Get circuit breaker state - simplified version
-	circuitBreakerState := "CLOSED"
-	if isHealthy, ok := healthMetrics["is_healthy"].(bool); ok && !isHealthy {
-		circuitBreakerState = "OPEN"
-	}
-
-	// Calculate response time (average from health metrics) - simplified version
-	responseTime := 0.0
-	if lastCheck, ok := healthMetrics["last_check"].(time.Time); ok {
-		responseTime = float64(time.Since(lastCheck).Milliseconds())
-	}
-
-	// Get RTSP connection metrics
-	rtspMetrics := c.rtspManager.GetConnectionMetrics(ctx)
-
-	// Add RTSP connection count to active connections
-	activeConnections := 0
-	if rtspConnections, ok := rtspMetrics["total_connections"].(int); ok {
-		activeConnections = rtspConnections
-	}
-
-	// Add RTSP-specific error counts
-	if rtspConnections, ok := rtspMetrics["total_connections"].(int); ok && rtspConnections > c.config.RTSPMonitoring.MaxConnections {
-		errorCounts["rtsp_connection_limit"] = int64(rtspConnections - c.config.RTSPMonitoring.MaxConnections)
-	}
-
-	// Calculate system resource usage (moved from WebSocket layer)
-	var m runtime.MemStats
-	runtime.ReadMemStats(&m)
-	memoryUsage := float64(m.Alloc) / 1024 / 1024 // MB
-	cpuUsage := c.calculateCPUUsage()             // Calculate CPU usage
-	diskUsage := c.calculateDiskUsage()           // Calculate disk usage
-	goroutines := runtime.NumGoroutine()
-	heapAlloc := int64(m.HeapAlloc) // Convert uint64 to int64
-
-	systemMetrics := &SystemMetrics{
-		RequestCount:        0, // Request counting handled by WebSocket layer
-		ResponseTime:        responseTime,
-		ErrorCount:          errorCounts["health_check"],
-		ActiveConnections:   int64(activeConnections),
-		MemoryUsage:         memoryUsage,
-		CPUUsage:            cpuUsage,
-		DiskUsage:           diskUsage,
-		Goroutines:          goroutines,
-		HeapAlloc:           heapAlloc,
-		ComponentStatus:     componentStatus,
-		ErrorCounts:         errorCounts,
-		LastCheck:           healthStatus.LastCheck,
-		CircuitBreakerState: circuitBreakerState,
-	}
-
-	// Check performance thresholds and send notifications with debounce
-	if c.healthNotificationManager != nil {
-		// Convert SystemMetrics to map for threshold checking
-		metricsMap := map[string]interface{}{
-			"memory_usage":          memoryUsage,                                  // Use calculated memory usage
-			"error_rate":            float64(errorCounts["health_check"]) / 100.0, // Simplified error rate
-			"average_response_time": responseTime,
-			"active_connections":    activeConnections,
-			"goroutines":            goroutines,
-		}
-		c.healthNotificationManager.CheckPerformanceThresholds(metricsMap)
-	}
-
-	return systemMetrics, nil
+	// Pure delegation to SystemMetricsManager - returns API-ready response with system calculations
+	return c.systemMetricsManager.GetSystemMetricsAPI(ctx)
 }
 
 // GetServerInfo returns server information and capabilities
-func (c *controller) GetServerInfo(ctx context.Context) (*ServerInfo, error) {
+func (c *controller) GetServerInfo(ctx context.Context) (*GetServerInfoResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	// Get system information (moved from WebSocket layer)
-	return &ServerInfo{
-		Name:             "MediaMTX Camera Service",
-		Version:          "1.0.0",
-		BuildDate:        time.Now().Format("2006-01-02"),
-		GoVersion:        runtime.Version(),
-		Architecture:     runtime.GOARCH,
-		Capabilities:     []string{"snapshots", "recordings", "streaming"},
-		SupportedFormats: []string{"mp4", "mkv", "jpg"},
-		MaxCameras:       10,
-	}, nil
+	// Check MediaMTX connection status
+	mediaMTXStatus := "connected"
+	if _, err := c.pathManager.ListPaths(ctx); err != nil {
+		mediaMTXStatus = "disconnected"
+	}
+
+	// Build API-ready response
+	response := &GetServerInfoResponse{
+		ServiceName:    "MediaMTX Camera Service",
+		Version:        "1.0.0",                                   // TODO: Get from build info
+		BuildTime:      time.Now().Format("2006-01-02T15:04:05Z"), // TODO: Get from build info
+		GoVersion:      runtime.Version(),
+		StartTime:      c.startTime.Format(time.RFC3339),
+		Uptime:         time.Since(c.startTime).String(),
+		Environment:    "production", // TODO: Get from config
+		ConfigVersion:  "1.0",        // TODO: Get from config
+		APIVersion:     "2.0",        // JSON-RPC 2.0
+		MediaMTXStatus: mediaMTXStatus,
+	}
+
+	return response, nil
 }
 
-// CleanupOldFiles performs cleanup of old files based on retention policy
-func (c *controller) CleanupOldFiles(ctx context.Context) (map[string]interface{}, error) {
+// CleanupOldFiles performs cleanup of old files based on retention policy.
+// Implements file lifecycle management for recording and snapshot storage.
+// TODO: FIX HARD CODING VIOLATION USE CENTRALIZED CONFIGURATION
+func (c *controller) CleanupOldFiles(ctx context.Context) (*CleanupOldFilesResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
@@ -678,14 +564,14 @@ func (c *controller) CleanupOldFiles(ctx context.Context) (map[string]interface{
 		maxAge := time.Duration(cfg.RetentionPolicy.MaxAgeDays) * 24 * time.Hour
 		maxCount := 100 // Default max count
 
-		// Clean up old recordings
+		// Clean up recordings based on retention policy
 		if err := c.recordingManager.CleanupOldRecordings(ctx, maxAge, maxCount); err != nil {
 			return nil, fmt.Errorf("failed to cleanup old recordings: %v", err)
 		} else {
 			deletedCount += 1
 		}
 
-		// Clean up old snapshots
+		// Clean up snapshots based on retention policy
 		if err := c.snapshotManager.CleanupOldSnapshots(ctx, maxAge, maxCount); err != nil {
 			return nil, fmt.Errorf("failed to cleanup old snapshots: %v", err)
 		} else {
@@ -696,14 +582,14 @@ func (c *controller) CleanupOldFiles(ctx context.Context) (map[string]interface{
 		maxAge := time.Duration(cfg.RetentionPolicy.MaxAgeDays) * 24 * time.Hour
 		maxCount := 100 // Default max count
 
-		// Clean up old recordings
+		// Clean up recordings based on retention policy
 		if err := c.recordingManager.CleanupOldRecordings(ctx, maxAge, maxCount); err != nil {
 			return nil, fmt.Errorf("failed to cleanup old recordings: %v", err)
 		} else {
 			deletedCount += 1
 		}
 
-		// Clean up old snapshots
+		// Clean up snapshots based on retention policy
 		if err := c.snapshotManager.CleanupOldSnapshots(ctx, maxAge, maxCount); err != nil {
 			return nil, fmt.Errorf("failed to cleanup old snapshots: %v", err)
 		} else {
@@ -711,15 +597,18 @@ func (c *controller) CleanupOldFiles(ctx context.Context) (map[string]interface{
 		}
 	}
 
-	return map[string]interface{}{
-		"deleted_count": deletedCount,
-		"total_size":    totalSize,
-		"message":       "File cleanup completed successfully",
-	}, nil
+	// Build API-ready response using CleanupOldFilesResponse from rpc_types.go
+	response := &CleanupOldFilesResponse{
+		FilesRemoved:    deletedCount,
+		SpaceFreed:      totalSize,
+		RecordingsCount: deletedCount, // TODO-IMPL: Track recordings vs snapshots separately
+		SnapshotsCount:  0,            // TODO-IMPL: Track recordings vs snapshots separately
+	}
+	return response, nil
 }
 
 // SetRetentionPolicy updates the retention policy configuration
-func (c *controller) SetRetentionPolicy(ctx context.Context, enabled bool, policyType string, params map[string]interface{}) (map[string]interface{}, error) {
+func (c *controller) SetRetentionPolicy(ctx context.Context, enabled bool, policyType string, params map[string]interface{}) (*SetRetentionPolicyResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
@@ -734,36 +623,39 @@ func (c *controller) SetRetentionPolicy(ctx context.Context, enabled bool, polic
 	cfg.RetentionPolicy.Enabled = enabled
 	cfg.RetentionPolicy.Type = policyType
 
+	// Initialize response values
+	maxAge := ""
+	maxSize := ""
+
 	// Update policy-specific parameters
 	if policyType == "age" {
 		if maxAgeDays, ok := params["max_age_days"].(float64); ok {
 			cfg.RetentionPolicy.MaxAgeDays = int(maxAgeDays)
+			maxAge = fmt.Sprintf("%d days", int(maxAgeDays))
 		} else if maxAgeDays, ok := params["max_age_days"].(int); ok {
 			cfg.RetentionPolicy.MaxAgeDays = maxAgeDays
+			maxAge = fmt.Sprintf("%d days", maxAgeDays)
 		}
 	} else if policyType == "size" {
 		if maxSizeGB, ok := params["max_size_gb"].(float64); ok {
 			cfg.RetentionPolicy.MaxSizeGB = int(maxSizeGB)
+			maxSize = fmt.Sprintf("%d GB", int(maxSizeGB))
 		} else if maxSizeGB, ok := params["max_size_gb"].(int); ok {
 			cfg.RetentionPolicy.MaxSizeGB = maxSizeGB
+			maxSize = fmt.Sprintf("%d GB", maxSizeGB)
 		}
 	}
 
-	// Build response result based on policy type
-	result := map[string]interface{}{
-		"policy_type": policyType,
-		"enabled":     enabled,
-		"message":     "Retention policy configuration updated successfully",
+	// Build API-ready response
+	response := &SetRetentionPolicyResponse{
+		Success:    true,
+		PolicyType: policyType,
+		MaxAge:     maxAge,
+		MaxSize:    maxSize,
+		Message:    "Retention policy configuration updated successfully",
 	}
 
-	// Add policy-specific parameters to response
-	if policyType == "age" {
-		result["max_age_days"] = cfg.RetentionPolicy.MaxAgeDays
-	} else if policyType == "size" {
-		result["max_size_gb"] = cfg.RetentionPolicy.MaxSizeGB
-	}
-
-	return result, nil
+	return response, nil
 }
 
 // SetSystemEventNotifier sets the system event notifier for health notifications
@@ -779,95 +671,23 @@ func (c *controller) SetSystemEventNotifier(notifier SystemEventNotifier) {
 }
 
 // GetStorageInfo returns information about the storage space used by recordings and snapshots.
-func (c *controller) GetStorageInfo(ctx context.Context) (*StorageInfo, error) {
+func (c *controller) GetStorageInfo(ctx context.Context) (*GetStorageInfoResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	// Disk totals from recordings path
-	root := c.config.RecordingsPath
-	var st unix.Statfs_t
-	if err := unix.Statfs(root, &st); err != nil {
-		return nil, fmt.Errorf("statfs failed: %w", err)
-	}
-	total := st.Blocks * uint64(st.Bsize)
-	free := st.Bfree * uint64(st.Bsize)
-	used := total - free
-	usagePct := 0.0
-	if total > 0 {
-		usagePct = float64(used) / float64(total) * 100.0
-	}
-
-	// Aggregate sizes via managers (no FS walking in API layer)
-	recList, err := c.recordingManager.GetRecordingsList(ctx, 100000, 0)
-	if err != nil {
-		return nil, fmt.Errorf("list recordings failed: %w", err)
-	}
-	snapList, err := c.snapshotManager.GetSnapshotsList(ctx, 100000, 0)
-	if err != nil {
-		return nil, fmt.Errorf("list snapshots failed: %w", err)
-	}
-	var recBytes int64
-	for _, f := range recList.Files {
-		recBytes += f.FileSize
-	}
-	var snapBytes int64
-	for _, f := range snapList.Files {
-		snapBytes += f.FileSize
-	}
-
-	// Low space threshold (use RetentionPolicy or default 80%)
-	lowWarn := usagePct >= 80.0
-
-	info := &StorageInfo{
-		TotalSpace:      total,
-		UsedSpace:       used,
-		AvailableSpace:  free,
-		UsagePercentage: usagePct,
-		RecordingsSize:  recBytes,
-		SnapshotsSize:   snapBytes,
-		LowSpaceWarning: lowWarn,
-	}
-
-	// Check storage thresholds and send notifications with debounce
-	if c.healthNotificationManager != nil {
-		c.healthNotificationManager.CheckStorageThresholds(info)
-	}
-
-	return info, nil
+	// Pure delegation to SystemMetricsManager - returns API-ready response with storage calculations
+	return c.systemMetricsManager.GetStorageInfoAPI(ctx)
 }
 
-// GetStreams returns all streams
-func (c *controller) GetStreams(ctx context.Context) ([]*Path, error) {
+// GetStreams returns all streams using cameraID-first architecture
+func (c *controller) GetStreams(ctx context.Context) (*GetStreamsResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	// Get streams from stream manager (contains internal stream names)
-	streams, err := c.streamManager.ListStreams(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	// Convert internal stream names to abstract camera identifiers
-	abstractStreams := make([]*Path, len(streams))
-	for i, stream := range streams {
-		// Stream name is already the camera identifier (camera0, camera1, etc.)
-		// No conversion needed - MediaMTX path names are camera identifiers
-		abstractStreams[i] = &Path{
-			Name:          stream.Name, // Return camera identifier directly
-			ConfName:      stream.ConfName,
-			Source:        stream.Source,
-			Ready:         stream.Ready,
-			ReadyTime:     stream.ReadyTime,
-			Tracks:        stream.Tracks,
-			BytesReceived: stream.BytesReceived,
-			BytesSent:     stream.BytesSent,
-			Readers:       stream.Readers,
-		}
-	}
-
-	return abstractStreams, nil
+	// Pure delegation to StreamManager - no business logic in Controller!
+	return c.streamManager.ListStreams(ctx)
 }
 
 // GetStream returns a specific stream
@@ -929,14 +749,14 @@ func (c *controller) CreatePath(ctx context.Context, path *Path) error {
 
 	// For now, create a basic path with just name and source
 	// The Path type is for runtime status, not configuration
-	// This method should probably be redesigned to take proper configuration parameters
-	options := make(map[string]interface{})
+	// TODO: This method should probably be redesigned to take proper configuration parameters
+	options := &PathConf{}
 
 	// Extract source from the path if available
 	source := ""
 	if path.Source != nil {
 		// If source is a PathSource object, we need to handle it appropriately
-		// For now, we'll use a default source
+		// TODO: Implement proper source configuration from parameters
 		source = "rtsp://localhost:8554/" + path.Name
 	}
 
@@ -953,7 +773,7 @@ func (c *controller) DeletePath(ctx context.Context, name string) error {
 }
 
 // DiscoverExternalStreams discovers external streams
-func (c *controller) DiscoverExternalStreams(ctx context.Context, options DiscoveryOptions) (*DiscoveryResult, error) {
+func (c *controller) DiscoverExternalStreams(ctx context.Context, options DiscoveryOptions) (*DiscoverExternalStreamsResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
@@ -962,106 +782,77 @@ func (c *controller) DiscoverExternalStreams(ctx context.Context, options Discov
 		return nil, fmt.Errorf("external stream discovery is not configured")
 	}
 
-	return c.externalDiscovery.DiscoverExternalStreams(ctx, options)
+	// Pure delegation to ExternalStreamDiscovery - returns API-ready response
+	return c.externalDiscovery.DiscoverExternalStreamsAPI(ctx, options)
 }
 
 // AddExternalStream adds an external stream to the system
-func (c *controller) AddExternalStream(ctx context.Context, stream *ExternalStream) error {
-	if !c.checkRunningState() {
-		return fmt.Errorf("controller is not running")
-	}
-
-	if !c.hasExternalDiscovery() {
-		return fmt.Errorf("external stream discovery is not configured")
-	}
-
-	// Create MediaMTX path for the external stream
-	// The path manager's CreatePath method takes: ctx, name, source, options
-	options := make(map[string]interface{})
-	options["sourceType"] = stream.Type // Store the stream type as metadata
-
-	if err := c.pathManager.CreatePath(ctx, stream.Name, stream.URL, options); err != nil {
-		return fmt.Errorf("failed to create MediaMTX path for external stream: %w", err)
-	}
-
-	c.logger.WithFields(logging.Fields{
-		"stream_url":  stream.URL,
-		"stream_name": stream.Name,
-		"stream_type": stream.Type,
-	}).Info("External stream added successfully")
-
-	return nil
-}
-
-// RemoveExternalStream removes an external stream from the system
-func (c *controller) RemoveExternalStream(ctx context.Context, streamURL string) error {
-	if !c.checkRunningState() {
-		return fmt.Errorf("controller is not running")
-	}
-
-	// CRITICAL: Check if external discovery is available (optional component)
-	if !c.hasExternalDiscovery() {
-		c.logger.WithField("stream_url", streamURL).Debug("External discovery not available, cannot remove stream")
-		return fmt.Errorf("external stream discovery is not configured")
-	}
-
-	// Find the stream by URL
-	streams := c.externalDiscovery.GetDiscoveredStreams()
-	stream, exists := streams[streamURL]
-	if !exists {
-		return fmt.Errorf("external stream not found: %s", streamURL)
-	}
-
-	// Delete MediaMTX path
-	if err := c.DeletePath(ctx, stream.Name); err != nil {
-		return fmt.Errorf("failed to delete MediaMTX path for external stream: %w", err)
-	}
-
-	c.logger.WithFields(logging.Fields{
-		"stream_url":  streamURL,
-		"stream_name": stream.Name,
-	}).Info("External stream removed successfully")
-
-	return nil
-}
-
-// GetExternalStreams returns all discovered external streams
-func (c *controller) GetExternalStreams(ctx context.Context) ([]*ExternalStream, error) {
+func (c *controller) AddExternalStream(ctx context.Context, stream *ExternalStream) (*AddExternalStreamResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
 	if !c.hasExternalDiscovery() {
-		return []*ExternalStream{}, nil // Return empty slice, not error
+		return nil, fmt.Errorf("external stream discovery is not configured")
 	}
 
-	streams := c.externalDiscovery.GetDiscoveredStreams()
-	result := make([]*ExternalStream, 0, len(streams))
-	for _, stream := range streams {
-		result = append(result, stream)
-	}
-
-	return result, nil
+	// Pure delegation to ExternalStreamDiscovery - returns API-ready response
+	return c.externalDiscovery.AddExternalStreamAPI(ctx, stream)
 }
 
-// StartRecording starts recording for a camera device - pure orchestration
-func (c *controller) StartRecording(ctx context.Context, device string, options map[string]interface{}) error {
+// RemoveExternalStream removes an external stream from the system
+func (c *controller) RemoveExternalStream(ctx context.Context, streamURL string) (*RemoveExternalStreamResponse, error) {
 	if !c.checkRunningState() {
-		return fmt.Errorf("controller is not running")
+		return nil, fmt.Errorf("controller is not running")
 	}
 
-	// Delegate to RecordingManager - it handles validation and business logic
-	return c.recordingManager.StartRecording(ctx, device, options)
+	if !c.hasExternalDiscovery() {
+		return nil, fmt.Errorf("external stream discovery is not configured")
+	}
+
+	// Pure delegation to ExternalStreamDiscovery - returns API-ready response
+	return c.externalDiscovery.RemoveExternalStreamAPI(ctx, streamURL)
 }
 
-// StopRecording stops recording for a camera device - pure orchestration
-func (c *controller) StopRecording(ctx context.Context, device string) error {
+// GetExternalStreams returns all discovered external streams
+func (c *controller) GetExternalStreams(ctx context.Context) (*GetExternalStreamsResponse, error) {
 	if !c.checkRunningState() {
-		return fmt.Errorf("controller is not running")
+		return nil, fmt.Errorf("controller is not running")
 	}
 
-	// Delegate to RecordingManager - it handles validation and business logic
-	return c.recordingManager.StopRecording(ctx, device)
+	if !c.hasExternalDiscovery() {
+		// Return empty API-ready response for unconfigured external discovery
+		return &GetExternalStreamsResponse{
+			ExternalStreams: []ExternalStreamInfo{},
+			SkydioStreams:   []ExternalStreamInfo{},
+			GenericStreams:  []ExternalStreamInfo{},
+			TotalCount:      0,
+			Timestamp:       time.Now().Unix(),
+		}, nil
+	}
+
+	// Pure delegation to ExternalStreamDiscovery - returns API-ready response
+	return c.externalDiscovery.GetExternalStreamsAPI(ctx)
+}
+
+// StartRecording starts recording for a camera device
+func (c *controller) StartRecording(ctx context.Context, cameraID string, options *PathConf) (*StartRecordingResponse, error) {
+	if !c.checkRunningState() {
+		return nil, fmt.Errorf("controller is not running")
+	}
+
+	// Pure delegation to RecordingManager - returns API-ready response with rich metadata
+	return c.recordingManager.StartRecording(ctx, cameraID, options)
+}
+
+// StopRecording stops recording for a camera device
+func (c *controller) StopRecording(ctx context.Context, cameraID string) (*StopRecordingResponse, error) {
+	if !c.checkRunningState() {
+		return nil, fmt.Errorf("controller is not running")
+	}
+
+	// Pure delegation to RecordingManager - returns API-ready response with actual metadata
+	return c.recordingManager.StopRecording(ctx, cameraID)
 }
 
 // GetConfig returns the current configuration
@@ -1160,18 +951,13 @@ func generateSnapshotID(device string) string {
 }
 
 // TakeAdvancedSnapshot takes a snapshot with advanced options
-func (c *controller) TakeAdvancedSnapshot(ctx context.Context, device string, options map[string]interface{}) (*Snapshot, error) {
+func (c *controller) TakeAdvancedSnapshot(ctx context.Context, cameraID string, options map[string]interface{}) (*TakeSnapshotResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	// Validate device exists
-	if device == "" {
-		return nil, fmt.Errorf("device path is required")
-	}
-
-	// Pure delegation to SnapshotManager - no business logic
-	return c.snapshotManager.TakeSnapshot(ctx, device, options)
+	// Pure delegation to SnapshotManager - returns API-ready response with rich metadata
+	return c.snapshotManager.TakeSnapshot(ctx, cameraID, options)
 }
 
 // GetAdvancedSnapshot gets a snapshot by ID
@@ -1179,9 +965,10 @@ func (c *controller) GetAdvancedSnapshot(snapshotID string) (*Snapshot, bool) {
 	return c.snapshotManager.GetSnapshot(snapshotID)
 }
 
+// TODO: invesstigate why some methods check for runningstate and iothers do not. is it needed on each method?
 // ListAdvancedSnapshots lists all snapshots
 func (c *controller) ListAdvancedSnapshots() []*Snapshot {
-	return c.snapshotManager.ListSnapshots()
+	return c.snapshotManager.ListSnapshotsInternal()
 }
 
 // DeleteAdvancedSnapshot deletes a snapshot
@@ -1204,53 +991,85 @@ func (c *controller) UpdateSnapshotSettings(settings *SnapshotSettings) {
 }
 
 // ListRecordings lists recording files with metadata and pagination
-func (c *controller) ListRecordings(ctx context.Context, limit, offset int) (*FileListResponse, error) {
+func (c *controller) ListRecordings(ctx context.Context, limit, offset int) (*ListRecordingsResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	c.logger.WithFields(logging.Fields{
-		"limit":  limit,
-		"offset": offset,
-	}).Debug("Listing recordings")
-
-	return c.recordingManager.GetRecordingsList(ctx, limit, offset)
+	// Pure delegation to RecordingManager - returns API-ready response with metadata extraction
+	return c.recordingManager.ListRecordings(ctx, limit, offset)
 }
 
 // ListSnapshots lists snapshot files with metadata and pagination
-func (c *controller) ListSnapshots(ctx context.Context, limit, offset int) (*FileListResponse, error) {
+func (c *controller) ListSnapshots(ctx context.Context, limit, offset int) (*ListSnapshotsResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	c.logger.WithFields(logging.Fields{
-		"limit":  limit,
-		"offset": offset,
-	}).Debug("Listing snapshots")
-
-	return c.snapshotManager.GetSnapshotsList(ctx, limit, offset)
+	// Pure delegation to SnapshotManager - returns API-ready response with metadata extraction
+	return c.snapshotManager.ListSnapshots(ctx, limit, offset)
 }
 
 // GetRecordingInfo gets detailed information about a specific recording file
-func (c *controller) GetRecordingInfo(ctx context.Context, filename string) (*FileMetadata, error) {
+func (c *controller) GetRecordingInfo(ctx context.Context, filename string) (*GetRecordingInfoResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
 	c.logger.WithField("filename", filename).Debug("Getting recording info")
 
-	return c.recordingManager.GetRecordingInfo(ctx, filename)
+	// TODO-IMPL: Convert FileMetadata to GetRecordingInfoResponse
+	metadata, err := c.recordingManager.GetRecordingInfo(ctx, filename)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build API-ready response - placeholder pending proper conversion implementation
+	duration := float64(0)
+	if metadata.Duration != nil {
+		duration = float64(*metadata.Duration)
+	}
+	response := &GetRecordingInfoResponse{
+		Device:      "camera0", // TODO: Extract from metadata
+		Filename:    filename,
+		FileSize:    metadata.FileSize,
+		Duration:    duration,
+		CreatedAt:   metadata.CreatedAt.Format(time.RFC3339),
+		Format:      "fmp4",      // TODO: Extract from metadata
+		Resolution:  "1920x1080", // TODO: Extract from metadata
+		FrameRate:   30,          // TODO: Extract from metadata
+		Bitrate:     1000,        // TODO: Extract from metadata
+		DownloadURL: fmt.Sprintf("/files/recordings/%s", filename),
+	}
+	return response, nil
 }
 
 // GetSnapshotInfo gets detailed information about a specific snapshot file
-func (c *controller) GetSnapshotInfo(ctx context.Context, filename string) (*FileMetadata, error) {
+func (c *controller) GetSnapshotInfo(ctx context.Context, filename string) (*GetSnapshotInfoResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
 	c.logger.WithField("filename", filename).Debug("Getting snapshot info")
 
-	return c.snapshotManager.GetSnapshotInfo(ctx, filename)
+	// TODO-IMPL: Convert FileMetadata to GetSnapshotInfoResponse
+	metadata, err := c.snapshotManager.GetSnapshotInfo(ctx, filename)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build API-ready response - placeholder pending proper conversion implementation
+	response := &GetSnapshotInfoResponse{
+		Device:      "camera0", // TODO: Extract from metadata
+		Filename:    filename,
+		FileSize:    metadata.FileSize,
+		CreatedAt:   metadata.CreatedAt.Format(time.RFC3339),
+		Format:      "jpg",       // TODO: Extract from metadata
+		Resolution:  "1920x1080", // TODO: Extract from metadata
+		Quality:     85,          // TODO: Extract from metadata
+		DownloadURL: fmt.Sprintf("/files/snapshots/%s", filename),
+	}
+	return response, nil
 }
 
 // DeleteRecording deletes a recording file
@@ -1358,151 +1177,62 @@ func (c *controller) GetRTSPConnectionMetrics(ctx context.Context) map[string]in
 	return c.rtspManager.GetConnectionMetrics(ctx)
 }
 
-// StartStreaming starts a live streaming session for the specified device
-func (c *controller) StartStreaming(ctx context.Context, device string) (*Path, error) {
+// StartStreaming starts a live streaming session
+func (c *controller) StartStreaming(ctx context.Context, cameraID string) (*GetStreamURLResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	c.logger.WithFields(logging.Fields{
-		"device": device,
-		"action": "start_streaming",
-	}).Info("Starting streaming session")
-
-	// Convert camera identifier to device path using PathManager
-	devicePath, exists := c.pathManager.GetDevicePathForCamera(device)
-	if !exists {
-		// For external streams, use the device identifier directly
-		devicePath = device
-	}
-
-	// Use StreamManager to start stream (single path for all operations)
-	stream, err := c.streamManager.StartStream(ctx, devicePath)
-	if err != nil {
-		c.logger.WithFields(logging.Fields{
-			"device": device,
-			"error":  err.Error(),
-		}).Error("Failed to start streaming")
-		return nil, fmt.Errorf("failed to start streaming: %w", err)
-	}
-
-	// For on-demand streams, readiness is determined when the stream is accessed
-	// Skip readiness check to avoid hanging tests - on-demand streams are ready when accessed
-	ready := true
-	c.logger.WithFields(logging.Fields{
-		"device":      device,
-		"stream_name": stream.Name,
-	}).Debug("On-demand stream created, will be ready when accessed")
-
-	// Return stream with abstract camera identifier for API consistency
-	abstractStream := &Path{
-		Name:          device, // Return abstract camera identifier, not internal stream name
-		ConfName:      stream.ConfName,
-		Source:        stream.Source,
-		Ready:         ready,
-		ReadyTime:     stream.ReadyTime,
-		Tracks:        stream.Tracks,
-		BytesReceived: stream.BytesReceived,
-		BytesSent:     stream.BytesSent,
-		Readers:       stream.Readers,
-	}
-
-	c.logger.WithFields(logging.Fields{
-		"device":      device,
-		"stream_name": stream.Name,
-		"ready":       ready,
-	}).Info("Streaming session started successfully")
-
-	return abstractStream, nil
+	// Pure delegation to StreamManager - returns API-ready response
+	return c.streamManager.StartStream(ctx, cameraID)
 }
 
 // StopStreaming stops the streaming session for the specified device
-func (c *controller) StopStreaming(ctx context.Context, device string) error {
+func (c *controller) StopStreaming(ctx context.Context, cameraID string) error {
 	if !c.checkRunningState() {
 		return fmt.Errorf("controller is not running")
 	}
 
 	c.logger.WithFields(logging.Fields{
-		"device": device,
-		"action": "stop_streaming",
+		"cameraID": cameraID,
+		"action":   "stop_streaming",
 	}).Info("Stopping streaming session")
 
 	// Use StreamManager to stop viewing stream
-	err := c.streamManager.StopStream(ctx, device)
+	err := c.streamManager.StopStream(ctx, cameraID)
 	if err != nil {
 		c.logger.WithFields(logging.Fields{
-			"device": device,
-			"error":  err.Error(),
+			"cameraID": cameraID,
+			"error":    err.Error(),
 		}).Error("Failed to stop streaming")
 		return fmt.Errorf("failed to stop streaming: %w", err)
 	}
 
 	c.logger.WithFields(logging.Fields{
-		"device": device,
+		"cameraID": cameraID,
 	}).Info("Streaming session stopped successfully")
 
 	return nil
 }
 
 // GetStreamURL returns the stream URL for the specified device
-func (c *controller) GetStreamURL(ctx context.Context, device string) (string, error) {
-	if !c.checkRunningState() {
-		return "", fmt.Errorf("controller is not running")
-	}
-
-	// Generate stream name and URL using unified path naming
-	streamName := c.streamManager.GenerateStreamName(device, UseCaseRecording)
-	streamURL := c.streamManager.GenerateStreamURL(streamName)
-
-	c.logger.WithFields(logging.Fields{
-		"device":      device,
-		"stream_name": streamName,
-		"stream_url":  streamURL,
-	}).Debug("Generated stream URL")
-
-	return streamURL, nil
-}
-
-// GetStreamStatus returns the status of the streaming session for the specified device
-func (c *controller) GetStreamStatus(ctx context.Context, device string) (*Path, error) {
+func (c *controller) GetStreamURL(ctx context.Context, device string) (*GetStreamURLResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	// Generate stream name using single path approach
-	streamName := c.streamManager.GenerateStreamName(device, UseCaseRecording)
+	// Pure delegation to StreamManager - consolidates URL generation and status checking
+	return c.streamManager.GetStreamURL(ctx, device)
+}
 
-	// Try to get the stream from MediaMTX
-	stream, err := c.streamManager.GetStream(ctx, streamName)
-	if err != nil {
-		c.logger.WithFields(logging.Fields{
-			"device":      device,
-			"stream_name": streamName,
-			"error":       err.Error(),
-		}).Debug("Stream not found or not active")
-		return nil, fmt.Errorf("stream not found or not active: %w", err)
+// GetStreamStatus returns the status of the streaming session for the specified device
+func (c *controller) GetStreamStatus(ctx context.Context, device string) (*GetStreamStatusResponse, error) {
+	if !c.checkRunningState() {
+		return nil, fmt.Errorf("controller is not running")
 	}
 
-	// Return stream with abstract camera identifier for API consistency
-	abstractStream := &Path{
-		Name:          device, // Return abstract camera identifier, not internal stream name
-		ConfName:      stream.ConfName,
-		Source:        stream.Source,
-		Ready:         stream.Ready,
-		ReadyTime:     stream.ReadyTime,
-		Tracks:        stream.Tracks,
-		BytesReceived: stream.BytesReceived,
-		BytesSent:     stream.BytesSent,
-		Readers:       stream.Readers,
-	}
-
-	c.logger.WithFields(logging.Fields{
-		"device":      device,
-		"stream_name": stream.Name,
-		"ready":       stream.Ready,
-	}).Debug("Retrieved stream status")
-
-	return abstractStream, nil
+	// Pure delegation to StreamManager - already returns complete GetStreamStatusResponse
+	return c.streamManager.GetStreamStatus(ctx, device)
 }
 
 // GetCameraList returns a list of all discovered cameras with their current status
@@ -1553,6 +1283,49 @@ func (c *controller) GetCameraStatus(ctx context.Context, device string) (*Camer
 	return response, nil
 }
 
+// GetCameraCapabilities returns detailed capabilities for a specific camera device
+func (c *controller) GetCameraCapabilities(ctx context.Context, device string) (*GetCameraCapabilitiesResponse, error) {
+	if !c.checkRunningState() {
+		return nil, fmt.Errorf("controller not running")
+	}
+
+	// Validate device parameter
+	if device == "" {
+		return nil, fmt.Errorf("device parameter is required")
+	}
+
+	// Delegate to PathManager (consolidates camera operations and abstraction layer)
+	response, err := c.pathManager.GetCameraCapabilities(ctx, device)
+	if err != nil {
+		c.logger.WithFields(logging.Fields{"device": device}).WithError(err).Error("Failed to get camera capabilities from path manager")
+		return nil, fmt.Errorf("camera device capabilities not available: %s", device)
+	}
+
+	c.logger.WithFields(logging.Fields{
+		"device":            device,
+		"formats_count":     len(response.SupportedFormats),
+		"fps_options_count": len(response.FpsOptions),
+	}).Info("Retrieved camera capabilities through PathManager")
+
+	return response, nil
+}
+
+// GetCameraForDevicePath converts device path to camera identifier (for event abstraction)
+func (c *controller) GetCameraForDevicePath(devicePath string) (string, bool) {
+	if !c.checkRunningState() {
+		return "", false
+	}
+	return c.pathManager.GetCameraForDevicePath(devicePath)
+}
+
+// GetDevicePathForCamera converts camera identifier to device path (for event abstraction)
+func (c *controller) GetDevicePathForCamera(cameraID string) (string, bool) {
+	if !c.checkRunningState() {
+		return "", false
+	}
+	return c.pathManager.GetDevicePathForCamera(cameraID)
+}
+
 // ValidateCameraDevice validates that a camera device exists and is accessible
 func (c *controller) ValidateCameraDevice(ctx context.Context, device string) (bool, error) {
 	if !c.checkRunningState() {
@@ -1579,7 +1352,7 @@ func (c *controller) ValidateCameraDevice(ctx context.Context, device string) (b
 	return exists, nil
 }
 
-// GetHealthMonitor returns the health monitor instance for threshold-crossing notifications
+// GetHealthMonitor returns the health monitor instance for threshold notifications
 func (c *controller) GetHealthMonitor() HealthMonitor {
 	return c.healthMonitor
 }
@@ -1610,7 +1383,7 @@ func (c *controller) calculateDiskUsage() float64 {
 		usage, err = disk.Usage(".")
 		if err != nil {
 			c.logger.WithError(err).Warn("Failed to get disk usage, falling back to placeholder")
-			return 0.0 // Return 0 instead of hardcoded value
+			return 0.0 // TODO: Implement proper CPU usage calculation when stats unavailable
 		}
 	}
 
@@ -1621,6 +1394,57 @@ func (c *controller) calculateDiskUsage() float64 {
 
 	percentUsed := float64(usage.Used) / float64(usage.Total) * 100.0
 	return percentUsed
+}
+
+// OnCameraDisconnected handles camera disconnection events
+// This is called by the camera monitor when a USB camera is unplugged
+func (c *controller) OnCameraDisconnected(devicePath string) {
+	// Convert device path to camera identifier using existing utilities
+	cameraID, exists := c.pathManager.GetCameraForDevicePath(devicePath)
+	if !exists {
+		return // Not a managed camera, ignore
+	}
+
+	// Check if this camera was recording using existing RecordingManager state
+	if c.recordingManager.IsRecording(cameraID) {
+		c.logger.WithFields(logging.Fields{
+			"cameraID":    cameraID,
+			"device_path": devicePath,
+		}).Warn("Camera disconnected during recording - notifying failure")
+
+		// Emit recording failure event for immediate UX feedback
+		if c.eventNotifier != nil {
+			c.eventNotifier.NotifyRecordingFailed(cameraID, "device_disconnected")
+		}
+
+		// Clean up recording state (stop timer, cleanup)
+		c.recordingManager.forceStopRecording(cameraID)
+	} // Close the if c.recordingManager.IsRecording(cameraID) block
+
+	// Update all statuses due to camera disconnection
+	// 1. Camera list status → disconnected (handled by camera monitor)
+	// 2. Recording status → inactive (handled above)
+	// 3. Stream status → inactive (TODO: implement stream cleanup)
+	// 4. WebSocket clients → real-time notification (handled by NotifyRecordingFailed)
+
+	// TODO-IMPL: Add stream cleanup when camera disconnects
+	// TODO-IMPL: Add general camera status notification (not just recording failure)
+}
+
+// HandleCameraEvent implements camera.CameraEventHandler interface
+// This is called by the camera monitor for all camera events
+func (c *controller) HandleCameraEvent(ctx context.Context, eventData camera.CameraEventData) error {
+	switch eventData.EventType {
+	case camera.CameraEventDisconnected:
+		c.OnCameraDisconnected(eventData.DevicePath)
+	case camera.CameraEventConnected:
+		// TODO-IMPL: Handle camera connected events
+		c.logger.WithField("device_path", eventData.DevicePath).Info("Camera connected")
+	case camera.CameraEventStatusChanged:
+		// TODO-IMPL: Handle camera status change events
+		c.logger.WithField("device_path", eventData.DevicePath).Info("Camera status changed")
+	}
+	return nil
 }
 
 // File management methods are implemented and wired to RecordingManager and SnapshotManager

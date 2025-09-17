@@ -1,15 +1,31 @@
-/*
-MediaMTX Integration Types
-
-Requirements Coverage:
-- REQ-MTX-001: MediaMTX service integration
-- REQ-MTX-002: Stream management capabilities
-- REQ-MTX-003: Path creation and deletion
-- REQ-MTX-004: Health monitoring
-
-Test Categories: Unit/Integration
-API Documentation Reference: docs/api/json_rpc_methods.md
-*/
+// Package mediamtx defines types and interfaces for MediaMTX integration.
+//
+// This package contains all type definitions, interfaces, and data structures
+// used throughout the MediaMTX controller and its components. It serves as the
+// central type registry for the MediaMTX integration layer.
+//
+// Architecture Compliance:
+//   - Interface-Based Design: All major components defined as interfaces
+//   - Dependency Inversion: High-level interfaces for low-level implementations
+//   - Event-Driven Architecture: Event notification interfaces for real-time updates
+//   - API Abstraction: DeviceToCameraIDMapper for camera0 ↔ /dev/video0 mapping
+//   - Optional Components: Interfaces support nil implementations
+//
+// Key Interface Categories:
+//   - MediaMTX Integration: Client, PathManager, StreamManager interfaces
+//   - Event Notification: MediaMTXEventNotifier, SystemEventNotifier for real-time updates
+//   - Business Logic: RecordingManager, SnapshotManager for high-level operations
+//   - Health Monitoring: HealthMonitor interface with circuit breaker support
+//   - Configuration: ConfigIntegration for centralized configuration access
+//
+// Requirements Coverage:
+//   - REQ-MTX-001: MediaMTX service integration via client interfaces
+//   - REQ-MTX-002: Stream management through manager interfaces
+//   - REQ-MTX-003: Path creation and deletion via PathManager interface
+//   - REQ-MTX-004: Health monitoring via HealthMonitor interface
+//
+// Test Categories: Unit/Integration
+// API Documentation Reference: docs/api/json_rpc_methods.md
 
 package mediamtx
 
@@ -17,26 +33,26 @@ import (
 	"context"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 )
 
-// EventNotifier interfaces for MediaMTX Controller event publishing
-// These interfaces allow MediaMTX Controller to publish events without direct WebSocket dependencies
-
-// DeviceToCameraIDMapper interface for converting device paths to camera IDs
-// This ensures event payloads use proper abstraction (camera0 vs /dev/video0)
+// DeviceToCameraIDMapper provides API abstraction layer mapping between
+// internal device paths (/dev/videoN) and external camera identifiers (camera0).
+// This interface ensures consistent abstraction across the system.
 type DeviceToCameraIDMapper interface {
-	GetCameraForDevicePath(devicePath string) (string, bool)
-	GetDevicePathForCamera(cameraID string) (string, bool)
+	GetCameraForDevicePath(devicePath string) (string, bool) // Maps /dev/video0 → camera0
+	GetDevicePathForCamera(cameraID string) (string, bool)   // Maps camera0 → /dev/video0
 }
 
-// MediaMTXEventNotifier interface for MediaMTX-specific events
+// MediaMTXEventNotifier defines the interface for real-time event notifications
+// to WebSocket clients. This allows the controller to publish events without
+// direct dependencies on the WebSocket layer, following dependency inversion.
 type MediaMTXEventNotifier interface {
-	NotifyRecordingStarted(device, filename string)
-	NotifyRecordingStopped(device, filename string, duration time.Duration)
-	NotifyStreamStarted(device, streamID, streamType string)
-	NotifyStreamStopped(device, streamID, streamType string)
+	NotifyRecordingStarted(device, filename string)                         // Recording start events
+	NotifyRecordingStopped(device, filename string, duration time.Duration) // Recording completion events
+	NotifyRecordingFailed(device, reason string)                            // Recording failure events (device disconnect, etc.)
+	NotifyStreamStarted(device, streamID, streamType string)                // Stream activation events
+	NotifyStreamStopped(device, streamID, streamType string)                // Stream deactivation events
 }
 
 // FFmpegConfig represents FFmpeg-specific configuration settings
@@ -213,14 +229,6 @@ type FileMetadata struct {
 	DownloadURL string    `json:"download_url"`
 }
 
-// ActiveRecording represents an active recording (Phase 2 enhancement)
-type ActiveRecording struct {
-	DevicePath string    `json:"device_path"`
-	StartTime  time.Time `json:"start_time"`
-	StreamName string    `json:"stream_name"`
-	Status     string    `json:"status"`
-}
-
 // CameraListResponse represents the response for camera list operations
 // APICameraInfo represents camera information in API-ready format
 type APICameraInfo struct {
@@ -233,23 +241,8 @@ type APICameraInfo struct {
 	Capabilities map[string]interface{} `json:"capabilities"` // Camera capabilities
 }
 
-type CameraListResponse struct {
-	Cameras   []*APICameraInfo `json:"cameras"`
-	Total     int              `json:"total"`
-	Connected int              `json:"connected"`
-}
-
-// CameraStatusResponse represents the response for camera status operations
-type CameraStatusResponse struct {
-	Device       string                    `json:"device"`
-	Status       string                    `json:"status"`
-	Name         string                    `json:"name"`
-	Resolution   string                    `json:"resolution"`
-	FPS          int                       `json:"fps"`
-	Streams      map[string]string         `json:"streams"`
-	Metrics      *CameraPerformanceMetrics `json:"metrics,omitempty"`
-	Capabilities *camera.V4L2Capabilities  `json:"capabilities,omitempty"`
-}
+// NOTE: CameraListResponse and CameraStatusResponse moved to rpc_types.go
+// This eliminates duplication and ensures JSON-RPC API compliance
 
 // CameraPerformanceMetrics represents camera performance metrics
 type CameraPerformanceMetrics struct {
@@ -293,15 +286,20 @@ func (s *StorageInfo) IsLowSpaceWarning() bool {
 type MediaMTXController interface {
 	// Camera discovery operations
 	GetCameraList(ctx context.Context) (*CameraListResponse, error)
-	GetCameraStatus(ctx context.Context, device string) (*CameraStatusResponse, error)
+	GetCameraStatus(ctx context.Context, device string) (*GetCameraStatusResponse, error)
+	GetCameraCapabilities(ctx context.Context, device string) (*GetCameraCapabilitiesResponse, error)
 	ValidateCameraDevice(ctx context.Context, device string) (bool, error)
 
+	// Device-to-camera mapping (for event abstraction layer)
+	GetCameraForDevicePath(devicePath string) (string, bool)
+	GetDevicePathForCamera(cameraID string) (string, bool)
+
 	// Health and status
-	GetHealth(ctx context.Context) (*HealthStatus, error)
-	GetMetrics(ctx context.Context) (*Metrics, error)
-	GetSystemMetrics(ctx context.Context) (*SystemMetrics, error)
-	GetStorageInfo(ctx context.Context) (*StorageInfo, error)
-	GetServerInfo(ctx context.Context) (*ServerInfo, error)
+	GetHealth(ctx context.Context) (*GetHealthResponse, error)
+	GetMetrics(ctx context.Context) (*GetMetricsResponse, error)
+	GetSystemMetrics(ctx context.Context) (*GetSystemMetricsResponse, error)
+	GetStorageInfo(ctx context.Context) (*GetStorageInfoResponse, error)
+	GetServerInfo(ctx context.Context) (*GetServerInfoResponse, error)
 	GetHealthMonitor() HealthMonitor
 
 	// System readiness
@@ -310,11 +308,11 @@ type MediaMTXController interface {
 	SubscribeToReadiness() <-chan struct{}
 
 	// Configuration management
-	CleanupOldFiles(ctx context.Context) (map[string]interface{}, error)
-	SetRetentionPolicy(ctx context.Context, enabled bool, policyType string, params map[string]interface{}) (map[string]interface{}, error)
+	CleanupOldFiles(ctx context.Context) (*CleanupOldFilesResponse, error)
+	SetRetentionPolicy(ctx context.Context, enabled bool, policyType string, params map[string]interface{}) (*SetRetentionPolicyResponse, error)
 
 	// Stream management (uses Path from api_types.go)
-	GetStreams(ctx context.Context) ([]*Path, error)
+	GetStreams(ctx context.Context) (*GetStreamsResponse, error)
 	GetStream(ctx context.Context, id string) (*Path, error)
 	CreateStream(ctx context.Context, name, source string) (*Path, error)
 	DeleteStream(ctx context.Context, id string) error
@@ -325,27 +323,27 @@ type MediaMTXController interface {
 	CreatePath(ctx context.Context, path *Path) error
 	DeletePath(ctx context.Context, name string) error
 
-	// External stream discovery
-	DiscoverExternalStreams(ctx context.Context, options DiscoveryOptions) (*DiscoveryResult, error)
-	AddExternalStream(ctx context.Context, stream *ExternalStream) error
-	RemoveExternalStream(ctx context.Context, streamURL string) error
-	GetExternalStreams(ctx context.Context) ([]*ExternalStream, error)
+	// External stream discovery (API-ready responses)
+	DiscoverExternalStreams(ctx context.Context, options DiscoveryOptions) (*DiscoverExternalStreamsResponse, error)
+	AddExternalStream(ctx context.Context, stream *ExternalStream) (*AddExternalStreamResponse, error)
+	RemoveExternalStream(ctx context.Context, streamURL string) (*RemoveExternalStreamResponse, error)
+	GetExternalStreams(ctx context.Context) (*GetExternalStreamsResponse, error)
 
 	// Recording operations (device-based, no session IDs)
-	StartRecording(ctx context.Context, device string, options map[string]interface{}) error
-	StopRecording(ctx context.Context, device string) error
+	StartRecording(ctx context.Context, device string, options *PathConf) (*StartRecordingResponse, error)
+	StopRecording(ctx context.Context, device string) (*StopRecordingResponse, error)
 
 	// Streaming operations
-	StartStreaming(ctx context.Context, device string) (*Path, error)
+	StartStreaming(ctx context.Context, device string) (*GetStreamURLResponse, error)
 	StopStreaming(ctx context.Context, device string) error
-	GetStreamURL(ctx context.Context, device string) (string, error)
-	GetStreamStatus(ctx context.Context, device string) (*Path, error)
+	GetStreamURL(ctx context.Context, device string) (*GetStreamURLResponse, error)
+	GetStreamStatus(ctx context.Context, device string) (*GetStreamStatusResponse, error)
 
 	// File listing operations
-	ListRecordings(ctx context.Context, limit, offset int) (*FileListResponse, error)
-	ListSnapshots(ctx context.Context, limit, offset int) (*FileListResponse, error)
-	GetRecordingInfo(ctx context.Context, filename string) (*FileMetadata, error)
-	GetSnapshotInfo(ctx context.Context, filename string) (*FileMetadata, error)
+	ListRecordings(ctx context.Context, limit, offset int) (*ListRecordingsResponse, error)
+	ListSnapshots(ctx context.Context, limit, offset int) (*ListSnapshotsResponse, error)
+	GetRecordingInfo(ctx context.Context, filename string) (*GetRecordingInfoResponse, error)
+	GetSnapshotInfo(ctx context.Context, filename string) (*GetSnapshotInfoResponse, error)
 	DeleteRecording(ctx context.Context, filename string) error
 	DeleteSnapshot(ctx context.Context, filename string) error
 
@@ -359,7 +357,7 @@ type MediaMTXController interface {
 	GetRTSPConnectionMetrics(ctx context.Context) map[string]interface{}
 
 	// Advanced snapshot operations
-	TakeAdvancedSnapshot(ctx context.Context, device string, options map[string]interface{}) (*Snapshot, error)
+	TakeAdvancedSnapshot(ctx context.Context, device string, options map[string]interface{}) (*TakeSnapshotResponse, error)
 	GetAdvancedSnapshot(snapshotID string) (*Snapshot, bool)
 	ListAdvancedSnapshots() []*Snapshot
 	DeleteAdvancedSnapshot(ctx context.Context, snapshotID string) error
@@ -386,32 +384,33 @@ type MediaMTXController interface {
 type MediaMTXControllerAPI interface {
 	// Camera queries
 	GetCameraList(ctx context.Context) (*CameraListResponse, error)
-	GetCameraStatus(ctx context.Context, device string) (*CameraStatusResponse, error)
+	GetCameraStatus(ctx context.Context, device string) (*GetCameraStatusResponse, error)
+	GetCameraCapabilities(ctx context.Context, device string) (*GetCameraCapabilitiesResponse, error)
 	ValidateCameraDevice(ctx context.Context, device string) (bool, error)
 
 	// Health and metrics
-	GetHealth(ctx context.Context) (*HealthStatus, error)
-	GetMetrics(ctx context.Context) (*Metrics, error)
-	GetSystemMetrics(ctx context.Context) (*SystemMetrics, error)
-	GetStorageInfo(ctx context.Context) (*StorageInfo, error)
-	GetServerInfo(ctx context.Context) (*ServerInfo, error)
+	GetHealth(ctx context.Context) (*GetHealthResponse, error)
+	GetMetrics(ctx context.Context) (*GetMetricsResponse, error)
+	GetSystemMetrics(ctx context.Context) (*GetSystemMetricsResponse, error)
+	GetStorageInfo(ctx context.Context) (*GetStorageInfoResponse, error)
+	GetServerInfo(ctx context.Context) (*GetServerInfoResponse, error)
 	GetHealthMonitor() HealthMonitor
 
 	// Streaming (uses Path from api_types.go)
-	GetStreams(ctx context.Context) ([]*Path, error)
-	StartStreaming(ctx context.Context, device string) (*Path, error)
+	GetStreams(ctx context.Context) (*GetStreamsResponse, error)
+	StartStreaming(ctx context.Context, device string) (*GetStreamURLResponse, error)
 	StopStreaming(ctx context.Context, device string) error
-	GetStreamURL(ctx context.Context, device string) (string, error)
-	GetStreamStatus(ctx context.Context, device string) (*Path, error)
+	GetStreamURL(ctx context.Context, device string) (*GetStreamURLResponse, error)
+	GetStreamStatus(ctx context.Context, device string) (*GetStreamStatusResponse, error)
 
 	// Recording and snapshots (device-based, no session IDs)
-	StartRecording(ctx context.Context, device string, options map[string]interface{}) error
-	StopRecording(ctx context.Context, device string) error
-	TakeAdvancedSnapshot(ctx context.Context, device string, options map[string]interface{}) (*Snapshot, error)
-	GetRecordingInfo(ctx context.Context, filename string) (*FileMetadata, error)
-	GetSnapshotInfo(ctx context.Context, filename string) (*FileMetadata, error)
-	ListRecordings(ctx context.Context, limit, offset int) (*FileListResponse, error)
-	ListSnapshots(ctx context.Context, limit, offset int) (*FileListResponse, error)
+	StartRecording(ctx context.Context, device string, options *PathConf) (*StartRecordingResponse, error)
+	StopRecording(ctx context.Context, device string) (*StopRecordingResponse, error)
+	TakeAdvancedSnapshot(ctx context.Context, device string, options map[string]interface{}) (*TakeSnapshotResponse, error) // TODO: Change to *PathConf after implementing proper snapshot options
+	GetRecordingInfo(ctx context.Context, filename string) (*GetRecordingInfoResponse, error)
+	GetSnapshotInfo(ctx context.Context, filename string) (*GetSnapshotInfoResponse, error)
+	ListRecordings(ctx context.Context, limit, offset int) (*ListRecordingsResponse, error)
+	ListSnapshots(ctx context.Context, limit, offset int) (*ListSnapshotsResponse, error)
 	DeleteRecording(ctx context.Context, filename string) error
 	DeleteSnapshot(ctx context.Context, filename string) error
 
@@ -420,14 +419,14 @@ type MediaMTXControllerAPI interface {
 	GetSnapshotManager() *SnapshotManager
 
 	// File cleanup and retention policy operations
-	CleanupOldFiles(ctx context.Context) (map[string]interface{}, error)
-	SetRetentionPolicy(ctx context.Context, enabled bool, policyType string, params map[string]interface{}) (map[string]interface{}, error)
+	CleanupOldFiles(ctx context.Context) (*CleanupOldFilesResponse, error)
+	SetRetentionPolicy(ctx context.Context, enabled bool, policyType string, params map[string]interface{}) (*SetRetentionPolicyResponse, error)
 
-	// External stream discovery
-	DiscoverExternalStreams(ctx context.Context, options DiscoveryOptions) (*DiscoveryResult, error)
-	AddExternalStream(ctx context.Context, stream *ExternalStream) error
-	RemoveExternalStream(ctx context.Context, streamURL string) error
-	GetExternalStreams(ctx context.Context) ([]*ExternalStream, error)
+	// External stream discovery (API-ready responses)
+	DiscoverExternalStreams(ctx context.Context, options DiscoveryOptions) (*DiscoverExternalStreamsResponse, error)
+	AddExternalStream(ctx context.Context, stream *ExternalStream) (*AddExternalStreamResponse, error)
+	RemoveExternalStream(ctx context.Context, streamURL string) (*RemoveExternalStreamResponse, error)
+	GetExternalStreams(ctx context.Context) (*GetExternalStreamsResponse, error)
 }
 
 // Compile-time assertion: controller implements the restricted API
@@ -478,8 +477,8 @@ type HealthMonitor interface {
 // PathManager interface defines path management operations
 type PathManager interface {
 	// Path operations
-	CreatePath(ctx context.Context, name, source string, options map[string]interface{}) error
-	PatchPath(ctx context.Context, name string, config map[string]interface{}) error
+	CreatePath(ctx context.Context, name, source string, options *PathConf) error
+	PatchPath(ctx context.Context, name string, config *PathConf) error
 	DeletePath(ctx context.Context, name string) error
 	GetPath(ctx context.Context, name string) (*Path, error)
 	ListPaths(ctx context.Context) ([]*PathConf, error)
@@ -494,7 +493,8 @@ type PathManager interface {
 
 	// Camera operations (PathManager handles camera-path integration)
 	GetCameraList(ctx context.Context) (*CameraListResponse, error)
-	GetCameraStatus(ctx context.Context, device string) (*CameraStatusResponse, error)
+	GetCameraStatus(ctx context.Context, device string) (*GetCameraStatusResponse, error)
+	GetCameraCapabilities(ctx context.Context, device string) (*GetCameraCapabilitiesResponse, error)
 	ValidateCameraDevice(ctx context.Context, device string) (bool, error)
 
 	// Camera-path mapping (abstraction layer)
@@ -508,32 +508,31 @@ type PathManager interface {
 
 // StreamManager interface defines stream management operations
 type StreamManager interface {
-	// Stream operations (simplified - single path for all operations)
-	StartStream(ctx context.Context, devicePath string) (*Path, error)
+	// Stream operations (cameraID-first - no conversion ping-pong)
+	StartStream(ctx context.Context, cameraID string) (*GetStreamURLResponse, error)
 
-	// Stream lifecycle management
-	StopStream(ctx context.Context, device string) error
+	// Stream lifecycle management (cameraID-first)
+	StopStream(ctx context.Context, cameraID string) error
 
-	// Stream utilities
-	GenerateStreamURL(streamName string) string
-	GenerateStreamName(devicePath string, useCase StreamUseCase) string
+	// Stream status and listing (API-ready responses)
+	GetStreamStatus(ctx context.Context, cameraID string) (*GetStreamStatusResponse, error)
+	ListStreams(ctx context.Context) (*GetStreamsResponse, error)
 
-	// Recording control (simplified - operates on stable paths)
-	EnableRecording(ctx context.Context, devicePath string) error
-	DisableRecording(ctx context.Context, devicePath string) error
+	// Stream utilities (internal use)
+	GenerateStreamURL(cameraID string) string
+	GenerateStreamName(cameraID string, useCase StreamUseCase) string
 
-	// Stream readiness management
-	WaitForStreamReadiness(ctx context.Context, streamName string, timeout time.Duration) (bool, error)
+	// TODO-IMPL: Add GetStreamURL method to consolidate URL generation and status checking from Controller
+	GetStreamURL(ctx context.Context, cameraID string) (*GetStreamURLResponse, error)
 
-	// Generic stream operations
+	// Generic stream operations (internal MediaMTX operations)
 	CreateStream(ctx context.Context, name, source string) (*Path, error)
 	DeleteStream(ctx context.Context, id string) error
 	GetStream(ctx context.Context, id string) (*Path, error)
-	ListStreams(ctx context.Context) ([]*Path, error)
 
-	// Stream monitoring
+	// Stream monitoring (internal)
 	MonitorStream(ctx context.Context, id string) error
-	GetStreamStatus(ctx context.Context, id string) (string, error)
+	WaitForStreamReadiness(ctx context.Context, streamName string, timeout time.Duration) (bool, error)
 }
 
 // StreamUseCase represents different stream use cases

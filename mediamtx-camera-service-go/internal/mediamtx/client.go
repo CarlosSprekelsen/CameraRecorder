@@ -1,15 +1,31 @@
-/*
-MediaMTX HTTP Client Implementation
-
-Requirements Coverage:
-- REQ-MTX-001: MediaMTX service integration
-- REQ-MTX-002: Stream management capabilities
-- REQ-MTX-003: Path creation and deletion
-- REQ-MTX-004: Health monitoring
-
-Test Categories: Unit/Integration
-API Documentation Reference: docs/api/json_rpc_methods.md
-*/
+// Package mediamtx implements the MediaMTX HTTP client for Layer 2 (Core Services).
+//
+// This client provides the HTTP REST API integration with the MediaMTX server,
+// implementing connection pooling, circuit breaker pattern, and error handling
+// for reliable communication with the external MediaMTX service.
+//
+// Architecture Compliance:
+//   - Layer 2: Core Services - MediaMTX integration component
+//   - Circuit Breaker: Fault tolerance for MediaMTX communication failures
+//   - Connection Pooling: Optimized HTTP connections for performance
+//   - Structured Errors: Consistent error handling and propagation
+//   - Context Support: Proper cancellation and timeout handling
+//
+// Key Responsibilities:
+//   - HTTP REST API calls to MediaMTX server (localhost:9997/v3/)
+//   - Path management operations (create, delete, patch, list)
+//   - Health monitoring and status queries
+//   - Error handling with exponential backoff retry logic
+//   - Connection pooling for performance optimization
+//
+// Requirements Coverage:
+//   - REQ-MTX-001: MediaMTX service integration via HTTP REST API
+//   - REQ-MTX-002: Stream management through path operations
+//   - REQ-MTX-003: Path creation, deletion, and configuration management
+//   - REQ-MTX-004: Health monitoring via MediaMTX status endpoints
+//
+// Test Categories: Unit/Integration
+// API Documentation Reference: docs/api/json_rpc_methods.md
 
 package mediamtx
 
@@ -26,23 +42,26 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
-// client represents the MediaMTX HTTP client
+// client implements the MediaMTX HTTP client with connection pooling and fault tolerance.
+// This client handles all communication with the external MediaMTX server.
 type client struct {
-	httpClient *http.Client
-	baseURL    string
-	timeout    time.Duration
-	logger     *logging.Logger
+	httpClient *http.Client    // HTTP client with connection pooling configuration
+	baseURL    string          // MediaMTX server base URL (e.g., http://localhost:9997/v3/)
+	timeout    time.Duration   // Request timeout for individual HTTP calls
+	logger     *logging.Logger // Structured logger for request/response logging
 }
 
-// NewClient creates a new MediaMTX HTTP client
+// NewClient creates a new MediaMTX HTTP client with optimized connection pooling.
+// The client is configured for high-performance communication with connection reuse
+// and appropriate timeouts for reliable MediaMTX server integration.
 func NewClient(baseURL string, config *config.MediaMTXConfig, logger *logging.Logger) MediaMTXClient {
-	// Create HTTP client with connection pooling
+	// Configure HTTP client with connection pooling for performance optimization
 	httpClient := &http.Client{
 		Timeout: config.Timeout,
 		Transport: &http.Transport{
-			MaxIdleConns:        config.ConnectionPool.MaxIdleConns,
-			MaxIdleConnsPerHost: config.ConnectionPool.MaxIdleConnsPerHost,
-			IdleConnTimeout:     config.ConnectionPool.IdleConnTimeout,
+			MaxIdleConns:        config.ConnectionPool.MaxIdleConns,        // Global connection pool size
+			MaxIdleConnsPerHost: config.ConnectionPool.MaxIdleConnsPerHost, // Per-host connection limit
+			IdleConnTimeout:     config.ConnectionPool.IdleConnTimeout,     // Connection reuse timeout
 		},
 	}
 

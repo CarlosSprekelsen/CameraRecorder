@@ -39,7 +39,7 @@ func NewEventIntegration(eventManager *EventManager, logger *logging.Logger) *Ev
 // CameraEventNotifier implements the camera.EventNotifier interface
 type CameraEventNotifier struct {
 	eventManager *EventManager
-	mapper       DeviceToCameraIDMapper // For proper abstraction layer
+	mapper       DeviceToCameraIDMapper // For device path to camera ID conversion
 	logger       *logging.Logger
 }
 
@@ -66,11 +66,11 @@ func (n *CameraEventNotifier) NotifyCameraConnected(device *camera.CameraDevice)
 		return
 	}
 
-	// Convert device path to camera ID for proper abstraction
+	// Convert device path to camera ID using proper abstraction layer
 	cameraID, exists := n.mapper.GetCameraForDevicePath(device.Path)
 	if !exists {
-		n.logger.WithField("device_path", device.Path).Warning("Could not map device path to camera ID")
-		cameraID = device.Path // Fallback to device path if mapping fails
+		n.logger.WithField("device_path", device.Path).Warning("Could not map device path to camera ID - skipping event")
+		return // Skip unmapped devices to prevent runtime errors
 	}
 
 	// Event payload matching JSON-RPC API specification
@@ -97,11 +97,11 @@ func (n *CameraEventNotifier) NotifyCameraConnected(device *camera.CameraDevice)
 
 // NotifyCameraDisconnected notifies when a camera is disconnected
 func (n *CameraEventNotifier) NotifyCameraDisconnected(devicePath string) {
-	// Convert device path to camera ID for proper abstraction
+	// Convert device path to camera ID using proper abstraction layer
 	cameraID, exists := n.mapper.GetCameraForDevicePath(devicePath)
 	if !exists {
-		n.logger.WithField("device_path", devicePath).Warning("Could not map device path to camera ID")
-		cameraID = devicePath // Fallback to device path if mapping fails
+		n.logger.WithField("device_path", devicePath).Warning("Could not map device path to camera ID - skipping event")
+		return // Skip unmapped devices to prevent runtime errors
 	}
 
 	// Event payload matching JSON-RPC API specification
@@ -130,11 +130,11 @@ func (n *CameraEventNotifier) NotifyCameraStatusChange(device *camera.CameraDevi
 		return
 	}
 
-	// Convert device path to camera ID for proper abstraction
+	// Convert device path to camera ID using proper abstraction layer
 	cameraID, exists := n.mapper.GetCameraForDevicePath(device.Path)
 	if !exists {
-		n.logger.WithField("device_path", device.Path).Warning("Could not map device path to camera ID")
-		cameraID = device.Path // Fallback to device path if mapping fails
+		n.logger.WithField("device_path", device.Path).Warning("Could not map device path to camera ID - skipping event")
+		return // Skip unmapped devices to prevent runtime errors
 	}
 
 	// Event payload matching JSON-RPC API specification: device (camera identifier) primary
@@ -167,11 +167,11 @@ func (n *CameraEventNotifier) NotifyCapabilityDetected(device *camera.CameraDevi
 		return
 	}
 
-	// Convert device path to camera ID for proper abstraction
+	// Convert device path to camera ID using proper abstraction layer
 	cameraID, exists := n.mapper.GetCameraForDevicePath(device.Path)
 	if !exists {
-		n.logger.WithField("device_path", device.Path).Warning("Could not map device path to camera ID")
-		cameraID = device.Path // Fallback to device path if mapping fails
+		n.logger.WithField("device_path", device.Path).Warning("Could not map device path to camera ID - skipping event")
+		return // Skip unmapped devices to prevent runtime errors
 	}
 
 	eventData := logging.Fields{
@@ -199,11 +199,9 @@ func (n *CameraEventNotifier) NotifyCapabilityDetected(device *camera.CameraDevi
 // NotifyCapabilityError notifies when camera capability detection fails
 func (n *CameraEventNotifier) NotifyCapabilityError(devicePath string, errorMsg string) {
 	// Convert device path to camera ID for proper abstraction
-	cameraID, exists := n.mapper.GetCameraForDevicePath(devicePath)
-	if !exists {
-		n.logger.WithField("device_path", devicePath).Warning("Could not map device path to camera ID")
-		cameraID = devicePath // Fallback to device path if mapping fails
-	}
+	// Use device path as camera identifier (devicePath = cameraID for our system)
+	// Controller handles proper device path to camera ID mapping internally
+	cameraID := devicePath
 
 	eventData := logging.Fields{
 		"device":      cameraID,
@@ -240,51 +238,66 @@ func NewMediaMTXEventNotifier(eventManager *EventManager, mapper DeviceToCameraI
 }
 
 // NotifyRecordingStarted notifies when MediaMTX recording starts
-func (n *MediaMTXEventNotifier) NotifyRecordingStarted(device, sessionID, filename string) {
-	// The 'device' parameter should already be camera_id from MediaMTX Controller
-	// But ensure we maintain proper abstraction in payload
+func (n *MediaMTXEventNotifier) NotifyRecordingStarted(device, filename string) {
+	// The 'device' parameter contains camera_id from MediaMTX Controller
+	// Stateless architecture - no session_id needed
 
 	// Event payload with proper abstraction: camera_id primary
 	eventData := logging.Fields{
-		"device":     device, // API spec: "device" field with camera identifier
-		"session_id": sessionID,
-		"filename":   filename,
-		"timestamp":  time.Now().Format(time.RFC3339),
+		"device":    device, // API spec: "device" field with camera identifier
+		"filename":  filename,
+		"timestamp": time.Now().Format(time.RFC3339),
 	}
 
 	if err := n.eventManager.PublishEvent(TopicMediaMTXRecordingStarted, eventData); err != nil {
 		n.logger.WithError(err).WithField("device", device).Error("Failed to publish recording started event")
 	} else {
 		n.logger.WithFields(logging.Fields{
-			"device":     device,
-			"session_id": sessionID,
-			"filename":   filename,
-			"topic":      TopicMediaMTXRecordingStarted,
+			"device":   device,
+			"filename": filename,
+			"topic":    TopicMediaMTXRecordingStarted,
 		}).Debug("Published recording started event")
 	}
 }
 
 // NotifyRecordingStopped notifies when MediaMTX recording stops
-func (n *MediaMTXEventNotifier) NotifyRecordingStopped(device, sessionID, filename string, duration time.Duration) {
-	// Event payload with proper abstraction: camera_id primary
+func (n *MediaMTXEventNotifier) NotifyRecordingStopped(device, filename string, duration time.Duration) {
+	// Event payload with proper abstraction: camera_id primary (stateless - no session_id)
 	eventData := logging.Fields{
-		"device":     device, // API spec: "device" field with camera identifier
-		"session_id": sessionID,
-		"filename":   filename,
-		"duration":   duration.Seconds(),
-		"timestamp":  time.Now().Format(time.RFC3339),
+		"device":    device, // API spec: "device" field with camera identifier
+		"filename":  filename,
+		"duration":  duration.Seconds(),
+		"timestamp": time.Now().Format(time.RFC3339),
 	}
 
 	if err := n.eventManager.PublishEvent(TopicMediaMTXRecordingStopped, eventData); err != nil {
 		n.logger.WithError(err).WithField("device", device).Error("Failed to publish recording stopped event")
 	} else {
 		n.logger.WithFields(logging.Fields{
-			"device":     device,
-			"session_id": sessionID,
-			"filename":   filename,
-			"duration":   duration,
-			"topic":      TopicMediaMTXRecordingStopped,
+			"device":   device,
+			"filename": filename,
+			"duration": duration,
+			"topic":    TopicMediaMTXRecordingStopped,
 		}).Debug("Published recording stopped event")
+	}
+}
+
+// NotifyRecordingFailed notifies when recording fails (e.g., device disconnection)
+func (n *MediaMTXEventNotifier) NotifyRecordingFailed(device, reason string) {
+	// Event payload for recording failure
+	eventData := logging.Fields{
+		"device":    device, // Camera identifier (e.g., "camera0")
+		"reason":    reason, // Failure reason (e.g., "device_disconnected")
+		"timestamp": time.Now().Format(time.RFC3339),
+	}
+
+	if err := n.eventManager.PublishEvent(TopicMediaMTXRecordingFailed, eventData); err != nil {
+		n.logger.WithError(err).WithField("device", device).Error("Failed to publish recording failed event")
+	} else {
+		n.logger.WithFields(logging.Fields{
+			"device": device,
+			"reason": reason,
+		}).Info("Published recording failed event")
 	}
 }
 

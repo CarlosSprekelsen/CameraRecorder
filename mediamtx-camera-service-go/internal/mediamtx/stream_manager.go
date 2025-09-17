@@ -26,7 +26,22 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
-// streamManager represents the MediaMTX stream manager
+// streamManager manages MediaMTX stream lifecycle and FFmpeg process coordination.
+//
+// RESPONSIBILITIES:
+// - Stream creation and lifecycle management via MediaMTX API
+// - FFmpeg command generation and process coordination
+// - Stream status monitoring and health checks
+// - API-ready response formatting for stream operations
+//
+// ARCHITECTURE:
+// - Operates with cameraID as primary identifier
+// - Converts to devicePath only when generating FFmpeg commands
+// - Uses MediaMTX api_types.go for all operations
+//
+// API INTEGRATION:
+// - Returns JSON-RPC API-ready responses
+// - Handles both V4L2 devices and external RTSP streams
 type streamManager struct {
 	client            MediaMTXClient
 	pathManager       PathManager
@@ -58,7 +73,7 @@ func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *co
 		panic("Logger cannot be nil")
 	}
 
-	// SIMPLIFIED: Single use case configuration for all operations
+	// TODO: Implement specialized configurations for different use cases
 	// All operations use the same stable path with consistent settings
 	useCaseConfigs := map[StreamUseCase]UseCaseConfig{
 		UseCaseRecording: {
@@ -82,8 +97,8 @@ func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *co
 	}
 }
 
-// StartStream starts a stream for a device (simplified - single path for all operations)
-func (sm *streamManager) StartStream(ctx context.Context, devicePath string) (*Path, error) {
+// StartStream starts a stream for a camera using cameraID-first architecture
+func (sm *streamManager) StartStream(ctx context.Context, cameraID string) (*GetStreamURLResponse, error) {
 	// Validate dependencies are initialized
 	if sm.pathManager == nil {
 		return nil, fmt.Errorf("PathManager not initialized")
@@ -92,35 +107,60 @@ func (sm *streamManager) StartStream(ctx context.Context, devicePath string) (*P
 		return nil, fmt.Errorf("MediaMTXClient not initialized")
 	}
 
-	return sm.startStreamForUseCase(ctx, devicePath, UseCaseRecording)
+	sm.logger.WithField("cameraID", cameraID).Info("Starting stream with cameraID-first approach")
+
+	// Pure delegation to startStreamForUseCase - no conversion ping-pong!
+	path, err := sm.startStreamForUseCase(ctx, cameraID, UseCaseRecording)
+	if err != nil {
+		return nil, err
+	}
+
+	// Build API-ready response
+	response := &GetStreamURLResponse{
+		Device:    cameraID,
+		StreamURL: sm.GenerateStreamURL(cameraID),
+		Status:    "active",
+		Format:    "rtsp",
+		Ready:     path.Ready,
+	}
+
+	return response, nil
 }
 
 // startStreamForUseCase starts a stream for the specified use case
-func (sm *streamManager) startStreamForUseCase(ctx context.Context, devicePath string, useCase StreamUseCase) (*Path, error) {
+func (sm *streamManager) startStreamForUseCase(ctx context.Context, cameraID string, useCase StreamUseCase) (*Path, error) {
+	// Get devicePath only when needed for FFmpeg command generation
+	devicePath, exists := sm.pathManager.GetDevicePathForCamera(cameraID)
+	if !exists {
+		// For external streams, cameraID is the source
+		devicePath = cameraID
+	}
+
 	// Validate device path
 	if err := sm.validateDevicePath(devicePath); err != nil {
 		return nil, fmt.Errorf("failed to validate device path %s: %w", devicePath, err)
 	}
 
-	// Generate stream name using simplified approach - same name for all use cases
-	streamName := GetMediaMTXPathName(devicePath)
+	// Use cameraID directly as MediaMTX path name
+	streamName := cameraID
 	sm.logger.WithFields(logging.Fields{
+		"cameraID":    cameraID,
 		"device_path": devicePath,
 		"use_case":    useCase,
 		"stream_name": streamName,
-	}).Info("Generated stream name for use case")
+	}).Info("Starting stream with cameraID as path name")
 
-	// Build FFmpeg command for device-to-stream conversion
+	// Build FFmpeg command using devicePath (only place where devicePath is needed)
 	ffmpegCommand := sm.buildFFmpegCommand(devicePath, streamName)
 
-	// SIMPLIFIED: Create path configuration with stable settings
+	// TODO: Create path configuration with use-case specific settings
 	// All use cases use the same configuration - stable path for streaming AND recording
-	pathConfig := map[string]interface{}{
-		"runOnDemand":             ffmpegCommand,
-		"runOnDemandRestart":      true,                              // Always restart FFmpeg if it crashes
-		"runOnDemandStartTimeout": sm.config.RunOnDemandStartTimeout, // Use configured timeout
-		"runOnDemandCloseAfter":   sm.config.RunOnDemandCloseAfter,   // Use configured timeout
-		"runOnUnDemand":           "",
+	pathConfig := &PathConf{
+		RunOnDemand:             ffmpegCommand,
+		RunOnDemandRestart:      true,                              // Always restart FFmpeg if it crashes
+		RunOnDemandStartTimeout: sm.config.RunOnDemandStartTimeout, // Use configured timeout
+		RunOnDemandCloseAfter:   sm.config.RunOnDemandCloseAfter,   // Use configured timeout
+		RunOnUnDemand:           "",
 	}
 
 	// Use PathManager for proper architectural integration and validation
@@ -139,7 +179,7 @@ func (sm *streamManager) startStreamForUseCase(ctx context.Context, devicePath s
 			"path_config": pathConfig,
 		}).Error("CreatePath failed - investigating error")
 
-		// Check if this is a "path already exists" error (idempotent success)
+		// Check if this is a "path exists" error (idempotent success)
 		errorMsg := err.Error()
 		sm.logger.WithField("error_message", errorMsg).Error("CreatePath error message")
 
@@ -209,12 +249,12 @@ func (sm *streamManager) validateDevicePath(devicePath string) error {
 	return nil
 }
 
-// GenerateStreamName generates stream name for the given device
+// GenerateStreamName generates stream name using cameraID-first approach
 // SIMPLIFIED: All use cases return the same stable path name (camera0, camera1, etc.)
 // This aligns with MediaMTX architecture where one path handles streaming AND recording
-func (sm *streamManager) GenerateStreamName(devicePath string, useCase StreamUseCase) string {
-	// Always return the same simple path name regardless of use case
-	return GetMediaMTXPathName(devicePath)
+func (sm *streamManager) GenerateStreamName(cameraID string, useCase StreamUseCase) string {
+	// Use cameraID directly as stream name (no conversion ping-pong!)
+	return cameraID
 }
 
 // buildFFmpegCommand builds FFmpeg command for camera stream with caching
@@ -264,18 +304,18 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 			source, sm.config.Host, sm.config.RTSPPort, name)
 
 		// Create path configuration for USB device
-		pathConfig := map[string]interface{}{
-			"runOnDemand":             ffmpegCommand,
-			"runOnDemandRestart":      true,
-			"runOnDemandStartTimeout": sm.config.RunOnDemandStartTimeout,
-			"runOnDemandCloseAfter":   sm.config.RunOnDemandCloseAfter,
-			"runOnUnDemand":           "",
+		pathConfig := &PathConf{
+			RunOnDemand:             ffmpegCommand,
+			RunOnDemandRestart:      true,
+			RunOnDemandStartTimeout: sm.config.RunOnDemandStartTimeout,
+			RunOnDemandCloseAfter:   sm.config.RunOnDemandCloseAfter,
+			RunOnUnDemand:           "",
 		}
 
 		// Use PathManager for proper architectural integration and validation
 		err := sm.pathManager.CreatePath(ctx, name, source, pathConfig)
 		if err != nil {
-			// Check if this is a "path already exists" error (idempotent success)
+			// Check if this is a "path exists" error (idempotent success)
 			errorMsg := err.Error()
 			isAlreadyExists := strings.Contains(errorMsg, "path already exists") ||
 				strings.Contains(errorMsg, "already exists")
@@ -315,8 +355,8 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 	} else {
 		// For non-USB sources (RTSP URLs, etc.), use direct source
 		// Create path configuration for direct source
-		pathConfig := map[string]interface{}{
-			"source": source,
+		pathConfig := &PathConf{
+			Source: source,
 		}
 
 		// Special handling for "publisher" source - PathManager will convert this
@@ -324,13 +364,13 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 		if source == "publisher" {
 			// PathManager will handle the conversion to runOnDemand
 			// Just pass the source and let PathManager do the conversion
-			pathConfig = map[string]interface{}{}
+			pathConfig = &PathConf{}
 		}
 
 		// Use PathManager for proper architectural integration
 		err := sm.pathManager.CreatePath(ctx, name, source, pathConfig)
 		if err != nil {
-			// Check if this is a "path already exists" error (idempotent success)
+			// Check if this is a "path exists" error (idempotent success)
 			errorMsg := err.Error()
 			isAlreadyExists := strings.Contains(errorMsg, "path already exists") ||
 				strings.Contains(errorMsg, "already exists")
@@ -407,31 +447,64 @@ func (sm *streamManager) GetStream(ctx context.Context, id string) (*Path, error
 }
 
 // ListStreams lists all streams
-func (sm *streamManager) ListStreams(ctx context.Context) ([]*Path, error) {
-	sm.logger.Debug("Listing MediaMTX streams")
+func (sm *streamManager) ListStreams(ctx context.Context) (*GetStreamsResponse, error) {
+	sm.logger.Debug("Listing MediaMTX streams with cameraID-first approach")
 
-	// Use PathManager for proper architectural integration
-	pathConfigs, err := sm.pathManager.ListPaths(ctx)
+	// Get runtime paths for actual stream status
+	runtimePaths, err := sm.pathManager.GetRuntimePaths(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list streams: %w", err)
 	}
 
-	// Convert PathConf to Path for runtime response
-	paths := make([]*Path, len(pathConfigs))
-	for i, config := range pathConfigs {
-		paths[i] = &Path{
-			Name:      config.Name,
-			ConfName:  config.Name,
-			Source:    nil,   // Source is populated by MediaMTX runtime
-			Ready:     false, // Will be updated by runtime status
-			ReadyTime: nil,
-			Tracks:    []string{},
-			Readers:   []PathReader{},
+	// Convert to API-ready StreamInfo format
+	streamInfos := make([]StreamInfo, len(runtimePaths))
+	activeCount := 0
+	inactiveCount := 0
+
+	for i, path := range runtimePaths {
+		status := "inactive"
+		if path.Ready {
+			status = "active"
+			activeCount++
+		} else {
+			inactiveCount++
+		}
+
+		startTime := ""
+		lastActivity := ""
+		if path.ReadyTime != nil {
+			startTime = *path.ReadyTime
+			lastActivity = startTime
+		}
+
+		// Convert PathSource to string
+		sourceStr := ""
+		if path.Source != nil {
+			sourceStr = path.Source.Type
+		}
+
+		streamInfos[i] = StreamInfo{
+			Name:         path.Name, // This is already cameraID (camera0, camera1)
+			Status:       status,
+			Source:       sourceStr,
+			Viewers:      len(path.Readers),
+			StartTime:    startTime,
+			LastActivity: lastActivity,
+			BytesSent:    path.BytesSent,
 		}
 	}
 
-	sm.logger.WithField("count", fmt.Sprintf("%d", len(paths))).Debug("MediaMTX streams listed successfully")
-	return paths, nil
+	// Build API-ready response
+	response := &GetStreamsResponse{
+		Streams:   streamInfos,
+		Total:     len(runtimePaths),
+		Active:    activeCount,
+		Inactive:  inactiveCount,
+		Timestamp: time.Now().Format(time.RFC3339),
+	}
+
+	sm.logger.WithField("count", fmt.Sprintf("%d", len(runtimePaths))).Debug("MediaMTX streams listed successfully")
+	return response, nil
 }
 
 // MonitorStream monitors a stream
@@ -453,19 +526,38 @@ func (sm *streamManager) MonitorStream(ctx context.Context, id string) error {
 }
 
 // GetStreamStatus gets the status of a stream
-func (sm *streamManager) GetStreamStatus(ctx context.Context, id string) (string, error) {
-	sm.logger.WithField("stream_id", id).Debug("Getting MediaMTX stream status")
+func (sm *streamManager) GetStreamStatus(ctx context.Context, cameraID string) (*GetStreamStatusResponse, error) {
+	sm.logger.WithField("cameraID", cameraID).Debug("Getting stream status with cameraID-first approach")
 
-	stream, err := sm.GetStream(ctx, id)
+	// Use cameraID directly as MediaMTX path name
+	stream, err := sm.GetStream(ctx, cameraID)
 	if err != nil {
-		return "", fmt.Errorf(id, "get_stream_status", "failed to get stream", err)
+		return nil, fmt.Errorf("failed to get stream status for %s: %w", cameraID, err)
 	}
 
-	// Convert MediaMTX ready status to our status format
+	// Build API-ready response
+	status := "inactive"
 	if stream.Ready {
-		return "READY", nil
+		status = "active"
 	}
-	return "NOT_READY", nil
+
+	response := &GetStreamStatusResponse{
+		Device:        cameraID,
+		Status:        status,
+		StreamURL:     sm.GenerateStreamURL(cameraID),
+		Viewers:       len(stream.Readers),
+		BytesSent:     stream.BytesSent,
+		BytesReceived: stream.BytesReceived,
+		StartTime:     "", // TODO: Add proper start time tracking
+		LastActivity:  "", // TODO: Add proper activity tracking
+	}
+
+	if stream.ReadyTime != nil {
+		response.StartTime = *stream.ReadyTime
+		response.LastActivity = *stream.ReadyTime
+	}
+
+	return response, nil
 }
 
 // CheckStreamReadiness checks if a stream is ready for operations (enhanced existing stream manager)
@@ -528,20 +620,20 @@ func (sm *streamManager) WaitForStreamReadiness(ctx context.Context, streamName 
 }
 
 // StopStream stops the stream for a device (simplified - single path)
-func (sm *streamManager) StopStream(ctx context.Context, device string) error {
+func (sm *streamManager) StopStream(ctx context.Context, cameraID string) error {
 	sm.logger.WithFields(logging.Fields{
-		"device": device,
-		"action": "stop_stream",
-	}).Info("Stopping stream for device")
+		"cameraID": cameraID,
+		"action":   "stop_stream",
+	}).Info("Stopping stream using cameraID-first approach")
 
-	// Get the stable path name
-	streamName := GetMediaMTXPathName(device)
+	// Use cameraID directly as MediaMTX path name (no conversion!)
+	streamName := cameraID
 
 	// Delete the stream from MediaMTX
 	err := sm.DeleteStream(ctx, streamName)
 	if err != nil {
 		sm.logger.WithFields(logging.Fields{
-			"device":      device,
+			"cameraID":    cameraID,
 			"stream_name": streamName,
 			"error":       err.Error(),
 		}).Error("Failed to stop stream")
@@ -549,7 +641,7 @@ func (sm *streamManager) StopStream(ctx context.Context, device string) error {
 	}
 
 	sm.logger.WithFields(logging.Fields{
-		"device":      device,
+		"cameraID":    cameraID,
 		"stream_name": streamName,
 	}).Info("Stream stopped successfully")
 
@@ -561,32 +653,60 @@ func (sm *streamManager) GenerateStreamURL(streamName string) string {
 	return fmt.Sprintf("rtsp://%s:%d/%s", sm.config.Host, sm.config.RTSPPort, streamName)
 }
 
-// EnableRecording enables recording on the stable path for a device
-// This is the simplified approach - one path handles both streaming and recording
-func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string) error {
-	// Get the stable path name
-	pathName := GetMediaMTXPathName(devicePath)
+// GetStreamURL returns stream URL with status checking - consolidates Controller business logic
+func (sm *streamManager) GetStreamURL(ctx context.Context, cameraID string) (*GetStreamURLResponse, error) {
+	sm.logger.WithField("cameraID", cameraID).Debug("Getting stream URL with status")
+
+	// Generate stream URL using cameraID directly
+	streamURL := sm.GenerateStreamURL(cameraID)
+
+	// Get actual stream status from MediaMTX
+	streamStatus, err := sm.GetStreamStatus(ctx, cameraID)
+	if err != nil {
+		// Stream doesn't exist or error - return available URL anyway
+		return &GetStreamURLResponse{
+			Device:    cameraID,
+			StreamURL: streamURL,
+			Status:    "available",
+			Format:    "rtsp",
+			Ready:     false,
+		}, nil
+	}
+
+	// Use actual status from StreamManager
+	response := &GetStreamURLResponse{
+		Device:    cameraID,
+		StreamURL: streamURL,
+		Status:    streamStatus.Status,
+		Format:    "rtsp",
+		Ready:     streamStatus.Status == "active",
+	}
+
+	return response, nil
+}
+
+// EnableRecording enables recording on the stable path for a camera
+func (sm *streamManager) EnableRecording(ctx context.Context, cameraID string) error {
 
 	// Serialize create→ready→patch operations per path using per-path mutex
-	pathMutex := sm.pathManager.(*pathManager).getPathMutex(pathName)
+	pathMutex := sm.pathManager.(*pathManager).getPathMutex(cameraID)
 	pathMutex.Lock()
 	defer pathMutex.Unlock()
 
 	// Ensure the path exists (idempotent)
-	stream, err := sm.startStreamForUseCase(ctx, devicePath, UseCaseRecording)
+	stream, err := sm.startStreamForUseCase(ctx, cameraID, UseCaseRecording)
 	if err != nil {
 		return fmt.Errorf("failed to ensure path exists: %w", err)
 	}
 
 	sm.logger.WithFields(logging.Fields{
-		"device_path": devicePath,
-		"path_name":   pathName,
+		"cameraID":    cameraID,
 		"stream_name": stream.Name,
 	}).Info("Path ensured, starting keepalive reader for recording")
 
 	// START KEEPALIVE READER - This is the KEY CHANGE
 	// This creates an RTSP connection that triggers runOnDemand
-	err = sm.keepaliveReader.StartKeepalive(ctx, pathName)
+	err = sm.keepaliveReader.StartKeepalive(ctx, cameraID)
 	if err != nil {
 		return fmt.Errorf("failed to start keepalive reader: %w", err)
 	}
@@ -600,7 +720,7 @@ func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string)
 		return fmt.Errorf("context cancelled while waiting for FFmpeg publisher to start")
 	}
 
-	sm.logger.WithField("path_name", pathName).Info("Keepalive reader active, enabling recording")
+	sm.logger.WithField("cameraID", cameraID).Info("Keepalive reader active, enabling recording")
 
 	// Generate recording path from configuration
 	recordPath := GenerateRecordingPath(sm.config, sm.recordingConfig)
@@ -609,23 +729,23 @@ func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string)
 	outputDir := sm.config.RecordingsPath
 	if err := os.MkdirAll(outputDir, 0755); err != nil {
 		// Stop keepalive on error
-		sm.keepaliveReader.StopKeepalive(pathName)
+		sm.keepaliveReader.StopKeepalive(cameraID)
 		return fmt.Errorf("failed to create recording directory: %w", err)
 	}
 
 	// Create recording configuration
-	recordingConfig := sm.createRecordingConfig(pathName, recordPath)
+	recordingConfig := sm.createRecordingConfig(cameraID, recordPath)
 
-	// PATCH the path to enable recording
-	err = sm.pathManager.PatchPath(ctx, pathName, recordingConfig)
+	// PATCH the path to enable recording using PathConf directly
+	err = sm.pathManager.PatchPath(ctx, cameraID, recordingConfig)
 	if err != nil {
 		// Stop keepalive on error
-		sm.keepaliveReader.StopKeepalive(pathName)
+		sm.keepaliveReader.StopKeepalive(cameraID)
 		return fmt.Errorf("failed to enable recording: %w", err)
 	}
 
 	sm.logger.WithFields(logging.Fields{
-		"path_name":     pathName,
+		"cameraID":      cameraID,
 		"record_path":   recordPath,
 		"has_keepalive": true,
 	}).Info("Recording enabled successfully with keepalive reader")
@@ -633,25 +753,23 @@ func (sm *streamManager) EnableRecording(ctx context.Context, devicePath string)
 	return nil
 }
 
-// DisableRecording disables recording on the stable path
-// This keeps the path alive for streaming while stopping file recording
-func (sm *streamManager) DisableRecording(ctx context.Context, devicePath string) error {
-	pathName := GetMediaMTXPathName(devicePath)
+// DisableRecording disables recording on the stable path for a camera
+func (sm *streamManager) DisableRecording(ctx context.Context, cameraID string) error {
 
 	// Serialize operations per path using per-path mutex
-	pathMutex := sm.pathManager.(*pathManager).getPathMutex(pathName)
+	pathMutex := sm.pathManager.(*pathManager).getPathMutex(cameraID)
 	pathMutex.Lock()
 	defer pathMutex.Unlock()
 
-	sm.logger.WithField("path_name", pathName).Info("Disabling recording")
+	sm.logger.WithField("cameraID", cameraID).Info("Disabling recording")
 
 	// Create disable configuration
-	disableConfig := map[string]interface{}{
-		"record": false,
+	disableConfig := &PathConf{
+		Record: false,
 	}
 
 	// PATCH the path to disable recording
-	err := sm.pathManager.PatchPath(ctx, pathName, disableConfig)
+	err := sm.pathManager.PatchPath(ctx, cameraID, disableConfig)
 	if err != nil {
 		sm.logger.WithError(err).Error("Failed to disable recording config")
 		// Continue to stop keepalive even if patch fails
@@ -659,13 +777,13 @@ func (sm *streamManager) DisableRecording(ctx context.Context, devicePath string
 
 	// STOP KEEPALIVE READER - This is the KEY CHANGE
 	// This closes the RTSP connection, allowing runOnDemand to stop FFmpeg
-	err = sm.keepaliveReader.StopKeepalive(pathName)
+	err = sm.keepaliveReader.StopKeepalive(cameraID)
 	if err != nil {
 		sm.logger.WithError(err).Warn("Failed to stop keepalive reader")
 	}
 
 	sm.logger.WithFields(logging.Fields{
-		"path_name":         pathName,
+		"cameraID":          cameraID,
 		"keepalive_stopped": true,
 	}).Info("Recording disabled and keepalive reader stopped")
 
@@ -673,23 +791,23 @@ func (sm *streamManager) DisableRecording(ctx context.Context, devicePath string
 }
 
 // createRecordingConfig creates the recording configuration for MediaMTX PATCH
-func (sm *streamManager) createRecordingConfig(pathName, outputPath string) map[string]interface{} {
+func (sm *streamManager) createRecordingConfig(cameraID, outputPath string) *PathConf {
 	// Generate recordPath with timestamp pattern
-	recordPath := sm.getRecordingOutputPath(pathName, outputPath)
+	recordPath := sm.getRecordingOutputPath(cameraID, outputPath)
 
-	// Use centralized configuration instead of hardcoded values
-	config := map[string]interface{}{
-		"record":                true,
-		"recordPath":            recordPath,
-		"recordFormat":          "fmp4", // STANAG 4609 compatible
-		"recordPartDuration":    sm.config.RecordPartDuration,
-		"recordMaxPartSize":     "100MB",
-		"recordSegmentDuration": sm.config.RecordSegmentDuration,
-		"recordDeleteAfter":     sm.config.RecordDeleteAfter,
+	// Use PathConf from api_types.go - single source of truth with MediaMTX swagger.json
+	config := &PathConf{
+		Record:                true,
+		RecordPath:            recordPath,
+		RecordFormat:          "fmp4", // STANAG 4609 compatible
+		RecordPartDuration:    sm.config.RecordPartDuration,
+		RecordMaxPartSize:     "100MB",
+		RecordSegmentDuration: sm.config.RecordSegmentDuration,
+		RecordDeleteAfter:     sm.config.RecordDeleteAfter,
 	}
 
 	sm.logger.WithFields(logging.Fields{
-		"path_name":   pathName,
+		"cameraID":    cameraID,
 		"record_path": recordPath,
 		"config":      config,
 	}).Debug("Created recording configuration for PATCH")
@@ -698,7 +816,7 @@ func (sm *streamManager) createRecordingConfig(pathName, outputPath string) map[
 }
 
 // getRecordingOutputPath generates the recordPath with timestamp pattern
-func (sm *streamManager) getRecordingOutputPath(pathName, outputPath string) string {
+func (sm *streamManager) getRecordingOutputPath(cameraID, outputPath string) string {
 	if outputPath != "" {
 		dir := filepath.Dir(outputPath)
 		// MediaMTX requires %path in recordPath - single % not double %%
@@ -720,7 +838,7 @@ func (sm *streamManager) shouldUseKeepalive(devicePath string) bool {
 	// For external RTSP sources, check if they're configured with sourceOnDemand
 	if strings.HasPrefix(devicePath, "rtsp://") {
 		// Could check path configuration here to determine if keepalive needed
-		// For now, assume external sources don't need keepalive (they're always pulling)
+		// TODO: Implement keepalive for external sources based on source type
 		return false
 	}
 

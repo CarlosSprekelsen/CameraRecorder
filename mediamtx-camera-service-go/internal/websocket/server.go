@@ -1,18 +1,35 @@
-/*
-WebSocket JSON-RPC 2.0 server implementation.
-
-Provides high-performance WebSocket server with JSON-RPC 2.0 protocol support,
-following the Python WebSocketJsonRpcServer patterns and project architecture standards.
-
-Requirements Coverage:
-- REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
-- REQ-API-002: JSON-RPC 2.0 protocol implementation
-- REQ-API-003: Request/response message handling
-- REQ-API-011: API methods respond within specified time limits
-
-Test Categories: Unit/Integration
-API Documentation Reference: docs/api/json_rpc_methods.md
-*/
+// Package websocket implements the Layer 6 (API) WebSocket JSON-RPC 2.0 server.
+//
+// This package provides the protocol layer implementation with NO business logic,
+// following the architectural constraint that all operations are delegated to
+// the MediaMTX controller (single source of truth).
+//
+// Architecture Compliance:
+//   - Protocol Layer Only: No business logic, pure JSON-RPC 2.0 implementation
+//   - Delegation Pattern: All operations forwarded to MediaMTX controller
+//   - High Concurrency: Supports 1000+ simultaneous WebSocket connections
+//   - Security Integration: JWT authentication with role-based access control
+//   - Event System: Real-time client notifications via event manager
+//
+// Key Responsibilities:
+//   - WebSocket connection management and lifecycle
+//   - JSON-RPC 2.0 protocol implementation and message handling
+//   - Authentication enforcement and session management
+//   - Input validation and security protection (rate limiting)
+//   - Real-time event broadcasting to connected clients
+//   - Performance metrics collection and monitoring
+//
+// Thread Safety: All components are designed for concurrent access with
+// appropriate synchronization primitives protecting shared state.
+//
+// Requirements Coverage:
+//   - REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint on port 8002
+//   - REQ-API-002: Complete JSON-RPC 2.0 protocol implementation
+//   - REQ-API-003: Request/response message handling with proper error codes
+//   - REQ-API-011: API methods respond within specified time limits (<100ms)
+//
+// Test Categories: Unit/Integration
+// API Documentation Reference: docs/api/json_rpc_methods.md
 
 package websocket
 
@@ -34,69 +51,72 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-// WebSocketServer implements the WebSocket JSON-RPC 2.0 server
-// Following Python WebSocketJsonRpcServer patterns with Go-specific optimizations
+// WebSocketServer implements the Layer 6 (API) WebSocket JSON-RPC 2.0 server.
+// This server contains NO business logic and delegates all operations to the
+// MediaMTX controller following architectural constraints.
 //
-// Thread Safety: This struct is designed to be thread-safe for concurrent operations.
-// All shared state is protected by appropriate mutexes:
-// - clientsMutex: Protects clients map and clientCounter
-// - metricsMutex: Protects metrics struct
-// - methodsMutex: Protects methods map
-// - eventHandlersMutex: Protects eventHandlers slice
-// - stopOnce: Ensures single close operation on stopChan
+// Performance Targets:
+//   - 1000+ simultaneous WebSocket connections
+//   - <100ms response time for 95% of requests
+//   - <20ms event notification delivery latency
+//
+// Thread Safety: All shared state is protected by appropriate synchronization:
+//   - clientsMutex: Protects clients map and clientCounter
+//   - metricsMutex: Protects performance metrics
+//   - methodsMutex: Protects method registration map
+//   - eventHandlersMutex: Protects event handler slice
+//   - stopOnce: Ensures single close operation on stopChan
 type WebSocketServer struct {
-	// Configuration
-	config *ServerConfig
+	// Configuration and Dependencies
+	config *ServerConfig // Server-specific configuration (ports, timeouts, etc.)
 
-	// Dependencies (proper dependency injection)
-	configManager      *config.ConfigManager
-	logger             *logging.Logger
-	jwtHandler         *security.JWTHandler
-	mediaMTXController mediamtx.MediaMTXControllerAPI
+	// Dependency Injection - All external dependencies injected via constructor
+	configManager      *config.ConfigManager          // Configuration management
+	logger             *logging.Logger                // Structured logging
+	jwtHandler         *security.JWTHandler           // JWT authentication and rate limiting
+	mediaMTXController mediamtx.MediaMTXControllerAPI // Business logic delegation target
 
-	// Security extensions (Phase 1 enhancement)
-	permissionChecker *security.PermissionChecker
+	// Security Framework Components
+	permissionChecker *security.PermissionChecker // Role-based access control
+	validationHelper  *ValidationHelper           // Input validation and sanitization
 
-	// Input validation
-	validationHelper *ValidationHelper
+	// WebSocket Protocol Implementation
+	upgrader websocket.Upgrader // WebSocket connection upgrader with CORS settings
+	server   *http.Server       // HTTP server for WebSocket endpoint
+	running  int32              // Atomic boolean for thread-safe running state (0=false, 1=true)
 
-	// WebSocket server
-	upgrader websocket.Upgrader
-	server   *http.Server
-	running  int32 // Atomic boolean: 0 = false, 1 = true
+	// Connection Management - High concurrency support (1000+ connections)
+	clients       map[string]*ClientConnection // Active client connections indexed by client ID
+	clientsMutex  sync.RWMutex                 // Protects clients map modifications
+	clientCounter int64                        // Atomic counter for unique client ID generation
+	clientCount   int64                        // Atomic counter for fast client count queries
 
-	// Client connection management
-	clients       map[string]*ClientConnection
-	clientsMutex  sync.RWMutex
-	clientCounter int64 // Atomic counter for thread-safe client ID generation
-	clientCount   int64 // Atomic counter for fast client count reads
+	// JSON-RPC Method Registration
+	methods             map[string]MethodHandler // Registered JSON-RPC methods
+	methodsMutex        sync.RWMutex             // Protects method map modifications
+	methodVersions      map[string]string        // Method version tracking
+	methodVersionsMutex sync.RWMutex             // Protects version map modifications
+	builtinMethodsReady int32                    // Atomic flag for builtin method initialization
 
-	// Method registration
-	methods             map[string]MethodHandler
-	methodsMutex        sync.RWMutex
-	methodVersions      map[string]string
-	methodVersionsMutex sync.RWMutex
-	builtinMethodsReady int32 // Atomic flag: 0 = not ready, 1 = ready
+	// Performance Monitoring
+	metrics      *PerformanceMetrics // Request/response performance tracking
+	metricsMutex sync.RWMutex        // Protects metrics updates
 
-	// Performance metrics
-	metrics      *PerformanceMetrics
-	metricsMutex sync.RWMutex
+	// Real-Time Event System
+	eventManager       *EventManager               // Event broadcasting manager
+	eventHandlers      []func(string, interface{}) // Registered event handlers
+	eventHandlersMutex sync.RWMutex                // Protects event handler slice
+	eventHandlerCount  int64                       // Atomic counter for handler count
 
-	// Event handling
-	eventManager       *EventManager
-	eventHandlers      []func(string, interface{})
-	eventHandlersMutex sync.RWMutex
-	eventHandlerCount  int64 // Atomic counter for event handler count
-
-	// Graceful shutdown
-	stopChan chan struct{}
-	stopOnce sync.Once
-	wg       sync.WaitGroup
+	// Graceful Shutdown Coordination
+	stopChan chan struct{}  // Shutdown signal channel
+	stopOnce sync.Once      // Ensures single shutdown execution
+	wg       sync.WaitGroup // Tracks active goroutines for clean shutdown
 }
 
-// Security extension methods (Phase 1 enhancement)
-
-// isSystemReady checks if the MediaMTX controller is ready
+// isSystemReady checks if the MediaMTX controller is ready to handle requests.
+// This implements the progressive readiness pattern where the API becomes available
+// as the underlying business logic components complete initialization.
 func (s *WebSocketServer) isSystemReady() bool {
 	if s.mediaMTXController == nil {
 		return false
@@ -336,7 +356,8 @@ func (s *WebSocketServer) notifySystemEvent(eventType string, data map[string]in
 }
 
 // broadcastEvent broadcasts an event to all connected clients
-// DEPRECATED: Use sendEventToSubscribers for efficient topic-based delivery
+// sendEventToAllClients broadcasts events to all connected clients.
+// For efficient topic-based delivery, use sendEventToSubscribers instead.
 func (s *WebSocketServer) broadcastEvent(eventType string, data interface{}) {
 	s.eventHandlersMutex.RLock()
 	defer s.eventHandlersMutex.RUnlock()
@@ -493,7 +514,7 @@ func NewWebSocketServer(
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
 			CheckOrigin: func(r *http.Request) bool {
-				// Allow all origins for now - can be made configurable
+				// TODO: Make CORS origins configurable for production security
 				return true
 			},
 		},
@@ -536,7 +557,7 @@ func NewWebSocketServer(
 
 // Start starts the WebSocket server
 func (s *WebSocketServer) Start() error {
-	// Check if already running without setting the flag yet
+	// Check current running state without modifying it
 	if atomic.LoadInt32(&s.running) == 1 {
 		s.logger.Warn("WebSocket server is already running")
 		return fmt.Errorf("WebSocket server is already running")

@@ -30,7 +30,22 @@ import (
 	"golang.org/x/sync/singleflight"
 )
 
-// pathManager represents the MediaMTX path manager
+// pathManager manages MediaMTX path lifecycle and device abstraction services.
+//
+// RESPONSIBILITIES:
+// - MediaMTX API integration using api_types.go
+// - Device abstraction layer and mapping services
+// - Camera capability extraction and API formatting
+// - Path lifecycle management for both V4L2 and external streams
+//
+// ABSTRACTION SERVICES:
+// - Provides cameraID to devicePath mapping services
+// - Acts as middleware between Controller and hardware layers
+// - Bridges CameraMonitor and JSON-RPC API requirements
+//
+// API INTEGRATION:
+// - Returns JSON-RPC API-ready responses
+// - Uses MediaMTX api_types.go for all operations
 type pathManager struct {
 	client        MediaMTXClient
 	config        *config.MediaMTXConfig
@@ -113,22 +128,20 @@ func (pm *pathManager) getPathMutex(pathName string) *sync.Mutex {
 }
 
 // CreatePath creates a new path with idempotency protection
-func (pm *pathManager) CreatePath(ctx context.Context, name, source string, options map[string]interface{}) error {
+func (pm *pathManager) CreatePath(ctx context.Context, name, source string, options *PathConf) error {
 	// Track path operation metrics
 	atomic.AddInt64(&pm.metrics.PathOperationsTotal, 1)
 
-	// DEFENSIVE NORMALIZATION: Handle nil options map
-	// Contract: All map[string]interface{} params are optional; nil means "no options"
-	// PathManager never mutates caller maps; always normalize before writes
-	var opts map[string]interface{}
+	// DEFENSIVE NORMALIZATION: Handle nil options PathConf
+	// Contract: *PathConf params are optional; nil means "no options"
+	// PathManager never mutates caller structs; always normalize before writes
+	var opts *PathConf
 	if options == nil {
-		opts = make(map[string]interface{})
+		opts = &PathConf{}
 	} else {
-		// Clone to avoid mutating caller's map
-		opts = make(map[string]interface{})
-		for k, v := range options {
-			opts[k] = v
-		}
+		// Clone to avoid mutating caller's PathConf
+		opts = &PathConf{}
+		*opts = *options // Shallow copy is sufficient for PathConf
 	}
 
 	// IMPORTANT: Avoid "publisher" source which creates runtime-only paths
@@ -145,23 +158,23 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 				"ffmpeg -f v4l2 -i %s -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp rtsp://localhost:8554/%s",
 				devicePath, name,
 			)
-			opts["runOnDemand"] = source
-			opts["runOnDemandRestart"] = true
-			opts["runOnDemandStartTimeout"] = pm.config.RunOnDemandStartTimeout
-			opts["runOnDemandCloseAfter"] = pm.config.RunOnDemandCloseAfter
+			opts.RunOnDemand = source
+			opts.RunOnDemandRestart = true
+			opts.RunOnDemandStartTimeout = pm.config.RunOnDemandStartTimeout
+			opts.RunOnDemandCloseAfter = pm.config.RunOnDemandCloseAfter
 			// Clear source since we're using runOnDemand
 			source = ""
 		} else {
 			// For non-camera paths, use a redirect or leave empty
 			// Empty source with runOnDemand allows dynamic publisher connection
 			source = ""
-			if _, hasRunOnDemand := opts["runOnDemand"]; !hasRunOnDemand {
-				// Set a placeholder runOnDemand command that won't create runtime path
+			if opts.RunOnDemand == "" {
+				// TODO: Set proper runOnDemand command from configuration
 				// This allows the validation to pass while creating a config path
-				opts["runOnDemand"] = "echo 'Publisher source - waiting for connection'"
-				opts["runOnDemandRestart"] = true
-				opts["runOnDemandStartTimeout"] = pm.config.RunOnDemandStartTimeout
-				opts["runOnDemandCloseAfter"] = pm.config.RunOnDemandCloseAfter
+				opts.RunOnDemand = "echo 'Publisher source - waiting for connection'"
+				opts.RunOnDemandRestart = true
+				opts.RunOnDemandStartTimeout = pm.config.RunOnDemandStartTimeout
+				opts.RunOnDemandCloseAfter = pm.config.RunOnDemandCloseAfter
 			}
 		}
 	}
@@ -197,7 +210,7 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 	})
 
 	if err != nil {
-		// Check if this is an "already exists" error
+		// Check if this is a "path exists" error
 		if pm.isAlreadyExistsError(err) {
 			pm.logger.WithField("path_name", name).
 				Info("Path already exists, checking if we can use it")
@@ -210,7 +223,7 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 				}).Info("Using existing path")
 
 				// If we need to update the configuration, patch it
-				if len(options) > 0 {
+				if options != nil {
 					if patchErr := pm.PatchPath(ctx, name, options); patchErr != nil {
 						pm.logger.WithError(patchErr).
 							Warn("Could not patch existing path, continuing anyway")
@@ -238,34 +251,36 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 }
 
 // createPathInternal performs the actual path creation logic
-func (pm *pathManager) createPathInternal(ctx context.Context, name, source string, options map[string]interface{}, devicePath string) error {
+func (pm *pathManager) createPathInternal(ctx context.Context, name, source string, options *PathConf, devicePath string) error {
 	// Create path request using PathConf for configuration
 	path := &PathConf{
 		Name:   name,
 		Source: source,
 	}
 
-	// Apply options to path
-	if sourceOnDemand, ok := options["sourceOnDemand"].(bool); ok {
-		path.SourceOnDemand = sourceOnDemand
-	}
-	if startTimeout, ok := options["sourceOnDemandStartTimeout"].(string); ok {
-		path.SourceOnDemandStartTimeout = startTimeout
-	}
-	if closeAfter, ok := options["sourceOnDemandCloseAfter"].(string); ok {
-		path.SourceOnDemandCloseAfter = closeAfter
-	}
-	if runOnDemand, ok := options["runOnDemand"].(string); ok {
-		path.RunOnDemand = runOnDemand
-	}
-	if runOnDemandRestart, ok := options["runOnDemandRestart"].(bool); ok {
-		path.RunOnDemandRestart = runOnDemandRestart
-	}
-	if runOnDemandCloseAfter, ok := options["runOnDemandCloseAfter"].(string); ok {
-		path.RunOnDemandCloseAfter = runOnDemandCloseAfter
-	}
-	if runOnDemandStartTimeout, ok := options["runOnDemandStartTimeout"].(string); ok {
-		path.RunOnDemandStartTimeout = runOnDemandStartTimeout
+	// Apply options to path from PathConf
+	if options != nil {
+		if options.SourceOnDemand {
+			path.SourceOnDemand = options.SourceOnDemand
+		}
+		if options.SourceOnDemandStartTimeout != "" {
+			path.SourceOnDemandStartTimeout = options.SourceOnDemandStartTimeout
+		}
+		if options.SourceOnDemandCloseAfter != "" {
+			path.SourceOnDemandCloseAfter = options.SourceOnDemandCloseAfter
+		}
+		if options.RunOnDemand != "" {
+			path.RunOnDemand = options.RunOnDemand
+		}
+		if options.RunOnDemandRestart {
+			path.RunOnDemandRestart = options.RunOnDemandRestart
+		}
+		if options.RunOnDemandCloseAfter != "" {
+			path.RunOnDemandCloseAfter = options.RunOnDemandCloseAfter
+		}
+		if options.RunOnDemandStartTimeout != "" {
+			path.RunOnDemandStartTimeout = options.RunOnDemandStartTimeout
+		}
 	}
 
 	// Marshal request - choose correct marshaling function based on path type
@@ -318,7 +333,7 @@ func (pm *pathManager) createPathInternal(ctx context.Context, name, source stri
 			"error_message": errorMsg,
 		}).Error("CreatePath HTTP request failed - investigating idempotency")
 
-		// Check if this is a "path already exists" error (idempotent success)
+		// Check if this is a "path exists" error (idempotent success)
 		// Check both the error message and details for the specific error text
 		isAlreadyExists := strings.Contains(errorMsg, "path already exists") ||
 			strings.Contains(errorMsg, "already exists")
@@ -352,15 +367,15 @@ func (pm *pathManager) createPathInternal(ctx context.Context, name, source stri
 }
 
 // PatchPath patches a path configuration with retry and jitter
-func (pm *pathManager) PatchPath(ctx context.Context, name string, config map[string]interface{}) error {
+func (pm *pathManager) PatchPath(ctx context.Context, name string, config *PathConf) error {
 	// Track patch attempt metrics
 	atomic.AddInt64(&pm.metrics.PatchAttemptsTotal, 1)
 
-	// DEFENSIVE NORMALIZATION: Handle nil config map
-	// Treat nil as empty object {} to prevent "null" PATCH body
-	var patchConfig map[string]interface{}
+	// DEFENSIVE NORMALIZATION: Handle nil config PathConf
+	// Treat nil as empty PathConf {} to prevent "null" PATCH body
+	var patchConfig *PathConf
 	if config == nil {
-		patchConfig = make(map[string]interface{})
+		patchConfig = &PathConf{}
 	} else {
 		patchConfig = config
 	}
@@ -672,10 +687,10 @@ func (pm *pathManager) validatePathName(name string) error {
 }
 
 // validateSource validates source format and content
-func (pm *pathManager) validateSource(source string, options map[string]interface{}) error {
+func (pm *pathManager) validateSource(source string, options *PathConf) error {
 	// Allow empty source if runOnDemand is specified
 	if source == "" {
-		if runOnDemand, exists := options["runOnDemand"]; exists && runOnDemand != "" {
+		if options != nil && options.RunOnDemand != "" {
 			return nil // Empty source is valid when using runOnDemand
 		}
 		return fmt.Errorf("source cannot be empty")
@@ -868,6 +883,97 @@ func (pm *pathManager) GetCameraStatus(ctx context.Context, device string) (*Cam
 	return response, nil
 }
 
+// GetCameraCapabilities returns detailed capabilities for a specific camera
+func (pm *pathManager) GetCameraCapabilities(ctx context.Context, device string) (*GetCameraCapabilitiesResponse, error) {
+	if pm.cameraMonitor == nil {
+		return nil, fmt.Errorf("camera monitor not available in path manager")
+	}
+
+	// Get actual device path using abstraction layer
+	devicePath := pm.getDevicePathFromCameraIdentifier(device)
+
+	// Get camera from camera monitor
+	cameraDevice, exists := pm.cameraMonitor.GetDevice(devicePath)
+	if !exists {
+		return nil, fmt.Errorf("camera device not found: %s", device)
+	}
+
+	// Extract ALL formats from camera module (no more single format extraction)
+	supportedFormats := make([]string, 0, len(cameraDevice.Formats))
+	supportedResolutions := make([]string, 0, len(cameraDevice.Formats))
+	fpsOptionsMap := make(map[int]bool)
+
+	for _, format := range cameraDevice.Formats {
+		// Collect pixel formats
+		if format.PixelFormat != "" {
+			supportedFormats = append(supportedFormats, format.PixelFormat)
+		}
+
+		// Collect resolutions
+		if format.Width > 0 && format.Height > 0 {
+			resolution := fmt.Sprintf("%dx%d", format.Width, format.Height)
+			supportedResolutions = append(supportedResolutions, resolution)
+		}
+
+		// Collect all frame rates
+		for _, fpsStr := range format.FrameRates {
+			if fps, err := strconv.Atoi(strings.TrimSuffix(fpsStr, " fps")); err == nil {
+				fpsOptionsMap[fps] = true
+			}
+		}
+	}
+
+	// Convert FPS map to sorted slice
+	fpsOptions := make([]int, 0, len(fpsOptionsMap))
+	for fps := range fpsOptionsMap {
+		fpsOptions = append(fpsOptions, fps)
+	}
+
+	// Build API-ready response with ALL camera module data
+	response := &GetCameraCapabilitiesResponse{
+		Device:           device,
+		SupportedFormats: supportedFormats,
+		SupportedCodecs:  supportedFormats,                              // V4L2 formats are the codecs
+		MaxResolution:    map[string]int{"width": 0, "height": 0},       // Calculated below
+		MinResolution:    map[string]int{"width": 9999, "height": 9999}, // Calculated below
+		FpsOptions:       fpsOptions,
+		V4L2Capabilities: map[string]interface{}{
+			"driver_name":  cameraDevice.Capabilities.DriverName,
+			"card_name":    cameraDevice.Capabilities.CardName,
+			"bus_info":     cameraDevice.Capabilities.BusInfo,
+			"version":      cameraDevice.Capabilities.Version,
+			"capabilities": cameraDevice.Capabilities.Capabilities,
+			"device_caps":  cameraDevice.Capabilities.DeviceCaps,
+		},
+		HardwareFeatures: cameraDevice.Capabilities.Capabilities,
+	}
+
+	// Calculate actual min/max resolutions from all formats
+	for _, format := range cameraDevice.Formats {
+		if format.Width > response.MaxResolution["width"] {
+			response.MaxResolution["width"] = format.Width
+		}
+		if format.Height > response.MaxResolution["height"] {
+			response.MaxResolution["height"] = format.Height
+		}
+		if format.Width < response.MinResolution["width"] {
+			response.MinResolution["width"] = format.Width
+		}
+		if format.Height < response.MinResolution["height"] {
+			response.MinResolution["height"] = format.Height
+		}
+	}
+
+	pm.logger.WithFields(logging.Fields{
+		"device":            device,
+		"formats_count":     len(supportedFormats),
+		"resolutions_count": len(supportedResolutions),
+		"fps_options_count": len(fpsOptions),
+	}).Debug("PathManager retrieved camera capabilities")
+
+	return response, nil
+}
+
 // ValidateCameraDevice validates that a camera device exists and is accessible
 func (pm *pathManager) ValidateCameraDevice(ctx context.Context, device string) (bool, error) {
 	if pm.cameraMonitor == nil {
@@ -978,7 +1084,7 @@ func (pm *pathManager) getDevicePathFromCameraIdentifier(cameraID string) string
 		number := strings.TrimPrefix(cameraID, "camera")
 		return fmt.Sprintf("/dev/video%s", number)
 	}
-	// If already a device path, return as-is
+	// If input is a device path, return as-is
 	return cameraID
 }
 
@@ -1001,7 +1107,7 @@ func (pm *pathManager) TrackDeviceEvent(eventType string) {
 	}).Debug("Device event tracked")
 }
 
-// isAlreadyExistsError checks if error indicates path already exists
+// isAlreadyExistsError checks if error indicates path exists
 func (pm *pathManager) isAlreadyExistsError(err error) bool {
 	if err == nil {
 		return false

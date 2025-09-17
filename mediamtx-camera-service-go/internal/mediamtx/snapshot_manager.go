@@ -30,7 +30,27 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
-// SnapshotManager manages advanced snapshot operations
+// SnapshotManager manages multi-tier snapshot capture with performance optimization.
+//
+// RESPONSIBILITIES:
+// - Multi-tier snapshot capture with intelligent fallback system
+// - V4L2 direct capture for high-performance USB device snapshots
+// - RTSP stream capture for external devices and fallback scenarios
+// - Camera capability extraction and validation for V4L2 devices
+//
+// TIER ARCHITECTURE:
+// - Tier 0: V4L2 direct capture (fastest, USB devices only)
+// - Tier 1: FFmpeg direct capture (fast, USB devices)
+// - Tier 2: RTSP immediate capture (existing streams)
+// - Tier 3: RTSP activation capture (create stream then capture)
+//
+// API INTEGRATION:
+// - Operates with cameraID as primary identifier
+// - Returns JSON-RPC API-ready responses
+// - Converts to devicePath only for V4L2 operations
+//
+// TODO-IMPL: Update TakeSnapshot to return *TakeSnapshotResponse directly (move response formatting from Controller)
+// TODO-IMPL: Add ListSnapshots method to return *ListSnapshotsResponse (API-ready) - GetSnapshotsList exists but returns wrong type
 type SnapshotManager struct {
 	ffmpegManager FFmpegManager
 	streamManager StreamManager        // Required for Tier 3: external RTSP source path creation
@@ -81,20 +101,19 @@ func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, streamManager Str
 	}
 }
 
-// TakeSnapshot takes a snapshot with multi-tier approach (enhanced existing method)
-// device parameter is camera identifier (e.g., "camera0")
-func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, device string, options map[string]interface{}) (*Snapshot, error) {
+// TakeSnapshot takes a snapshot with multi-tier approach and returns API-ready response
+func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, cameraID string, options map[string]interface{}) (*TakeSnapshotResponse, error) {
 	// Convert camera identifier to device path using PathManager
-	devicePath, exists := sm.pathManager.GetDevicePathForCamera(device)
+	devicePath, exists := sm.pathManager.GetDevicePathForCamera(cameraID)
 	if !exists {
-		return nil, fmt.Errorf("camera '%s' not found or not accessible", device)
+		return nil, fmt.Errorf("camera '%s' not found or not accessible", cameraID)
 	}
 
 	// Generate snapshot path using device path for file naming
 	snapshotPath := GenerateSnapshotPath(sm.config, &sm.configManager.GetConfig().Snapshots, devicePath)
 
 	sm.logger.WithFields(logging.Fields{
-		"device":     device,
+		"cameraID":   cameraID,
 		"devicePath": devicePath,
 		"path":       snapshotPath,
 		"options":    options,
@@ -127,10 +146,10 @@ func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, device string, opti
 	}
 
 	// Generate snapshot ID
-	snapshotID := generateSnapshotID(device)
+	snapshotID := generateSnapshotID(cameraID)
 
 	// Execute multi-tier snapshot capture
-	snapshot, err := sm.takeSnapshotMultiTier(ctx, device, snapshotPath, options, tierConfig)
+	snapshot, err := sm.takeSnapshotMultiTier(ctx, cameraID, devicePath, snapshotPath, options, tierConfig)
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute multi-tier snapshot capture: %w", err)
 	}
@@ -139,131 +158,147 @@ func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, device string, opti
 	sm.snapshots.Store(snapshotID, snapshot)
 
 	// Store the camera identifier in the snapshot for API consistency
-	snapshot.Device = device
+	snapshot.Device = cameraID
+
+	// Extract filename from full path
+	filename := snapshot.FilePath
+	if parts := strings.Split(snapshot.FilePath, "/"); len(parts) > 0 {
+		filename = parts[len(parts)-1]
+	}
+
+	// Build API-ready response with rich metadata from snapshot
+	response := &TakeSnapshotResponse{
+		Device:    cameraID,                              // Use cameraID for API consistency
+		Filename:  filename,                              // Extracted filename
+		Status:    "completed",                           // Successful capture
+		Timestamp: snapshot.Created.Format(time.RFC3339), // ISO 8601 timestamp
+		FileSize:  snapshot.Size,                         // Actual file size
+		FilePath:  snapshot.FilePath,                     // Full file path
+	}
 
 	sm.logger.WithFields(logging.Fields{
-		"snapshot_id": snapshotID,
-		"device":      device,
-		"devicePath":  devicePath,
-		"path":        snapshotPath,
-		"file_size":   snapshot.Size,
-		"format":      sm.snapshotSettings.Format,
-		"quality":     sm.snapshotSettings.Quality,
-		"tier_used":   snapshot.Metadata["tier_used"],
-	}).Info("Multi-tier snapshot taken successfully")
+		"snapshot_id":    snapshotID,
+		"cameraID":       cameraID,
+		"devicePath":     devicePath,
+		"file_size":      snapshot.Size,
+		"tier_used":      snapshot.Metadata["tier_used"],
+		"capture_method": snapshot.Metadata["capture_method"],
+		"format":         sm.snapshotSettings.Format,
+		"quality":        sm.snapshotSettings.Quality,
+	}).Info("Multi-tier snapshot completed with API-ready response")
 
-	return snapshot, nil
+	return response, nil
 }
 
 // takeSnapshotMultiTier implements the 5-tier snapshot capture system
-func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, snapshotPath string, options map[string]interface{}, tierConfig *config.SnapshotTiersConfig) (*Snapshot, error) {
+func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, cameraID, devicePath, snapshotPath string, options map[string]interface{}, tierConfig *config.SnapshotTiersConfig) (*Snapshot, error) {
 	startTime := time.Now()
 	captureMethodsTried := []string{}
 
 	sm.logger.WithFields(logging.Fields{
-		"device": device,
-		"tier":   0,
+		"cameraID": cameraID,
+		"tier":     0,
 	}).Info("Tier 0: Attempting V4L2 direct capture")
 
-	// Tier 0: V4L2 Direct Capture (Fastest Path - NEW)
+	// Tier 0: V4L2 Direct Capture (Fastest Path - used /dev/vide)
 	tier0Ctx, tier0Cancel := context.WithTimeout(ctx, time.Duration(tierConfig.Tier1USBDirectTimeout*float64(time.Second)))
 	defer tier0Cancel()
 
-	if snapshot, err := sm.captureSnapshotV4L2Direct(tier0Ctx, device, snapshotPath, options); err == nil {
+	if snapshot, err := sm.captureSnapshotV4L2Direct(tier0Ctx, devicePath, snapshotPath, options); err == nil {
 		captureTime := time.Since(startTime)
 		result := sm.createSnapshotResult(snapshot, 0, captureTime, captureMethodsTried)
 		sm.logger.WithFields(logging.Fields{
-			"device":       device,
+			"cameraID":     cameraID,
 			"tier":         0,
 			"capture_time": captureTime,
 		}).Info("Tier 0: V4L2 direct capture successful")
 		return result, nil
 	} else {
 		sm.logger.WithFields(logging.Fields{
-			"device": device,
-			"tier":   0,
-			"error":  err.Error(),
+			"cameraID": cameraID,
+			"tier":     0,
+			"error":    err.Error(),
 		}).Warn("Tier 0: V4L2 direct capture failed")
 	}
 	captureMethodsTried = append(captureMethodsTried, "v4l2_direct")
 
 	sm.logger.WithFields(logging.Fields{
-		"device": device,
-		"tier":   1,
+		"cameraID": cameraID,
+		"tier":     1,
 	}).Info("Tier 1: Attempting USB direct capture")
 
 	// Tier 1: USB Direct Capture (Fastest Path)
 	tier1Ctx, tier1Cancel := context.WithTimeout(ctx, time.Duration(tierConfig.Tier1USBDirectTimeout*float64(time.Second)))
 	defer tier1Cancel()
 
-	if snapshot, err := sm.captureSnapshotDirect(tier1Ctx, device, snapshotPath); err == nil {
+	if snapshot, err := sm.captureSnapshotDirect(tier1Ctx, devicePath, snapshotPath); err == nil {
 		captureTime := time.Since(startTime)
 		result := sm.createSnapshotResult(snapshot, 1, captureTime, captureMethodsTried)
 		sm.logger.WithFields(logging.Fields{
-			"device":       device,
+			"cameraID":     cameraID,
 			"tier":         1,
 			"capture_time": captureTime,
 		}).Info("Tier 1: USB direct capture successful")
 		return result, nil
 	} else {
 		sm.logger.WithFields(logging.Fields{
-			"device": device,
-			"tier":   1,
-			"error":  err.Error(),
+			"cameraID": cameraID,
+			"tier":     1,
+			"error":    err.Error(),
 		}).Warn("Tier 1: USB direct capture failed")
 	}
 	captureMethodsTried = append(captureMethodsTried, "usb_direct")
 
 	sm.logger.WithFields(logging.Fields{
-		"device": device,
-		"tier":   2,
+		"cameraID": cameraID,
+		"tier":     2,
 	}).Info("Tier 2: Attempting RTSP immediate capture")
 
 	// Tier 2: RTSP Immediate Capture
 	tier2Ctx, tier2Cancel := context.WithTimeout(ctx, time.Duration(tierConfig.Tier2RTSPReadyCheckTimeout*float64(time.Second)))
 	defer tier2Cancel()
 
-	if snapshot, err := sm.captureSnapshotFromRTSP(tier2Ctx, device, snapshotPath); err == nil {
+	if snapshot, err := sm.captureSnapshotFromRTSP(tier2Ctx, cameraID, snapshotPath); err == nil {
 		captureTime := time.Since(startTime)
 		result := sm.createSnapshotResult(snapshot, 2, captureTime, captureMethodsTried)
 		sm.logger.WithFields(logging.Fields{
-			"device":       device,
+			"cameraID":     cameraID,
 			"tier":         2,
 			"capture_time": captureTime,
 		}).Info("Tier 2: RTSP immediate capture successful")
 		return result, nil
 	} else {
 		sm.logger.WithFields(logging.Fields{
-			"device": device,
-			"tier":   2,
-			"error":  err.Error(),
+			"cameraID": cameraID,
+			"tier":     2,
+			"error":    err.Error(),
 		}).Warn("Tier 2: RTSP immediate capture failed")
 	}
 	captureMethodsTried = append(captureMethodsTried, "rtsp_immediate")
 
 	sm.logger.WithFields(logging.Fields{
-		"device": device,
-		"tier":   3,
+		"cameraID": cameraID,
+		"tier":     3,
 	}).Info("Tier 3: Attempting RTSP stream activation")
 
 	// Tier 3: RTSP Stream Activation
 	tier3Ctx, tier3Cancel := context.WithTimeout(ctx, time.Duration(tierConfig.Tier3ActivationTimeout*float64(time.Second)))
 	defer tier3Cancel()
 
-	if snapshot, err := sm.captureSnapshotFromRTSP(tier3Ctx, device, snapshotPath); err == nil {
+	if snapshot, err := sm.captureSnapshotFromRTSP(tier3Ctx, cameraID, snapshotPath); err == nil {
 		captureTime := time.Since(startTime)
 		result := sm.createSnapshotResult(snapshot, 3, captureTime, captureMethodsTried)
 		sm.logger.WithFields(logging.Fields{
-			"device":       device,
+			"cameraID":     cameraID,
 			"tier":         3,
 			"capture_time": captureTime,
 		}).Info("Tier 3: RTSP stream activation successful")
 		return result, nil
 	} else {
 		sm.logger.WithFields(logging.Fields{
-			"device": device,
-			"tier":   3,
-			"error":  err.Error(),
+			"cameraID": cameraID,
+			"tier":     3,
+			"error":    err.Error(),
 		}).Warn("Tier 3: RTSP stream activation failed")
 	}
 	captureMethodsTried = append(captureMethodsTried, "rtsp_activation")
@@ -271,12 +306,12 @@ func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, device, sn
 	// Tier 4: Error Handling - All methods failed
 	totalTime := time.Since(startTime)
 	sm.logger.WithFields(logging.Fields{
-		"device":        device,
+		"cameraID":      cameraID,
 		"total_time":    totalTime,
 		"methods_tried": captureMethodsTried,
 	}).Error("Tier 4: All snapshot capture methods failed")
 
-	return nil, sm.createMultiTierError(device, captureMethodsTried, totalTime)
+	return nil, sm.createMultiTierError(cameraID, captureMethodsTried, totalTime)
 }
 
 // getTierConfiguration retrieves multi-tier configuration from existing config system
@@ -408,12 +443,18 @@ func (sm *SnapshotManager) captureSnapshotDirect(ctx context.Context, devicePath
 }
 
 // captureSnapshotFromRTSP implements Tier 2/3: RTSP Capture
-func (sm *SnapshotManager) captureSnapshotFromRTSP(ctx context.Context, devicePath, snapshotPath string) (*Snapshot, error) {
+func (sm *SnapshotManager) captureSnapshotFromRTSP(ctx context.Context, cameraID, snapshotPath string) (*Snapshot, error) {
 	sm.logger.WithFields(logging.Fields{
-		"device":      devicePath,
+		"cameraID":    cameraID,
 		"output_path": snapshotPath,
 		"tier":        2,
 	}).Info("Tier 2/3: Capturing from RTSP stream")
+
+	// Get devicePath only to determine if external or USB
+	devicePath, exists := sm.pathManager.GetDevicePathForCamera(cameraID)
+	if !exists {
+		devicePath = cameraID // For external streams
+	}
 
 	// Determine if this is an external RTSP source or USB device
 	var streamName string
@@ -427,13 +468,13 @@ func (sm *SnapshotManager) captureSnapshotFromRTSP(ctx context.Context, devicePa
 		}).Info("Tier 3: External RTSP source detected, creating MediaMTX path")
 
 		// Use StreamManager to create MediaMTX path for external RTSP source (single path)
-		stream, err := sm.streamManager.StartStream(ctx, devicePath)
+		stream, err := sm.streamManager.StartStream(ctx, cameraID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create MediaMTX path for external RTSP source: %w", err)
 		}
 
-		streamName = stream.Name
-		rtspURL = fmt.Sprintf("rtsp://%s:%d/%s", sm.config.Host, sm.config.RTSPPort, streamName)
+		streamName = cameraID      // Use cameraID directly as stream name
+		rtspURL = stream.StreamURL // Use the StreamURL from the response
 
 		sm.logger.WithFields(logging.Fields{
 			"device":      devicePath,
@@ -444,7 +485,7 @@ func (sm *SnapshotManager) captureSnapshotFromRTSP(ctx context.Context, devicePa
 
 		// Stream should be ready immediately
 	} else {
-		// USB device - assume MediaMTX path already exists from previous streaming
+		// USB device - assume MediaMTX path exists from streaming setup
 		streamName = sm.getStreamNameFromDevice(devicePath)
 		rtspURL = fmt.Sprintf("rtsp://%s:%d/%s", sm.config.Host, sm.config.RTSPPort, streamName)
 
@@ -566,9 +607,9 @@ func (sm *SnapshotManager) determineUserExperience(captureTime time.Duration) st
 }
 
 // createMultiTierError creates a comprehensive error for multi-tier failures
-func (sm *SnapshotManager) createMultiTierError(device string, methodsTried []string, totalTime time.Duration) error {
+func (sm *SnapshotManager) createMultiTierError(cameraID string, methodsTried []string, totalTime time.Duration) error {
 	return fmt.Errorf("all snapshot capture methods failed for %s after %.2fs: tried %v",
-		device, totalTime.Seconds(), methodsTried)
+		cameraID, totalTime.Seconds(), methodsTried)
 }
 
 // GetSnapshot gets a snapshot by ID
@@ -579,8 +620,8 @@ func (sm *SnapshotManager) GetSnapshot(snapshotID string) (*Snapshot, bool) {
 	return nil, false
 }
 
-// ListSnapshots lists all snapshots
-func (sm *SnapshotManager) ListSnapshots() []*Snapshot {
+// ListSnapshotsInternal lists all snapshots (internal use)
+func (sm *SnapshotManager) ListSnapshotsInternal() []*Snapshot {
 	var snapshots []*Snapshot
 
 	// Iterate over sync.Map - lock-free operation
@@ -619,7 +660,7 @@ func (sm *SnapshotManager) DeleteSnapshot(ctx context.Context, snapshotID string
 	return nil
 }
 
-// CleanupOldSnapshots cleans up old snapshots based on age and count
+// CleanupOldSnapshots cleans up snapshots based on age and count
 func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.Duration, maxCount int) error {
 	sm.logger.WithFields(logging.Fields{
 		"max_age":   maxAge,
@@ -680,7 +721,7 @@ func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.
 			return files[i].ModifiedAt.Before(files[j].ModifiedAt)
 		})
 
-		// Delete old files based on age
+		// Delete files based on age threshold
 		cutoffTime := time.Now().Add(-maxAge)
 
 		for _, file := range files {
@@ -696,7 +737,7 @@ func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.
 		// Delete excess files if we have too many (keep newest files)
 		if len(files) > maxCount {
 			excessCount := len(files) - maxCount
-			// Delete oldest files first
+			// Delete earliest files first
 			for i := 0; i < excessCount && i < len(files); i++ {
 				file := files[i]
 				filePath := filepath.Join(snapshotsDir, file.FileName)
@@ -716,12 +757,12 @@ func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.
 		return true // Continue iteration
 	})
 
-	// Sort by creation time (oldest first)
+	// Sort by creation time (earliest first)
 	sort.Slice(snapshots, func(i, j int) bool {
 		return snapshots[i].Created.Before(snapshots[j].Created)
 	})
 
-	// Delete old snapshots from memory - lock-free operations with sync.Map
+	// Delete snapshots from memory - lock-free operations with sync.Map
 	deletedCount := 0
 
 	for _, snapshot := range snapshots {
@@ -807,6 +848,58 @@ func (sm *SnapshotManager) UpdateSnapshotSettings(settings *SnapshotSettings) {
 		"max_height":  settings.MaxHeight,
 		"auto_resize": settings.AutoResize,
 	}).Info("Snapshot settings updated")
+}
+
+// ListSnapshots returns API-ready snapshot list response
+func (sm *SnapshotManager) ListSnapshots(ctx context.Context, limit, offset int) (*ListSnapshotsResponse, error) {
+	sm.logger.WithFields(logging.Fields{
+		"limit":  limit,
+		"offset": offset,
+	}).Debug("Getting API-ready snapshots list")
+
+	// Get file list from existing method
+	fileList, err := sm.GetSnapshotsList(ctx, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to API-ready SnapshotFileInfo format with rich metadata
+	snapshots := make([]SnapshotFileInfo, len(fileList.Files))
+	for i, file := range fileList.Files {
+		// Extract device from filename pattern (camera0_timestamp.jpg)
+		//TODO: if the filename is configurable (which is) this will fail.
+		device := "camera0" // Default
+		if parts := strings.Split(file.FileName, "_"); len(parts) > 0 {
+			if strings.HasPrefix(parts[0], "camera") {
+				device = parts[0]
+			}
+		}
+
+		// Extract format from filename extension
+		format := "jpg" // Default
+		if parts := strings.Split(file.FileName, "."); len(parts) > 1 {
+			format = parts[len(parts)-1]
+		}
+
+		snapshots[i] = SnapshotFileInfo{
+			Device:      device,
+			Filename:    file.FileName,
+			FileSize:    file.FileSize,
+			CreatedAt:   file.CreatedAt.Format(time.RFC3339),
+			Format:      format,
+			Resolution:  "1920x1080", // TODO-IMPL: Extract from EXIF or metadata
+			DownloadURL: fmt.Sprintf("/files/snapshots/%s", file.FileName),
+		}
+	}
+
+	response := &ListSnapshotsResponse{
+		Snapshots: snapshots,
+		Total:     fileList.Total,
+		Limit:     limit,
+		Offset:    offset,
+	}
+
+	return response, nil
 }
 
 // GetSnapshotsList scans the snapshots directory and returns a list of snapshot files with metadata
@@ -942,13 +1035,13 @@ func (sm *SnapshotManager) extractSnapshotMetadata(ctx context.Context, filePath
 	}
 
 	// Parse JSON output for comprehensive metadata
-	// For now, we'll log the raw output and extract basic information
+	// TODO: Implement proper FFmpeg output parsing for comprehensive metadata extraction
 	sm.logger.WithFields(logging.Fields{
 		"file_path": filePath,
 		"metadata":  string(output),
 	}).Debug("Extracted raw image metadata")
 
-	// Add basic metadata for Python equivalence
+	// TODO: Add comprehensive metadata parsing for full feature parity
 	metadata["format"] = "image"
 	metadata["extraction_method"] = "ffprobe"
 	metadata["extraction_time"] = time.Now().Unix()

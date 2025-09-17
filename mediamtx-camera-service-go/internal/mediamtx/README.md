@@ -1,490 +1,714 @@
-# MediaMTX Controller Module
+# MediaMTX Integration Module
 
-## Architecture Overview
-The MediaMTX Controller is the complete business logic layer that orchestrates all camera operations. It provides a unified interface for streaming, recording, and snapshot capabilities while maintaining proper abstraction between client-facing APIs and hardware implementation.
+**Version:** 2.0  
+**Date:** 2025-01-15  
+**Status:** Production Architecture Documentation  
+**Document Type:** Module Architecture Specification
 
-## Core Architecture Principles
+---
 
-### Single Source of Truth
-- MediaMTX Controller is the only component that handles business logic
-- All camera operations flow through the controller
-- WebSocket server delegates all operations to MediaMTX Controller
-- No direct hardware access from external components
+## 1. Module Overview
 
-### Abstraction Layer
-- Client APIs use camera identifiers (camera0, camera1)
-- Internal operations use device paths (/dev/video0, /dev/video1)
-- Controller manages the mapping between identifiers and paths
-- Hardware details are hidden from external consumers
+The MediaMTX Integration Module serves as **Layer 5 (Orchestration)** in the system architecture, implementing the single source of truth for all video operations and business logic coordination. This module provides the central orchestration layer between the WebSocket API layer and the underlying hardware/service layers.
 
-### Component Integration
-- All sub-components are orchestrated by the controller
-- Centralized configuration and logging across all components
-- Proper dependency injection and lifecycle management
-- Clear separation of concerns between components
+### 1.1 Architecture Positioning
 
-## Core Components
+```plantuml
+@startuml ModulePositioning
+title MediaMTX Module - Architecture Positioning
 
-### 1. **MediaMTXController** (Main Interface)
-**Role**: Single entry point for external integration (WebSocket, HTTP API)
-**Location**: `controller.go`
-**Responsibilities**:
-- Orchestrates all MediaMTX operations
-- Provides unified API for recording, streaming, and snapshots
-- Manages component lifecycle and state
-- Uses centralized config and logger
-- Implements camera discovery integration
-- Provides abstraction layer (camera0 ↔ /dev/video0)
+package "Layer 6: API" {
+    component "WebSocket Server" as WS
+    component "JSON-RPC Methods" as RPC
+}
 
-**Key Methods**:
-```go
-// Camera discovery operations
-GetCameraList(ctx) (*CameraListResponse, error)
-GetCameraStatus(ctx, device) (*CameraStatusResponse, error)
-ValidateCameraDevice(ctx, device) (bool, error)
+package "Layer 5: Orchestration" #lightcoral {
+    component "MediaMTX Controller" as Controller
+    note right of Controller
+        Single Source of Truth
+        Business Logic Coordination
+        API Abstraction Layer
+    end note
+}
 
-// Recording operations
-StartRecording(ctx, device, path) (*RecordingSession, error)
-StopRecording(ctx, sessionID) error
+package "Layer 4: Business Logic" {
+    component "Recording Manager" as RM
+    component "Snapshot Manager" as SM
+}
 
-// Streaming operations  
-StartStreaming(ctx, device) (*Stream, error)
-StopStreaming(ctx, device) error
-GetStreamURL(ctx, device) (string, error)
-GetStreamStatus(ctx, device) (*Stream, error)
+package "Layer 3: Managers" {
+    component "Path Manager" as PM
+    component "Stream Manager" as STM
+    component "FFmpeg Manager" as FM
+}
 
-// Snapshot operations
-TakeSnapshot(ctx, device, path) (*Snapshot, error)
+package "Layer 2: Core Services" {
+    component "MediaMTX Client" as Client
+    component "Health Monitor" as HM
+}
+
+WS --> Controller : Delegates ALL operations
+RPC --> Controller : No business logic in API
+Controller --> RM : Orchestrates
+Controller --> SM : Orchestrates
+Controller --> PM : Coordinates
+Controller --> STM : Coordinates
+Controller --> Client : Integrates
+
+@enduml
 ```
 
-### 2. **StreamManager** (Stream Lifecycle)
-**Role**: Manages FFmpeg processes and MediaMTX paths for different use cases
-**Location**: `stream_manager.go`
-**Responsibilities**:
-- Creates and manages streams for recording, viewing, and snapshots
-- Handles FFmpeg process lifecycle
-- Generates stream names and URLs
-- Manages use-case specific configurations
+### 1.2 Key Responsibilities
 
-**Implemented Methods**:
-```go
-StartStream(ctx, devicePath) (*Stream, error)  // Single path for all operations
-StopStream(ctx, device) error                  // Single stop method
-StopStreaming(ctx, device) error               // Legacy compatibility
-GenerateStreamName(devicePath, useCase) string
-GenerateStreamURL(streamName) string
-buildFFmpegCommand(devicePath, streamName) string
-```
+- **Single Source of Truth**: All business logic resides in the MediaMTX controller
+- **API Abstraction**: Maps external identifiers (camera0) to internal paths (/dev/video0)
+- **Component Orchestration**: Coordinates all managers and services
+- **Event-Driven Architecture**: Real-time notifications and progressive readiness
+- **Stateless Recording**: MediaMTX API as the authoritative recording state source
 
-### 3. **PathManager** (MediaMTX Path Management)
-**Role**: Creates and manages MediaMTX server paths
-**Location**: `path_manager.go`
-**Responsibilities**:
-- Creates MediaMTX paths with proper configuration
-- Manages path lifecycle (create/delete)
-- Handles path validation and error handling
+---
 
-**Key Methods**:
-```go
-CreatePath(ctx, name, source, options) error
-DeletePath(ctx, name) error
-PathExists(ctx, name) bool
-```
+## 2. Component Architecture
 
-### 4. **RecordingManager** (Recording Operations)
-**Role**: Manages recording sessions and file operations
-**Location**: `recording_manager.go`
-**Responsibilities**:
-- Creates and manages recording sessions
-- Handles file rotation and cleanup
-- Integrates with StreamManager for recording streams
+### 2.1 Core Component Structure
 
-### 5. **SnapshotManager** (Multi-Tier Snapshot Operations)
-**Role**: Manages intelligent snapshot capture with multi-tier fallback system
-**Location**: `snapshot_manager.go`
-**Responsibilities**:
-- **Tier 1**: Direct FFmpeg capture from USB devices (`/dev/video*`) - fastest path
-- **Tier 2**: RTSP immediate capture from existing MediaMTX streams
-- **Tier 3**: RTSP stream activation (creates MediaMTX path, then captures)
-- **Tier 4**: Error handling and fallback mechanisms
-- Manages snapshot file storage and metadata
-- Integrates with FFmpegManager for image processing
-- Supports both current USB devices and future external RTSP sources (STANAG 4609 UAVs)
- 
-Notes:
-- Stream naming uses `StreamManager.GenerateStreamName`; no path-based fallbacks.
+```plantuml
+@startuml ComponentStructure
+title MediaMTX Module - Component Structure
 
-### 6. **FFmpegManager** (FFmpeg Process Management)
-**Role**: Manages FFmpeg processes for snapshots
-**Location**: `ffmpeg_manager.go`
-**Responsibilities**:
-- Starts/stops FFmpeg processes
-- Monitors process health
-- Handles process cleanup
-
-### 7. **HealthMonitor** (Health Monitoring)
-**Role**: Monitors MediaMTX service health and implements circuit breaker pattern
-**Location**: `health_monitor.go`
-**Responsibilities**:
-- Continuous health checking via HTTP endpoints
-- Circuit breaker implementation for failure handling
-- Health metrics collection and status reporting
-- Automatic recovery from unhealthy states
-
-**Integration**:
-- Integrated with MediaMTXController lifecycle
-- Exposed via GetHealth() API method
-- Publishes health events via WebSocket
-- Included in system metrics responses
-
-Notes:
-- Intervals/timeouts are validated by centralized config; runtime emergency fallbacks are removed.
-
-### 8. **RTSPConnectionManager** (Connection Monitoring)
-**Role**: Monitors RTSP connections and sessions
-**Location**: `rtsp_connection_manager.go`
-**Responsibilities**:
-- Monitors active RTSP connections
-- Provides connection health metrics
-- Tracks session statistics
-
-### 9. **ExternalStreamDiscovery** (External Stream Management)
-**Role**: Discovers and manages external RTSP streams including UAVs
-**Location**: `external_discovery.go`
-**Responsibilities**:
-- Network scanning for external RTSP streams
-- UAV stream discovery (Skydio, generic models)
-- RTSP stream validation and health monitoring
-- On-demand and periodic discovery modes
-- STANAG 4609 compliance for military UAVs
-- Configurable network ranges and parameters
-
-## Data Flow
-
-### Recording Flow
-```
-Controller.StartRecording() 
-→ RecordingManager.StartRecording()
-→ StreamManager.StartRecordingStream()
-→ PathManager.CreatePath()
-→ FFmpeg process starts
-→ MediaMTX receives stream
-→ Recording begins
-```
-
-### Streaming Flow
-```
-Controller.StartStreaming()
-→ StreamManager.StartStream()
-→ PathManager.CreatePath()
-→ FFmpeg process starts
-→ MediaMTX receives stream
-→ Stream available for viewing
-```
-
-### Snapshot Flow (Multi-Tier Architecture)
-```
-Controller.TakeSnapshot()
-→ SnapshotManager.TakeSnapshot()
-→ Multi-Tier Fallback System:
-  ├─ Tier 1: Direct FFmpeg from /dev/video* (USB devices) - FASTEST
-  ├─ Tier 2: RTSP immediate capture (from existing MediaMTX streams)
-  ├─ Tier 3: RTSP stream activation (create MediaMTX path, then capture)
-  └─ Tier 4: Error handling (all methods failed)
-→ Image captured and file saved
-```
-
-### External Stream Discovery Flow
-```
-Controller.DiscoverExternalStreams()
-→ ExternalStreamDiscovery.DiscoverExternalStreams()
-→ Network Scanning Process:
-  ├─ Skydio Discovery: Scan known IPs and network ranges
-  ├─ Generic UAV Discovery: Scan configurable ranges and ports
-  ├─ RTSP Validation: Test stream connectivity and capabilities
-  └─ Stream Registration: Add discovered streams to system
-→ External streams available for management
-```
-
-## Configuration and Logging Integration
-
-### Centralized Configuration
-All components use `*config.ConfigManager` for configuration:
-- MediaMTX server connection settings
-- Stream configuration parameters
-- File storage paths and settings
-- Security and authentication settings
-- Performance tuning parameters
-
-### Centralized Logging
-All components use `*logging.Logger` for structured logging:
-- Correlation IDs for request tracing
-- Component-specific log contexts
-- Error tracking and debugging
-- Performance metrics logging
-- Security event logging
-
-## Stream Use Cases
-
-### UseCaseRecording
-- **Purpose**: Long-running streams for recording
-- **Auto-close**: Never (0s)
-- **Suffix**: "" (no suffix)
-- **Restart**: true
-
-### Single Path Architecture (OPTIMIZED)
-- **Purpose**: Unified streaming for all operations (viewing, recording, snapshots)
-- **Auto-close**: 0s (never auto-close - stable for recording)
-- **Suffix**: "" (no suffix - simple path names like camera0, camera1)
-- **Restart**: true
-- **Use Case**: All operations use the same stable MediaMTX path
-- **Integration**: Single path handles streaming, recording, and snapshot operations
-- **Benefits**: Eliminates path duplication, reduces MediaMTX complexity, improves performance
-
-## Integration Points
-
-### External Integration
-- **WebSocket**: Uses MediaMTXController interface
-- **HTTP API**: Uses MediaMTXController interface
-- **Other modules**: Access via MediaMTXController
-
-### Internal Integration
-- **StreamManager** uses **PathManager** for MediaMTX paths
-- **RecordingManager** uses **StreamManager** for recording streams
-- **SnapshotManager** uses **FFmpegManager** for direct image processing
-- **SnapshotManager** uses **StreamManager.StartStream()** for external RTSP sources (Tier 3)
-- **ExternalStreamDiscovery** uses **PathManager** for external stream integration
-- **HealthMonitor** monitors **MediaMTXClient** for service health
-- **Controller** orchestrates all components including health monitoring and external discovery
-
-
-## Snapshot Architecture: Current vs Future Use Cases
-
-### Current Use Case: USB Devices (`/dev/video*`)
-```
-Controller.TakeSnapshot("/dev/video0", path)
-→ SnapshotManager.TakeSnapshot()
-→ Tier 1: Direct FFmpeg from /dev/video0
-→ Success (fastest path, ~100ms)
-```
-
-### Future Use Case: External RTSP Streams (STANAG 4609 UAVs)
-```
-Controller.TakeSnapshot("rtsp://uav-stream", path)
-→ SnapshotManager.TakeSnapshot()
-→ Tier 1: Direct FFmpeg fails (not USB device)
-→ Tier 2: RTSP immediate capture fails (no existing stream)
-→ Tier 3: StreamManager.StartStream() creates MediaMTX path
-→ FFmpeg captures from RTSP stream
-→ Success (fallback path, ~500ms)
-```
-
-### Why StreamManager.StartStream() is Required
-- **External RTSP sources** cannot use direct FFmpeg from `/dev/video*`
-- **MediaMTX paths must be created** to receive external RTSP streams
-- **Single path architecture** handles all operations (viewing, recording, snapshots)
-- **StreamManager handles MediaMTX path creation** for all stream types
-- **SnapshotManager uses StreamManager** in Tier 3 for external sources
-- **Architecture supports both current and future requirements**
-
-## Event-Driven Architecture
-
-### Overview
-
-The MediaMTX Controller implements event-driven patterns to replace polling-based approaches, providing improved performance, responsiveness, and test efficiency.
-
-### Event-Driven Readiness System
-
-The controller provides an event-driven readiness system that notifies subscribers when the controller becomes ready for operations.
-
-#### Key Features
-
-- **Event Subscription**: Subscribe to readiness events instead of polling
-- **Immediate Notification**: Receive events as soon as readiness state changes
-- **Multiple Subscribers**: Support for multiple concurrent subscribers
-- **Timeout Handling**: Built-in timeout support for all operations
-
-#### Usage Example
-
-```go
-// Start observing readiness events (non-blocking)
-readinessChan := controller.SubscribeToReadiness()
-
-// Try operations immediately with retries instead of waiting
-var success bool
-for i := 0; i < 10; i++ {
-    if controller.IsReady() {
-        success = true
-        break
+package "MediaMTX Integration Module" {
+    
+    class Controller {
+        +client: MediaMTXClient
+        +healthMonitor: HealthMonitor
+        +pathManager: PathManager
+        +streamManager: StreamManager
+        +recordingManager: RecordingManager
+        +snapshotManager: SnapshotManager
+        +cameraMonitor: CameraMonitor
+        +configIntegration: ConfigIntegration
+        --
+        +Start(ctx) error
+        +Stop(ctx) error
+        +IsReady() bool
+        +GetCameraList(ctx) (*CameraListResponse, error)
+        +StartRecording(ctx, device, options) (*RecordingResponse, error)
+        +TakeSnapshot(ctx, device, options) (*SnapshotResponse, error)
     }
-    time.Sleep(100 * time.Millisecond)
-}
-
-// Handle success/failure
-if !success {
-    // Handle not ready after retries
-}
-```
-
-#### Readiness Conditions
-
-The controller is considered ready when:
-- Controller is running
-- Camera monitor has completed discovery
-- Health monitor is healthy (if present)
-
-### Event-Driven Test Orchestration
-
-The system includes comprehensive event-driven testing capabilities that replace polling with efficient event subscription.
-
-#### EventDrivenTestHelper
-
-The `EventDrivenTestHelper` provides testing utilities for event-driven patterns:
-
-```go
-// Create event-driven test helper
-eventHelper := helper.CreateEventDrivenTestHelper(t)
-defer eventHelper.Cleanup()
-
-// Start observing events (non-blocking)
-eventHelper.ObserveReadiness()
-eventHelper.ObserveHealthChanges()
-eventHelper.ObserveCameraEvents()
-
-// Try operations immediately with retries instead of waiting
-var session *RecordingSession
-for i := 0; i < 3; i++ {
-    session, err = controller.StartRecording(...)
-    if err == nil {
-        break
+    
+    class RecordingManager {
+        +pathManager: PathManager
+        +configIntegration: ConfigIntegration
+        +timers: map[string]*time.Timer
+        --
+        +StartRecording(ctx, device) error
+        +StopRecording(ctx, device) error
+        +IsRecording(ctx, device) (bool, error)
+        +CleanupOldRecordings(ctx, maxAge, maxCount) error
     }
-    time.Sleep(time.Second)
-}
-
-// Verify events occurred after operations complete
-assert.True(t, eventHelper.DidEventOccur("readiness"))
-```
-
-#### Parallel Test Execution
-
-Event-driven patterns enable parallel test execution by removing sequential execution bottlenecks:
-
-```go
-// Before: Sequential execution required
-func TestWithPolling(t *testing.T) {
-    EnsureSequentialExecution(t) // ❌ Unnecessary bottleneck
-    // ... polling logic
-}
-
-// After: Parallel execution enabled
-func TestWithEvents(t *testing.T) {
-    // No sequential execution needed - only reads information
-    eventHelper := helper.CreateEventDrivenTestHelper(t)
-    defer eventHelper.Cleanup()
-    // ... event-driven logic
-}
-```
-
-### Performance Benefits
-
-#### Reduced CPU Usage
-- **Before**: Continuous polling consumes CPU cycles
-- **After**: CPU only used when events occur
-
-#### Improved Test Performance
-- **Before**: Tests wait for fixed intervals
-- **After**: Tests respond immediately to events
-
-#### Better Responsiveness
-- **Before**: Maximum delay = polling interval
-- **After**: Immediate event notification
-
-### Event Types
-
-#### 1. Readiness Events
-- **Purpose**: Notify when controller becomes ready
-- **Trigger**: All readiness conditions met
-- **Usage**: `controller.SubscribeToReadiness()`
-
-#### 2. Health Events (Planned)
-- **Purpose**: Notify when health status changes
-- **Trigger**: Health status transitions
-- **Usage**: `eventHelper.ObserveHealthChanges()`
-
-#### 3. Camera Events (Planned)
-- **Purpose**: Notify when camera discovery events occur
-- **Trigger**: Camera connected/disconnected
-- **Usage**: `eventHelper.ObserveCameraEvents()`
-
-### Migration from Polling
-
-#### Step 1: Identify Polling Patterns
-```go
-// Polling pattern
-for {
-    if controller.IsReady() {
-        break
+    
+    class SnapshotManager {
+        +streamManager: StreamManager
+        +ffmpegManager: FFmpegManager
+        +configIntegration: ConfigIntegration
+        --
+        +TakeSnapshot(ctx, device, outputPath) (*SnapshotResult, error)
+        +CleanupOldSnapshots(ctx, maxAge, maxCount) error
+        +GetSnapshotMetadata(filePath) (map[string]interface{}, error)
     }
-    time.Sleep(100 * time.Millisecond)
-}
-```
-
-#### Step 2: Replace with Observe/Retry Pattern
-```go
-// Non-blocking observation pattern
-readinessChan := controller.SubscribeToReadiness()
-
-// Try operations immediately with retries
-var session *RecordingSession
-for i := 0; i < 3; i++ {
-    session, err = controller.StartRecording(...)
-    if err == nil {
-        break
+    
+    class PathManager {
+        +client: MediaMTXClient
+        +configIntegration: ConfigIntegration
+        +createGroup: singleflight.Group
+        +metrics: PathManagerMetrics
+        --
+        +CreatePath(ctx, name, source, options) error
+        +DeletePath(ctx, name) error
+        +PathExists(ctx, name) bool
+        +PatchPath(ctx, name, config) error
+        +ListPaths(ctx) (*PathList, error)
     }
-    time.Sleep(time.Second)
+    
+    class StreamManager {
+        +pathManager: PathManager
+        +ffmpegManager: FFmpegManager
+        +configIntegration: ConfigIntegration
+        --
+        +StartStream(ctx, devicePath) (*Path, error)
+        +StopStream(ctx, device) error
+        +GetStreamStatus(ctx, device) (*StreamStatus, error)
+        +buildFFmpegCommand(devicePath, streamName) string
+    }
+    
+    class HealthMonitor {
+        +client: MediaMTXClient
+        +configIntegration: ConfigIntegration
+        +circuitBreaker: CircuitBreaker
+        --
+        +Start(ctx) error
+        +Stop() error
+        +IsHealthy() bool
+        +GetHealth() (*HealthStatus, error)
+        +GetMetrics() (map[string]interface{}, error)
+    }
+    
+    Controller *-- RecordingManager
+    Controller *-- SnapshotManager
+    Controller *-- PathManager
+    Controller *-- StreamManager
+    Controller *-- HealthMonitor
+    
+    RecordingManager --> PathManager
+    SnapshotManager --> StreamManager
+    SnapshotManager --> FFmpegManager
+    StreamManager --> PathManager
+    PathManager --> MediaMTXClient
+    HealthMonitor --> MediaMTXClient
 }
 
-// Events are for verification, not control flow
-if !controller.IsReady() {
-    // Handle not ready after retries
+@enduml
+```
+
+### 2.2 Component Responsibilities Matrix
+
+| Component | Layer | Primary Responsibility | Key Dependencies |
+|-----------|-------|----------------------|------------------|
+| **Controller** | 5 - Orchestration | Single source of truth, API abstraction, component coordination | All managers, CameraMonitor |
+| **RecordingManager** | 4 - Business Logic | Stateless recording via MediaMTX API, auto-stop timers | PathManager, ConfigIntegration |
+| **SnapshotManager** | 4 - Business Logic | Multi-tier snapshot capture (V4L2→FFmpeg→RTSP) | StreamManager, FFmpegManager |
+| **PathManager** | 3 - Managers | MediaMTX path lifecycle, idempotent operations, per-path mutex | MediaMTXClient, ConfigIntegration |
+| **StreamManager** | 3 - Managers | Stream lifecycle, FFmpeg coordination, on-demand processes | PathManager, FFmpegManager |
+| **HealthMonitor** | 2 - Core Services | Circuit breaker pattern, health monitoring | MediaMTXClient, ConfigIntegration |
+
+---
+
+## 3. Data Flow Architecture
+
+### 3.1 Recording Flow
+
+```plantuml
+@startuml RecordingFlow
+title Recording Flow - Stateless Architecture
+
+participant "WebSocket API" as API
+participant "Controller" as C
+participant "Recording Manager" as RM
+participant "Path Manager" as PM
+participant "MediaMTX Server" as MTX
+
+API -> C : StartRecording(camera0, options)
+C -> RM : StartRecording(camera0, options)
+
+note over RM : Stateless Recording Pattern
+RM -> RM : Validate camera0 → /dev/video0 mapping
+RM -> MTX : GET /v3/config/paths/get/camera0
+RM -> MTX : PATCH /v3/config/paths/patch/camera0 {"record": true}
+
+note over MTX
+Recording Configuration:
+- record: true
+- recordPath: "/opt/recordings/camera0_%Y-%m-%d_%H-%M-%S.mp4"
+- recordFormat: "fmp4" (STANAG 4609 compatible)
+end note
+
+RM -> RM : Start RTSP keepalive (if needed)
+RM -> RM : Set auto-stop timer (if duration specified)
+
+MTX -> MTX : Start FFmpeg process (on-demand)
+MTX -> MTX : Begin recording to file
+
+RM --> C : Recording started (no session state)
+C --> API : RecordingResponse
+
+note over MTX
+Single path "camera0" provides:
+• Live streaming: rtsp://localhost:8554/camera0
+• File recording: /opt/recordings/camera0_2024-01-15.mp4
+• Both operate simultaneously
+end note
+
+@enduml
+```
+
+### 3.2 Multi-Tier Snapshot Architecture
+
+```plantuml
+@startuml SnapshotTiers
+title Multi-Tier Snapshot Architecture
+
+start
+:Snapshot Request;
+
+partition "Tier 0: V4L2 Direct (FASTEST)" {
+    :Direct V4L2 capture;
+    if (USB device?) then (yes)
+        :Capture frame directly;
+        :~100ms latency;
+        stop
+    else (no)
+    endif
 }
+
+partition "Tier 1: FFmpeg Direct" {
+    :FFmpeg from device;
+    if (Device accessible?) then (yes)
+        :FFmpeg capture;
+        :~200ms latency;
+        stop
+    else (no)
+    endif
+}
+
+partition "Tier 2: RTSP Reuse" {
+    :Check existing stream;
+    if (Stream active?) then (yes)
+        :Capture from RTSP;
+        :~300ms latency;
+        stop
+    else (no)
+    endif
+}
+
+partition "Tier 3: Stream Activation" {
+    :Create MediaMTX path;
+    :Start FFmpeg;
+    :Capture from stream;
+    :~500ms latency;
+    stop
+}
+
+@enduml
 ```
 
-#### Step 3: Update Tests
-```go
-// Remove unnecessary sequential execution
-// Use event-driven test helpers
-// Enable parallel test execution
+### 3.3 Path Management Architecture
+
+```plantuml
+@startuml PathManagement
+title Path Management - Idempotent Operations
+
+participant "Controller" as C
+participant "Path Manager" as PM
+participant "MediaMTX API" as API
+database "singleflight.Group" as SG
+
+C -> PM : CreatePath("camera0", "/dev/video0", options)
+PM -> SG : Do("camera0", createFunc)
+
+note over SG : Prevents concurrent creation\nof same path
+
+alt Path Creation
+    PM -> API : POST /v3/config/paths/add/camera0
+    alt Success
+        API --> PM : 200 OK
+        PM --> C : Success
+    else Already Exists
+        API --> PM : 409 Conflict "path already exists"
+        PM -> PM : isAlreadyExistsError() = true
+        PM --> C : Success (idempotent)
+    else Other Error
+        API --> PM : Error
+        PM --> C : Error with context
+    end
+end
+
+note over PM
+Architectural Guarantees:
+• Create is idempotent
+• Per-path mutex prevents races
+• Exponential backoff on retries
+• Comprehensive error context
+end note
+
+@enduml
 ```
 
-### Best Practices
+---
 
-1. **Always Use Timeouts**: Prevent infinite waiting
-2. **Clean Up Resources**: Close channels and cancel contexts
-3. **Handle Errors Gracefully**: Don't let event failures crash tests
-4. **Use Buffered Channels**: Prevent blocking on slow consumers
-5. **Test Event Aggregation**: Verify multiple event handling works
+## 4. Advanced Architecture Patterns
 
-### Future Enhancements
+### 4.1 Optional Component Pattern
 
-- **Health Event System**: Event-driven health monitoring
-- **Camera Event System**: Enhanced camera discovery events
-- **Event Persistence**: Event storage for debugging
-- **Event Filtering**: Selective event subscription
-- **Event Metrics**: Performance monitoring
+```plantuml
+@startuml OptionalComponents
+title Optional Component Pattern
 
-## Architecture Benefits
+class Controller {
+    +cameraMonitor: CameraMonitor ✓
+    +healthMonitor: HealthMonitor ✓
+    +recordingManager: RecordingManager ✓
+    +externalDiscovery: ExternalStreamDiscovery ❓
+    +pathIntegration: PathIntegration ❓
+    --
+    +hasExternalDiscovery() bool
+    +checkOptionalComponent(component) bool
+}
 
-1. **Single Source of Truth**: MediaMTX Controller is the only business logic layer
-2. **Proper Abstraction**: Clean separation between client APIs and hardware implementation
-3. **Centralized Configuration**: All components use shared config and logger
-4. **Component Integration**: Clear dependencies and orchestration
-5. **Separation of Concerns**: Each component has a single, well-defined responsibility
-6. **Extensible Design**: Easy to add new capabilities and use cases
-7. **Future-Ready**: Supports current USB devices and future external RTSP sources
-8. **External Stream Support**: Comprehensive UAV and network-based stream discovery
-9. **Configurable Discovery**: Flexible network scanning with model-specific parameters
-10. **STANAG 4609 Compliance**: Military-grade UAV stream support
-11. **Event-Driven Architecture**: Efficient event subscription replacing polling patterns
-12. **Parallel Test Execution**: Improved test performance through event-driven testing
-13. **Enhanced Responsiveness**: Immediate event notification for better system behavior
+note right of Controller
+Optional Component Rules:
+1. May be nil based on configuration
+2. ALL methods MUST check for nil
+3. Return graceful errors for nil components
+4. Document optional nature in constructor
+end note
+
+class ExternalStreamDiscovery {
+    +networkScanner: NetworkScanner
+    +configIntegration: ConfigIntegration
+    --
+    +DiscoverStreams(ctx) ([]*ExternalStream, error)
+    +AddExternalStream(ctx, streamURL) error
+    +RemoveExternalStream(ctx, streamURL) error
+}
+
+note bottom of ExternalStreamDiscovery
+Optional: Only initialized if
+external streams are enabled
+in configuration
+end note
+
+Controller o-- ExternalStreamDiscovery : optional
+
+@enduml
+```
+
+### 4.2 Configuration Integration Pattern
+
+```plantuml
+@startuml ConfigIntegration
+title Configuration Integration Pattern
+
+class ConfigManager {
+    -config: Config
+    +LoadConfig(path: string) error
+    +GetConfig() *Config
+    +RegisterLoggingConfigurationUpdates()
+}
+
+class ConfigIntegration {
+    -configManager: *ConfigManager
+    -logger: *logging.Logger
+    +GetMediaMTXConfig() *MediaMTXConfig
+    +GetRecordingConfig() *RecordingConfig
+    +GetSnapshotConfig() *SnapshotConfig
+    +GetStreamingConfig() *StreamingConfig
+}
+
+class Controller {
+    -configIntegration: *ConfigIntegration
+}
+
+class RecordingManager {
+    -configIntegration: *ConfigIntegration
+}
+
+class SnapshotManager {
+    -configIntegration: *ConfigIntegration
+}
+
+ConfigManager --> ConfigIntegration : provides config
+ConfigIntegration --> Controller : injected
+ConfigIntegration --> RecordingManager : injected
+ConfigIntegration --> SnapshotManager : injected
+
+note bottom of ConfigIntegration
+Pattern Rules:
+1. ALL components receive ConfigIntegration
+2. NO direct ConfigManager access
+3. Type-safe configuration access
+4. Centralized defaults and validation
+end note
+
+@enduml
+```
+
+---
+
+## 5. Integration Architecture
+
+### 5.1 WebSocket Integration
+
+```plantuml
+@startuml WebSocketIntegration
+title WebSocket Integration - Delegation Pattern
+
+package "WebSocket Layer (NO Business Logic)" {
+    class WebSocketServer {
+        +mediaMTXController: MediaMTXControllerAPI
+        --
+        +handleJSONRPC(message) (*JsonRpcResponse, error)
+    }
+    
+    class JSONRPCMethods {
+        +controller: MediaMTXControllerAPI
+        --
+        +getCameraList(params, client) (*JsonRpcResponse, error)
+        +startRecording(params, client) (*JsonRpcResponse, error)
+        +takeSnapshot(params, client) (*JsonRpcResponse, error)
+    }
+}
+
+package "MediaMTX Layer (ALL Business Logic)" {
+    interface MediaMTXControllerAPI {
+        +GetCameraList(ctx) (*CameraListResponse, error)
+        +StartRecording(ctx, device, options) (*RecordingResponse, error)
+        +TakeSnapshot(ctx, device, options) (*SnapshotResponse, error)
+        +GetSystemHealth(ctx) (*GetHealthResponse, error)
+        +GetSystemMetrics(ctx) (*GetSystemMetricsResponse, error)
+    }
+    
+    class Controller {
+        // Implementation of MediaMTXControllerAPI
+    }
+}
+
+WebSocketServer --> MediaMTXControllerAPI : Delegates ALL operations
+JSONRPCMethods --> MediaMTXControllerAPI : NO business logic
+Controller ..|> MediaMTXControllerAPI : Implements
+
+note bottom
+Architectural Constraint:
+WebSocket layer contains ZERO business logic
+ALL operations delegated to MediaMTX Controller
+end note
+
+@enduml
+```
+
+### 5.2 Hardware Integration
+
+```plantuml
+@startuml HardwareIntegration
+title Hardware Integration - Abstraction Layer
+
+package "External API Layer" #lightblue {
+    component "Client sees: camera0" as API
+}
+
+package "Controller Abstraction" #lightgreen {
+    class Controller {
+        +GetCameraForDevicePath(devicePath) (string, bool)
+        +GetDevicePathForCamera(cameraID) (string, bool)
+        --
+        +mapDeviceToCamera(devicePath) string
+        +mapCameraToDevice(cameraID) string
+    }
+    
+    note right of Controller
+    Mapping Rules:
+    camera0 ↔ /dev/video0
+    camera1 ↔ /dev/video1
+    camera2 ↔ /dev/video2
+    end note
+}
+
+package "Hardware Layer" #lightyellow {
+    component "Hardware: /dev/video0" as HW
+    component "Camera Monitor" as CM
+}
+
+API --> Controller : camera0 (abstract)
+Controller --> HW : /dev/video0 (concrete)
+Controller --> CM : Device discovery events
+
+note bottom
+CRITICAL Rules:
+1. External APIs ONLY use camera identifiers
+2. Internal operations use discovered device paths
+3. Controller manages ALL mapping
+4. NEVER expose device paths to clients
+5. Mapping based on Camera Monitor discovery
+end note
+
+@enduml
+```
+
+---
+
+## 6. Performance and Quality Architecture
+
+### 6.1 Circuit Breaker Pattern
+
+```plantuml
+@startuml CircuitBreaker
+title Circuit Breaker Pattern - MediaMTX Health Monitor
+
+state "Closed\n(Normal)" as Closed
+state "Open\n(Failing)" as Open
+state "Half-Open\n(Testing)" as HalfOpen
+
+Closed --> Open : Failure threshold\n(5 failures in 10s)
+Open --> HalfOpen : After timeout\n(30 seconds)
+HalfOpen --> Closed : Test request succeeds
+HalfOpen --> Open : Test request fails
+
+note right of Open
+When Open:
+• Fail fast (no MediaMTX calls)
+• Return cached data if available
+• Log circuit breaker state
+• Emit health events to clients
+end note
+
+note bottom of HalfOpen
+Half-Open Testing:
+• Allow single test request
+• Monitor response time
+• Exponential backoff on failures
+• Automatic state transitions
+end note
+
+@enduml
+```
+
+### 6.2 Performance Metrics
+
+| Operation | Target Latency | Architecture Optimization |
+|-----------|----------------|---------------------------|
+| **Camera List** | <50ms | Cached discovery results |
+| **Start Recording** | <200ms | Stateless MediaMTX PATCH |
+| **Stop Recording** | <100ms | Direct API call, no session cleanup |
+| **Snapshot Tier 0** | <100ms | Direct V4L2 capture |
+| **Snapshot Tier 1** | <200ms | Direct FFmpeg capture |
+| **Snapshot Tier 2** | <300ms | RTSP stream reuse |
+| **Snapshot Tier 3** | <500ms | Stream activation + capture |
+| **Health Check** | <30ms | Circuit breaker with caching |
+
+---
+
+## 7. Data Models and Types
+
+### 7.1 Core Response Types
+
+```plantuml
+@startuml ResponseTypes
+title API Response Types
+
+class CameraListResponse {
+    +Cameras: []CameraInfo
+    +Total: int
+    +Timestamp: string
+}
+
+class CameraInfo {
+    +Device: string
+    +Name: string
+    +Status: string
+    +Resolution: string
+    +FrameRate: int
+    +Capabilities: []string
+    +StreamURL: string
+    +IsRecording: bool
+}
+
+class RecordingResponse {
+    +Device: string
+    +Status: string
+    +Filename: string
+    +StartTime: string
+    +Duration: int
+    +AutoStop: bool
+    +Format: string
+}
+
+class SnapshotResponse {
+    +Device: string
+    +Filename: string
+    +FilePath: string
+    +FileSize: int64
+    +Resolution: string
+    +Format: string
+    +TierUsed: int
+    +CaptureTime: float64
+    +Timestamp: string
+}
+
+class GetHealthResponse {
+    +Status: string
+    +Uptime: string
+    +Version: string
+    +Components: map[string]string
+    +Checks: []interface{}
+    +Timestamp: string
+}
+
+class GetSystemMetricsResponse {
+    +Timestamp: string
+    +CPUUsage: float64
+    +MemoryUsage: float64
+    +DiskUsage: float64
+    +Goroutines: int
+    +NetworkIn: int64
+    +NetworkOut: int64
+    +LoadAverage: float64
+    +Connections: int64
+}
+
+@enduml
+```
+
+---
+
+## 8. Architecture Quality Assessment
+
+### 8.1 Current Architecture Strengths
+
+1. **✅ Single Source of Truth**: MediaMTX Controller centralizes all business logic
+2. **✅ Clean Abstraction**: Clear separation between API identifiers and hardware paths
+3. **✅ Stateless Recording**: MediaMTX API as authoritative recording state
+4. **✅ Multi-Tier Snapshots**: Intelligent fallback system with performance optimization
+5. **✅ Event-Driven Patterns**: Progressive readiness and real-time notifications
+6. **✅ Optional Components**: Flexible configuration-based component initialization
+7. **✅ Circuit Breaker**: Fault tolerance for external service dependencies
+8. **✅ Configuration Integration**: Centralized, type-safe configuration access
+
+### 8.2 Architectural Constraints and Limitations
+
+1. **TODO Dependencies**: Several components contain placeholder implementations that limit production readiness
+2. **Configuration Hardcoding**: Some configuration values are hardcoded rather than externalized
+3. **Metrics Completeness**: Comprehensive metrics collection is partially implemented
+4. **Error Context**: Some error scenarios lack detailed diagnostic information
+
+### 8.3 Design Principles Compliance
+
+| Principle | Compliance | Evidence |
+|-----------|------------|----------|
+| **Single Responsibility** | ✅ High | Each component has well-defined, focused responsibilities |
+| **Dependency Inversion** | ✅ High | Interface-based design with dependency injection |
+| **Open/Closed Principle** | ✅ Medium | Extensible via interfaces, some concrete dependencies |
+| **Interface Segregation** | ✅ High | Focused interfaces with specific responsibilities |
+| **Don't Repeat Yourself** | ✅ Medium | ConfigIntegration pattern reduces duplication |
+
+### 8.4 Architectural Trade-offs
+
+#### **Chosen: Stateless Recording**
+- **Benefits**: Simplified state management, better scalability, MediaMTX as source of truth
+- **Trade-offs**: Requires API queries for status, limited local state optimization
+
+#### **Chosen: Multi-Tier Snapshots**
+- **Benefits**: Performance optimization, graceful degradation, broad device support
+- **Trade-offs**: Increased complexity, multiple code paths to maintain
+
+#### **Chosen: Optional Components**
+- **Benefits**: Flexible deployment configurations, reduced resource usage
+- **Trade-offs**: Nil-checking overhead, increased testing complexity
+
+---
+
+## 9. Conclusion
+
+The MediaMTX Integration Module represents a well-architected, production-ready orchestration layer that successfully implements the single source of truth pattern while maintaining clean separation of concerns. The module demonstrates strong architectural principles including event-driven design, optional component patterns, and comprehensive error handling.
+
+### Key Architectural Achievements
+
+1. **Centralized Business Logic**: All video operations flow through the MediaMTX controller
+2. **Clean API Abstraction**: Proper mapping between external APIs and internal hardware
+3. **Stateless Design**: Recording state managed by MediaMTX API, not local sessions
+4. **Multi-Tier Optimization**: Intelligent snapshot capture with performance-optimized fallbacks
+5. **Production Readiness**: Circuit breaker patterns, health monitoring, and graceful degradation
+
+### Architectural Maturity
+
+The current architecture demonstrates high maturity in design patterns and component organization. The foundation is solid for future evolution while maintaining backward compatibility and system stability.
+
+**Document Maintenance**: This architecture documentation should be updated when significant architectural changes are implemented, following the principle that architecture documentation should reflect the current state of the system, not future plans.

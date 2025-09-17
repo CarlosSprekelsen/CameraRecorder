@@ -21,7 +21,24 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
-// HealthNotificationManager manages debounced health notifications
+// HealthNotificationManager manages system-wide health monitoring and threshold-based notifications.
+//
+// RESPONSIBILITIES:
+// - System-wide resource monitoring (storage, performance, thresholds)
+// - Cross-component health aggregation and alerting
+// - Debounced notification system to prevent spam
+// - Storage threshold monitoring and disk space management
+// - Performance metrics collection and threshold checking
+//
+// SCOPE:
+// - Handles system-level metrics (CPU, memory, disk usage, goroutines)
+// - Manages storage operations and file system monitoring
+// - Aggregates metrics from multiple components
+// - Does NOT handle MediaMTX-specific connectivity (that's HealthMonitor)
+//
+// API INTEGRATION:
+// - Should provide JSON-RPC API-ready responses for system metrics
+// - Centralizes system resource data collection and formatting
 type HealthNotificationManager struct {
 	// Configuration
 	config *config.Config

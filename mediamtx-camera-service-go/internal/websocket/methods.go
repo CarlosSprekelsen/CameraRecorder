@@ -1,24 +1,38 @@
-/*
-WebSocket JSON-RPC 2.0 method registration and core method implementations.
-
-Provides method registration system and core JSON-RPC method implementations
-following project architecture standards.
-
-Requirements Coverage:
-- REQ-API-002: JSON-RPC 2.0 protocol implementation
-- REQ-API-003: Request/response message handling
-- REQ-API-004: Core method implementations (ping, authenticate, get_camera_list, get_camera_status)
-
-Test Categories: Unit/Integration
-API Documentation Reference: docs/api/json_rpc_methods.md
-*/
+// Package websocket implements JSON-RPC 2.0 method registration and core API methods.
+//
+// This package provides the method registration system and implements all
+// JSON-RPC 2.0 API methods defined in the API documentation. All methods
+// follow the delegation pattern, forwarding business logic to the MediaMTX
+// controller while handling protocol-level concerns.
+//
+// Architecture Compliance:
+//   - Delegation Pattern: All business logic forwarded to MediaMTX controller
+//   - No Business Logic: Methods contain only protocol handling and validation
+//   - Consistent Error Handling: Structured JSON-RPC 2.0 error responses
+//   - Security Integration: Authentication and authorization enforcement
+//   - Performance Monitoring: Request/response metrics collection
+//
+// Method Categories:
+//   - Core Methods: ping, authenticate, system status
+//   - Camera Methods: get_camera_list, get_camera_status, camera operations
+//   - Recording Methods: start_recording, stop_recording, recording management
+//   - Snapshot Methods: take_snapshot with multi-tier fallback
+//   - File Methods: list_recordings, list_snapshots, file operations
+//   - Health Methods: get_system_health, component status
+//
+// Requirements Coverage:
+//   - REQ-API-002: Complete JSON-RPC 2.0 protocol implementation
+//   - REQ-API-003: Request/response message handling with proper error codes
+//   - REQ-API-004: All core method implementations with controller delegation
+//
+// Test Categories: Unit/Integration
+// API Documentation Reference: docs/api/json_rpc_methods.md
 
 package websocket
 
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -27,10 +41,9 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 )
 
-// Method Wrapper Helpers
-// These helpers centralize common patterns for consistent method execution
-
-// methodWrapper provides common method execution pattern with proper logging and error handling
+// methodWrapper provides common method execution pattern with structured logging
+// and consistent error handling. This centralizes cross-cutting concerns for
+// all JSON-RPC method implementations.
 func (s *WebSocketServer) methodWrapper(methodName string, handler func() (interface{}, error)) func(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	return func(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 		s.logger.WithFields(logging.Fields{
@@ -140,7 +153,6 @@ func (s *WebSocketServer) authenticatedMethodWrapper(methodName string, handler 
 }
 
 // registerBuiltinMethods registers all built-in JSON-RPC methods
-// Following Python _register_builtin_methods patterns
 func (s *WebSocketServer) registerBuiltinMethods() {
 	// Core methods
 	s.registerMethod("ping", s.MethodPing, "1.0")
@@ -274,7 +286,6 @@ func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, ver
 }
 
 // MethodPing implements the ping method
-// Following Python _method_ping implementation
 func (s *WebSocketServer) MethodPing(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// Uses wrapper helpers for consistent method execution
 	return s.authenticatedMethodWrapper("ping", func() (interface{}, error) {
@@ -289,7 +300,6 @@ func (s *WebSocketServer) MethodPing(params map[string]interface{}, client *Clie
 }
 
 // MethodAuthenticate implements the authenticate method
-// Following Python _method_authenticate implementation
 func (s *WebSocketServer) MethodAuthenticate(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// Handle authentication errors directly to return proper error codes
 	// Extract auth_token parameter
@@ -352,7 +362,7 @@ func (s *WebSocketServer) MethodAuthenticate(params map[string]interface{}, clie
 		Result: map[string]interface{}{
 			"authenticated": true,
 			"role":          claims.Role,
-			"permissions":   GetPermissionsForRole(claims.Role),
+			"permissions":   s.permissionChecker.GetPermissionsForRole(claims.Role), // Delegate to security module
 			"expires_at":    expiresAt.Format(time.RFC3339),
 			"session_id":    client.ClientID,
 		},
@@ -360,24 +370,21 @@ func (s *WebSocketServer) MethodAuthenticate(params map[string]interface{}, clie
 }
 
 // MethodGetCameraList implements the get_camera_list method
-// Following Python _method_get_camera_list implementation
 func (s *WebSocketServer) MethodGetCameraList(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// Delegates to MediaMTX Controller for business logic
 	return s.authenticatedMethodWrapper("get_camera_list", func() (interface{}, error) {
-		// Delegate to MediaMTX controller - now returns API-ready APICameraInfo format
+		// Delegate to MediaMTX controller - returns API-ready APICameraInfo format
 		cameraListResponse, err := s.mediaMTXController.GetCameraList(context.Background())
 		if err != nil {
 			return nil, err
 		}
 
-		// MediaMTX Controller now handles the API formatting through PathManager abstraction
+		// MediaMTX Controller handles the API formatting through PathManager abstraction
 		// Simply return the API-ready response
 		return cameraListResponse, nil
 	})(params, client)
 }
 
-// MethodGetCameraStatus implements the get_camera_status method
-// Following Python _method_get_camera_status implementation
 func (s *WebSocketServer) MethodGetCameraStatus(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// Uses wrapper helpers for consistent method execution
 	return s.authenticatedMethodWrapper("get_camera_status", func() (interface{}, error) {
@@ -393,64 +400,14 @@ func (s *WebSocketServer) MethodGetCameraStatus(params map[string]interface{}, c
 			return nil, fmt.Errorf("invalid device parameter: %v", validation.Errors)
 		}
 
-		// Get camera status from MediaMTX controller using camera identifier
-		cameraStatus, err := s.mediaMTXController.GetCameraStatus(context.Background(), cameraID)
+		// Delegate to MediaMTX controller - returns API-ready CameraStatusResponse
+		cameraStatusResponse, err := s.mediaMTXController.GetCameraStatus(context.Background(), cameraID)
 		if err != nil {
 			return nil, fmt.Errorf("camera '%s' not found: %v", cameraID, err)
 		}
 
-		// Get resolution from camera status
-		resolution := cameraStatus.Resolution
-
-		// Build streams object following API documentation exactly
-		streams := cameraStatus.Streams
-
-		// Build capabilities object following API documentation exactly
-		capabilities := map[string]interface{}{
-			"formats":     []string{}, // Will be populated from camera status
-			"resolutions": []string{}, // Will be populated from camera status
-		}
-
-		// Populate capabilities from camera status if available
-		if cameraStatus.Capabilities != nil {
-			capabilities["driver_name"] = cameraStatus.Capabilities.DriverName
-			capabilities["card_name"] = cameraStatus.Capabilities.CardName
-			capabilities["bus_info"] = cameraStatus.Capabilities.BusInfo
-		}
-
-		// Return camera status following API documentation exactly
-		result := map[string]interface{}{
-			"device":       cameraID,
-			"status":       cameraStatus.Status,
-			"name":         cameraStatus.Name,
-			"resolution":   resolution,
-			"fps":          cameraStatus.FPS,
-			"streams":      streams,
-			"capabilities": capabilities,
-		}
-
-		// Ensure metrics field exists with required subfields
-		if cameraStatus.Metrics != nil {
-			result["metrics"] = map[string]interface{}{
-				"bytes_sent": cameraStatus.Metrics.BytesSent,
-				"readers":    cameraStatus.Metrics.Readers,
-				"uptime":     cameraStatus.Metrics.Uptime,
-			}
-		} else {
-			result["metrics"] = map[string]interface{}{
-				"bytes_sent": int64(0),
-				"readers":    0,
-				"uptime":     int64(0),
-			}
-		}
-
-		// Validate response fields match API specification
-		requiredFields := []string{"device", "status", "name", "resolution", "fps", "streams", "metrics", "capabilities"}
-		if err := assertResponseFields("get_camera_status", result, requiredFields); err != nil {
-			return nil, err
-		}
-
-		return result, nil
+		// Return Controller's API-ready response directly - thin delegation
+		return cameraStatusResponse, nil
 	})(params, client)
 }
 
@@ -471,34 +428,23 @@ func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client
 
 		// Build API response from controller metrics (thin client pattern)
 		result := map[string]interface{}{
-			"active_connections":    activeConnections,                                                               // WebSocket-specific
-			"total_requests":        systemMetrics.RequestCount,                                                      // From controller
-			"average_response_time": systemMetrics.ResponseTime,                                                      // From controller
-			"error_rate":            float64(systemMetrics.ErrorCount) / float64(systemMetrics.RequestCount) * 100.0, // From controller
-			"memory_usage":          systemMetrics.MemoryUsage,                                                       // From controller
-			"cpu_usage":             systemMetrics.CPUUsage,                                                          // From controller
-			"disk_usage":            systemMetrics.DiskUsage,                                                         // From controller
-			"goroutines":            systemMetrics.Goroutines,                                                        // From controller
-			"heap_alloc":            systemMetrics.HeapAlloc,                                                         // From controller
+			"timestamp":          systemMetrics.Timestamp,   // From controller
+			"active_connections": activeConnections,         // WebSocket-specific
+			"memory_usage":       systemMetrics.MemoryUsage, // From controller
+			"cpu_usage":          systemMetrics.CPUUsage,    // From controller
+			"disk_usage":         systemMetrics.DiskUsage,   // From controller
+			"goroutines":         systemMetrics.Goroutines,  // From controller
+			"network_in":         systemMetrics.NetworkIn,   // From controller
+			"network_out":        systemMetrics.NetworkOut,  // From controller
+			"load_average":       systemMetrics.LoadAverage, // From controller
+			"connections":        systemMetrics.Connections, // From controller
 		}
-
-		// Add enhanced health monitoring metrics from controller
-		if systemMetrics.ComponentStatus != nil {
-			result["component_status"] = systemMetrics.ComponentStatus
-		}
-		if systemMetrics.ErrorCounts != nil {
-			result["error_counts"] = systemMetrics.ErrorCounts
-		}
-		result["circuit_breaker_state"] = systemMetrics.CircuitBreakerState
-		result["last_check"] = systemMetrics.LastCheck
 
 		// Return metrics from controller (single source of truth)
 		return result, nil
 	})(params, client)
 }
 
-// MethodGetCameraCapabilities implements the get_camera_capabilities method
-// Following Python _method_get_camera_capabilities implementation
 func (s *WebSocketServer) MethodGetCameraCapabilities(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// Uses wrapper helpers for consistent method execution
 	return s.authenticatedMethodWrapper("get_camera_capabilities", func() (interface{}, error) {
@@ -513,43 +459,25 @@ func (s *WebSocketServer) MethodGetCameraCapabilities(params map[string]interfac
 		// Extract validated device parameter
 		device := validationResult.Data["device"].(string)
 
-		// Initialize response with architecture defaults following API documentation exactly
-		cameraCapabilities := map[string]interface{}{
-			"device":            device,
-			"formats":           []string{},
-			"resolutions":       []string{},
-			"fps_options":       []int{},
-			"validation_status": "none",
-		}
-
-		// Get camera info from MediaMTX controller using existing infrastructure
-		cameraStatus, err := s.mediaMTXController.GetCameraStatus(context.Background(), device)
+		// ULTRA THIN: Delegate to MediaMTX controller - returns complete API-ready capabilities
+		cameraCapabilities, err := s.mediaMTXController.GetCameraCapabilities(context.Background(), device)
 		if err != nil {
-			cameraCapabilities["validation_status"] = "disconnected"
-		} else {
-			// MediaMTX Controller already handles status tracking
-			cameraCapabilities["validation_status"] = cameraStatus.Status
-
-			// Add device info from camera status
-			cameraCapabilities["device_name"] = cameraStatus.Name
-			if cameraStatus.Capabilities != nil {
-				cameraCapabilities["driver_name"] = cameraStatus.Capabilities.DriverName
-				cameraCapabilities["card_name"] = cameraStatus.Capabilities.CardName
-				cameraCapabilities["bus_info"] = cameraStatus.Capabilities.BusInfo
-			}
-
-			// Add FPS options as int list per API documentation
-			fpsOptions := []int{15, 30, 60}
-			cameraCapabilities["fps_options"] = fpsOptions
+			return map[string]interface{}{
+				"device":            device,
+				"formats":           []string{},
+				"resolutions":       []string{},
+				"fps_options":       []int{},
+				"validation_status": "disconnected",
+			}, nil
 		}
 
-		// Return camera capabilities following API documentation exactly
+		// Return Controller's complete API-ready response - NO manual extraction needed
+		// PathManager now provides ALL formats, resolutions, and FPS from camera module
 		return cameraCapabilities, nil
 	})(params, client)
 }
 
 // MethodGetStatus implements the get_status method
-// Following Python _method_get_status implementation
 func (s *WebSocketServer) MethodGetStatus(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// Uses wrapper helpers for consistent method execution
 	return s.authenticatedMethodWrapper("get_status", func() (interface{}, error) {
@@ -614,7 +542,6 @@ func (s *WebSocketServer) MethodGetSystemStatus(params map[string]interface{}, c
 }
 
 // MethodGetServerInfo implements the get_server_info method
-// Following Python _method_get_server_info implementation
 func (s *WebSocketServer) MethodGetServerInfo(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// Uses wrapper helpers for consistent method execution
 	return s.authenticatedMethodWrapper("get_server_info", func() (interface{}, error) {
@@ -626,20 +553,21 @@ func (s *WebSocketServer) MethodGetServerInfo(params map[string]interface{}, cli
 
 		// Convert to map for JSON response
 		return map[string]interface{}{
-			"name":              serverInfo.Name,
-			"version":           serverInfo.Version,
-			"build_date":        serverInfo.BuildDate,
-			"go_version":        serverInfo.GoVersion,
-			"architecture":      serverInfo.Architecture,
-			"capabilities":      serverInfo.Capabilities,
-			"supported_formats": serverInfo.SupportedFormats,
-			"max_cameras":       serverInfo.MaxCameras,
+			"service_name":    serverInfo.ServiceName,
+			"version":         serverInfo.Version,
+			"build_time":      serverInfo.BuildTime,
+			"go_version":      serverInfo.GoVersion,
+			"start_time":      serverInfo.StartTime,
+			"uptime":          serverInfo.Uptime,
+			"environment":     serverInfo.Environment,
+			"config_version":  serverInfo.ConfigVersion,
+			"api_version":     serverInfo.APIVersion,
+			"mediamtx_status": serverInfo.MediaMTXStatus,
 		}, nil
 	})(params, client)
 }
 
 // MethodGetStreams implements the get_streams method
-// Following Python _method_get_streams implementation
 func (s *WebSocketServer) MethodGetStreams(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// Uses wrapper helpers for consistent method execution
 	return s.authenticatedMethodWrapper("get_streams", func() (interface{}, error) {
@@ -649,15 +577,13 @@ func (s *WebSocketServer) MethodGetStreams(params map[string]interface{}, client
 			return nil, fmt.Errorf("failed to get streams from MediaMTX service: %v", err)
 		}
 
-		// INVESTIGATE: What should GetStreams return for API?
+		// Return Controller's API-ready response directly - thin delegation
 		return streams, nil
 	})(params, client)
 }
 
 // MethodListRecordings implements the list_recordings method
-// Following Python _method_list_recordings implementation
 func (s *WebSocketServer) MethodListRecordings(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 100 lines → 25 lines using wrapper helpers
 	return s.authenticatedMethodWrapper("list_recordings", func() (interface{}, error) {
 
 		// Basic parameter validation and extraction
@@ -676,19 +602,18 @@ func (s *WebSocketServer) MethodListRecordings(params map[string]interface{}, cl
 			}
 		}
 
-		// Delegate to MediaMTX controller - investigate what it returns
+		// Delegate to MediaMTX controller - returns API-ready ListRecordingsResponse
 		fileList, err := s.mediaMTXController.ListRecordings(context.Background(), limit, offset)
 		if err != nil {
 			return nil, fmt.Errorf("error getting recordings list: %v", err)
 		}
 
-		// INVESTIGATE: What should ListRecordings return for API?
+		// Return Controller's API-ready response directly - thin delegation
 		return fileList, nil
 	})(params, client)
 }
 
 // MethodDeleteRecording implements the delete_recording method
-// Following Python _method_delete_recording implementation
 func (s *WebSocketServer) MethodDeleteRecording(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// REFACTORED: 81 lines → 20 lines using wrapper helpers
 	return s.authenticatedMethodWrapper("delete_recording", func() (interface{}, error) {
@@ -719,9 +644,7 @@ func (s *WebSocketServer) MethodDeleteRecording(params map[string]interface{}, c
 }
 
 // MethodDeleteSnapshot implements the delete_snapshot method
-// Following Python _method_delete_snapshot implementation
 func (s *WebSocketServer) MethodDeleteSnapshot(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 68 lines → 20 lines using wrapper helpers
 	return s.authenticatedMethodWrapper("delete_snapshot", func() (interface{}, error) {
 
 		// Validate filename parameter
@@ -749,10 +672,7 @@ func (s *WebSocketServer) MethodDeleteSnapshot(params map[string]interface{}, cl
 	})(params, client)
 }
 
-// MethodGetStorageInfo implements the get_storage_info method
-// Following Python _method_get_storage_info implementation
 func (s *WebSocketServer) MethodGetStorageInfo(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 124 lines → 20 lines using wrapper helpers
 	return s.authenticatedMethodWrapper("get_storage_info", func() (interface{}, error) {
 
 		// Get storage info from controller (thin delegation)
@@ -761,33 +681,13 @@ func (s *WebSocketServer) MethodGetStorageInfo(params map[string]interface{}, cl
 			return nil, fmt.Errorf("error getting storage information: %v", err)
 		}
 
-		// Storage threshold checking moved to controller layer
-
-		// Build response per API specification
-		response := map[string]interface{}{
-			"total_space":       info.TotalSpace,
-			"used_space":        info.UsedSpace,
-			"available_space":   info.AvailableSpace,
-			"usage_percentage":  info.UsagePercentage,
-			"recordings_size":   info.RecordingsSize,
-			"snapshots_size":    info.SnapshotsSize,
-			"low_space_warning": info.LowSpaceWarning,
-		}
-
-		// Validate response fields match API specification
-		requiredFields := []string{"total_space", "used_space", "available_space", "usage_percentage", "recordings_size", "snapshots_size", "low_space_warning"}
-		if err := assertResponseFields("get_storage_info", response, requiredFields); err != nil {
-			return nil, err
-		}
-
-		return response, nil
+		// Return Controller's API-ready response directly - thin delegation
+		return info, nil
 	})(params, client)
 }
 
-// MethodCleanupOldFiles implements the cleanup_old_files method
-// Following Python _method_cleanup_old_files implementation
 func (s *WebSocketServer) MethodCleanupOldFiles(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 141 lines → 25 lines using wrapper helpers
+
 	return s.authenticatedMethodWrapper("cleanup_old_files", func() (interface{}, error) {
 		// Delegate to Controller for cleanup logic (single source of truth)
 		result, err := s.mediaMTXController.CleanupOldFiles(context.Background())
@@ -799,9 +699,7 @@ func (s *WebSocketServer) MethodCleanupOldFiles(params map[string]interface{}, c
 }
 
 // MethodSetRetentionPolicy implements the set_retention_policy method
-// Following Python _method_set_retention_policy implementation
 func (s *WebSocketServer) MethodSetRetentionPolicy(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 191 lines → 30 lines using wrapper helpers
 	return s.authenticatedMethodWrapper("set_retention_policy", func() (interface{}, error) {
 		// Validate retention policy parameters
 		validationResult := s.validationHelper.ValidateRetentionPolicyParameters(params)
@@ -823,10 +721,7 @@ func (s *WebSocketServer) MethodSetRetentionPolicy(params map[string]interface{}
 	})(params, client)
 }
 
-// MethodListSnapshots implements the list_snapshots method
-// Following Python _method_list_snapshots implementation
 func (s *WebSocketServer) MethodListSnapshots(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 95 lines → 20 lines using wrapper helpers
 	return s.authenticatedMethodWrapper("list_snapshots", func() (interface{}, error) {
 
 		// Validate pagination parameters
@@ -851,13 +746,13 @@ func (s *WebSocketServer) MethodListSnapshots(params map[string]interface{}, cli
 			return nil, fmt.Errorf("no snapshots found")
 		}
 
-		// Convert FileMetadata to map for JSON response
-		files := make([]map[string]interface{}, len(fileList.Files))
-		for i, file := range fileList.Files {
+		// Convert SnapshotFileInfo to map for JSON response
+		files := make([]map[string]interface{}, len(fileList.Snapshots))
+		for i, file := range fileList.Snapshots {
 			fileData := map[string]interface{}{
-				"filename":      file.FileName,
+				"filename":      file.Filename,
 				"file_size":     file.FileSize,
-				"modified_time": file.ModifiedAt.Format(time.RFC3339),
+				"modified_time": file.CreatedAt, // ISO 8601 formatted timestamp
 				"download_url":  file.DownloadURL,
 			}
 
@@ -875,162 +770,60 @@ func (s *WebSocketServer) MethodListSnapshots(params map[string]interface{}, cli
 }
 
 // MethodTakeSnapshot implements the take_snapshot method
-// Following Python _method_take_snapshot implementation
 func (s *WebSocketServer) MethodTakeSnapshot(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 87 lines → 25 lines using wrapper helpers
 	return s.authenticatedMethodWrapper("take_snapshot", func() (interface{}, error) {
-
-		// Validate snapshot parameters
+		// 1. Input validation only (API contract validation)
 		validationResult := s.validationHelper.ValidateSnapshotParameters(params)
 		if !validationResult.Valid {
 			s.validationHelper.LogValidationWarnings(validationResult, "take_snapshot", client.ClientID)
-			return nil, fmt.Errorf("validation failed: %s", "validation failed")
+			return nil, fmt.Errorf("validation failed")
 		}
 
-		// Extract validated parameters
+		// 2. Extract parameters and delegate everything to Controller
 		devicePath := validationResult.Data["device"].(string)
 		options := validationResult.Data["options"].(map[string]interface{})
 
-		// Validate camera device exists
-		exists, err := s.mediaMTXController.ValidateCameraDevice(context.Background(), devicePath)
-		if err != nil || !exists {
-			return nil, fmt.Errorf("camera device %s not found", devicePath)
-		}
-
-		// Take snapshot using MediaMTX controller - thin delegation
+		// 3. Pure delegation - Controller and SnapshotManager handle all business logic
+		// No duplicate validation, no response formatting, no business logic
 		snapshot, err := s.mediaMTXController.TakeAdvancedSnapshot(context.Background(), devicePath, options)
 		if err != nil {
 			return nil, fmt.Errorf("failed to take snapshot: %v", err)
 		}
 
-		// Map to API-compliant fields
-		filename := ""
-		if parts := strings.Split(snapshot.FilePath, "/"); len(parts) > 0 {
-			filename = parts[len(parts)-1]
-		}
-		response := map[string]interface{}{
-			"device":    snapshot.Device,
-			"filename":  filename,
-			"status":    "completed",
-			"timestamp": snapshot.Created.Format(time.RFC3339),
-			"file_size": snapshot.Size,
-			"file_path": snapshot.FilePath,
-		}
-
-		// Validate response fields match API specification
-		requiredFields := []string{"device", "filename", "status", "timestamp", "file_size", "file_path"}
-		if err := assertResponseFields("take_snapshot", response, requiredFields); err != nil {
-			return nil, err
-		}
-
-		return response, nil
+		// 4. Return snapshot as-is - SnapshotManager should provide API-ready response
+		return snapshot, nil
 	})(params, client)
 }
 
 // MethodStartRecording implements the start_recording method
-// Following Python _method_start_recording implementation
 func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 90 lines → 25 lines using wrapper helpers
 	return s.authenticatedMethodWrapper("start_recording", func() (interface{}, error) {
-		// Validate recording parameters
+		// 1. Input validation only (JSON-RPC API contract validation)
 		validationResult := s.validationHelper.ValidateRecordingParameters(params)
 		if !validationResult.Valid {
 			s.validationHelper.LogValidationWarnings(validationResult, "start_recording", client.ClientID)
-			return nil, fmt.Errorf("validation failed: %s", "validation failed")
+			return nil, fmt.Errorf("validation failed")
 		}
 
-		// Extract and process parameters
-		devicePath := validationResult.Data["device"].(string)
-		options := validationResult.Data["options"].(map[string]interface{})
+		// 2. Extract JSON-RPC API parameters only (per docs/api/json_rpc_methods.md)
+		device := validationResult.Data["device"].(string)
 
-		// Convert duration to time.Duration if present
-		if duration, exists := options["max_duration"]; exists {
-			if durationInt, ok := duration.(int); ok {
-				options["max_duration"] = time.Duration(durationInt) * time.Second
-			}
+		// 3. Build PathConf with only JSON-RPC API parameters (no internal MediaMTX fields)
+		options := &mediamtx.PathConf{}
+		if format, ok := params["format"].(string); ok && format != "" {
+			options.RecordFormat = format
 		}
-
-		// Add additional parameters
-		if qualityStr, ok := params["quality_level"].(string); ok && qualityStr != "" {
-			options["quality"] = qualityStr
-		}
-		if autoRotate, ok := params["auto_rotate"].(bool); ok {
-			options["auto_rotate"] = autoRotate
-		}
-		if rotationSize, ok := params["rotation_size"].(int64); ok && rotationSize > 0 {
-			options["rotation_size"] = rotationSize
+		if duration, ok := params["duration"].(int); ok && duration > 0 {
+			options.RecordDeleteAfter = fmt.Sprintf("%ds", duration) // Convert to MediaMTX duration format
 		}
 
-		// Enhanced segment-based rotation parameters
-		if continuityMode, ok := params["continuity_mode"].(bool); ok {
-			options["continuity_mode"] = continuityMode
-		}
-		if segmentFormat, ok := params["segment_format"].(string); ok && segmentFormat != "" {
-			options["segment_format"] = segmentFormat
-		}
-		if resetTimestamps, ok := params["reset_timestamps"].(bool); ok {
-			options["reset_timestamps"] = resetTimestamps
-		}
-		if strftimeEnabled, ok := params["strftime_enabled"].(bool); ok {
-			options["strftime_enabled"] = strftimeEnabled
-		}
-		if segmentPrefix, ok := params["segment_prefix"].(string); ok && segmentPrefix != "" {
-			options["segment_prefix"] = segmentPrefix
-		}
-		if maxSegments, ok := params["max_segments"].(int); ok && maxSegments > 0 {
-			options["max_segments"] = maxSegments
-		}
-		if segmentRotation, ok := params["segment_rotation"].(bool); ok {
-			options["segment_rotation"] = segmentRotation
-		}
-
-		// Validate device parameter using centralized validation
-		val := s.validationHelper.ValidateDeviceParameter(map[string]interface{}{"device": devicePath})
-		if !val.Valid {
-			return nil, fmt.Errorf("invalid device parameter: %v", val.Errors)
-		}
-		exists, err := s.mediaMTXController.ValidateCameraDevice(context.Background(), devicePath)
-		if err != nil || !exists {
-			return nil, fmt.Errorf("camera '%s' not found or not accessible", devicePath)
-		}
-
-		// Start recording using MediaMTX controller with path-based recording
-		err = s.mediaMTXController.StartRecording(context.Background(), devicePath, options)
-		if err != nil {
-			return nil, fmt.Errorf("failed to start recording: %v", err)
-		}
-
-		// Map to API-compliant fields (no session_id)
-		format := "fmp4" // Default to fmp4 format
-		if f, ok := options["format"].(string); ok && f != "" {
-			format = f
-		}
-
-		// Generate filename without extension (MediaMTX adds it based on format)
-		filename := fmt.Sprintf("%s_%s", devicePath, time.Now().Format("2006-01-02_15-04-05"))
-
-		response := map[string]interface{}{
-			"device":     devicePath,
-			"filename":   filename,
-			"status":     "RECORDING",
-			"start_time": time.Now().Format(time.RFC3339),
-			"format":     format,
-		}
-
-		// Validate response fields (no session_id)
-		required := []string{"device", "filename", "status", "start_time", "format"}
-		if err := assertResponseFields("start_recording", response, required); err != nil {
-			return nil, err
-		}
-
-		return response, nil
+		// 4. Pure delegation - Controller returns API-ready response
+		return s.mediaMTXController.StartRecording(context.Background(), device, options)
 	})(params, client)
 }
 
 // MethodStopRecording implements the stop_recording method
-// Following Python _method_stop_recording implementation
 func (s *WebSocketServer) MethodStopRecording(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 57 lines → 25 lines using wrapper helpers
 	return s.authenticatedMethodWrapper("stop_recording", func() (interface{}, error) {
 		// Validate parameters
 		if params == nil {
@@ -1049,23 +842,27 @@ func (s *WebSocketServer) MethodStopRecording(params map[string]interface{}, cli
 		}
 
 		// Stop recording using device-based approach (no session ID needed)
-		err := s.mediaMTXController.StopRecording(context.Background(), cameraID)
+		response, err := s.mediaMTXController.StopRecording(context.Background(), cameraID)
 		if err != nil {
 			return nil, fmt.Errorf("failed to stop recording: %v", err)
 		}
 
-		// Return success response (no session_id)
+		// Return API-ready response directly
 		return map[string]interface{}{
-			"device": cameraID,
-			"status": "STOPPED",
+			"device":     response.Device,
+			"filename":   response.Filename,
+			"status":     response.Status,
+			"start_time": response.StartTime,
+			"end_time":   response.EndTime,
+			"duration":   response.Duration,
+			"file_size":  response.FileSize,
+			"format":     response.Format,
 		}, nil
 	})(params, client)
 }
 
-// MethodGetRecordingInfo implements the get_recording_info method
-// Following API documentation exactly
 func (s *WebSocketServer) MethodGetRecordingInfo(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 80 lines → 20 lines using wrapper helpers
+
 	return s.authenticatedMethodWrapper("get_recording_info", func() (interface{}, error) {
 
 		// Validate filename parameter
@@ -1084,20 +881,18 @@ func (s *WebSocketServer) MethodGetRecordingInfo(params map[string]interface{}, 
 			return nil, fmt.Errorf("error getting recording info: %v", err)
 		}
 
-		// Return recording info
+		// Return recording info - API-ready response
 		result := map[string]interface{}{
-			"filename":     fileMetadata.FileName,
+			"device":       fileMetadata.Device,
+			"filename":     fileMetadata.Filename,
 			"file_size":    fileMetadata.FileSize,
-			"created_time": fileMetadata.CreatedAt.Format(time.RFC3339),
+			"duration":     fileMetadata.Duration,
+			"created_at":   fileMetadata.CreatedAt, // ISO 8601 formatted timestamp
+			"format":       fileMetadata.Format,
+			"resolution":   fileMetadata.Resolution,
+			"frame_rate":   fileMetadata.FrameRate,
+			"bitrate":      fileMetadata.Bitrate,
 			"download_url": fileMetadata.DownloadURL,
-		}
-
-		// Add duration if available
-		if fileMetadata.Duration != nil {
-			result["duration"] = *fileMetadata.Duration
-		} else {
-			// Duration is nil for non-video files or when extraction fails
-			result["duration"] = nil
 		}
 
 		// Return recording info
@@ -1106,9 +901,7 @@ func (s *WebSocketServer) MethodGetRecordingInfo(params map[string]interface{}, 
 }
 
 // MethodGetSnapshotInfo implements the get_snapshot_info method
-// Following API documentation exactly
 func (s *WebSocketServer) MethodGetSnapshotInfo(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 385 lines → 25 lines using wrapper helpers
 	return s.authenticatedMethodWrapper("get_snapshot_info", func() (interface{}, error) {
 
 		// Validate filename parameter
@@ -1127,34 +920,23 @@ func (s *WebSocketServer) MethodGetSnapshotInfo(params map[string]interface{}, c
 			return nil, fmt.Errorf("error getting snapshot info: %v", err)
 		}
 
-		// Return snapshot info
+		// Return snapshot info - API-ready response
 		return map[string]interface{}{
-			"filename":     fileMetadata.FileName,
+			"device":       fileMetadata.Device,
+			"filename":     fileMetadata.Filename,
 			"file_size":    fileMetadata.FileSize,
-			"created_time": fileMetadata.CreatedAt.Format(time.RFC3339),
+			"created_at":   fileMetadata.CreatedAt, // ISO 8601 formatted timestamp
+			"format":       fileMetadata.Format,
+			"resolution":   fileMetadata.Resolution,
+			"quality":      fileMetadata.Quality,
 			"download_url": fileMetadata.DownloadURL,
 		}, nil
 	})(params, client)
 }
 
-// GetPermissionsForRole returns permissions for a given role
-// Following Python role-based access control patterns
-func GetPermissionsForRole(role string) []string {
-	switch role {
-	case "admin":
-		return []string{"view", "control", "admin"}
-	case "operator":
-		return []string{"view", "control"}
-	case "viewer":
-		return []string{"view"}
-	default:
-		return []string{}
-	}
-}
-
 // MethodCameraStatusUpdate handles camera status update notifications
-// Following Python implementation patterns and API documentation specification
 // SECURITY: This method should not be called directly by clients - it's for server-generated notifications only
+// PURPOSE: WebSocket event system for real-time camera status notifications (REQ-API-020/021)
 func (s *WebSocketServer) MethodCameraStatusUpdate(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// REQ-API-020: WebSocket server shall support camera_status_update notifications
 	// REQ-API-021: Notifications shall include device, status, name, resolution, fps, and streams
@@ -1167,7 +949,6 @@ func (s *WebSocketServer) MethodCameraStatusUpdate(params map[string]interface{}
 }
 
 // MethodRecordingStatusUpdate handles recording status update notifications
-// Following Python implementation patterns and API documentation specification
 // SECURITY: This method should not be called directly by clients - it's for server-generated notifications only
 func (s *WebSocketServer) MethodRecordingStatusUpdate(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// REQ-API-022: WebSocket server shall support recording_status_update notifications
@@ -1182,7 +963,6 @@ func (s *WebSocketServer) MethodRecordingStatusUpdate(params map[string]interfac
 
 // MethodSubscribeEvents handles client subscription to event topics
 func (s *WebSocketServer) MethodSubscribeEvents(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 90 lines → 25 lines using wrapper helpers
 	return s.authenticatedMethodWrapper("subscribe_events", func() (interface{}, error) {
 		// Validate required parameters
 		topicsParam, exists := params["topics"]
@@ -1239,7 +1019,6 @@ func (s *WebSocketServer) MethodSubscribeEvents(params map[string]interface{}, c
 
 // MethodUnsubscribeEvents handles client unsubscription from event topics
 func (s *WebSocketServer) MethodUnsubscribeEvents(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 49 lines → 20 lines using wrapper helpers
 	return s.authenticatedMethodWrapper("unsubscribe_events", func() (interface{}, error) {
 		// Parse optional topics parameter (if not provided, unsubscribe from all)
 		var topics []EventTopic
@@ -1277,7 +1056,6 @@ func (s *WebSocketServer) MethodUnsubscribeEvents(params map[string]interface{},
 
 // MethodGetSubscriptionStats returns statistics about event subscriptions
 func (s *WebSocketServer) MethodGetSubscriptionStats(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 15 lines → 8 lines using wrapper helpers
 	return s.methodWrapper("get_subscription_stats", func() (interface{}, error) {
 		// Get subscription statistics
 		stats := s.eventManager.GetSubscriptionStats()
@@ -1295,7 +1073,6 @@ func (s *WebSocketServer) MethodGetSubscriptionStats(params map[string]interface
 
 // MethodStartStreaming starts a live streaming session for the specified camera device
 func (s *WebSocketServer) MethodStartStreaming(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 30 lines → 15 lines using wrapper helpers
 	return s.authenticatedMethodWrapper("start_streaming", func() (interface{}, error) {
 		// Validate device parameter using centralized validation
 		validationResult := s.validationHelper.ValidateDeviceParameter(params)
@@ -1334,7 +1111,6 @@ func (s *WebSocketServer) MethodStartStreaming(params map[string]interface{}, cl
 
 // MethodStopStreaming stops the active streaming session for the specified camera device
 func (s *WebSocketServer) MethodStopStreaming(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 30 lines → 15 lines using wrapper helpers
 	return s.authenticatedMethodWrapper("stop_streaming", func() (interface{}, error) {
 		// Validate device parameter using centralized validation
 		validationResult := s.validationHelper.ValidateDeviceParameter(params)
@@ -1380,26 +1156,14 @@ func (s *WebSocketServer) MethodGetStreamURL(params map[string]interface{}, clie
 		// Extract validated device parameter
 		device := validationResult.Data["device"].(string)
 
-		// Get stream URL from controller
-		streamURL, err := s.mediaMTXController.GetStreamURL(context.Background(), device)
+		// ULTRA THIN: Delegate to Controller - returns complete API-ready response
+		streamURLResp, err := s.mediaMTXController.GetStreamURL(context.Background(), device)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get stream URL: %v", err)
 		}
-		streamName := strings.TrimPrefix(streamURL, "rtsp://localhost:8554/")
 
-		// Check if stream is active (simplified check)
-		streamStatus, err := s.mediaMTXController.GetStreamStatus(context.Background(), streamName)
-		available := err == nil && streamStatus != nil
-
-		// Return stream URL result
-		return map[string]interface{}{
-			"device":           device,
-			"stream_name":      streamName,
-			"stream_url":       streamURL,
-			"available":        available,
-			"active_consumers": 0,
-			"stream_status":    "ready",
-		}, nil
+		// Return Controller's API-ready response directly - no business logic duplication
+		return streamURLResp, nil
 	})(params, client)
 }
 
@@ -1422,52 +1186,11 @@ func (s *WebSocketServer) MethodGetStreamStatus(params map[string]interface{}, c
 		if err != nil {
 			return nil, fmt.Errorf("stream not found or not active: %v", err)
 		}
-		streamName := stream.Name
 
-		// Return stream status result
-		return map[string]interface{}{
-			"device":      device,
-			"stream_name": streamName,
-			"status":      "active",
-			"ready":       true,
-			"ffmpeg_process": map[string]interface{}{
-				"running": true,
-				"pid":     12345,
-				"uptime":  300,
-			},
-			"mediamtx_path": map[string]interface{}{
-				"exists":  true,
-				"ready":   true,
-				"readers": 2,
-			},
-			"metrics": map[string]interface{}{
-				"bytes_sent":  12345678,
-				"frames_sent": 9000,
-				"bitrate":     600000,
-				"fps":         30,
-			},
-			"start_time": time.Now().Add(-5 * time.Minute).Format(time.RFC3339),
-		}, nil
+		// ULTRA THIN: Return Controller's API-ready response directly - no business logic duplication
+		return stream, nil
 	})(params, client)
 }
-
-// assertResponseFields validates response contains all required fields per API specification
-func assertResponseFields(methodName string, response map[string]interface{}, requiredFields []string) error {
-	for _, field := range requiredFields {
-		if _, exists := response[field]; !exists {
-			return fmt.Errorf("method %s missing required API field: %s", methodName, field)
-		}
-	}
-	return nil
-}
-
-// validateCameraIdentifier delegates to controller validation pattern via path mapping fallbacks
-func (s *WebSocketServer) validateCameraIdentifier(id string) bool {
-	matched, _ := regexp.MatchString(`^camera[0-9]+$`, id)
-	return matched
-}
-
-// Threshold checking functions moved to controller layer for proper architecture
 
 // MethodDiscoverExternalStreams discovers external streams (Skydio UAVs, etc.)
 func (s *WebSocketServer) MethodDiscoverExternalStreams(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
@@ -1616,8 +1339,9 @@ func (s *WebSocketServer) MethodSetDiscoveryInterval(params map[string]interface
 			return nil, fmt.Errorf("scan_interval must be >= 0")
 		}
 
-		// Note: This would require updating the configuration and restarting the discovery timer
-		// For now, return success with the requested interval
+		// TODO-CONTROLLER: Implement Controller.SetDiscoveryInterval() method
+		// TODO-CONTROLLER: Should delegate to ExternalStreamDiscovery to update scan interval dynamically
+		// TODO: Implement proper interval validation and configuration persistence
 		return map[string]interface{}{
 			"scan_interval": int(interval),
 			"status":        "updated",
