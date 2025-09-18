@@ -251,8 +251,8 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 		}
 	}
 
-	// Create health monitor
-	healthMonitor := NewHealthMonitor(client, mediaMTXConfig, logger)
+	// Create health monitor with configuration integration
+	healthMonitor := NewHealthMonitor(client, mediaMTXConfig, configIntegration, logger)
 
 	// Create path manager with camera monitor (consolidated camera operations)
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)
@@ -517,17 +517,13 @@ func (c *controller) GetServerInfo(ctx context.Context) (*GetServerInfoResponse,
 		mediaMTXStatus = "disconnected"
 	}
 
+	// Get version from centralized configuration
+	versionInfo := c.configIntegration.GetVersionInfo()
+
 	// Build API-ready response
 	response := &GetServerInfoResponse{
-		ServiceName: "MediaMTX Camera Service",
-		Version:     "1.0.0", // TODO: Get version from build-time injection instead of hardcoding
-		// INVESTIGATION: Version should come from build process (go build -ldflags "-X main.Version=...")
-		// CURRENT: Hardcoded "1.0.0" violates configuration management principles
-		// SOLUTION: Add build-time variable injection in Makefile/build script:
-		//   var Version = "dev" // Default for development
-		//   go build -ldflags "-X main.Version=$(git describe --tags)"
-		// REFERENCE: Common Go pattern, see Prometheus/Docker implementations
-		// EFFORT: 1-2 hours - add build variable and update build process
+		ServiceName:   "MediaMTX Camera Service",
+		Version:       versionInfo.Version,
 		Status:        "running",
 		StartTime:     c.startTime.Format(time.RFC3339),
 		Uptime:        time.Since(c.startTime).String(),
@@ -571,9 +567,11 @@ func (c *controller) CleanupOldFiles(ctx context.Context) (*CleanupOldFilesRespo
 
 	switch cfg.RetentionPolicy.Type {
 	case "age":
-		// Age-based cleanup using MediaMTX managers
-		maxAge := time.Duration(cfg.RetentionPolicy.MaxAgeDays) * 24 * time.Hour
-		maxCount := 100 // Default max count
+		// Age-based cleanup using centralized configuration
+		maxAge, maxCount, _, err := c.configIntegration.GetCleanupLimits()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get cleanup limits: %v", err)
+		}
 
 		// Clean up recordings based on retention policy
 		if err := c.recordingManager.CleanupOldRecordings(ctx, maxAge, maxCount); err != nil {
@@ -589,9 +587,15 @@ func (c *controller) CleanupOldFiles(ctx context.Context) (*CleanupOldFilesRespo
 			deletedCount += 1
 		}
 	case "size":
-		// Size-based cleanup - convert GB to bytes and use age-based as fallback
-		maxAge := time.Duration(cfg.RetentionPolicy.MaxAgeDays) * 24 * time.Hour
-		maxCount := 100 // Default max count
+		// Size-based cleanup using centralized configuration
+		maxAge, maxCount, maxSize, err := c.configIntegration.GetCleanupLimits()
+		if err != nil {
+			return nil, fmt.Errorf("failed to get cleanup limits: %v", err)
+		}
+
+		// TODO: Implement size-based cleanup logic using maxSize
+		// For now, using age/count-based cleanup as fallback
+		_ = maxSize // Acknowledge unused variable
 
 		// Clean up recordings based on retention policy
 		if err := c.recordingManager.CleanupOldRecordings(ctx, maxAge, maxCount); err != nil {
@@ -773,33 +777,16 @@ func (c *controller) CreatePath(ctx context.Context, path *Path) error {
 		return fmt.Errorf("controller is not running")
 	}
 
-	// For now, create a basic path with just name and source
-	// The Path type is for runtime status, not configuration
-	// TODO: Redesign method to use proper configuration parameters from centralized config
-	// INVESTIGATION: Method uses hardcoded PathConf{} instead of centralized configuration
-	// CURRENT: Creates basic path with minimal options, ignoring recording/streaming config
-	// SOLUTION: Use configIntegration to get proper PathConf with:
-	//   - Recording settings from GetRecordingConfig()
-	//   - Stream settings from GetStreamConfig()
-	//   - Path settings from GetPathConfig()
-	// REFERENCE: enableRecordingOnPath():593 shows proper configuration usage
-	// EFFORT: 3-4 hours - refactor to use centralized configuration throughout
-	options := &PathConf{}
+	// Build comprehensive path configuration using centralized config
+	options, err := c.configIntegration.BuildPathConf(path.Name, path.Source, false)
+	if err != nil {
+		return fmt.Errorf("failed to build path configuration: %w", err)
+	}
 
-	// Extract source from the path if available
-	source := ""
-	if path.Source != nil {
-		// If source is a PathSource object, we need to handle it appropriately
-		// TODO: Implement proper source configuration from centralized config parameters
-		// INVESTIGATION: Source hardcoded to "rtsp://localhost:8554/" + path.Name pattern
-		// CURRENT: Ignores actual device path and stream configuration from parameters
-		// SOLUTION: Use path.Source if provided, otherwise build from:
-		//   - Device path for V4L2 sources: path.Source = devicePath
-		//   - RTSP URL for external sources: use provided URL
-		//   - Config-based URL building: config.MediaMTXConfig.Host + ":" + RTSPPort + "/" + pathName
-		// REFERENCE: stream_manager.go:buildFFmpegCommand() shows proper source handling
-		// EFFORT: 2-3 hours - implement proper source configuration logic
-		source = "rtsp://localhost:8554/" + path.Name
+	// Build source URL using centralized configuration
+	source, err := c.configIntegration.BuildSourceURL(path.Name, path.Source)
+	if err != nil {
+		return fmt.Errorf("failed to build source URL: %w", err)
 	}
 
 	return c.pathManager.CreatePath(ctx, path.Name, source, options)
@@ -993,7 +980,7 @@ func generateSnapshotID(device string) string {
 }
 
 // TakeAdvancedSnapshot takes a snapshot with advanced options
-func (c *controller) TakeAdvancedSnapshot(ctx context.Context, cameraID string, options map[string]interface{}) (*TakeSnapshotResponse, error) {
+func (c *controller) TakeAdvancedSnapshot(ctx context.Context, cameraID string, options *SnapshotOptions) (*TakeSnapshotResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}

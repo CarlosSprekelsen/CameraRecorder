@@ -169,17 +169,9 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 			// Empty source with runOnDemand allows dynamic publisher connection
 			source = ""
 			if opts.RunOnDemand == "" {
-				// TODO: Set proper runOnDemand command from centralized configuration
-				// INVESTIGATION: runOnDemand hardcoded to echo command instead of using config
-				// CURRENT: Uses placeholder "echo 'Publisher source - waiting for connection'"
-				// SOLUTION: Use centralized config for on-demand commands:
-				//   - V4L2 devices: ffmpeg command from config.MediaMTXConfig.Codec settings
-				//   - External RTSP: proxy/relay command configuration
-				//   - Custom commands: config.PathConfig.RunOnDemandCommand if available
-				// REFERENCE: stream_manager.go:buildFFmpegCommand() shows proper command building
-				// EFFORT: 3-4 hours - implement configurable runOnDemand command generation
-				// This allows the validation to pass while creating a config path
-				opts.RunOnDemand = "echo 'Publisher source - waiting for connection'"
+				// Generate proper FFmpeg command using centralized configuration
+				pathName := GetMediaMTXPathName(devicePath)
+				opts.RunOnDemand = BuildFFmpegCommand(devicePath, pathName, pm.config)
 				opts.RunOnDemandRestart = true
 				opts.RunOnDemandStartTimeout = pm.config.RunOnDemandStartTimeout
 				opts.RunOnDemandCloseAfter = pm.config.RunOnDemandCloseAfter

@@ -195,14 +195,6 @@ type Snapshot struct {
 	Metadata map[string]interface{} `json:"metadata,omitempty"`
 }
 
-// SnapshotOptions represents snapshot capture options
-type SnapshotOptions struct {
-	Quality    int    `json:"quality"`    // Image quality (1-100)
-	Format     string `json:"format"`     // Image format (jpg, png)
-	Resolution string `json:"resolution"` // Resolution (e.g., "1920x1080")
-	Timestamp  bool   `json:"timestamp"`  // Include timestamp in filename
-}
-
 // RecordingOptions represents recording options
 type RecordingOptions struct {
 	Duration     int    `json:"duration"`      // Recording duration in seconds (0 = unlimited)
@@ -357,7 +349,7 @@ type MediaMTXController interface {
 	GetRTSPConnectionMetrics(ctx context.Context) map[string]interface{}
 
 	// Advanced snapshot operations
-	TakeAdvancedSnapshot(ctx context.Context, device string, options map[string]interface{}) (*TakeSnapshotResponse, error)
+	TakeAdvancedSnapshot(ctx context.Context, device string, options *SnapshotOptions) (*TakeSnapshotResponse, error)
 	GetAdvancedSnapshot(snapshotID string) (*Snapshot, bool)
 	ListAdvancedSnapshots() []*Snapshot
 	DeleteAdvancedSnapshot(ctx context.Context, snapshotID string) error
@@ -406,15 +398,7 @@ type MediaMTXControllerAPI interface {
 	// Recording and snapshots (device-based, no session IDs)
 	StartRecording(ctx context.Context, device string, options *PathConf) (*StartRecordingResponse, error)
 	StopRecording(ctx context.Context, device string) (*StopRecordingResponse, error)
-	TakeAdvancedSnapshot(ctx context.Context, device string, options map[string]interface{}) (*TakeSnapshotResponse, error) // TODO: Change parameter type to *PathConf for consistency
-	// INVESTIGATION: TakeAdvancedSnapshot uses map[string]interface{} while other methods use *PathConf
-	// CURRENT: Type inconsistency between snapshot and recording methods parameter types
-	// SOLUTION: Standardize to *PathConf parameter type for consistency:
-	//   - Update TakeAdvancedSnapshot signature to use *PathConf
-	//   - Update all implementations to handle PathConf instead of map
-	//   - Ensure snapshot options (quality, format, resolution) map to PathConf fields
-	// REFERENCE: StartRecording() and StopRecording() already use *PathConf consistently
-	// EFFORT: 2-3 hours - update interface and all implementations for type consistency
+	TakeAdvancedSnapshot(ctx context.Context, device string, options *SnapshotOptions) (*TakeSnapshotResponse, error)
 	GetRecordingInfo(ctx context.Context, filename string) (*GetRecordingInfoResponse, error)
 	GetSnapshotInfo(ctx context.Context, filename string) (*GetSnapshotInfoResponse, error)
 	ListRecordings(ctx context.Context, limit, offset int) (*ListRecordingsResponse, error)
@@ -532,7 +516,7 @@ type StreamManager interface {
 	GenerateStreamURL(cameraID string) string
 	GenerateStreamName(cameraID string, useCase StreamUseCase) string
 
-	// TODO-IMPL: Add GetStreamURL method to consolidate URL generation and status checking from Controller
+	// GetStreamURL consolidates URL generation and status checking from Controller
 	GetStreamURL(ctx context.Context, cameraID string) (*GetStreamURLResponse, error)
 
 	// Generic stream operations (internal MediaMTX operations)

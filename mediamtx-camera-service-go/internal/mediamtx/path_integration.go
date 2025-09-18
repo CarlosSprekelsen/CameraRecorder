@@ -134,22 +134,15 @@ func (pi *PathIntegration) CreatePathForCamera(ctx context.Context, device strin
 		return nil // Idempotent success - path exists
 	}
 
-	// Get configuration
-	cfg, err := pi.configIntegration.GetConfig()
+	// Create comprehensive path configuration using centralized config
+	pathSource := &PathSource{
+		Type: "rtspSource",
+		ID:   device,
+	}
+	options, err := pi.configIntegration.BuildPathConf(pathName, pathSource, false)
 	if err != nil {
-		return fmt.Errorf("failed to get configuration: %w", err)
+		return fmt.Errorf("failed to build path configuration: %w", err)
 	}
-
-	// Create path options using config values
-	options := &PathConf{
-		SourceOnDemand:             true,
-		SourceOnDemandStartTimeout: cfg.MediaMTX.RunOnDemandStartTimeout,
-		SourceOnDemandCloseAfter:   cfg.MediaMTX.RunOnDemandCloseAfter,
-	}
-
-	// Note: resolution and fps are not standard PathConf fields
-	// These camera-specific options would need to be handled differently
-	// TODO: Implement comprehensive path configuration with all MediaMTX options
 
 	// Create the path
 	if err := pi.pathManager.CreatePath(ctx, pathName, device, options); err != nil {

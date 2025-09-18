@@ -161,6 +161,12 @@ security:
   rate_limit_window: 2m    # Increased from 1m
   jwt_secret_key: "edge-device-secret-key-change-in-production"
   jwt_expiry_hours: 48     # Increased from 24 for stability
+  
+  # CORS configuration for WebSocket security
+  cors_origins: ["http://localhost:3000", "https://localhost:3000"]  # Allowed origins
+  cors_methods: ["GET", "POST", "OPTIONS"]  # Allowed HTTP methods
+  cors_headers: ["Authorization", "Content-Type"]  # Allowed headers
+  cors_credentials: false  # Disable credentials for security
 
 # Storage configuration optimized for edge devices
 storage:

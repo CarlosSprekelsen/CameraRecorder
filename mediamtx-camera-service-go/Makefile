@@ -7,15 +7,25 @@ BINARY_NAME=mediamtx-camera-service-go
 BUILD_DIR=build
 MAIN_PATH=cmd/server/main.go
 
+# Version management - automatic extraction from git or environment
+VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+BUILD_DATE ?= $(shell date -u '+%Y-%m-%d_%H:%M:%S')
+GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+
+# Build flags for version injection
+LDFLAGS = -X github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx.Version=$(VERSION) \
+          -X github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx.BuildDate=$(BUILD_DATE) \
+          -X github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx.GitCommit=$(GIT_COMMIT)
+
 # Default target
 all: build
 
 # Build the application
 build:
-	@echo "Building $(BINARY_NAME)..."
+	@echo "Building $(BINARY_NAME) version $(VERSION)..."
 	@mkdir -p $(BUILD_DIR)
-	go build -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_PATH)
-	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
+	go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_PATH)
+	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME) (version $(VERSION))"
 
 # Run the application
 run:
@@ -69,26 +79,26 @@ docs:
 
 # Build for production (optimized)
 build-prod:
-	@echo "Building for production..."
+	@echo "Building for production version $(VERSION)..."
 	@mkdir -p $(BUILD_DIR)
-	CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_PATH)
-	@echo "Production build complete: $(BUILD_DIR)/$(BINARY_NAME)"
+	CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_PATH)
+	@echo "Production build complete: $(BUILD_DIR)/$(BINARY_NAME) (version $(VERSION))"
 
 # Build for different platforms
 build-linux:
-	@echo "Building for Linux..."
+	@echo "Building for Linux version $(VERSION)..."
 	@mkdir -p $(BUILD_DIR)
-	GOOS=linux GOARCH=amd64 go build -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 $(MAIN_PATH)
+	GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 $(MAIN_PATH)
 
 build-windows:
-	@echo "Building for Windows..."
+	@echo "Building for Windows version $(VERSION)..."
 	@mkdir -p $(BUILD_DIR)
-	GOOS=windows GOARCH=amd64 go build -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe $(MAIN_PATH)
+	GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe $(MAIN_PATH)
 
 build-darwin:
-	@echo "Building for macOS..."
+	@echo "Building for macOS version $(VERSION)..."
 	@mkdir -p $(BUILD_DIR)
-	GOOS=darwin GOARCH=amd64 go build -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 $(MAIN_PATH)
+	GOOS=darwin GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 $(MAIN_PATH)
 
 # Build all platforms
 build-all: build-linux build-windows build-darwin

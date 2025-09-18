@@ -1150,7 +1150,7 @@ func (h *MediaMTXTestHelper) TestControllerInputValidation(t *testing.T, control
 					t.Errorf("BUG DETECTED: StartStreaming should reject invalid device path '%s'", devicePath)
 				}
 
-				_, err = controller.TakeAdvancedSnapshot(ctx, devicePath, map[string]interface{}{})
+				_, err = controller.TakeAdvancedSnapshot(ctx, devicePath, &SnapshotOptions{})
 				if err == nil {
 					t.Errorf("BUG DETECTED: TakeAdvancedSnapshot should reject invalid device path '%s'", devicePath)
 				}

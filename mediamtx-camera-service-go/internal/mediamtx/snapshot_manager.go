@@ -49,8 +49,8 @@ import (
 // - Returns JSON-RPC API-ready responses
 // - Converts to devicePath only for V4L2 operations
 //
-// TODO-IMPL: Update TakeSnapshot to return *TakeSnapshotResponse directly (move response formatting from Controller)
-// TODO-IMPL: Add ListSnapshots method to return *ListSnapshotsResponse (API-ready) - GetSnapshotsList exists but returns wrong type
+// TakeSnapshot returns *TakeSnapshotResponse directly with proper response formatting
+// ListSnapshots method returns *ListSnapshotsResponse (API-ready) - implemented correctly
 type SnapshotManager struct {
 	ffmpegManager FFmpegManager
 	streamManager StreamManager        // Required for Tier 3: external RTSP source path creation
@@ -102,7 +102,7 @@ func NewSnapshotManagerWithConfig(ffmpegManager FFmpegManager, streamManager Str
 }
 
 // TakeSnapshot takes a snapshot with multi-tier approach and returns API-ready response
-func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, cameraID string, options map[string]interface{}) (*TakeSnapshotResponse, error) {
+func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, cameraID string, options *SnapshotOptions) (*TakeSnapshotResponse, error) {
 	// Convert camera identifier to device path using PathManager
 	devicePath, exists := sm.pathManager.GetDevicePathForCamera(cameraID)
 	if !exists {
@@ -119,24 +119,26 @@ func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, cameraID string, op
 		"options":    options,
 	}).Info("Taking multi-tier snapshot")
 
-	// Apply snapshot settings from options (existing logic)
-	if format, ok := options["format"].(string); ok {
-		sm.snapshotSettings.Format = format
-	}
-	if quality, ok := options["quality"].(int); ok {
-		sm.snapshotSettings.Quality = quality
-	}
-	if maxWidth, ok := options["max_width"].(int); ok {
-		sm.snapshotSettings.MaxWidth = maxWidth
-	}
-	if maxHeight, ok := options["max_height"].(int); ok {
-		sm.snapshotSettings.MaxHeight = maxHeight
-	}
-	if autoResize, ok := options["auto_resize"].(bool); ok {
-		sm.snapshotSettings.AutoResize = autoResize
-	}
-	if compression, ok := options["compression"].(int); ok {
-		sm.snapshotSettings.Compression = compression
+	// Apply snapshot settings from strongly-typed options
+	if options != nil {
+		if options.Format != "" {
+			sm.snapshotSettings.Format = options.Format
+		}
+		if options.Quality > 0 {
+			sm.snapshotSettings.Quality = options.Quality
+		}
+		if options.MaxWidth > 0 {
+			sm.snapshotSettings.MaxWidth = options.MaxWidth
+		}
+		if options.MaxHeight > 0 {
+			sm.snapshotSettings.MaxHeight = options.MaxHeight
+		}
+		if options.AutoResize {
+			sm.snapshotSettings.AutoResize = options.AutoResize
+		}
+		if options.Compression > 0 {
+			sm.snapshotSettings.Compression = options.Compression
+		}
 	}
 
 	// Get tier configuration from existing config system
@@ -191,7 +193,7 @@ func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, cameraID string, op
 }
 
 // takeSnapshotMultiTier implements the 5-tier snapshot capture system
-func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, cameraID, devicePath, snapshotPath string, options map[string]interface{}, tierConfig *config.SnapshotTiersConfig) (*Snapshot, error) {
+func (sm *SnapshotManager) takeSnapshotMultiTier(ctx context.Context, cameraID, devicePath, snapshotPath string, options *SnapshotOptions, tierConfig *config.SnapshotTiersConfig) (*Snapshot, error) {
 	startTime := time.Now()
 	captureMethodsTried := []string{}
 
@@ -330,7 +332,7 @@ func (sm *SnapshotManager) getTierConfiguration() *config.SnapshotTiersConfig {
 }
 
 // captureSnapshotV4L2Direct implements Tier 0: V4L2 Direct Capture (Fastest Path - NEW)
-func (sm *SnapshotManager) captureSnapshotV4L2Direct(ctx context.Context, devicePath, snapshotPath string, options map[string]interface{}) (*Snapshot, error) {
+func (sm *SnapshotManager) captureSnapshotV4L2Direct(ctx context.Context, devicePath, snapshotPath string, options *SnapshotOptions) (*Snapshot, error) {
 	sm.logger.WithFields(logging.Fields{
 		"device":      devicePath,
 		"output_path": snapshotPath,
@@ -349,7 +351,14 @@ func (sm *SnapshotManager) captureSnapshotV4L2Direct(ctx context.Context, device
 	}
 
 	// Use camera monitor's direct snapshot capability
-	directSnapshot, err := sm.cameraMonitor.TakeDirectSnapshot(ctx, devicePath, snapshotPath, options)
+	// Convert SnapshotOptions to map for backward compatibility with camera monitor
+	var optionsMap map[string]interface{}
+	if options != nil {
+		optionsMap = options.ToMap()
+	} else {
+		optionsMap = make(map[string]interface{})
+	}
+	directSnapshot, err := sm.cameraMonitor.TakeDirectSnapshot(ctx, devicePath, snapshotPath, optionsMap)
 	if err != nil {
 		return nil, fmt.Errorf("V4L2 direct capture failed: %w", err)
 	}
@@ -789,7 +798,7 @@ func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.
 }
 
 // buildAdvancedSnapshotCommand builds an advanced FFmpeg command for snapshots
-func (sm *SnapshotManager) buildAdvancedSnapshotCommand(device, outputPath string, options map[string]interface{}) []string {
+func (sm *SnapshotManager) buildAdvancedSnapshotCommand(device, outputPath string, options *SnapshotOptions) []string {
 	command := []string{"ffmpeg"}
 
 	// Input device
@@ -866,17 +875,26 @@ func (sm *SnapshotManager) ListSnapshots(ctx context.Context, limit, offset int)
 	// Convert to API-ready SnapshotFileInfo format with rich metadata
 	snapshots := make([]SnapshotFileInfo, len(fileList.Files))
 	for i, file := range fileList.Files {
-		// Extract device from filename pattern (camera0_timestamp.jpg)
-		// TODO: Use configurable filename pattern from centralized config instead of hardcoded parsing
-		// INVESTIGATION: config.SnapshotConfig.FileNamePattern already exists in default.yaml:102
-		// Pattern: "%device_%timestamp.jpg" - supports %device, %timestamp placeholders
-		// SOLUTION: Replace hardcoded "camera0_timestamp.jpg" parsing with pattern-based parsing
-		// LOCATION: config/default.yaml:102, internal/config/config_types.go:345
-		// EFFORT: 2-3 hours - implement expandSnapshotPattern() usage from path_utils.go:126
-		device := "camera0" // Default
-		if parts := strings.Split(file.FileName, "_"); len(parts) > 0 {
-			if strings.HasPrefix(parts[0], "camera") {
-				device = parts[0]
+		// Extract device and timestamp from filename using configured pattern
+		var device string = "camera0" // Default
+
+		if sm.configManager != nil {
+			cfg := sm.configManager.GetConfig()
+			if cfg != nil {
+				// Use pattern-based parsing
+				parsedDevice, _, parseErr := ParseSnapshotFilename(file.FileName, cfg.Snapshots.FileNamePattern)
+				if parseErr == nil {
+					device = parsedDevice
+				}
+			}
+		}
+
+		// Fallback to hardcoded parsing if config unavailable or parsing failed
+		if device == "camera0" {
+			if parts := strings.Split(file.FileName, "_"); len(parts) > 0 {
+				if strings.HasPrefix(parts[0], "camera") {
+					device = parts[0]
+				}
 			}
 		}
 

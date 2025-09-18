@@ -157,6 +157,88 @@ type PathConfList struct {
 }
 
 // ============================================================================
+// SNAPSHOT CONFIGURATION TYPES - STRONGLY TYPED OPTIONS
+// ============================================================================
+
+// SnapshotOptions represents strongly-typed snapshot capture options
+// This provides type safety for snapshot operations while maintaining compatibility
+// with existing map[string]interface{} usage patterns
+type SnapshotOptions struct {
+	Quality     int    `json:"quality,omitempty"`     // Image quality (1-100) for JPEG
+	Format      string `json:"format,omitempty"`      // Image format (jpg, png)
+	Resolution  string `json:"resolution,omitempty"`  // Resolution (e.g., "1920x1080")
+	Timestamp   bool   `json:"timestamp,omitempty"`   // Include timestamp in filename
+	MaxWidth    int    `json:"max_width,omitempty"`   // Maximum width for auto-resize
+	MaxHeight   int    `json:"max_height,omitempty"`  // Maximum height for auto-resize
+	AutoResize  bool   `json:"auto_resize,omitempty"` // Auto-resize if needed
+	Compression int    `json:"compression,omitempty"` // Compression level for PNG
+}
+
+// ToMap converts SnapshotOptions to map[string]interface{} for backward compatibility
+func (so *SnapshotOptions) ToMap() map[string]interface{} {
+	result := make(map[string]interface{})
+
+	if so.Quality > 0 {
+		result["quality"] = so.Quality
+	}
+	if so.Format != "" {
+		result["format"] = so.Format
+	}
+	if so.Resolution != "" {
+		result["resolution"] = so.Resolution
+	}
+	if so.Timestamp {
+		result["timestamp"] = so.Timestamp
+	}
+	if so.MaxWidth > 0 {
+		result["max_width"] = so.MaxWidth
+	}
+	if so.MaxHeight > 0 {
+		result["max_height"] = so.MaxHeight
+	}
+	if so.AutoResize {
+		result["auto_resize"] = so.AutoResize
+	}
+	if so.Compression > 0 {
+		result["compression"] = so.Compression
+	}
+
+	return result
+}
+
+// FromMap creates SnapshotOptions from map[string]interface{} for backward compatibility
+func SnapshotOptionsFromMap(options map[string]interface{}) *SnapshotOptions {
+	so := &SnapshotOptions{}
+
+	if quality, ok := options["quality"].(int); ok {
+		so.Quality = quality
+	}
+	if format, ok := options["format"].(string); ok {
+		so.Format = format
+	}
+	if resolution, ok := options["resolution"].(string); ok {
+		so.Resolution = resolution
+	}
+	if timestamp, ok := options["timestamp"].(bool); ok {
+		so.Timestamp = timestamp
+	}
+	if maxWidth, ok := options["max_width"].(int); ok {
+		so.MaxWidth = maxWidth
+	}
+	if maxHeight, ok := options["max_height"].(int); ok {
+		so.MaxHeight = maxHeight
+	}
+	if autoResize, ok := options["auto_resize"].(bool); ok {
+		so.AutoResize = autoResize
+	}
+	if compression, ok := options["compression"].(int); ok {
+		so.Compression = compression
+	}
+
+	return so
+}
+
+// ============================================================================
 // MEDIAMTX API ERROR TYPES - EXACT SWAGGER MATCH
 // ============================================================================
 

@@ -43,9 +43,10 @@ import (
 // - Returns JSON-RPC API-ready responses for health queries
 // - Provides real-time health status for MediaMTX connectivity
 type SimpleHealthMonitor struct {
-	client MediaMTXClient
-	config *config.MediaMTXConfig
-	logger *logging.Logger
+	client            MediaMTXClient
+	config            *config.MediaMTXConfig
+	configIntegration *ConfigIntegration
+	logger            *logging.Logger
 
 	// Context for lifecycle management
 	ctx    context.Context
@@ -76,16 +77,17 @@ type SimpleHealthMonitor struct {
 }
 
 // NewHealthMonitor creates a new simplified MediaMTX health monitor
-func NewHealthMonitor(client MediaMTXClient, config *config.MediaMTXConfig, logger *logging.Logger) HealthMonitor {
+func NewHealthMonitor(client MediaMTXClient, config *config.MediaMTXConfig, configIntegration *ConfigIntegration, logger *logging.Logger) HealthMonitor {
 	return &SimpleHealthMonitor{
-		client:           client,
-		config:           config,
-		logger:           logger,
-		isHealthy:        1, // Assume healthy initially (1 = true)
-		failureCount:     0,
-		lastCheckTime:    time.Now().UnixNano(),
-		debounceDuration: 15 * time.Second,        // 15s debounce for health notifications
-		healthEventChan:  make(chan struct{}, 10), // Buffered channel for health events
+		client:            client,
+		config:            config,
+		configIntegration: configIntegration,
+		logger:            logger,
+		isHealthy:         1, // Assume healthy initially (1 = true)
+		failureCount:      0,
+		lastCheckTime:     time.Now().UnixNano(),
+		debounceDuration:  15 * time.Second,        // 15s debounce for health notifications
+		healthEventChan:   make(chan struct{}, 10), // Buffered channel for health events
 	}
 }
 
@@ -454,18 +456,14 @@ func (h *SimpleHealthMonitor) GetHealthAPI(ctx context.Context, startTime time.T
 		overallStatus = "unhealthy"
 	}
 
+	// Get version from centralized configuration
+	versionInfo := h.configIntegration.GetVersionInfo()
+
 	// Build API-ready response
 	response := &GetHealthResponse{
-		Status:  overallStatus,
-		Uptime:  uptime,
-		Version: "1.0.0", // TODO: Get version from build-time injection (same as controller.go:523)
-		// INVESTIGATION: Version hardcoded in multiple places, should use single source
-		// CURRENT: Duplicated hardcoded version in health_monitor and controller
-		// SOLUTION: Use same build-time injection pattern as controller:
-		//   - Import version from main package or shared constants
-		//   - Use build-time ldflags injection: -X main.Version=$(git describe --tags)
-		// REFERENCE: controller.go:523-530 shows same TODO and solution
-		// EFFORT: 30 minutes - import version from centralized location
+		Status:     overallStatus,
+		Uptime:     uptime,
+		Version:    versionInfo.Version,
 		Components: components,
 		Checks:     []interface{}{}, // TODO: Add comprehensive health checks for all system components
 		// INVESTIGATION: Health checks array empty, should validate system component health

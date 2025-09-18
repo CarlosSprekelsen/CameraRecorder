@@ -514,8 +514,7 @@ func NewWebSocketServer(
 			ReadBufferSize:  1024,
 			WriteBufferSize: 1024,
 			CheckOrigin: func(r *http.Request) bool {
-				// TODO: Make CORS origins configurable for production security
-				return true
+				return validateCORSOrigin(r, cfg, logger)
 			},
 		},
 
@@ -1198,6 +1197,36 @@ func (s *WebSocketServer) IsBuiltinMethodsReady() bool {
 }
 
 // GetEventHandlerCount returns the current number of event handlers using atomic operation
+// validateCORSOrigin validates the origin header against configured CORS origins
+func validateCORSOrigin(r *http.Request, cfg *config.Config, logger *logging.Logger) bool {
+	origin := r.Header.Get("Origin")
+
+	// Allow same-origin requests (no Origin header)
+	if origin == "" {
+		return true
+	}
+
+	// Check against configured allowed origins
+	for _, allowed := range cfg.Security.CORSOrigins {
+		if origin == allowed {
+			logger.WithFields(logging.Fields{
+				"origin":  origin,
+				"allowed": true,
+			}).Debug("CORS origin validated successfully")
+			return true
+		}
+	}
+
+	// Log rejected origin for security monitoring
+	logger.WithFields(logging.Fields{
+		"origin":          origin,
+		"allowed_origins": cfg.Security.CORSOrigins,
+		"allowed":         false,
+	}).Warn("CORS origin rejected")
+
+	return false
+}
+
 func (s *WebSocketServer) GetEventHandlerCount() int64 {
 	return atomic.LoadInt64(&s.eventHandlerCount)
 }

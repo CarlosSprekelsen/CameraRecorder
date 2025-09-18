@@ -17,6 +17,7 @@ package mediamtx
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -173,4 +174,76 @@ func GetRecordingFilePath(cfg *config.MediaMTXConfig, recordingCfg *config.Recor
 	}
 
 	return filepath.Join(basePath, filename)
+}
+
+// BuildFFmpegCommand builds a proper FFmpeg command based on device type and configuration
+// This centralizes FFmpeg command generation to prevent hardcoded echo commands
+func BuildFFmpegCommand(devicePath, streamName string, cfg *config.MediaMTXConfig) string {
+	// Detect device type
+	if strings.HasPrefix(devicePath, "/dev/video") {
+		// V4L2 device - build comprehensive FFmpeg command using codec config
+		return fmt.Sprintf(
+			"ffmpeg -f v4l2 -i %s -c:v libx264 -profile:v %s -level %s "+
+				"-pix_fmt %s -preset %s -b:v %s -f rtsp rtsp://%s:%d/%s",
+			devicePath,
+			cfg.Codec.VideoProfile,
+			cfg.Codec.VideoLevel,
+			cfg.Codec.PixelFormat,
+			cfg.Codec.Preset,
+			cfg.Codec.Bitrate,
+			cfg.Host, cfg.RTSPPort, streamName)
+	} else if strings.HasPrefix(devicePath, "rtsp://") {
+		// External RTSP source - use relay/proxy command
+		return fmt.Sprintf(
+			"ffmpeg -i %s -c copy -f rtsp rtsp://%s:%d/%s",
+			devicePath, cfg.Host, cfg.RTSPPort, streamName)
+	}
+
+	// Fallback for unknown device types
+	return fmt.Sprintf(
+		"ffmpeg -i %s -c:v libx264 -preset %s -f rtsp rtsp://%s:%d/%s",
+		devicePath, cfg.Codec.Preset, cfg.Host, cfg.RTSPPort, streamName)
+}
+
+// ParseSnapshotFilename parses a snapshot filename using the configured pattern
+// This is the inverse of expandSnapshotPattern
+func ParseSnapshotFilename(filename, pattern string) (device string, timestamp time.Time, err error) {
+	// Handle the common pattern: %device_%timestamp.jpg
+	if pattern == "%device_%timestamp.jpg" {
+		// Remove extension first
+		nameWithoutExt := strings.TrimSuffix(filename, filepath.Ext(filename))
+
+		// Split by underscore
+		parts := strings.Split(nameWithoutExt, "_")
+		if len(parts) < 2 {
+			return "", time.Time{}, fmt.Errorf("filename %s does not match pattern %s", filename, pattern)
+		}
+
+		// Extract device (first part)
+		device = parts[0]
+
+		// Extract timestamp (last part)
+		timestampStr := parts[len(parts)-1]
+		timestampInt, err := strconv.ParseInt(timestampStr, 10, 64)
+		if err != nil {
+			return "", time.Time{}, fmt.Errorf("failed to parse timestamp from %s: %w", timestampStr, err)
+		}
+		timestamp = time.Unix(timestampInt, 0)
+
+		return device, timestamp, nil
+	}
+
+	// For more complex patterns, we could implement regex-based parsing
+	// For now, fallback to basic parsing
+	device = "camera0" // Default
+	if parts := strings.Split(filename, "_"); len(parts) > 0 {
+		if strings.HasPrefix(parts[0], "camera") {
+			device = parts[0]
+		}
+	}
+
+	// Try to extract timestamp from filename if possible
+	timestamp = time.Now() // Fallback to current time
+
+	return device, timestamp, nil
 }

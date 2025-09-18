@@ -47,6 +47,12 @@ type SecurityConfig struct {
 	RateLimitWindow   time.Duration `mapstructure:"rate_limit_window"`   // Default: 1 minute
 	JWTSecretKey      string        `mapstructure:"jwt_secret_key"`
 	JWTExpiryHours    int           `mapstructure:"jwt_expiry_hours"` // Default: 24 hours
+
+	// CORS configuration for WebSocket security
+	CORSOrigins     []string `mapstructure:"cors_origins"`     // Allowed origins for CORS
+	CORSMethods     []string `mapstructure:"cors_methods"`     // Allowed HTTP methods
+	CORSHeaders     []string `mapstructure:"cors_headers"`     // Allowed headers
+	CORSCredentials bool     `mapstructure:"cors_credentials"` // Allow credentials
 }
 
 // StorageConfig represents storage configuration settings.

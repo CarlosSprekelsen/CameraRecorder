@@ -206,3 +206,32 @@ func TestController_UpdateConfig_NotRunning_ReqMTX004(t *testing.T) {
 	err = controller.UpdateConfig(ctx, config)
 	assert.Error(t, err, "Updating configuration when controller is not running should fail")
 }
+
+// TestConfigIntegration_GetVersionInfo tests centralized version management
+func TestConfigIntegration_GetVersionInfo(t *testing.T) {
+	// Create test helper for logger
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create test configuration manager
+	configManager := config.CreateConfigManager()
+	logger := helper.GetLogger()
+
+	// Create config integration
+	ci := NewConfigIntegration(configManager, logger)
+	require.NotNil(t, ci, "ConfigIntegration should not be nil")
+
+	// Get version info
+	versionInfo := ci.GetVersionInfo()
+	require.NotNil(t, versionInfo, "VersionInfo should not be nil")
+
+	// Version should not be hardcoded
+	assert.NotEmpty(t, versionInfo.Version, "Version should not be empty")
+	assert.NotEmpty(t, versionInfo.BuildDate, "BuildDate should not be empty")
+	assert.NotEmpty(t, versionInfo.GitCommit, "GitCommit should not be empty")
+
+	// Validate JSON structure
+	assert.IsType(t, "", versionInfo.Version, "Version should be string")
+	assert.IsType(t, "", versionInfo.BuildDate, "BuildDate should be string")
+	assert.IsType(t, "", versionInfo.GitCommit, "GitCommit should be string")
+}

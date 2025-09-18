@@ -1289,12 +1289,12 @@ func TestSnapshotManager_Tier0_V4L2Direct_RealHardware(t *testing.T) {
 	t.Run("Tier0_V4L2Direct_RealHardware_ErrorHandling", func(t *testing.T) {
 		// Test error handling with real hardware
 		// Test with non-existent device
-		_, err := snapshotManager.TakeSnapshot(ctx, "/dev/nonexistent", map[string]interface{}{})
+		_, err := snapshotManager.TakeSnapshot(ctx, "/dev/nonexistent", &SnapshotOptions{})
 		require.Error(t, err, "Should fail with non-existent device")
 		assert.Contains(t, err.Error(), "all snapshot capture methods failed", "Error should indicate all methods failed")
 
 		// Test with invalid device
-		_, err = snapshotManager.TakeSnapshot(ctx, "", map[string]interface{}{})
+		_, err = snapshotManager.TakeSnapshot(ctx, "", &SnapshotOptions{})
 		require.Error(t, err, "Should fail with invalid device")
 	})
 }

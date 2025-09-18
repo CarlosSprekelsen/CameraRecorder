@@ -837,6 +837,12 @@ func (cm *ConfigManager) setDefaults(v *viper.Viper) {
 	v.SetDefault("performance.debounce.storage_monitor_seconds", 30)
 	v.SetDefault("performance.debounce.performance_monitor_seconds", 45)
 
+	// CORS security defaults
+	v.SetDefault("security.cors_origins", []string{"http://localhost:3000", "https://localhost:3000"})
+	v.SetDefault("security.cors_methods", []string{"GET", "POST", "OPTIONS"})
+	v.SetDefault("security.cors_headers", []string{"Authorization", "Content-Type"})
+	v.SetDefault("security.cors_credentials", false)
+
 	// Camera defaults
 	v.SetDefault("camera.poll_interval", 0.1)
 	v.SetDefault("camera.detection_timeout", 2.0)

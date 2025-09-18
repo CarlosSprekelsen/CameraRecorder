@@ -15,6 +15,8 @@ package mediamtx
 
 import (
 	"fmt"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
@@ -27,12 +29,37 @@ type ConfigIntegration struct {
 	logger        *logging.Logger
 }
 
+// VersionInfo represents build-time version information
+type VersionInfo struct {
+	Version   string `json:"version"`
+	BuildDate string `json:"build_date"`
+	GitCommit string `json:"git_commit"`
+}
+
+// Build-time variables - these will be set via -ldflags during build
+// These are package-level variables that will be injected by the build process
+var (
+	Version   = "dev"     // Injected by -ldflags "-X github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx.Version=..."
+	BuildDate = "unknown" // Injected by -ldflags "-X github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx.BuildDate=..."
+	GitCommit = "unknown" // Injected by -ldflags "-X github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx.GitCommit=..."
+)
+
 // NewConfigIntegration creates a new configuration integration
 func NewConfigIntegration(configManager *config.ConfigManager, logger *logging.Logger) *ConfigIntegration {
-	return &ConfigIntegration{
+	ci := &ConfigIntegration{
 		configManager: configManager,
 		logger:        logger,
 	}
+
+	// Log version information at startup
+	versionInfo := ci.GetVersionInfo()
+	logger.WithFields(logging.Fields{
+		"version":    versionInfo.Version,
+		"build_date": versionInfo.BuildDate,
+		"git_commit": versionInfo.GitCommit,
+	}).Info("ConfigIntegration initialized with version info")
+
+	return ci
 }
 
 // GetMediaMTXConfig retrieves MediaMTX configuration from the existing config system
@@ -66,23 +93,23 @@ func (ci *ConfigIntegration) GetMediaMTXConfig() (*config.MediaMTXConfig, error)
 		},
 
 		// Integration with existing config
-		Host:                                cfg.MediaMTX.Host,
-		APIPort:                             cfg.MediaMTX.APIPort,
-		RTSPPort:                            cfg.MediaMTX.RTSPPort,
-		WebRTCPort:                          cfg.MediaMTX.WebRTCPort,
-		HLSPort:                             cfg.MediaMTX.HLSPort,
-		ConfigPath:                          cfg.MediaMTX.ConfigPath,
-		RecordingsPath:                      cfg.MediaMTX.RecordingsPath,
-		SnapshotsPath:                       cfg.MediaMTX.SnapshotsPath,
-		OverrideMediaMTXPaths:               cfg.MediaMTX.OverrideMediaMTXPaths,
-		
+		Host:                  cfg.MediaMTX.Host,
+		APIPort:               cfg.MediaMTX.APIPort,
+		RTSPPort:              cfg.MediaMTX.RTSPPort,
+		WebRTCPort:            cfg.MediaMTX.WebRTCPort,
+		HLSPort:               cfg.MediaMTX.HLSPort,
+		ConfigPath:            cfg.MediaMTX.ConfigPath,
+		RecordingsPath:        cfg.MediaMTX.RecordingsPath,
+		SnapshotsPath:         cfg.MediaMTX.SnapshotsPath,
+		OverrideMediaMTXPaths: cfg.MediaMTX.OverrideMediaMTXPaths,
+
 		// Codec configuration
-		Codec:                               cfg.MediaMTX.Codec,
-		
+		Codec: cfg.MediaMTX.Codec,
+
 		// FFmpeg and Performance Configuration
-		FFmpeg:                              cfg.MediaMTX.FFmpeg,
-		Performance:                         cfg.MediaMTX.Performance,
-		
+		FFmpeg:      cfg.MediaMTX.FFmpeg,
+		Performance: cfg.MediaMTX.Performance,
+
 		// Health and Circuit Breaker Configuration
 		HealthCheckInterval:                 cfg.MediaMTX.HealthCheckInterval,
 		HealthFailureThreshold:              cfg.MediaMTX.HealthFailureThreshold,
@@ -94,18 +121,18 @@ func (ci *ConfigIntegration) GetMediaMTXConfig() (*config.MediaMTXConfig, error)
 		BackoffJitterRange:                  cfg.MediaMTX.BackoffJitterRange,
 		ProcessTerminationTimeout:           cfg.MediaMTX.ProcessTerminationTimeout,
 		ProcessKillTimeout:                  cfg.MediaMTX.ProcessKillTimeout,
-		
+
 		// Stream Readiness Configuration
-		StreamReadiness:                     cfg.MediaMTX.StreamReadiness,
-		
+		StreamReadiness: cfg.MediaMTX.StreamReadiness,
+
 		// Run on demand configuration
-		RunOnDemandStartTimeout:             cfg.MediaMTX.RunOnDemandStartTimeout,
-		RunOnDemandCloseAfter:               cfg.MediaMTX.RunOnDemandCloseAfter,
-		
+		RunOnDemandStartTimeout: cfg.MediaMTX.RunOnDemandStartTimeout,
+		RunOnDemandCloseAfter:   cfg.MediaMTX.RunOnDemandCloseAfter,
+
 		// Recording configuration
-		RecordPartDuration:                  cfg.MediaMTX.RecordPartDuration,
-		RecordSegmentDuration:               cfg.MediaMTX.RecordSegmentDuration,
-		RecordDeleteAfter:                   cfg.MediaMTX.RecordDeleteAfter,
+		RecordPartDuration:    cfg.MediaMTX.RecordPartDuration,
+		RecordSegmentDuration: cfg.MediaMTX.RecordSegmentDuration,
+		RecordDeleteAfter:     cfg.MediaMTX.RecordDeleteAfter,
 	}
 
 	ci.logger.WithFields(logging.Fields{
@@ -244,6 +271,167 @@ func (ci *ConfigIntegration) UpdateMediaMTXConfig(mediaMTXConfig *config.MediaMT
 
 	ci.logger.Info("MediaMTX configuration updated and saved to file")
 	return nil
+}
+
+// GetVersionInfo returns build-time version information
+func (ci *ConfigIntegration) GetVersionInfo() VersionInfo {
+	return VersionInfo{
+		Version:   getVersionFromBuildOrEnv(),
+		BuildDate: getBuildDateFromBuildOrEnv(),
+		GitCommit: getGitCommitFromBuildOrEnv(),
+	}
+}
+
+// Helper functions to access build-time variables with fallbacks
+func getVersionFromBuildOrEnv() string {
+	// Check environment variable first (for runtime override)
+	if version := os.Getenv("SERVICE_VERSION"); version != "" {
+		return version
+	}
+	// Use build-time injected version
+	return Version
+}
+
+func getBuildDateFromBuildOrEnv() string {
+	if buildDate := os.Getenv("SERVICE_BUILD_DATE"); buildDate != "" {
+		return buildDate
+	}
+	return BuildDate
+}
+
+func getGitCommitFromBuildOrEnv() string {
+	if gitCommit := os.Getenv("SERVICE_GIT_COMMIT"); gitCommit != "" {
+		return gitCommit
+	}
+	return GitCommit
+}
+
+// GetRetentionPolicy retrieves retention policy configuration
+func (ci *ConfigIntegration) GetRetentionPolicy() (*config.RetentionPolicyConfig, error) {
+	cfg := ci.configManager.GetConfig()
+	if cfg == nil {
+		return nil, fmt.Errorf("failed to get config: config is nil")
+	}
+
+	return &cfg.RetentionPolicy, nil
+}
+
+// GetCleanupLimits calculates cleanup limits based on configuration
+func (ci *ConfigIntegration) GetCleanupLimits() (maxAge time.Duration, maxCount int, maxSize int64, err error) {
+	cfg := ci.configManager.GetConfig()
+	if cfg == nil {
+		return 0, 0, 0, fmt.Errorf("failed to get config: config is nil")
+	}
+
+	// Use retention policy for age-based cleanup
+	maxAge = time.Duration(cfg.RetentionPolicy.MaxAgeDays) * 24 * time.Hour
+
+	// Use snapshot config for count-based cleanup (snapshots have count limits)
+	maxCount = cfg.Snapshots.MaxCount
+
+	// Use retention policy for size-based cleanup (convert GB to bytes)
+	maxSize = int64(cfg.RetentionPolicy.MaxSizeGB) * 1024 * 1024 * 1024
+
+	return maxAge, maxCount, maxSize, nil
+}
+
+// BuildRecordingPathConf creates a comprehensive PathConf for recording operations
+func (ci *ConfigIntegration) BuildRecordingPathConf(devicePath, pathName string) (*PathConf, error) {
+	cfg := ci.configManager.GetConfig()
+	if cfg == nil {
+		return nil, fmt.Errorf("failed to get config: config is nil")
+	}
+
+	// Build recording path pattern using existing utility
+	recordPath := GenerateRecordingPath(&cfg.MediaMTX, &cfg.Recording)
+
+	pathConf := &PathConf{
+		// Source configuration
+		Source:         devicePath,
+		SourceOnDemand: true,
+
+		// On-demand configuration
+		RunOnDemand:             BuildFFmpegCommand(devicePath, pathName, &cfg.MediaMTX),
+		RunOnDemandRestart:      true,
+		RunOnDemandStartTimeout: cfg.MediaMTX.RunOnDemandStartTimeout,
+		RunOnDemandCloseAfter:   "0s", // Never auto-close recording paths
+
+		// Recording configuration
+		Record:                cfg.Recording.Enabled,
+		RecordFormat:          cfg.Recording.RecordFormat,
+		RecordPath:            recordPath,
+		RecordPartDuration:    cfg.MediaMTX.RecordPartDuration,
+		RecordSegmentDuration: cfg.MediaMTX.RecordSegmentDuration,
+		RecordDeleteAfter:     cfg.MediaMTX.RecordDeleteAfter,
+	}
+
+	return pathConf, nil
+}
+
+// BuildSourceURL builds the appropriate source URL based on configuration and path type
+func (ci *ConfigIntegration) BuildSourceURL(pathName string, pathSource *PathSource) (string, error) {
+	cfg := ci.configManager.GetConfig()
+	if cfg == nil {
+		return "", fmt.Errorf("failed to get config: config is nil")
+	}
+
+	// If path has a specific source, use it appropriately
+	if pathSource != nil {
+		if pathSource.Type == "rtspSource" {
+			// For RTSP sources, use the provided ID as the source URL
+			if strings.HasPrefix(pathSource.ID, "rtsp://") {
+				return pathSource.ID, nil
+			}
+			// If ID is a device path, convert to device path
+			return GetDevicePathFromCameraIdentifier(pathSource.ID), nil
+		}
+	}
+
+	// Build RTSP URL using configuration
+	return fmt.Sprintf("rtsp://%s:%d/%s", cfg.MediaMTX.Host, cfg.MediaMTX.RTSPPort, pathName), nil
+}
+
+// BuildPathConf creates a comprehensive PathConf for general path operations
+func (ci *ConfigIntegration) BuildPathConf(pathName string, pathSource *PathSource, enableRecording bool) (*PathConf, error) {
+	cfg := ci.configManager.GetConfig()
+	if cfg == nil {
+		return nil, fmt.Errorf("failed to get config: config is nil")
+	}
+
+	// Determine source URL and device path
+	var devicePath string
+	if pathSource != nil && pathSource.Type == "rtspSource" {
+		devicePath = GetDevicePathFromCameraIdentifier(pathSource.ID)
+	} else {
+		devicePath = GetDevicePathFromCameraIdentifier(pathName)
+	}
+
+	pathConf := &PathConf{
+		// Basic path configuration
+		Name: pathName,
+
+		// On-demand configuration
+		SourceOnDemand:             true,
+		SourceOnDemandStartTimeout: cfg.MediaMTX.RunOnDemandStartTimeout,
+		SourceOnDemandCloseAfter:   cfg.MediaMTX.RunOnDemandCloseAfter,
+
+		// FFmpeg command configuration
+		RunOnDemand:        BuildFFmpegCommand(devicePath, pathName, &cfg.MediaMTX),
+		RunOnDemandRestart: true,
+	}
+
+	// Add recording configuration if requested
+	if enableRecording {
+		recordPath := GenerateRecordingPath(&cfg.MediaMTX, &cfg.Recording)
+		pathConf.Record = cfg.Recording.Enabled
+		pathConf.RecordFormat = cfg.Recording.RecordFormat
+		pathConf.RecordPath = recordPath
+		pathConf.RecordPartDuration = cfg.MediaMTX.RecordPartDuration
+		pathConf.RecordSegmentDuration = cfg.MediaMTX.RecordSegmentDuration
+		pathConf.RecordDeleteAfter = cfg.MediaMTX.RecordDeleteAfter
+	}
+
+	return pathConf, nil
 }
 
 // WatchConfigChanges watches for configuration changes and notifies the MediaMTX controller

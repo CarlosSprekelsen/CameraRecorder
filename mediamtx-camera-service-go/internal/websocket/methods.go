@@ -492,11 +492,19 @@ func (s *WebSocketServer) MethodGetStatus(params map[string]interface{}, client 
 			systemStatus = "degraded"
 		}
 
+		// Get version from MediaMTX controller (single source of truth)
+		var version string = "unknown"
+		if s.mediaMTXController != nil {
+			if serverInfo, err := s.mediaMTXController.GetServerInfo(context.Background()); err == nil {
+				version = serverInfo.Version
+			}
+		}
+
 		// Return status
 		return map[string]interface{}{
 			"status":  systemStatus,
 			"uptime":  uptime,
-			"version": "1.0.0",
+			"version": version,
 			"components": map[string]interface{}{
 				"websocket_server":    websocketServerStatus,
 				"mediamtx_controller": mediamtxControllerStatus,
@@ -737,9 +745,12 @@ func (s *WebSocketServer) MethodTakeSnapshot(params map[string]interface{}, clie
 			return nil, fmt.Errorf("validation failed")
 		}
 
-		// 2. Extract parameters and delegate everything to Controller
+		// 2. Extract parameters and convert to strongly-typed options
 		devicePath := validationResult.Data["device"].(string)
-		options := validationResult.Data["options"].(map[string]interface{})
+		optionsMap := validationResult.Data["options"].(map[string]interface{})
+
+		// Convert map to strongly-typed SnapshotOptions for type safety
+		options := mediamtx.SnapshotOptionsFromMap(optionsMap)
 
 		// 3. Pure delegation - Controller and SnapshotManager handle all business logic
 		// No duplicate validation, no response formatting, no business logic

@@ -149,20 +149,12 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, cameraID string,
 	// Ensure path exists in MediaMTX before checking recording status
 	// In stateless architecture, we create paths on-demand
 	if !rm.pathManager.PathExists(ctx, pathName) {
-		// TODO: Create path with comprehensive configuration for on-demand streaming
-		// INVESTIGATION: PathConf uses basic Source + SourceOnDemand, missing recording config
-		// CURRENT: Only devicePath and SourceOnDemand=true set, no recording-specific options
-		// SOLUTION: Use centralized recording config from configIntegration.GetRecordingConfig():
-		//   - RecordFormat from config.RecordingConfig.RecordFormat
-		//   - RecordPath from config.MediaMTXConfig.RecordingsPath
-		//   - RecordPartDuration, RecordMaxPartSize from config defaults
-		// REFERENCE: enableRecordingOnPath():593 shows complete PathConf setup
-		// EFFORT: 3-4 hours - integrate full recording configuration into path creation
-		pathOptions := &PathConf{
-			Source:         devicePath,
-			SourceOnDemand: true,
+		// Create path with comprehensive recording configuration
+		pathOptions, err := rm.configIntegration.BuildRecordingPathConf(devicePath, pathName)
+		if err != nil {
+			return nil, fmt.Errorf("failed to build recording path configuration: %w", err)
 		}
-		err := rm.pathManager.CreatePath(ctx, pathName, devicePath, pathOptions)
+		err = rm.pathManager.CreatePath(ctx, pathName, devicePath, pathOptions)
 		if err != nil {
 			return nil, fmt.Errorf("failed to create path %s: %w", pathName, err)
 		}
