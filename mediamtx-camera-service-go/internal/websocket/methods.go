@@ -33,7 +33,6 @@ package websocket
 import (
 	"context"
 	"fmt"
-	"strings"
 	"sync/atomic"
 	"time"
 
@@ -412,36 +411,12 @@ func (s *WebSocketServer) MethodGetCameraStatus(params map[string]interface{}, c
 }
 
 // MethodGetMetrics implements the get_metrics method
-// Thin client - delegates all metrics calculation to MediaMTX controller
+// Thin delegation - Controller returns API-ready GetMetricsResponse
 func (s *WebSocketServer) MethodGetMetrics(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// Uses wrapper helpers for consistent method execution
 	return s.authenticatedMethodWrapper("get_metrics", func() (interface{}, error) {
-
-		// Get system metrics from MediaMTX controller - single source of truth
-		systemMetrics, err := s.mediaMTXController.GetSystemMetrics(context.Background())
-		if err != nil {
-			return nil, fmt.Errorf("failed to get system metrics: %v", err)
-		}
-
-		// Get WebSocket-specific metrics (only what WebSocket layer should track)
-		activeConnections := s.GetClientCount()
-
-		// Build API response from controller metrics (thin client pattern)
-		result := map[string]interface{}{
-			"timestamp":          systemMetrics.Timestamp,   // From controller
-			"active_connections": activeConnections,         // WebSocket-specific
-			"memory_usage":       systemMetrics.MemoryUsage, // From controller
-			"cpu_usage":          systemMetrics.CPUUsage,    // From controller
-			"disk_usage":         systemMetrics.DiskUsage,   // From controller
-			"goroutines":         systemMetrics.Goroutines,  // From controller
-			"network_in":         systemMetrics.NetworkIn,   // From controller
-			"network_out":        systemMetrics.NetworkOut,  // From controller
-			"load_average":       systemMetrics.LoadAverage, // From controller
-			"connections":        systemMetrics.Connections, // From controller
-		}
-
-		// Return metrics from controller (single source of truth)
-		return result, nil
+		// Pure delegation to Controller - returns complete API-ready response
+		return s.mediaMTXController.GetMetrics(context.Background())
 	})(params, client)
 }
 
@@ -545,25 +520,8 @@ func (s *WebSocketServer) MethodGetSystemStatus(params map[string]interface{}, c
 func (s *WebSocketServer) MethodGetServerInfo(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// Uses wrapper helpers for consistent method execution
 	return s.authenticatedMethodWrapper("get_server_info", func() (interface{}, error) {
-		// Delegate to Controller for server info (single source of truth)
-		serverInfo, err := s.mediaMTXController.GetServerInfo(context.Background())
-		if err != nil {
-			return nil, fmt.Errorf("failed to get server info: %v", err)
-		}
-
-		// Convert to map for JSON response
-		return map[string]interface{}{
-			"service_name":    serverInfo.ServiceName,
-			"version":         serverInfo.Version,
-			"build_time":      serverInfo.BuildTime,
-			"go_version":      serverInfo.GoVersion,
-			"start_time":      serverInfo.StartTime,
-			"uptime":          serverInfo.Uptime,
-			"environment":     serverInfo.Environment,
-			"config_version":  serverInfo.ConfigVersion,
-			"api_version":     serverInfo.APIVersion,
-			"mediamtx_status": serverInfo.MediaMTXStatus,
-		}, nil
+		// Pure delegation to Controller - returns API-ready GetServerInfoResponse
+		return s.mediaMTXController.GetServerInfo(context.Background())
 	})(params, client)
 }
 
@@ -841,23 +799,8 @@ func (s *WebSocketServer) MethodStopRecording(params map[string]interface{}, cli
 			return nil, fmt.Errorf("invalid device parameter: %v", val.Errors)
 		}
 
-		// Stop recording using device-based approach (no session ID needed)
-		response, err := s.mediaMTXController.StopRecording(context.Background(), cameraID)
-		if err != nil {
-			return nil, fmt.Errorf("failed to stop recording: %v", err)
-		}
-
-		// Return API-ready response directly
-		return map[string]interface{}{
-			"device":     response.Device,
-			"filename":   response.Filename,
-			"status":     response.Status,
-			"start_time": response.StartTime,
-			"end_time":   response.EndTime,
-			"duration":   response.Duration,
-			"file_size":  response.FileSize,
-			"format":     response.Format,
-		}, nil
+		// Pure delegation to Controller - returns API-ready StopRecordingResponse
+		return s.mediaMTXController.StopRecording(context.Background(), cameraID)
 	})(params, client)
 }
 
@@ -875,28 +818,8 @@ func (s *WebSocketServer) MethodGetRecordingInfo(params map[string]interface{}, 
 		// Extract validated filename parameter
 		filename := validationResult.Data["filename"].(string)
 
-		// Use MediaMTX controller to get recording info - thin delegation
-		fileMetadata, err := s.mediaMTXController.GetRecordingInfo(context.Background(), filename)
-		if err != nil {
-			return nil, fmt.Errorf("error getting recording info: %v", err)
-		}
-
-		// Return recording info - API-ready response
-		result := map[string]interface{}{
-			"device":       fileMetadata.Device,
-			"filename":     fileMetadata.Filename,
-			"file_size":    fileMetadata.FileSize,
-			"duration":     fileMetadata.Duration,
-			"created_at":   fileMetadata.CreatedAt, // ISO 8601 formatted timestamp
-			"format":       fileMetadata.Format,
-			"resolution":   fileMetadata.Resolution,
-			"frame_rate":   fileMetadata.FrameRate,
-			"bitrate":      fileMetadata.Bitrate,
-			"download_url": fileMetadata.DownloadURL,
-		}
-
-		// Return recording info
-		return result, nil
+		// Pure delegation to Controller - returns API-ready GetRecordingInfoResponse
+		return s.mediaMTXController.GetRecordingInfo(context.Background(), filename)
 	})(params, client)
 }
 
@@ -914,23 +837,8 @@ func (s *WebSocketServer) MethodGetSnapshotInfo(params map[string]interface{}, c
 		// Extract validated filename parameter
 		filename := validationResult.Data["filename"].(string)
 
-		// Use MediaMTX controller to get snapshot info - thin delegation
-		fileMetadata, err := s.mediaMTXController.GetSnapshotInfo(context.Background(), filename)
-		if err != nil {
-			return nil, fmt.Errorf("error getting snapshot info: %v", err)
-		}
-
-		// Return snapshot info - API-ready response
-		return map[string]interface{}{
-			"device":       fileMetadata.Device,
-			"filename":     fileMetadata.Filename,
-			"file_size":    fileMetadata.FileSize,
-			"created_at":   fileMetadata.CreatedAt, // ISO 8601 formatted timestamp
-			"format":       fileMetadata.Format,
-			"resolution":   fileMetadata.Resolution,
-			"quality":      fileMetadata.Quality,
-			"download_url": fileMetadata.DownloadURL,
-		}, nil
+		// Pure delegation to Controller - returns API-ready GetSnapshotInfoResponse
+		return s.mediaMTXController.GetSnapshotInfo(context.Background(), filename)
 	})(params, client)
 }
 
@@ -1085,27 +993,8 @@ func (s *WebSocketServer) MethodStartStreaming(params map[string]interface{}, cl
 		// Extract validated device parameter
 		device := validationResult.Data["device"].(string)
 
-		// Start streaming via controller using camera ID (mapping internal)
-		stream, err := s.mediaMTXController.StartStreaming(context.Background(), device)
-		if err != nil {
-			return nil, fmt.Errorf("failed to start streaming: %v", err)
-		}
-
-		// Get stream URL from controller (respects configuration)
-		streamURL, err := s.mediaMTXController.GetStreamURL(context.Background(), device)
-		if err != nil {
-			return nil, fmt.Errorf("failed to get stream URL: %v", err)
-		}
-
-		// Return streaming result
-		return map[string]interface{}{
-			"device":           device,
-			"stream_name":      stream.Name,
-			"stream_url":       streamURL,
-			"status":           "STARTED",
-			"start_time":       time.Now().Format(time.RFC3339),
-			"auto_close_after": s.config.AutoCloseAfter.String(),
-		}, nil
+		// Pure delegation to Controller - returns API-ready GetStreamURLResponse
+		return s.mediaMTXController.StartStreaming(context.Background(), device)
 	})(params, client)
 }
 
@@ -1257,18 +1146,8 @@ func (s *WebSocketServer) MethodAddExternalStream(params map[string]interface{},
 			},
 		}
 
-		// Add stream to system
-		if err := s.mediaMTXController.AddExternalStream(context.Background(), stream); err != nil {
-			return nil, fmt.Errorf("failed to add external stream: %w", err)
-		}
-
-		return map[string]interface{}{
-			"stream_url":  streamURL,
-			"stream_name": streamName,
-			"stream_type": streamType,
-			"status":      "added",
-			"timestamp":   time.Now().Unix(),
-		}, nil
+		// Pure delegation to Controller - returns API-ready AddExternalStreamResponse
+		return s.mediaMTXController.AddExternalStream(context.Background(), stream)
 	})(params, client)
 }
 
@@ -1281,47 +1160,16 @@ func (s *WebSocketServer) MethodRemoveExternalStream(params map[string]interface
 			return nil, fmt.Errorf("stream_url parameter is required")
 		}
 
-		// Remove stream from system
-		if err := s.mediaMTXController.RemoveExternalStream(context.Background(), streamURL); err != nil {
-			return nil, fmt.Errorf("failed to remove external stream: %w", err)
-		}
-
-		return map[string]interface{}{
-			"stream_url": streamURL,
-			"status":     "removed",
-			"timestamp":  time.Now().Unix(),
-		}, nil
+		// Pure delegation to Controller - returns API-ready RemoveExternalStreamResponse
+		return s.mediaMTXController.RemoveExternalStream(context.Background(), streamURL)
 	})(params, client)
 }
 
 // MethodGetExternalStreams returns all discovered external streams
 func (s *WebSocketServer) MethodGetExternalStreams(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	return s.authenticatedMethodWrapper("get_external_streams", func() (interface{}, error) {
-		// Get all external streams
-		streams, err := s.mediaMTXController.GetExternalStreams(context.Background())
-		if err != nil {
-			return nil, fmt.Errorf("failed to get external streams: %w", err)
-		}
-
-		// Categorize streams
-		skydioStreams := make([]*mediamtx.ExternalStream, 0)
-		genericStreams := make([]*mediamtx.ExternalStream, 0)
-
-		for _, stream := range streams {
-			if strings.Contains(stream.Type, "skydio") {
-				skydioStreams = append(skydioStreams, stream)
-			} else {
-				genericStreams = append(genericStreams, stream)
-			}
-		}
-
-		return map[string]interface{}{
-			"external_streams": streams,
-			"skydio_streams":   skydioStreams,
-			"generic_streams":  genericStreams,
-			"total_count":      len(streams),
-			"timestamp":        time.Now().Unix(),
-		}, nil
+		// Pure delegation to Controller - returns API-ready GetExternalStreamsResponse
+		return s.mediaMTXController.GetExternalStreams(context.Background())
 	})(params, client)
 }
 

@@ -762,7 +762,7 @@ func (pm *pathManager) GetCameraList(ctx context.Context) (*CameraListResponse, 
 	cameras := pm.cameraMonitor.GetConnectedCameras()
 
 	// Convert to API-ready format with abstraction layer
-	apiCameras := make([]*APICameraInfo, 0, len(cameras))
+	apiCameras := make([]CameraInfo, 0, len(cameras))
 	connectedCount := 0
 
 	for _, cameraDevice := range cameras {
@@ -796,15 +796,14 @@ func (pm *pathManager) GetCameraList(ctx context.Context) (*CameraListResponse, 
 			capabilities["formats"] = len(cameraDevice.Formats)
 		}
 
-		// Create API-ready camera info
-		apiCamera := &APICameraInfo{
-			Device:       cameraID,                    // Abstracted camera ID
-			Status:       string(cameraDevice.Status), // Camera status
-			Name:         cameraDevice.Name,           // Camera name
-			Resolution:   resolution,                  // Extracted resolution
-			FPS:          30,                          // Default FPS (could be extracted from capabilities)
-			Streams:      streams,                     // Generated stream URLs
-			Capabilities: capabilities,                // API-ready capabilities
+		// Create API-ready camera info using CameraInfo from rpc_types.go
+		apiCamera := CameraInfo{
+			Device:     cameraID,                    // Abstracted camera ID
+			Status:     string(cameraDevice.Status), // Camera status
+			Name:       cameraDevice.Name,           // Camera name
+			Resolution: resolution,                  // Extracted resolution
+			FPS:        30,                          // Default FPS (could be extracted from capabilities)
+			Streams:    streams,                     // Generated stream URLs
 		}
 
 		apiCameras = append(apiCameras, apiCamera)
@@ -862,7 +861,7 @@ func (pm *pathManager) GetCameraStatus(ctx context.Context, device string) (*Get
 		Resolution:   "",
 		FPS:          0,
 		Streams:      make(map[string]string),
-		Capabilities: &cameraDevice.Capabilities,
+		Capabilities: pm.convertV4L2CapabilitiesToMap(&cameraDevice.Capabilities),
 	}
 
 	// Extract resolution and FPS from capabilities if available
@@ -929,39 +928,13 @@ func (pm *pathManager) GetCameraCapabilities(ctx context.Context, device string)
 		fpsOptions = append(fpsOptions, fps)
 	}
 
-	// Build API-ready response with ALL camera module data
+	// Build API-ready response using correct GetCameraCapabilitiesResponse fields
 	response := &GetCameraCapabilitiesResponse{
-		Device:           device,
-		SupportedFormats: supportedFormats,
-		SupportedCodecs:  supportedFormats,                              // V4L2 formats are the codecs
-		MaxResolution:    map[string]int{"width": 0, "height": 0},       // Calculated below
-		MinResolution:    map[string]int{"width": 9999, "height": 9999}, // Calculated below
-		FpsOptions:       fpsOptions,
-		V4L2Capabilities: map[string]interface{}{
-			"driver_name":  cameraDevice.Capabilities.DriverName,
-			"card_name":    cameraDevice.Capabilities.CardName,
-			"bus_info":     cameraDevice.Capabilities.BusInfo,
-			"version":      cameraDevice.Capabilities.Version,
-			"capabilities": cameraDevice.Capabilities.Capabilities,
-			"device_caps":  cameraDevice.Capabilities.DeviceCaps,
-		},
-		HardwareFeatures: cameraDevice.Capabilities.Capabilities,
-	}
-
-	// Calculate actual min/max resolutions from all formats
-	for _, format := range cameraDevice.Formats {
-		if format.Width > response.MaxResolution["width"] {
-			response.MaxResolution["width"] = format.Width
-		}
-		if format.Height > response.MaxResolution["height"] {
-			response.MaxResolution["height"] = format.Height
-		}
-		if format.Width < response.MinResolution["width"] {
-			response.MinResolution["width"] = format.Width
-		}
-		if format.Height < response.MinResolution["height"] {
-			response.MinResolution["height"] = format.Height
-		}
+		Device:       device,
+		Formats:      supportedFormats,
+		Resolutions:  supportedResolutions,
+		FrameRates:   fpsOptions,
+		Capabilities: cameraDevice.Capabilities.Capabilities,
 	}
 
 	pm.logger.WithFields(logging.Fields{
@@ -1125,4 +1098,32 @@ func truncateString(s string, maxLen int) string {
 		return s
 	}
 	return s[:maxLen] + "..."
+}
+
+// convertV4L2CapabilitiesToMap converts V4L2Capabilities to map for API response
+func (pm *pathManager) convertV4L2CapabilitiesToMap(caps *camera.V4L2Capabilities) map[string]interface{} {
+	if caps == nil {
+		return make(map[string]interface{})
+	}
+
+	result := make(map[string]interface{})
+	if len(caps.Capabilities) > 0 {
+		result["capabilities"] = caps.Capabilities
+	}
+	if caps.DriverName != "" {
+		result["driver_name"] = caps.DriverName
+	}
+	if caps.CardName != "" {
+		result["card_name"] = caps.CardName
+	}
+	if caps.BusInfo != "" {
+		result["bus_info"] = caps.BusInfo
+	}
+	if caps.Version != "" {
+		result["version"] = caps.Version
+	}
+	if len(caps.DeviceCaps) > 0 {
+		result["device_caps"] = caps.DeviceCaps
+	}
+	return result
 }

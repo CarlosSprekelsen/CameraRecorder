@@ -542,14 +542,13 @@ func (sm *streamManager) GetStreamStatus(ctx context.Context, cameraID string) (
 	}
 
 	response := &GetStreamStatusResponse{
-		Device:        cameraID,
-		Status:        status,
-		StreamURL:     sm.GenerateStreamURL(cameraID),
-		Viewers:       len(stream.Readers),
-		BytesSent:     stream.BytesSent,
-		BytesReceived: stream.BytesReceived,
-		StartTime:     "", // TODO: Add proper start time tracking
-		LastActivity:  "", // TODO: Add proper activity tracking
+		Device:       cameraID,
+		Status:       status,
+		StreamURL:    sm.GenerateStreamURL(cameraID),
+		Viewers:      len(stream.Readers),
+		BytesSent:    stream.BytesSent,
+		StartTime:    "", // TODO: Add proper start time tracking
+		LastActivity: "", // TODO: Add proper activity tracking
 	}
 
 	if stream.ReadyTime != nil {

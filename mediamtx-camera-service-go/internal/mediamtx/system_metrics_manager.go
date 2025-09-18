@@ -95,7 +95,7 @@ func (sm *SystemMetricsManager) GetStorageInfoAPI(ctx context.Context) (*GetStor
 	sm.logger.Debug("Collecting system storage information")
 
 	// Get recordings path from configuration
-	recordingsPath := sm.recordingConfig.RecordingsPath
+	recordingsPath := sm.config.MediaMTX.RecordingsPath
 	if recordingsPath == "" {
 		return nil, fmt.Errorf("recordings path not configured")
 	}
@@ -131,7 +131,7 @@ func (sm *SystemMetricsManager) GetStorageInfoAPI(ctx context.Context) (*GetStor
 	}
 
 	// Get snapshots size from configuration
-	snapshotsPath := sm.config.Camera.SnapshotsPath
+	snapshotsPath := sm.config.MediaMTX.SnapshotsPath
 	if snapshotsPath != "" {
 		if entries, err := os.ReadDir(snapshotsPath); err == nil {
 			for _, entry := range entries {
