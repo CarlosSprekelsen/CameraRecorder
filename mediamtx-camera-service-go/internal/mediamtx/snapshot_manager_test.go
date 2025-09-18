@@ -58,7 +58,7 @@ func TestNewSnapshotManager_ReqMTX001(t *testing.T) {
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
 	cameraMonitor := helper.GetCameraMonitor()
-	
+
 	// Create PathManager for SnapshotManager dependency
 	client := helper.GetClient()
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)
@@ -98,7 +98,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002(t *testing.T) {
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
 	cameraMonitor := helper.GetCameraMonitor()
-	
+
 	// Create PathManager for SnapshotManager dependency
 	client := helper.GetClient()
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)
@@ -112,7 +112,10 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002(t *testing.T) {
 	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
 	require.NoError(t, err)
 
-	devicePath := "/dev/video0"
+	// Use existing test helper to get camera identifier - following established patterns
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
+
 	// Test snapshot options
 	options := map[string]interface{}{
 		"format":      "jpg",
@@ -125,15 +128,22 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002(t *testing.T) {
 	// Check if hardware is available for proper test validation
 	hasHardware := helper.HasHardwareCamera(ctx)
 
-	// Take snapshot (this will test the multi-tier approach)
-	snapshot, err := snapshotManager.TakeSnapshot(ctx, devicePath, options)
+	// Take snapshot using new API-ready signature (cameraID-first architecture)
+	response, err := snapshotManager.TakeSnapshot(ctx, cameraID, options)
 
 	// Hardware-aware test validation
 	if hasHardware {
 		// Hardware is available - expect success
 		require.NoError(t, err, "Snapshot should succeed with real hardware")
-		require.NotNil(t, snapshot, "Snapshot should not be nil")
-		assert.Equal(t, "camera0", snapshot.Device)
+		require.NotNil(t, response, "TakeSnapshot should return API-ready response")
+
+		// Validate API-ready response format per JSON-RPC documentation
+		assert.Equal(t, cameraID, response.Device, "Response device should match camera ID")
+		assert.NotEmpty(t, response.Filename, "Response should include generated filename")
+		assert.Equal(t, "completed", response.Status, "Response should indicate completion status")
+		assert.NotEmpty(t, response.Timestamp, "Response should include timestamp")
+		assert.Greater(t, response.FileSize, int64(0), "Response should include file size")
+		assert.NotEmpty(t, response.FilePath, "Response should include file path")
 	} else {
 		// No hardware available - expect failure but verify error handling works
 		require.Error(t, err, "Snapshot should fail without hardware")
@@ -142,11 +152,12 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002(t *testing.T) {
 		assert.Contains(t, err.Error(), "failed", "Error should indicate failure")
 	}
 
-	// Verify snapshot is tracked (if successful)
+	// Verify snapshot is tracked using new API method (if successful)
 	if err == nil {
-		snapshots := snapshotManager.ListSnapshots()
-		assert.Len(t, snapshots, 1)
-		assert.Equal(t, snapshot.ID, snapshots[0].ID)
+		listResponse, listErr := snapshotManager.ListSnapshots(ctx, 10, 0)
+		require.NoError(t, listErr, "ListSnapshots should succeed")
+		require.NotNil(t, listResponse, "ListSnapshots should return API-ready response")
+		assert.Greater(t, listResponse.Total, 0, "Should have at least one snapshot")
 	}
 }
 
@@ -179,7 +190,7 @@ func TestSnapshotManager_GetSnapshotsList_ReqMTX002(t *testing.T) {
 	// Create SnapshotManager with configManager for proper multi-tier support
 	// Create real hardware camera monitor for testing
 	cameraMonitor := helper.GetCameraMonitor()
-	
+
 	// Create PathManager for SnapshotManager dependency
 	client := helper.GetClient()
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)
@@ -254,7 +265,7 @@ func TestSnapshotManager_GetSnapshotInfo_ReqMTX002(t *testing.T) {
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
 	cameraMonitor := helper.GetCameraMonitor()
-	
+
 	// Create PathManager for SnapshotManager dependency
 	client := helper.GetClient()
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)
@@ -322,7 +333,7 @@ func TestSnapshotManager_DeleteSnapshotFile_ReqMTX002(t *testing.T) {
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
 	cameraMonitor := helper.GetCameraMonitor()
-	
+
 	// Create PathManager for SnapshotManager dependency
 	client := helper.GetClient()
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)
@@ -393,7 +404,7 @@ func TestSnapshotManager_SnapshotSettings_ReqMTX001(t *testing.T) {
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
 	cameraMonitor := helper.GetCameraMonitor()
-	
+
 	// Create PathManager for SnapshotManager dependency
 	client := helper.GetClient()
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)
@@ -463,7 +474,7 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002(t *testing.T) {
 	// Create SnapshotManager with configManager for proper multi-tier support
 	// Create real hardware camera monitor for testing
 	cameraMonitor := helper.GetCameraMonitor()
-	
+
 	// Create PathManager for SnapshotManager dependency
 	client := helper.GetClient()
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)
@@ -580,7 +591,7 @@ func TestSnapshotManager_ErrorHandling_ReqMTX004(t *testing.T) {
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
 	cameraMonitor := helper.GetCameraMonitor()
-	
+
 	// Create PathManager for SnapshotManager dependency
 	client := helper.GetClient()
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)
@@ -631,7 +642,7 @@ func TestSnapshotManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
 	cameraMonitor := helper.GetCameraMonitor()
-	
+
 	// Create PathManager for SnapshotManager dependency
 	client := helper.GetClient()
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)
@@ -716,7 +727,7 @@ func TestSnapshotManager_Tier1_USBDirectCapture_ReqMTX002(t *testing.T) {
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
 	cameraMonitor := helper.GetCameraMonitor()
-	
+
 	// Create PathManager for SnapshotManager dependency
 	client := helper.GetClient()
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)
@@ -792,7 +803,7 @@ func TestSnapshotManager_Tier2_RTSPImmediateCapture_ReqMTX002(t *testing.T) {
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
 	cameraMonitor := helper.GetCameraMonitor()
-	
+
 	// Create PathManager for SnapshotManager dependency
 	client := helper.GetClient()
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)
@@ -875,7 +886,7 @@ func TestSnapshotManager_Tier3_RTSPStreamActivation_ReqMTX002(t *testing.T) {
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
 	cameraMonitor := helper.GetCameraMonitor()
-	
+
 	// Create PathManager for SnapshotManager dependency
 	client := helper.GetClient()
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)
@@ -954,7 +965,7 @@ func TestSnapshotManager_MultiTierIntegration_ReqMTX002(t *testing.T) {
 	configManager := config.CreateConfigManager()
 	// Create real hardware camera monitor for testing
 	cameraMonitor := helper.GetCameraMonitor()
-	
+
 	// Create PathManager for SnapshotManager dependency
 	client := helper.GetClient()
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)

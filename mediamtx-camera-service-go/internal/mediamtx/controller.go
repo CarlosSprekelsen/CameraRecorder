@@ -35,7 +35,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -520,16 +519,12 @@ func (c *controller) GetServerInfo(ctx context.Context) (*GetServerInfoResponse,
 
 	// Build API-ready response
 	response := &GetServerInfoResponse{
-		ServiceName:    "MediaMTX Camera Service",
-		Version:        "1.0.0",                                   // TODO: Get from build info
-		BuildTime:      time.Now().Format("2006-01-02T15:04:05Z"), // TODO: Get from build info
-		GoVersion:      runtime.Version(),
-		StartTime:      c.startTime.Format(time.RFC3339),
-		Uptime:         time.Since(c.startTime).String(),
-		Environment:    "production", // TODO: Get from config
-		ConfigVersion:  "1.0",        // TODO: Get from config
-		APIVersion:     "2.0",        // JSON-RPC 2.0
-		MediaMTXStatus: mediaMTXStatus,
+		ServiceName:   "MediaMTX Camera Service",
+		Version:       "1.0.0", // TODO: Get from build info
+		Status:        "running",
+		StartTime:     c.startTime.Format(time.RFC3339),
+		Uptime:        time.Since(c.startTime).String(),
+		MediaMTXReady: mediaMTXStatus == "connected",
 	}
 
 	return response, nil
@@ -599,10 +594,11 @@ func (c *controller) CleanupOldFiles(ctx context.Context) (*CleanupOldFilesRespo
 
 	// Build API-ready response using CleanupOldFilesResponse from rpc_types.go
 	response := &CleanupOldFilesResponse{
-		FilesRemoved:    deletedCount,
-		SpaceFreed:      totalSize,
-		RecordingsCount: deletedCount, // TODO-IMPL: Track recordings vs snapshots separately
-		SnapshotsCount:  0,            // TODO-IMPL: Track recordings vs snapshots separately
+		RecordingsRemoved: deletedCount, // TODO-IMPL: Track recordings vs snapshots separately
+		SnapshotsRemoved:  0,            // TODO-IMPL: Track recordings vs snapshots separately
+		SpaceFreed:        totalSize,
+		Status:            "completed",
+		Message:           fmt.Sprintf("Cleaned up %d files, freed %d bytes", deletedCount, totalSize),
 	}
 	return response, nil
 }
@@ -1030,16 +1026,12 @@ func (c *controller) GetRecordingInfo(ctx context.Context, filename string) (*Ge
 		duration = float64(*metadata.Duration)
 	}
 	response := &GetRecordingInfoResponse{
-		Device:      "camera0", // TODO: Extract from metadata
-		Filename:    filename,
-		FileSize:    metadata.FileSize,
-		Duration:    duration,
-		CreatedAt:   metadata.CreatedAt.Format(time.RFC3339),
-		Format:      "fmp4",      // TODO: Extract from metadata
-		Resolution:  "1920x1080", // TODO: Extract from metadata
-		FrameRate:   30,          // TODO: Extract from metadata
-		Bitrate:     1000,        // TODO: Extract from metadata
-		DownloadURL: fmt.Sprintf("/files/recordings/%s", filename),
+		Filename:  filename,
+		FileSize:  metadata.FileSize,
+		Duration:  duration,
+		CreatedAt: metadata.CreatedAt.Format(time.RFC3339),
+		Format:    "fmp4",    // TODO: Extract from metadata
+		Device:    "camera0", // TODO: Extract from filename
 	}
 	return response, nil
 }
@@ -1060,14 +1052,12 @@ func (c *controller) GetSnapshotInfo(ctx context.Context, filename string) (*Get
 
 	// Build API-ready response - placeholder pending proper conversion implementation
 	response := &GetSnapshotInfoResponse{
-		Device:      "camera0", // TODO: Extract from metadata
-		Filename:    filename,
-		FileSize:    metadata.FileSize,
-		CreatedAt:   metadata.CreatedAt.Format(time.RFC3339),
-		Format:      "jpg",       // TODO: Extract from metadata
-		Resolution:  "1920x1080", // TODO: Extract from metadata
-		Quality:     85,          // TODO: Extract from metadata
-		DownloadURL: fmt.Sprintf("/files/snapshots/%s", filename),
+		Filename:   filename,
+		FileSize:   metadata.FileSize,
+		CreatedAt:  metadata.CreatedAt.Format(time.RFC3339),
+		Format:     "jpg",       // TODO: Extract from metadata
+		Resolution: "1920x1080", // TODO: Extract from metadata
+		Device:     "camera0",   // TODO: Extract from filename
 	}
 	return response, nil
 }
@@ -1257,7 +1247,7 @@ func (c *controller) GetCameraList(ctx context.Context) (*CameraListResponse, er
 }
 
 // GetCameraStatus returns the status for a specific camera device
-func (c *controller) GetCameraStatus(ctx context.Context, device string) (*CameraStatusResponse, error) {
+func (c *controller) GetCameraStatus(ctx context.Context, device string) (*GetCameraStatusResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller not running")
 	}
@@ -1303,8 +1293,8 @@ func (c *controller) GetCameraCapabilities(ctx context.Context, device string) (
 
 	c.logger.WithFields(logging.Fields{
 		"device":            device,
-		"formats_count":     len(response.SupportedFormats),
-		"fps_options_count": len(response.FpsOptions),
+		"formats_count":     len(response.Formats),
+		"fps_options_count": len(response.FrameRates),
 	}).Info("Retrieved camera capabilities through PathManager")
 
 	return response, nil

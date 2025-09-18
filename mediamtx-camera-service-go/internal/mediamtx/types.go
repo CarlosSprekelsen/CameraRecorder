@@ -461,6 +461,7 @@ type HealthMonitor interface {
 	GetStatus() HealthStatus
 	IsHealthy() bool
 	GetMetrics() map[string]interface{}
+	GetHealthAPI(ctx context.Context, startTime time.Time) (*GetHealthResponse, error)
 
 	// Circuit breaker
 	IsCircuitOpen() bool

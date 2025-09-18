@@ -840,7 +840,7 @@ func (pm *pathManager) generateCameraID(devicePath string) string {
 }
 
 // GetCameraStatus returns status for a specific camera
-func (pm *pathManager) GetCameraStatus(ctx context.Context, device string) (*CameraStatusResponse, error) {
+func (pm *pathManager) GetCameraStatus(ctx context.Context, device string) (*GetCameraStatusResponse, error) {
 	if pm.cameraMonitor == nil {
 		return nil, fmt.Errorf("camera monitor not available in path manager")
 	}
@@ -855,7 +855,7 @@ func (pm *pathManager) GetCameraStatus(ctx context.Context, device string) (*Cam
 	}
 
 	// Build response with abstraction layer
-	response := &CameraStatusResponse{
+	response := &GetCameraStatusResponse{
 		Device:       device, // Return camera identifier (camera0)
 		Status:       string(cameraDevice.Status),
 		Name:         cameraDevice.Name,

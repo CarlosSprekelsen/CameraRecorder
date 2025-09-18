@@ -461,3 +461,153 @@ func TestHealthMonitor_StatusTransitions_ReqMTX004(t *testing.T) {
 
 	t.Log("Health monitor status transitions working correctly")
 }
+
+// TestHealthMonitor_GetHealthAPI_ReqMTX004 tests new API-ready health method
+func TestHealthMonitor_GetHealthAPI_ReqMTX004(t *testing.T) {
+	// REQ-MTX-004: Health monitoring - API-ready health responses
+	EnsureSequentialExecution(t)
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create health monitor using existing test infrastructure
+	config := &config.MediaMTXConfig{
+		BaseURL:                helper.GetConfig().BaseURL,
+		Timeout:                30 * time.Second,
+		HealthCheckInterval:    5,
+		HealthFailureThreshold: 3,
+		HealthCheckTimeout:     5 * time.Second,
+	}
+	logger := logging.CreateTestLogger(t, nil)
+
+	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
+	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
+
+	// Start health monitor
+	ctx := context.Background()
+	err := healthMonitor.Start(ctx)
+	require.NoError(t, err, "Health monitor should start successfully")
+
+	// Ensure health monitor is stopped after test
+	defer func() {
+		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		healthMonitor.Stop(stopCtx)
+	}()
+
+	// Test GetHealthAPI method - new API-ready response
+	startTime := time.Now().Add(-1 * time.Hour) // Simulate system start time
+	response, err := healthMonitor.GetHealthAPI(ctx, startTime)
+	require.NoError(t, err, "GetHealthAPI should succeed")
+	require.NotNil(t, response, "GetHealthAPI should return API-ready response")
+
+	// Validate API-ready response format per JSON-RPC documentation
+	assert.NotEmpty(t, response.Status, "Response should include overall status")
+	assert.Contains(t, []string{"healthy", "degraded", "unhealthy"}, response.Status, "Status should be valid")
+	assert.NotEmpty(t, response.Uptime, "Response should include uptime")
+	assert.NotEmpty(t, response.Version, "Response should include version")
+	assert.NotNil(t, response.Components, "Response should include components map")
+	assert.NotNil(t, response.Checks, "Response should include checks array")
+	assert.NotEmpty(t, response.Timestamp, "Response should include timestamp")
+	assert.GreaterOrEqual(t, response.ResponseTime, 0.0, "Response time should be non-negative")
+
+	// Validate components structure
+	if mediaStatus, exists := response.Components["mediamtx"]; exists {
+		assert.Contains(t, []string{"healthy", "degraded", "unhealthy"}, mediaStatus, "MediaMTX status should be valid")
+	}
+
+	// Validate timestamp format (should be ISO 8601)
+	_, err = time.Parse(time.RFC3339, response.Timestamp)
+	assert.NoError(t, err, "Timestamp should be in ISO 8601 format")
+}
+
+// TestHealthMonitor_GetHealthAPI_APICompliance_ReqAPI001 tests API compliance for GetHealthAPI
+func TestHealthMonitor_GetHealthAPI_APICompliance_ReqAPI001(t *testing.T) {
+	// REQ-API-001: JSON-RPC API compliance for health endpoints
+	EnsureSequentialExecution(t)
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create health monitor using existing test infrastructure
+	config := &config.MediaMTXConfig{
+		BaseURL:                helper.GetConfig().BaseURL,
+		Timeout:                30 * time.Second,
+		HealthCheckInterval:    5,
+		HealthFailureThreshold: 3,
+		HealthCheckTimeout:     5 * time.Second,
+	}
+	logger := logging.CreateTestLogger(t, nil)
+
+	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
+	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
+
+	ctx := context.Background()
+	startTime := time.Now().Add(-30 * time.Minute)
+
+	// Test API compliance for GetHealthAPI method
+	response, err := healthMonitor.GetHealthAPI(ctx, startTime)
+	require.NoError(t, err, "API method should not return error")
+	require.NotNil(t, response, "API method should return structured response")
+
+	// Validate all documented fields are present with correct types
+	assert.IsType(t, "", response.Status, "Status should be string")
+	assert.IsType(t, "", response.Uptime, "Uptime should be string")
+	assert.IsType(t, "", response.Version, "Version should be string")
+	assert.IsType(t, map[string]interface{}{}, response.Components, "Components should be map[string]interface{}")
+	assert.IsType(t, []interface{}{}, response.Checks, "Checks should be []interface{}")
+	assert.IsType(t, "", response.Timestamp, "Timestamp should be string")
+	assert.IsType(t, float64(0), response.ResponseTime, "ResponseTime should be float64")
+
+	// Validate status field values are within documented enum
+	validStatuses := []string{"healthy", "degraded", "unhealthy"}
+	assert.Contains(t, validStatuses, response.Status, "Status should be one of documented values")
+
+	// Validate uptime format (should be duration string)
+	assert.Regexp(t, `^\d+(\.\d+)?[a-z]+$`, response.Uptime, "Uptime should be duration format")
+}
+
+// TestHealthMonitor_GetHealthAPI_ErrorScenarios_ReqMTX004 tests error handling for GetHealthAPI
+func TestHealthMonitor_GetHealthAPI_ErrorScenarios_ReqMTX004(t *testing.T) {
+	// REQ-MTX-004: Health monitoring - error handling
+	EnsureSequentialExecution(t)
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create health monitor using existing test infrastructure
+	config := &config.MediaMTXConfig{
+		BaseURL:                helper.GetConfig().BaseURL,
+		Timeout:                30 * time.Second,
+		HealthCheckInterval:    5,
+		HealthFailureThreshold: 3,
+		HealthCheckTimeout:     5 * time.Second,
+	}
+	logger := logging.CreateTestLogger(t, nil)
+
+	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
+	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
+
+	// Test with cancelled context
+	cancelledCtx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	startTime := time.Now().Add(-30 * time.Minute)
+
+	// GetHealthAPI should handle cancelled context gracefully
+	response, err := healthMonitor.GetHealthAPI(cancelledCtx, startTime)
+	// Should either succeed quickly or return context error
+	if err != nil {
+		assert.Contains(t, err.Error(), "context", "Context cancellation should be handled properly")
+	} else {
+		// If it succeeds, response should still be valid
+		require.NotNil(t, response, "Response should be valid even with cancelled context")
+		assert.NotEmpty(t, response.Status, "Status should be present")
+	}
+
+	// Test with future start time (edge case)
+	futureStartTime := time.Now().Add(1 * time.Hour)
+	response, err = healthMonitor.GetHealthAPI(context.Background(), futureStartTime)
+	require.NoError(t, err, "Should handle future start time gracefully")
+	require.NotNil(t, response, "Should return valid response for future start time")
+
+	// Uptime should be reasonable (not negative)
+	assert.NotEmpty(t, response.Uptime, "Uptime should be present even for future start time")
+}

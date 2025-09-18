@@ -88,6 +88,121 @@ func TestStreamManager_DeleteStream_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Stream deletion should succeed")
 }
 
+// TestStreamManager_StartStream_ReqMTX002 tests new cameraID-first stream starting
+func TestStreamManager_StartStream_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities - cameraID-first architecture
+	EnsureSequentialExecution(t)
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
+	require.NotNil(t, streamManager)
+
+	ctx := context.Background()
+
+	// Use existing test helper to get camera identifier - following established patterns
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
+
+	// Start stream using new cameraID-first API
+	response, err := streamManager.StartStream(ctx, cameraID)
+	require.NoError(t, err, "StartStream should succeed with valid camera ID")
+	require.NotNil(t, response, "StartStream should return API-ready response")
+
+	// Validate API-ready response format per JSON-RPC documentation
+	assert.Equal(t, cameraID, response.Device, "Response device should match camera ID")
+	assert.NotEmpty(t, response.StreamURL, "Response should include stream URL")
+	assert.True(t, response.Available, "Response should indicate stream is available")
+	assert.Contains(t, response.StreamURL, cameraID, "Stream URL should contain camera ID")
+}
+
+// TestStreamManager_GetStreamStatus_ReqMTX002 tests new cameraID-first stream status
+func TestStreamManager_GetStreamStatus_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities - cameraID-first architecture
+	EnsureSequentialExecution(t)
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
+	require.NotNil(t, streamManager)
+
+	ctx := context.Background()
+
+	// Use existing test helper to get camera identifier - following established patterns
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
+
+	// Get stream status using new cameraID-first API
+	response, err := streamManager.GetStreamStatus(ctx, cameraID)
+	require.NoError(t, err, "GetStreamStatus should succeed with valid camera ID")
+	require.NotNil(t, response, "GetStreamStatus should return API-ready response")
+
+	// Validate API-ready response format per JSON-RPC documentation
+	assert.Equal(t, cameraID, response.Device, "Response device should match camera ID")
+	assert.NotEmpty(t, response.Status, "Response should include status")
+	assert.Contains(t, []string{"active", "inactive", "ready"}, response.Status, "Status should be valid")
+}
+
+// TestStreamManager_ListStreamsAPI_ReqMTX002 tests new API-ready stream listing
+func TestStreamManager_ListStreamsAPI_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities - API-ready responses
+	EnsureSequentialExecution(t)
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
+	require.NotNil(t, streamManager)
+
+	ctx := context.Background()
+
+	// List streams using new API-ready method
+	response, err := streamManager.ListStreams(ctx)
+	require.NoError(t, err, "ListStreams should succeed")
+	require.NotNil(t, response, "ListStreams should return API-ready response")
+
+	// Validate API-ready response format per JSON-RPC documentation
+	assert.NotNil(t, response.Streams, "Response should include streams array")
+	assert.GreaterOrEqual(t, response.Total, 0, "Response should include total count")
+
+	// If streams are present, validate their structure
+	for _, stream := range response.Streams {
+		assert.NotEmpty(t, stream.Name, "Stream should have name")
+		assert.NotEmpty(t, stream.Source, "Stream should have source")
+	}
+}
+
+// TestStreamManager_GetStreamURL_ReqMTX002 tests new cameraID-first stream URL retrieval
+func TestStreamManager_GetStreamURL_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities - cameraID-first architecture
+	EnsureSequentialExecution(t)
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Use shared stream manager from test helper
+	streamManager := helper.GetStreamManager()
+	require.NotNil(t, streamManager)
+
+	ctx := context.Background()
+
+	// Use existing test helper to get camera identifier - following established patterns
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
+
+	// Get stream URL using new cameraID-first API
+	response, err := streamManager.GetStreamURL(ctx, cameraID)
+	require.NoError(t, err, "GetStreamURL should succeed with valid camera ID")
+	require.NotNil(t, response, "GetStreamURL should return API-ready response")
+
+	// Validate API-ready response format per JSON-RPC documentation
+	assert.Equal(t, cameraID, response.Device, "Response device should match camera ID")
+	assert.NotEmpty(t, response.StreamURL, "Response should include stream URL")
+	assert.Contains(t, response.StreamURL, cameraID, "Stream URL should contain camera ID")
+	assert.True(t, response.Available, "Response should indicate stream availability")
+}
+
 // TestStreamManager_GetStream_ReqMTX002 tests stream retrieval
 func TestStreamManager_GetStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities

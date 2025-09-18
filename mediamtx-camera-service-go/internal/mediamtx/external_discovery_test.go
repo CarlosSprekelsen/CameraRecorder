@@ -486,3 +486,156 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		assert.NoError(t, err, "Stop without start should not error")
 	})
 }
+
+// TestExternalStreamDiscovery_DiscoverExternalStreamsAPI_ReqMTX002 tests new API-ready discovery method
+func TestExternalStreamDiscovery_DiscoverExternalStreamsAPI_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities - API-ready external stream discovery
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create external stream discovery using existing test infrastructure
+	configManager := helper.GetConfigManager()
+	logger := helper.GetLogger()
+
+	discovery := NewExternalStreamDiscovery(configManager, logger)
+	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
+
+	ctx := context.Background()
+
+	// Test DiscoverExternalStreamsAPI method - new API-ready response
+	options := DiscoveryOptions{
+		SkydioEnabled:  true,
+		GenericEnabled: false,
+		ForceRescan:    true,
+		IncludeOffline: false,
+	}
+
+	response, err := discovery.DiscoverExternalStreamsAPI(ctx, options)
+	require.NoError(t, err, "DiscoverExternalStreamsAPI should succeed")
+	require.NotNil(t, response, "DiscoverExternalStreamsAPI should return API-ready response")
+
+	// Validate API-ready response format per JSON-RPC documentation
+	assert.NotNil(t, response.DiscoveredStreams, "Response should include discovered streams array")
+	assert.NotNil(t, response.SkydioStreams, "Response should include Skydio streams array")
+	assert.NotNil(t, response.GenericStreams, "Response should include generic streams array")
+	assert.GreaterOrEqual(t, response.TotalFound, 0, "Response should include total found count")
+	assert.GreaterOrEqual(t, response.ScanTimestamp, int64(0), "Response should include scan timestamp")
+	assert.NotNil(t, response.DiscoveryOptions, "Response should include discovery options")
+	assert.NotEmpty(t, response.ScanDuration, "Response should include scan duration")
+	assert.NotNil(t, response.Errors, "Response should include errors array")
+}
+
+// TestExternalStreamDiscovery_GetExternalStreamsAPI_ReqMTX002 tests new API-ready streams listing
+func TestExternalStreamDiscovery_GetExternalStreamsAPI_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities - API-ready external streams listing
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create external stream discovery using existing test infrastructure
+	configManager := helper.GetConfigManager()
+	logger := helper.GetLogger()
+
+	discovery := NewExternalStreamDiscovery(configManager, logger)
+	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
+
+	ctx := context.Background()
+
+	// Test GetExternalStreamsAPI method - new API-ready response
+	response, err := discovery.GetExternalStreamsAPI(ctx)
+	require.NoError(t, err, "GetExternalStreamsAPI should succeed")
+	require.NotNil(t, response, "GetExternalStreamsAPI should return API-ready response")
+
+	// Validate API-ready response format per JSON-RPC documentation
+	assert.NotNil(t, response.ExternalStreams, "Response should include external streams array")
+	assert.NotNil(t, response.SkydioStreams, "Response should include Skydio streams array")
+	assert.NotNil(t, response.GenericStreams, "Response should include generic streams array")
+	assert.GreaterOrEqual(t, response.TotalCount, 0, "Response should include total count")
+	assert.GreaterOrEqual(t, response.Timestamp, int64(0), "Response should include timestamp")
+}
+
+// TestExternalStreamDiscovery_AddExternalStreamAPI_ReqMTX002 tests new API-ready stream addition
+func TestExternalStreamDiscovery_AddExternalStreamAPI_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities - API-ready external stream addition
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create external stream discovery using existing test infrastructure
+	configManager := helper.GetConfigManager()
+	logger := helper.GetLogger()
+
+	discovery := NewExternalStreamDiscovery(configManager, logger)
+	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
+
+	ctx := context.Background()
+
+	// Create test external stream
+	testStream := &ExternalStream{
+		URL:          "rtsp://test-stream.example.com:554/test",
+		Type:         "generic_rtsp",
+		Name:         "Test Stream",
+		Status:       "discovered",
+		DiscoveredAt: time.Now(),
+		LastSeen:     time.Now(),
+	}
+
+	// Test AddExternalStreamAPI method - new API-ready response
+	response, err := discovery.AddExternalStreamAPI(ctx, testStream)
+	require.NoError(t, err, "AddExternalStreamAPI should succeed")
+	require.NotNil(t, response, "AddExternalStreamAPI should return API-ready response")
+
+	// Validate API-ready response format per JSON-RPC documentation
+	assert.Equal(t, testStream.URL, response.StreamURL, "Response should include stream URL")
+	assert.Equal(t, testStream.Name, response.StreamName, "Response should include stream name")
+	assert.Equal(t, testStream.Type, response.StreamType, "Response should include stream type")
+	assert.Equal(t, "added", response.Status, "Response should indicate added status")
+	assert.Greater(t, response.Timestamp, int64(0), "Response should include timestamp")
+
+	// Verify stream was actually added by listing streams
+	listResponse, err := discovery.GetExternalStreamsAPI(ctx)
+	require.NoError(t, err, "GetExternalStreamsAPI should succeed after adding")
+	assert.Greater(t, listResponse.TotalCount, 0, "Should have at least one stream after adding")
+}
+
+// TestExternalStreamDiscovery_RemoveExternalStreamAPI_ReqMTX002 tests new API-ready stream removal
+func TestExternalStreamDiscovery_RemoveExternalStreamAPI_ReqMTX002(t *testing.T) {
+	// REQ-MTX-002: Stream management capabilities - API-ready external stream removal
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Create external stream discovery using existing test infrastructure
+	configManager := helper.GetConfigManager()
+	logger := helper.GetLogger()
+
+	discovery := NewExternalStreamDiscovery(configManager, logger)
+	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
+
+	ctx := context.Background()
+
+	// First add a test stream
+	testStream := &ExternalStream{
+		URL:          "rtsp://test-remove.example.com:554/test",
+		Type:         "generic_rtsp",
+		Name:         "Test Remove Stream",
+		Status:       "discovered",
+		DiscoveredAt: time.Now(),
+		LastSeen:     time.Now(),
+	}
+
+	addResponse, err := discovery.AddExternalStreamAPI(ctx, testStream)
+	require.NoError(t, err, "AddExternalStreamAPI should succeed for setup")
+	require.NotNil(t, addResponse, "Should add stream successfully for setup")
+
+	// Test RemoveExternalStreamAPI method - new API-ready response
+	response, err := discovery.RemoveExternalStreamAPI(ctx, testStream.URL)
+	require.NoError(t, err, "RemoveExternalStreamAPI should succeed")
+	require.NotNil(t, response, "RemoveExternalStreamAPI should return API-ready response")
+
+	// Validate API-ready response format per JSON-RPC documentation
+	assert.Equal(t, testStream.URL, response.StreamURL, "Response should include stream URL")
+	assert.Equal(t, "removed", response.Status, "Response should indicate removed status")
+	assert.Greater(t, response.Timestamp, int64(0), "Response should include timestamp")
+
+	// Verify stream was actually removed by attempting to remove again
+	_, err = discovery.RemoveExternalStreamAPI(ctx, testStream.URL)
+	assert.Error(t, err, "Should return error when removing non-existent stream")
+}

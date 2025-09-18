@@ -60,19 +60,34 @@ func TestRecordingManager_StartRecording_ReqMTX002(t *testing.T) {
 	err := os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
 
-	devicePath := "/dev/video0"
+	// Use existing test helper to get camera identifier - following established patterns
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
 
-	// Start recording
+	// Start recording using new API-ready signature
 	options := map[string]interface{}{}
-	err = recordingManager.StartRecording(ctx, devicePath, options)
+	response, err := recordingManager.StartRecording(ctx, cameraID, options)
 	require.NoError(t, err, "Recording should start successfully")
+	require.NotNil(t, response, "StartRecording should return API-ready response")
+
+	// Validate API-ready response format per JSON-RPC documentation
+	assert.Equal(t, cameraID, response.Device, "Response device should match request")
+	assert.NotEmpty(t, response.Filename, "Response should include generated filename")
+	assert.Equal(t, "RECORDING", response.Status, "Response should indicate recording status")
+	assert.NotEmpty(t, response.StartTime, "Response should include start time")
+	assert.NotEmpty(t, response.Format, "Response should include recording format")
 
 	// With stateless recording, we verify by checking MediaMTX directly
 	// The recording is now managed by MediaMTX, not by local session state
 
-	// Clean up
-	err = recordingManager.StopRecording(ctx, devicePath)
+	// Clean up using new API-ready signature
+	stopResponse, err := recordingManager.StopRecording(ctx, cameraID)
 	require.NoError(t, err, "Recording should stop successfully")
+	require.NotNil(t, stopResponse, "StopRecording should return API-ready response")
+
+	// Validate stop response format per JSON-RPC documentation
+	assert.Equal(t, cameraID, stopResponse.Device, "Stop response device should match request")
+	assert.Equal(t, "STOPPED", stopResponse.Status, "Stop response should indicate stopped status")
 }
 
 // TestRecordingManager_StopRecording_ReqMTX002 tests recording session termination with real server
@@ -94,16 +109,25 @@ func TestRecordingManager_StopRecording_ReqMTX002(t *testing.T) {
 	err := os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
 
-	devicePath := "/dev/video0"
+	// Use existing test helper to get camera identifier - following established patterns
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
 
-	// Start recording
+	// Start recording using new API-ready signature
 	options := map[string]interface{}{}
-	session, err := recordingManager.StartRecording(ctx, devicePath, options)
+	startResponse, err := recordingManager.StartRecording(ctx, cameraID, options)
 	require.NoError(t, err, "Recording should start successfully")
+	require.NotNil(t, startResponse, "StartRecording should return API-ready response")
 
-	// Stop recording
-	err = recordingManager.StopRecording(ctx, session.ID)
+	// Stop recording using new API-ready signature (cameraID-first architecture)
+	stopResponse, err := recordingManager.StopRecording(ctx, cameraID)
 	require.NoError(t, err, "Recording should stop successfully")
+	require.NotNil(t, stopResponse, "StopRecording should return API-ready response")
+
+	// Validate stateless recording architecture - response contains all necessary info
+	assert.Equal(t, cameraID, stopResponse.Device, "Stop response should match camera ID")
+	assert.NotEmpty(t, stopResponse.EndTime, "Stop response should include end time")
+	assert.Greater(t, stopResponse.Duration, 0.0, "Stop response should include recording duration")
 
 }
 

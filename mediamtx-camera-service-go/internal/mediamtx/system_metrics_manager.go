@@ -21,6 +21,7 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"golang.org/x/sys/unix"
@@ -51,8 +52,10 @@ type SystemMetricsManager struct {
 
 	// Dependencies for metrics aggregation
 	recordingManager *RecordingManager
-	cameraMonitor    interface{ GetMetrics() map[string]interface{} }
-	streamManager    StreamManager
+	cameraMonitor    interface {
+		GetConnectedCameras() map[string]*camera.CameraDevice
+	} // Use actual camera monitor interface
+	streamManager StreamManager
 
 	// System start time for uptime calculations
 	startTime time.Time
@@ -77,7 +80,9 @@ func NewSystemMetricsManager(
 // SetDependencies sets the required dependencies for metrics aggregation
 func (sm *SystemMetricsManager) SetDependencies(
 	recordingManager *RecordingManager,
-	cameraMonitor interface{ GetMetrics() map[string]interface{} },
+	cameraMonitor interface {
+		GetConnectedCameras() map[string]*camera.CameraDevice
+	},
 	streamManager StreamManager,
 ) {
 	sm.recordingManager = recordingManager
@@ -223,7 +228,9 @@ func (sm *SystemMetricsManager) GetMetricsAPI(ctx context.Context) (*GetMetricsR
 	// Build camera metrics map
 	cameraMetrics := make(map[string]interface{})
 	if sm.cameraMonitor != nil {
-		cameraMetrics = sm.cameraMonitor.GetMetrics()
+		cameras := sm.cameraMonitor.GetConnectedCameras()
+		cameraMetrics["connected_cameras"] = len(cameras)
+		cameraMetrics["cameras"] = cameras
 	}
 
 	// Build recording metrics map
