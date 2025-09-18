@@ -133,6 +133,30 @@ func (c *client) HealthCheck(ctx context.Context) error {
 	return nil
 }
 
+// GetDetailedHealth performs a health check and returns detailed status using parseHealthResponse
+func (c *client) GetDetailedHealth(ctx context.Context) (*HealthStatus, error) {
+	// Get detailed health from MediaMTX health endpoint
+	data, err := c.Get(ctx, "/v3/config/global/get")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get detailed health: %w", err)
+	}
+
+	// Use existing parseHealthResponse method
+	return parseHealthResponse(data)
+}
+
+// GetMediaMTXMetrics gets MediaMTX server metrics using parseMetricsResponse
+func (c *client) GetMediaMTXMetrics(ctx context.Context) (*Metrics, error) {
+	// Get metrics from MediaMTX metrics endpoint
+	data, err := c.Get(ctx, "/v3/metrics")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get MediaMTX metrics: %w", err)
+	}
+
+	// Use existing parseMetricsResponse method
+	return parseMetricsResponse(data)
+}
+
 // Close closes the HTTP client
 func (c *client) Close() error {
 	// HTTP client doesn't need explicit closing in Go

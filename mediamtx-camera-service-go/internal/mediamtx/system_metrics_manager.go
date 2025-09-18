@@ -174,7 +174,15 @@ func (sm *SystemMetricsManager) GetSystemMetricsAPI(ctx context.Context) (*GetSy
 	runtime.ReadMemStats(&memStats)
 
 	// Calculate CPU usage (simplified - could be enhanced with proper CPU monitoring)
-	cpuUsage := 0.0 // TODO-IMPL: Implement proper CPU usage calculation
+	cpuUsage := 0.0 // TODO: Implement proper CPU usage calculation using system monitoring
+	// INVESTIGATION: CPU usage hardcoded to 0.0, should use actual system metrics
+	// CURRENT: No CPU monitoring implemented, placeholder value returned
+	// SOLUTION: Use Go system monitoring libraries:
+	//   - Option 1: github.com/shirou/gopsutil/cpu for cross-platform CPU stats
+	//   - Option 2: /proc/stat parsing for Linux-specific implementation
+	//   - Option 3: runtime.ReadMemStats() + custom CPU sampling
+	// REFERENCE: Prometheus client_golang patterns for system metrics
+	// EFFORT: 4-6 hours - implement CPU monitoring with proper sampling and averaging
 
 	// Calculate memory usage percentage
 	memUsage := float64(memStats.Alloc) / float64(memStats.Sys) * 100.0
@@ -235,7 +243,16 @@ func (sm *SystemMetricsManager) GetMetricsAPI(ctx context.Context) (*GetMetricsR
 
 	// Build recording metrics map
 	recordingMetrics := make(map[string]interface{})
-	// TODO-IMPL: Add recording-specific metrics from RecordingManager
+	// TODO: Add recording-specific metrics from RecordingManager integration
+	// INVESTIGATION: Recording metrics missing from system metrics aggregation
+	// CURRENT: Empty recordingMetrics map, no recording performance data collected
+	// SOLUTION: Integrate with RecordingManager to collect:
+	//   - Active recording count: len(recordingManager.timers)
+	//   - Recording duration stats: average, min, max from timer metadata
+	//   - Recording file sizes: aggregate from recent recordings
+	//   - Recording failure rate: success/failure ratio tracking
+	// REFERENCE: recordingManager.timers sync.Map contains active recordings
+	// EFFORT: 3-4 hours - implement recording metrics collection and aggregation
 
 	// Build stream metrics map
 	streamMetrics := make(map[string]interface{})
@@ -255,6 +272,16 @@ func (sm *SystemMetricsManager) GetMetricsAPI(ctx context.Context) (*GetMetricsR
 		}
 	}
 
+	// Get MediaMTX server metrics using existing parseMetricsResponse method
+	mediaMTXMetrics := make(map[string]interface{})
+	if sm.client != nil {
+		if metrics, err := sm.client.GetMediaMTXMetrics(ctx); err == nil {
+			mediaMTXMetrics["server_metrics"] = metrics
+		} else {
+			sm.logger.WithError(err).Debug("Failed to get MediaMTX server metrics")
+		}
+	}
+
 	// Build API-ready response
 	response := &GetMetricsResponse{
 		Timestamp:        time.Now().Format(time.RFC3339),
@@ -262,6 +289,7 @@ func (sm *SystemMetricsManager) GetMetricsAPI(ctx context.Context) (*GetMetricsR
 		CameraMetrics:    cameraMetrics,
 		RecordingMetrics: recordingMetrics,
 		StreamMetrics:    streamMetrics,
+		ComponentMetrics: mediaMTXMetrics,
 	}
 
 	return response, nil

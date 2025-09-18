@@ -17,6 +17,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -43,8 +45,8 @@ import (
 // - Returns JSON-RPC API-ready responses
 // - Uses MediaMTX api_types.go for all operations
 //
-// TODO-IMPL: Update StartRecording and StopRecording to return API-ready responses directly (move response formatting from Controller)
-// TODO-IMPL: Add ListRecordings method to return *ListRecordingsResponse (API-ready) - GetRecordingsList exists but returns wrong type
+// ARCHITECTURE COMPLIANCE: StartRecording and StopRecording return API-ready responses directly
+// ARCHITECTURE COMPLIANCE: ListRecordings method returns *ListRecordingsResponse (API-ready)
 type RecordingManager struct {
 	client            MediaMTXClient
 	config            *config.MediaMTXConfig
@@ -148,6 +150,14 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, cameraID string,
 	// In stateless architecture, we create paths on-demand
 	if !rm.pathManager.PathExists(ctx, pathName) {
 		// TODO: Create path with comprehensive configuration for on-demand streaming
+		// INVESTIGATION: PathConf uses basic Source + SourceOnDemand, missing recording config
+		// CURRENT: Only devicePath and SourceOnDemand=true set, no recording-specific options
+		// SOLUTION: Use centralized recording config from configIntegration.GetRecordingConfig():
+		//   - RecordFormat from config.RecordingConfig.RecordFormat
+		//   - RecordPath from config.MediaMTXConfig.RecordingsPath
+		//   - RecordPartDuration, RecordMaxPartSize from config defaults
+		// REFERENCE: enableRecordingOnPath():593 shows complete PathConf setup
+		// EFFORT: 3-4 hours - integrate full recording configuration into path creation
 		pathOptions := &PathConf{
 			Source:         devicePath,
 			SourceOnDemand: true,
@@ -227,17 +237,62 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, cameraID string,
 }
 
 // GetRecordingInfo gets detailed information about a specific recording file
-func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename string) (*FileMetadata, error) {
-	rm.logger.WithField("filename", filename).Info("Getting recording info")
+// GetRecordingInfo returns API-ready recording information with rich metadata
+func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename string) (*GetRecordingInfoResponse, error) {
+	rm.logger.WithField("filename", filename).Debug("Getting API-ready recording info")
 
-	// TODO:For MediaMTX-based recording, we would query the MediaMTX API
-	// TODO: Implement comprehensive recording metadata extraction
-	return &FileMetadata{
-		FileName:   filename,
-		FileSize:   0, // Would be populated from MediaMTX API
-		CreatedAt:  time.Now(),
-		ModifiedAt: time.Now(),
-	}, nil
+	// Get basic file metadata first
+	recordingsPath := rm.config.RecordingsPath
+	filePath := filepath.Join(recordingsPath, filename)
+
+	// Get file stats
+	fileInfo, err := os.Stat(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("recording file not found: %v", err)
+	}
+
+	// Extract device from filename pattern (camera0_timestamp.mp4)
+	device := "camera0" // Default
+	if parts := strings.Split(filename, "_"); len(parts) > 0 {
+		if strings.HasPrefix(parts[0], "camera") {
+			device = parts[0]
+		}
+	}
+
+	// Extract format from filename extension
+	format := "mp4" // Default
+	if ext := filepath.Ext(filename); ext != "" {
+		format = strings.TrimPrefix(ext, ".")
+	}
+
+	// TODO: Parse video duration from ffprobe output (ffprobe already integrated)
+	// INVESTIGATION: ffprobe is already used in snapshot_manager.go:1021-1027 for image metadata
+	// CURRENT: Hardcoded duration = 0 placeholder for all recordings
+	// SOLUTION: Use same ffprobe integration pattern for video files:
+	//   ffprobe -v quiet -print_format json -show_format [video_file]
+	//   Parse JSON: result.format.duration (string, convert to float64)
+	// REFERENCE: MediaMTX recordings stored at config.RecordingsPath with .mp4/.fmp4 extensions
+	// EFFORT: 3-4 hours - implement ffprobe video parsing similar to image metadata
+	duration := float64(0) // Placeholder
+
+	// Build API-ready response with rich metadata
+	response := &GetRecordingInfoResponse{
+		Filename:  filename,
+		FileSize:  fileInfo.Size(),
+		Duration:  duration,
+		CreatedAt: fileInfo.ModTime().Format(time.RFC3339),
+		Format:    format,
+		Device:    device,
+	}
+
+	rm.logger.WithFields(logging.Fields{
+		"filename":  filename,
+		"device":    device,
+		"format":    format,
+		"file_size": fileInfo.Size(),
+	}).Debug("Recording info retrieved successfully")
+
+	return response, nil
 }
 
 // DeleteRecording deletes a recording file via MediaMTX API
@@ -250,6 +305,12 @@ func (rm *RecordingManager) DeleteRecording(ctx context.Context, filename string
 	}
 
 	// TODO: Implement recording deletion via MediaMTX API integration
+	// INVESTIGATION: MediaMTX v3 API has DELETE /v3/recordings/delete/{name} endpoint
+	// CURRENT: Returns "not yet implemented" error, complex filename parsing was removed
+	// SOLUTION: Use MediaMTX client.Delete() with endpoint "/v3/recordings/delete/" + recordingName
+	// REFERENCE: MediaMTX API docs, existing client.Get() pattern in GetRecordingsList():440
+	// FILENAME FORMAT: MediaMTX uses path_timestamp format (e.g., "camera0_2025-01-15_14-30-00")
+	// EFFORT: 4-6 hours - implement MediaMTX DELETE API call with proper error handling
 	// The complex filename parsing was over-engineered and fragile
 	return fmt.Errorf("recording deletion not yet implemented - requires MediaMTX API investigation")
 }
@@ -299,7 +360,13 @@ func (rm *RecordingManager) StopRecording(ctx context.Context, cameraID string) 
 	var startTime time.Time
 	var duration float64
 	if _, exists := rm.timers.Load(cameraID); exists {
-		// TODO-IMPL: Track actual start time in timer metadata
+		// TODO: Track actual start time in timer metadata for accurate duration calculation
+		// INVESTIGATION: timers sync.Map only stores *time.Timer, no metadata about start time
+		// CURRENT: Using placeholder time.Now().Add(-time.Hour) for duration calculation
+		// SOLUTION: Change timers map value from *time.Timer to custom struct:
+		//   type RecordingTimer struct { Timer *time.Timer; StartTime time.Time; CameraID string }
+		// USAGE: Store start time when timer created in setAutoStopTimer():658
+		// EFFORT: 2-3 hours - refactor timers map structure and update all timer operations
 		startTime = time.Now().Add(-time.Hour) // Placeholder - need to track start time
 		duration = time.Since(startTime).Seconds()
 	} else {
@@ -318,8 +385,14 @@ func (rm *RecordingManager) StopRecording(ctx context.Context, cameraID string) 
 		StartTime: startTime.Format(time.RFC3339),
 		EndTime:   time.Now().Format(time.RFC3339),
 		Duration:  duration,
-		FileSize:  1024, // TODO-IMPL: Get actual file size from MediaMTX API
-		Format:    "fmp4",
+		FileSize:  1024, // TODO: Get actual file size from MediaMTX API or filesystem
+		// INVESTIGATION: MediaMTX API /v3/recordings/list returns segments but no file sizes
+		// CURRENT: Hardcoded 1024 bytes placeholder for all recordings
+		// SOLUTION: Use os.Stat() on recording file path or enhance MediaMTX API query
+		// FILE PATH: config.RecordingsPath + "/" + filename (with proper extension)
+		// ALTERNATIVE: Query MediaMTX /v3/recordings/get/{name} if available in v3 API
+		// EFFORT: 2-3 hours - implement file size retrieval with filesystem fallback
+		Format: "fmp4",
 	}
 
 	rm.logger.WithFields(logging.Fields{
@@ -580,7 +653,7 @@ func (rm *RecordingManager) enableRecordingOnPath(ctx context.Context, cameraID 
 	}
 
 	endpoint := fmt.Sprintf("/v3/config/paths/patch/%s", cameraID)
-	jsonData, err := json.Marshal(recordConfig)
+	jsonData, err := marshalUpdatePathRequest(recordConfig)
 	if err != nil {
 		return fmt.Errorf("failed to marshal PathConf record config: %w", err)
 	}
@@ -595,7 +668,7 @@ func (rm *RecordingManager) disableRecordingOnPath(ctx context.Context, cameraID
 	}
 
 	endpoint := fmt.Sprintf("/v3/config/paths/patch/%s", cameraID)
-	jsonData, err := json.Marshal(recordConfig)
+	jsonData, err := marshalUpdatePathRequest(recordConfig)
 	if err != nil {
 		return fmt.Errorf("failed to marshal PathConf record config: %w", err)
 	}

@@ -1187,14 +1187,7 @@ func (s *WebSocketServer) MethodSetDiscoveryInterval(params map[string]interface
 			return nil, fmt.Errorf("scan_interval must be >= 0")
 		}
 
-		// TODO-CONTROLLER: Implement Controller.SetDiscoveryInterval() method
-		// TODO-CONTROLLER: Should delegate to ExternalStreamDiscovery to update scan interval dynamically
-		// TODO: Implement proper interval validation and configuration persistence
-		return map[string]interface{}{
-			"scan_interval": int(interval),
-			"status":        "updated",
-			"message":       "Discovery interval updated (restart required for changes to take effect)",
-			"timestamp":     time.Now().Unix(),
-		}, nil
+		// Pure delegation to Controller - returns API-ready SetDiscoveryIntervalResponse
+		return s.mediaMTXController.SetDiscoveryInterval(int(interval))
 	})(params, client)
 }

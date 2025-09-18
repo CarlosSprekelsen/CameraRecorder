@@ -234,7 +234,12 @@ func (h *SimpleHealthMonitor) checkHealth(ctx context.Context) {
 	defer cancel()
 
 	// This will be cancelled immediately when Stop() is called!
-	err := h.client.HealthCheck(checkCtx)
+	// Try to get detailed health first, fallback to simple health check
+	_, err := h.client.GetDetailedHealth(checkCtx)
+	if err != nil {
+		// Fallback to simple health check
+		err = h.client.HealthCheck(checkCtx)
+	}
 
 	// Check if cancelled
 	if ctx.Err() != nil {
@@ -451,13 +456,39 @@ func (h *SimpleHealthMonitor) GetHealthAPI(ctx context.Context, startTime time.T
 
 	// Build API-ready response
 	response := &GetHealthResponse{
-		Status:       overallStatus,
-		Uptime:       uptime,
-		Version:      "1.0.0", // TODO-IMPL: Get from build info
-		Components:   components,
-		Checks:       []interface{}{}, // TODO-IMPL: Add health checks
+		Status:  overallStatus,
+		Uptime:  uptime,
+		Version: "1.0.0", // TODO: Get version from build-time injection (same as controller.go:523)
+		// INVESTIGATION: Version hardcoded in multiple places, should use single source
+		// CURRENT: Duplicated hardcoded version in health_monitor and controller
+		// SOLUTION: Use same build-time injection pattern as controller:
+		//   - Import version from main package or shared constants
+		//   - Use build-time ldflags injection: -X main.Version=$(git describe --tags)
+		// REFERENCE: controller.go:523-530 shows same TODO and solution
+		// EFFORT: 30 minutes - import version from centralized location
+		Components: components,
+		Checks:     []interface{}{}, // TODO: Add comprehensive health checks for all system components
+		// INVESTIGATION: Health checks array empty, should validate system component health
+		// CURRENT: No actual health validation, only basic uptime/status reporting
+		// SOLUTION: Implement health checks for:
+		//   - MediaMTX API connectivity: GET /v3/config/global with timeout
+		//   - Camera device availability: check /dev/videoN accessibility
+		//   - Disk space: validate recordings/snapshots storage availability
+		//   - Memory usage: check if within acceptable limits
+		//   - Active connections: WebSocket connection count validation
+		// REFERENCE: config/default.yaml:36-40 health_monitor_defaults for check intervals
+		// EFFORT: 6-8 hours - implement comprehensive health checking system
 		Timestamp:    time.Now().Format(time.RFC3339),
-		ResponseTime: 0.0, // TODO-IMPL: Add response time calculation
+		ResponseTime: 0.0, // TODO: Add health check response time calculation and tracking
+		// INVESTIGATION: Response time hardcoded to 0.0, should measure actual check duration
+		// CURRENT: No timing of health check operations, placeholder value returned
+		// SOLUTION: Implement response time tracking:
+		//   - Start timer before health checks execution
+		//   - Measure total time for all health checks completion
+		//   - Track average/min/max response times over time
+		//   - Include in health metrics for performance monitoring
+		// REFERENCE: Performance targets in config/default.yaml:138-142
+		// EFFORT: 2-3 hours - add timing instrumentation to health check execution
 	}
 
 	h.logger.WithFields(logging.Fields{

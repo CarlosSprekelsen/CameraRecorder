@@ -867,7 +867,12 @@ func (sm *SnapshotManager) ListSnapshots(ctx context.Context, limit, offset int)
 	snapshots := make([]SnapshotFileInfo, len(fileList.Files))
 	for i, file := range fileList.Files {
 		// Extract device from filename pattern (camera0_timestamp.jpg)
-		//TODO: if the filename is configurable (which is) this will fail.
+		// TODO: Use configurable filename pattern from centralized config instead of hardcoded parsing
+		// INVESTIGATION: config.SnapshotConfig.FileNamePattern already exists in default.yaml:102
+		// Pattern: "%device_%timestamp.jpg" - supports %device, %timestamp placeholders
+		// SOLUTION: Replace hardcoded "camera0_timestamp.jpg" parsing with pattern-based parsing
+		// LOCATION: config/default.yaml:102, internal/config/config_types.go:345
+		// EFFORT: 2-3 hours - implement expandSnapshotPattern() usage from path_utils.go:126
 		device := "camera0" // Default
 		if parts := strings.Split(file.FileName, "_"); len(parts) > 0 {
 			if strings.HasPrefix(parts[0], "camera") {
@@ -882,12 +887,17 @@ func (sm *SnapshotManager) ListSnapshots(ctx context.Context, limit, offset int)
 		}
 
 		snapshots[i] = SnapshotFileInfo{
-			Device:      device,
-			Filename:    file.FileName,
-			FileSize:    file.FileSize,
-			CreatedAt:   file.CreatedAt.Format(time.RFC3339),
-			Format:      format,
-			Resolution:  "1920x1080", // TODO-IMPL: Extract from EXIF or metadata
+			Device:     device,
+			Filename:   file.FileName,
+			FileSize:   file.FileSize,
+			CreatedAt:  file.CreatedAt.Format(time.RFC3339),
+			Format:     format,
+			Resolution: "1920x1080", // TODO: Extract resolution from FFmpeg-captured images only (V4L2 has no EXIF)
+			// INVESTIGATION: V4L2 direct capture (Tier 0) produces raw frames without EXIF metadata
+			// Only FFmpeg captures (Tier 1+) can have extractable metadata via ffprobe
+			// SOLUTION: Check capture_method in metadata, if "ffmpeg", parse ffprobe JSON for resolution
+			// FFPROBE: Already integrated at line 1021-1027, JSON parsing incomplete
+			// EFFORT: 4-6 hours - implement ffprobe JSON parsing for streams.width/height
 			DownloadURL: fmt.Sprintf("/files/snapshots/%s", file.FileName),
 		}
 	}
@@ -1035,13 +1045,26 @@ func (sm *SnapshotManager) extractSnapshotMetadata(ctx context.Context, filePath
 	}
 
 	// Parse JSON output for comprehensive metadata
-	// TODO: Implement proper FFmpeg output parsing for comprehensive metadata extraction
+	// TODO: Parse ffprobe JSON output for comprehensive metadata extraction
+	// INVESTIGATION: ffprobe integration already exists (lines 1021-1027), JSON parsing incomplete
+	// CURRENT: Raw JSON stored in metadata["extraction_method"] = "ffprobe" but not parsed
+	// SOLUTION: json.Unmarshal(output, &ffprobeResult) then extract streams[0].width/height/duration/codec
+	// REFERENCE: ffprobe JSON structure: {"streams":[{"width":1920,"height":1080,"codec_name":"mjpeg"}],"format":{}}
+	// EFFORT: 6-8 hours - implement complete ffprobe JSON parsing with error handling
 	sm.logger.WithFields(logging.Fields{
 		"file_path": filePath,
 		"metadata":  string(output),
 	}).Debug("Extracted raw image metadata")
 
-	// TODO: Add comprehensive metadata parsing for full feature parity
+	// TODO: Complete metadata parsing implementation for full feature parity with Python version
+	// INVESTIGATION: Python version extracts width, height, format, codec, bitrate from ffprobe
+	// CURRENT: Only basic metadata stored (format="image", extraction_method="ffprobe")
+	// SOLUTION: Parse JSON output above and populate metadata map with:
+	//   - width/height from streams[0].width/height
+	//   - codec from streams[0].codec_name
+	//   - bitrate from streams[0].bit_rate (if available)
+	//   - duration from format.duration (for videos)
+	// EFFORT: 2-3 hours - extend JSON parsing from TODO above
 	metadata["format"] = "image"
 	metadata["extraction_method"] = "ffprobe"
 	metadata["extraction_time"] = time.Now().Unix()
@@ -1055,8 +1078,9 @@ func (sm *SnapshotManager) extractSnapshotMetadata(ctx context.Context, filePath
 }
 
 // GetSnapshotInfo gets detailed information about a specific snapshot file
-func (sm *SnapshotManager) GetSnapshotInfo(ctx context.Context, filename string) (*FileMetadata, error) {
-	sm.logger.WithField("filename", filename).Debug("Getting snapshot info")
+// GetSnapshotInfo returns API-ready snapshot information with rich metadata
+func (sm *SnapshotManager) GetSnapshotInfo(ctx context.Context, filename string) (*GetSnapshotInfoResponse, error) {
+	sm.logger.WithField("filename", filename).Debug("Getting API-ready snapshot info")
 
 	// Validate filename
 	if filename == "" {
@@ -1086,17 +1110,47 @@ func (sm *SnapshotManager) GetSnapshotInfo(ctx context.Context, filename string)
 		return nil, fmt.Errorf("path is not a file: %s", filename)
 	}
 
-	// Create file metadata
-	fileMetadata := &FileMetadata{
-		FileName:    filename,
-		FileSize:    fileInfo.Size(),
-		CreatedAt:   fileInfo.ModTime(), // Use ModTime as CreatedAt since creation time may not be available
-		ModifiedAt:  fileInfo.ModTime(),
-		DownloadURL: fmt.Sprintf("/files/snapshots/%s", filename),
+	// Extract device from filename pattern (camera0_timestamp.jpg)
+	device := "camera0" // Default
+	if parts := strings.Split(filename, "_"); len(parts) > 0 {
+		if strings.HasPrefix(parts[0], "camera") {
+			device = parts[0]
+		}
 	}
 
-	sm.logger.WithField("filename", filename).Debug("Snapshot info retrieved successfully")
-	return fileMetadata, nil
+	// Extract format from filename extension
+	format := "jpg" // Default
+	if ext := filepath.Ext(filename); ext != "" {
+		format = strings.TrimPrefix(ext, ".")
+	}
+
+	// TODO: Extract resolution from image metadata for FFmpeg-captured images only
+	// INVESTIGATION: V4L2 captures have no EXIF/metadata, only FFmpeg captures do
+	// CURRENT: Hardcoded "1920x1080" placeholder for all images
+	// SOLUTION: Use ffprobe integration from extractSnapshotMetadata() to get real resolution
+	// DEPENDENCY: Requires completed ffprobe JSON parsing from lines 1038-1044 above
+	// EFFORT: 1-2 hours - call extractSnapshotMetadata() and use parsed width/height
+	resolution := "1920x1080" // Placeholder
+
+	// Build API-ready response with rich metadata
+	response := &GetSnapshotInfoResponse{
+		Filename:   filename,
+		FileSize:   fileInfo.Size(),
+		CreatedAt:  fileInfo.ModTime().Format(time.RFC3339),
+		Format:     format,
+		Resolution: resolution,
+		Device:     device,
+	}
+
+	sm.logger.WithFields(logging.Fields{
+		"filename":   filename,
+		"device":     device,
+		"format":     format,
+		"resolution": resolution,
+		"file_size":  fileInfo.Size(),
+	}).Debug("Snapshot info retrieved successfully")
+
+	return response, nil
 }
 
 // DeleteSnapshotFile deletes a snapshot file by filename

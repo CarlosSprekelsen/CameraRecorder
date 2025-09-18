@@ -406,7 +406,15 @@ type MediaMTXControllerAPI interface {
 	// Recording and snapshots (device-based, no session IDs)
 	StartRecording(ctx context.Context, device string, options *PathConf) (*StartRecordingResponse, error)
 	StopRecording(ctx context.Context, device string) (*StopRecordingResponse, error)
-	TakeAdvancedSnapshot(ctx context.Context, device string, options map[string]interface{}) (*TakeSnapshotResponse, error) // TODO: Change to *PathConf after implementing proper snapshot options
+	TakeAdvancedSnapshot(ctx context.Context, device string, options map[string]interface{}) (*TakeSnapshotResponse, error) // TODO: Change parameter type to *PathConf for consistency
+	// INVESTIGATION: TakeAdvancedSnapshot uses map[string]interface{} while other methods use *PathConf
+	// CURRENT: Type inconsistency between snapshot and recording methods parameter types
+	// SOLUTION: Standardize to *PathConf parameter type for consistency:
+	//   - Update TakeAdvancedSnapshot signature to use *PathConf
+	//   - Update all implementations to handle PathConf instead of map
+	//   - Ensure snapshot options (quality, format, resolution) map to PathConf fields
+	// REFERENCE: StartRecording() and StopRecording() already use *PathConf consistently
+	// EFFORT: 2-3 hours - update interface and all implementations for type consistency
 	GetRecordingInfo(ctx context.Context, filename string) (*GetRecordingInfoResponse, error)
 	GetSnapshotInfo(ctx context.Context, filename string) (*GetSnapshotInfoResponse, error)
 	ListRecordings(ctx context.Context, limit, offset int) (*ListRecordingsResponse, error)
@@ -427,6 +435,7 @@ type MediaMTXControllerAPI interface {
 	AddExternalStream(ctx context.Context, stream *ExternalStream) (*AddExternalStreamResponse, error)
 	RemoveExternalStream(ctx context.Context, streamURL string) (*RemoveExternalStreamResponse, error)
 	GetExternalStreams(ctx context.Context) (*GetExternalStreamsResponse, error)
+	SetDiscoveryInterval(interval int) (*SetDiscoveryIntervalResponse, error)
 }
 
 // Compile-time assertion: controller implements the restricted API

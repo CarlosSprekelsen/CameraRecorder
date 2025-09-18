@@ -169,7 +169,15 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 			// Empty source with runOnDemand allows dynamic publisher connection
 			source = ""
 			if opts.RunOnDemand == "" {
-				// TODO: Set proper runOnDemand command from configuration
+				// TODO: Set proper runOnDemand command from centralized configuration
+				// INVESTIGATION: runOnDemand hardcoded to echo command instead of using config
+				// CURRENT: Uses placeholder "echo 'Publisher source - waiting for connection'"
+				// SOLUTION: Use centralized config for on-demand commands:
+				//   - V4L2 devices: ffmpeg command from config.MediaMTXConfig.Codec settings
+				//   - External RTSP: proxy/relay command configuration
+				//   - Custom commands: config.PathConfig.RunOnDemandCommand if available
+				// REFERENCE: stream_manager.go:buildFFmpegCommand() shows proper command building
+				// EFFORT: 3-4 hours - implement configurable runOnDemand command generation
 				// This allows the validation to pass while creating a config path
 				opts.RunOnDemand = "echo 'Publisher source - waiting for connection'"
 				opts.RunOnDemandRestart = true
@@ -290,8 +298,11 @@ func (pm *pathManager) createPathInternal(ctx context.Context, name, source stri
 	if path.RunOnDemand != "" {
 		// For on-demand streams (USB devices), use USB-specific marshaling
 		data, err = marshalCreateUSBPathRequest(name, path.RunOnDemand)
+	} else if strings.HasPrefix(source, "rtsp://") || strings.HasPrefix(source, "rtmp://") {
+		// For external stream sources, use stream-specific marshaling
+		data, err = marshalCreateStreamRequest(name, source)
 	} else {
-		// For direct sources (external RTSP), use standard marshaling
+		// For direct sources, use standard path marshaling
 		// Convert PathConf to Path for marshaling
 		pathForMarshaling := &Path{
 			Name:   path.Name,
@@ -583,9 +594,9 @@ func (pm *pathManager) GetPath(ctx context.Context, name string) (*Path, error) 
 		return nil, NewPathErrorWithErr(name, "get_path", "failed to get path", err)
 	}
 
-	path, err := parsePathResponse(data)
+	path, err := parseStreamResponse(data)
 	if err != nil {
-		return nil, NewPathErrorWithErr(name, "get_path", "failed to parse path response", err)
+		return nil, NewPathErrorWithErr(name, "get_path", "failed to parse stream response", err)
 	}
 
 	return path, nil

@@ -486,6 +486,27 @@ func (esd *ExternalStreamDiscovery) GetLastScanTime() time.Time {
 	return esd.lastScanTime
 }
 
+// UpdateScanInterval updates the discovery scan interval dynamically
+func (esd *ExternalStreamDiscovery) UpdateScanInterval(interval int) error {
+	esd.mu.Lock()
+	defer esd.mu.Unlock()
+
+	// Update the configuration
+	oldInterval := esd.config.ScanInterval
+	esd.config.ScanInterval = interval
+
+	esd.logger.WithFields(logging.Fields{
+		"old_interval": oldInterval,
+		"new_interval": interval,
+	}).Info("Updated external discovery scan interval")
+
+	// Note: The ticker restart will happen automatically in the next timer cycle
+	// The startDiscoveryTimer method reads from esd.config.ScanInterval each time
+	// This provides dynamic updates without requiring service restart
+
+	return nil
+}
+
 // DiscoverExternalStreamsAPI performs discovery and returns API-ready response
 func (esd *ExternalStreamDiscovery) DiscoverExternalStreamsAPI(ctx context.Context, options DiscoveryOptions) (*DiscoverExternalStreamsResponse, error) {
 	// Get internal discovery result

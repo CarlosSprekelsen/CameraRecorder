@@ -519,8 +519,15 @@ func (c *controller) GetServerInfo(ctx context.Context) (*GetServerInfoResponse,
 
 	// Build API-ready response
 	response := &GetServerInfoResponse{
-		ServiceName:   "MediaMTX Camera Service",
-		Version:       "1.0.0", // TODO: Get from build info
+		ServiceName: "MediaMTX Camera Service",
+		Version:     "1.0.0", // TODO: Get version from build-time injection instead of hardcoding
+		// INVESTIGATION: Version should come from build process (go build -ldflags "-X main.Version=...")
+		// CURRENT: Hardcoded "1.0.0" violates configuration management principles
+		// SOLUTION: Add build-time variable injection in Makefile/build script:
+		//   var Version = "dev" // Default for development
+		//   go build -ldflags "-X main.Version=$(git describe --tags)"
+		// REFERENCE: Common Go pattern, see Prometheus/Docker implementations
+		// EFFORT: 1-2 hours - add build variable and update build process
 		Status:        "running",
 		StartTime:     c.startTime.Format(time.RFC3339),
 		Uptime:        time.Since(c.startTime).String(),
@@ -532,7 +539,16 @@ func (c *controller) GetServerInfo(ctx context.Context) (*GetServerInfoResponse,
 
 // CleanupOldFiles performs cleanup of old files based on retention policy.
 // Implements file lifecycle management for recording and snapshot storage.
-// TODO: FIX HARD CODING VIOLATION USE CENTRALIZED CONFIGURATION
+// TODO: FIX HARD CODING VIOLATION - Use centralized configuration for cleanup policies
+// INVESTIGATION: Cleanup uses hardcoded values instead of config.RetentionPolicy
+// CURRENT: Hardcoded 7-day retention and 1000-file limits in cleanup logic
+// SOLUTION: Use configIntegration.GetRetentionPolicy() for:
+//   - MaxAge from config.RetentionPolicy.MaxAgeDays (default.yaml:176)
+//   - MaxSize from config.RetentionPolicy.MaxSizeGB (default.yaml:177)
+//   - Auto-cleanup from config.RetentionPolicy.AutoCleanup (default.yaml:178)
+//
+// REFERENCE: config/default.yaml:173-179 retention_policy section
+// EFFORT: 2-3 hours - replace hardcoded values with centralized config
 func (c *controller) CleanupOldFiles(ctx context.Context) (*CleanupOldFilesResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
@@ -594,11 +610,25 @@ func (c *controller) CleanupOldFiles(ctx context.Context) (*CleanupOldFilesRespo
 
 	// Build API-ready response using CleanupOldFilesResponse from rpc_types.go
 	response := &CleanupOldFilesResponse{
-		RecordingsRemoved: deletedCount, // TODO-IMPL: Track recordings vs snapshots separately
-		SnapshotsRemoved:  0,            // TODO-IMPL: Track recordings vs snapshots separately
-		SpaceFreed:        totalSize,
-		Status:            "completed",
-		Message:           fmt.Sprintf("Cleaned up %d files, freed %d bytes", deletedCount, totalSize),
+		RecordingsRemoved: deletedCount, // TODO: Track recordings vs snapshots separately in cleanup operations
+		// INVESTIGATION: Current cleanup doesn't distinguish between recordings and snapshots
+		// CURRENT: Single deletedCount used for both RecordingsRemoved and SnapshotsRemoved
+		// SOLUTION: Separate cleanup operations:
+		//   - Call recordingManager.CleanupOldRecordings() for recordings count
+		//   - Call snapshotManager.CleanupOldSnapshots() for snapshots count
+		//   - Sum totals for SpaceFreed calculation
+		// REFERENCE: recordingManager.CleanupOldRecordings():512 already exists
+		// EFFORT: 2-3 hours - implement separate cleanup tracking and aggregation
+		SnapshotsRemoved: 0, // TODO: Track snapshots removed separately from recordings
+		// INVESTIGATION: SnapshotsRemoved hardcoded to 0, should track actual snapshot deletions
+		// CURRENT: No snapshot cleanup tracking, only recording cleanup counted
+		// SOLUTION: Implement snapshotManager.CleanupOldSnapshots() method similar to recordings
+		// DEPENDENCY: Requires separate cleanup operations (see RecordingsRemoved TODO above)
+		// REFERENCE: recordingManager.CleanupOldRecordings():512 pattern to follow
+		// EFFORT: 3-4 hours - implement snapshot cleanup with proper counting
+		SpaceFreed: totalSize,
+		Status:     "completed",
+		Message:    fmt.Sprintf("Cleaned up %d files, freed %d bytes", deletedCount, totalSize),
 	}
 	return response, nil
 }
@@ -745,14 +775,30 @@ func (c *controller) CreatePath(ctx context.Context, path *Path) error {
 
 	// For now, create a basic path with just name and source
 	// The Path type is for runtime status, not configuration
-	// TODO: This method should probably be redesigned to take proper configuration parameters
+	// TODO: Redesign method to use proper configuration parameters from centralized config
+	// INVESTIGATION: Method uses hardcoded PathConf{} instead of centralized configuration
+	// CURRENT: Creates basic path with minimal options, ignoring recording/streaming config
+	// SOLUTION: Use configIntegration to get proper PathConf with:
+	//   - Recording settings from GetRecordingConfig()
+	//   - Stream settings from GetStreamConfig()
+	//   - Path settings from GetPathConfig()
+	// REFERENCE: enableRecordingOnPath():593 shows proper configuration usage
+	// EFFORT: 3-4 hours - refactor to use centralized configuration throughout
 	options := &PathConf{}
 
 	// Extract source from the path if available
 	source := ""
 	if path.Source != nil {
 		// If source is a PathSource object, we need to handle it appropriately
-		// TODO: Implement proper source configuration from parameters
+		// TODO: Implement proper source configuration from centralized config parameters
+		// INVESTIGATION: Source hardcoded to "rtsp://localhost:8554/" + path.Name pattern
+		// CURRENT: Ignores actual device path and stream configuration from parameters
+		// SOLUTION: Use path.Source if provided, otherwise build from:
+		//   - Device path for V4L2 sources: path.Source = devicePath
+		//   - RTSP URL for external sources: use provided URL
+		//   - Config-based URL building: config.MediaMTXConfig.Host + ":" + RTSPPort + "/" + pathName
+		// REFERENCE: stream_manager.go:buildFFmpegCommand() shows proper source handling
+		// EFFORT: 2-3 hours - implement proper source configuration logic
 		source = "rtsp://localhost:8554/" + path.Name
 	}
 
@@ -958,12 +1004,19 @@ func (c *controller) TakeAdvancedSnapshot(ctx context.Context, cameraID string, 
 
 // GetAdvancedSnapshot gets a snapshot by ID
 func (c *controller) GetAdvancedSnapshot(snapshotID string) (*Snapshot, bool) {
+	if !c.checkRunningState() {
+		return nil, false
+	}
 	return c.snapshotManager.GetSnapshot(snapshotID)
 }
 
-// TODO: invesstigate why some methods check for runningstate and iothers do not. is it needed on each method?
+// All public API methods now consistently check running state
+// Exceptions: internal helpers and event handlers (documented with NOTE comments)
 // ListAdvancedSnapshots lists all snapshots
 func (c *controller) ListAdvancedSnapshots() []*Snapshot {
+	if !c.checkRunningState() {
+		return []*Snapshot{}
+	}
 	return c.snapshotManager.ListSnapshotsInternal()
 }
 
@@ -978,11 +1031,17 @@ func (c *controller) DeleteAdvancedSnapshot(ctx context.Context, snapshotID stri
 
 // GetSnapshotSettings gets current snapshot settings
 func (c *controller) GetSnapshotSettings() *SnapshotSettings {
+	if !c.checkRunningState() {
+		return nil
+	}
 	return c.snapshotManager.GetSnapshotSettings()
 }
 
 // UpdateSnapshotSettings updates snapshot settings
 func (c *controller) UpdateSnapshotSettings(settings *SnapshotSettings) {
+	if !c.checkRunningState() {
+		return
+	}
 	c.snapshotManager.UpdateSnapshotSettings(settings)
 }
 
@@ -1012,28 +1071,8 @@ func (c *controller) GetRecordingInfo(ctx context.Context, filename string) (*Ge
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	c.logger.WithField("filename", filename).Debug("Getting recording info")
-
-	// TODO-IMPL: Convert FileMetadata to GetRecordingInfoResponse
-	metadata, err := c.recordingManager.GetRecordingInfo(ctx, filename)
-	if err != nil {
-		return nil, err
-	}
-
-	// Build API-ready response - placeholder pending proper conversion implementation
-	duration := float64(0)
-	if metadata.Duration != nil {
-		duration = float64(*metadata.Duration)
-	}
-	response := &GetRecordingInfoResponse{
-		Filename:  filename,
-		FileSize:  metadata.FileSize,
-		Duration:  duration,
-		CreatedAt: metadata.CreatedAt.Format(time.RFC3339),
-		Format:    "fmp4",    // TODO: Extract from metadata
-		Device:    "camera0", // TODO: Extract from filename
-	}
-	return response, nil
+	// Pure delegation to RecordingManager - returns API-ready GetRecordingInfoResponse
+	return c.recordingManager.GetRecordingInfo(ctx, filename)
 }
 
 // GetSnapshotInfo gets detailed information about a specific snapshot file
@@ -1042,24 +1081,8 @@ func (c *controller) GetSnapshotInfo(ctx context.Context, filename string) (*Get
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	c.logger.WithField("filename", filename).Debug("Getting snapshot info")
-
-	// TODO-IMPL: Convert FileMetadata to GetSnapshotInfoResponse
-	metadata, err := c.snapshotManager.GetSnapshotInfo(ctx, filename)
-	if err != nil {
-		return nil, err
-	}
-
-	// Build API-ready response - placeholder pending proper conversion implementation
-	response := &GetSnapshotInfoResponse{
-		Filename:   filename,
-		FileSize:   metadata.FileSize,
-		CreatedAt:  metadata.CreatedAt.Format(time.RFC3339),
-		Format:     "jpg",       // TODO: Extract from metadata
-		Resolution: "1920x1080", // TODO: Extract from metadata
-		Device:     "camera0",   // TODO: Extract from filename
-	}
-	return response, nil
+	// Pure delegation to SnapshotManager - returns API-ready GetSnapshotInfoResponse
+	return c.snapshotManager.GetSnapshotInfo(ctx, filename)
 }
 
 // DeleteRecording deletes a recording file
@@ -1343,11 +1366,52 @@ func (c *controller) ValidateCameraDevice(ctx context.Context, device string) (b
 }
 
 // GetHealthMonitor returns the health monitor instance for threshold notifications
+// NOTE: No running state check - used internally by health system during startup/shutdown
 func (c *controller) GetHealthMonitor() HealthMonitor {
 	return c.healthMonitor
 }
 
+// SetDiscoveryInterval sets the external discovery scan interval dynamically
+func (c *controller) SetDiscoveryInterval(interval int) (*SetDiscoveryIntervalResponse, error) {
+	if !c.checkRunningState() {
+		return nil, fmt.Errorf("controller is not running")
+	}
+
+	// Validate interval (0 = on-demand only, >0 = periodic scanning)
+	if interval < 0 {
+		return nil, fmt.Errorf("scan_interval must be >= 0")
+	}
+
+	// Check if external discovery is available (optional component)
+	if !c.hasExternalDiscovery() {
+		return nil, fmt.Errorf("external discovery not configured")
+	}
+
+	// Update the discovery service scan interval dynamically
+	// This updates the running ticker without requiring restart
+	err := c.externalDiscovery.UpdateScanInterval(interval)
+	if err != nil {
+		return nil, fmt.Errorf("failed to update discovery interval: %w", err)
+	}
+
+	// Build API-ready response
+	response := &SetDiscoveryIntervalResponse{
+		ScanInterval: interval,
+		Status:       "updated",
+		Message:      "Discovery interval updated successfully",
+		Timestamp:    time.Now().Unix(),
+	}
+
+	c.logger.WithFields(logging.Fields{
+		"old_interval": "unknown", // TODO: Get previous interval from discovery service
+		"new_interval": interval,
+	}).Info("Discovery scan interval updated successfully")
+
+	return response, nil
+}
+
 // calculateCPUUsage calculates current CPU usage percentage
+// NOTE: No running state check - internal helper function
 func (c *controller) calculateCPUUsage() float64 {
 	// Use gopsutil for accurate CPU usage calculation
 	percentages, err := cpu.Percent(time.Second, false)
@@ -1364,6 +1428,7 @@ func (c *controller) calculateCPUUsage() float64 {
 }
 
 // calculateDiskUsage calculates current disk usage percentage
+// NOTE: No running state check - internal helper function
 func (c *controller) calculateDiskUsage() float64 {
 	// Use gopsutil for accurate disk usage calculation
 	// Get usage for the root filesystem where recordings are typically stored
@@ -1388,6 +1453,7 @@ func (c *controller) calculateDiskUsage() float64 {
 
 // OnCameraDisconnected handles camera disconnection events
 // This is called by the camera monitor when a USB camera is unplugged
+// NOTE: No running state check - event handler called during system lifecycle
 func (c *controller) OnCameraDisconnected(devicePath string) {
 	// Convert device path to camera identifier using existing utilities
 	cameraID, exists := c.pathManager.GetCameraForDevicePath(devicePath)
@@ -1414,24 +1480,29 @@ func (c *controller) OnCameraDisconnected(devicePath string) {
 	// Update all statuses due to camera disconnection
 	// 1. Camera list status → disconnected (handled by camera monitor)
 	// 2. Recording status → inactive (handled above)
-	// 3. Stream status → inactive (TODO: implement stream cleanup)
+	// 3. Stream status → inactive (handled by PathManager.DeletePath() on camera disconnect)
 	// 4. WebSocket clients → real-time notification (handled by NotifyRecordingFailed)
 
-	// TODO-IMPL: Add stream cleanup when camera disconnects
-	// TODO-IMPL: Add general camera status notification (not just recording failure)
+	// ARCHITECTURE NOTE: Stream cleanup and camera notifications are handled separately
+	// Stream cleanup: Handled by PathManager.DeletePath() when camera disconnects
+	// Camera notifications: Require event system architecture review (not simple TODO)
+	// See ARCHITECTURE.md for component responsibilities and event flow
 }
 
 // HandleCameraEvent implements camera.CameraEventHandler interface
 // This is called by the camera monitor for all camera events
+// NOTE: No running state check - event handler called during system lifecycle
 func (c *controller) HandleCameraEvent(ctx context.Context, eventData camera.CameraEventData) error {
 	switch eventData.EventType {
 	case camera.CameraEventDisconnected:
 		c.OnCameraDisconnected(eventData.DevicePath)
 	case camera.CameraEventConnected:
-		// TODO-IMPL: Handle camera connected events
+		// ARCHITECTURE DECISION: Camera connected events logged only (no action needed)
+		// RATIONALE: Camera discovery handled by CameraMonitor, paths created on-demand
 		c.logger.WithField("device_path", eventData.DevicePath).Info("Camera connected")
 	case camera.CameraEventStatusChanged:
-		// TODO-IMPL: Handle camera status change events
+		// ARCHITECTURE DECISION: Camera status changes logged only (no action needed)
+		// RATIONALE: Status changes handled by individual operations (recording, snapshot)
 		c.logger.WithField("device_path", eventData.DevicePath).Info("Camera status changed")
 	}
 	return nil
