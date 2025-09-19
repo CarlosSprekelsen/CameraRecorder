@@ -14,6 +14,7 @@ Ensure all project documentation is consistent, discoverable, reviewable for IV&
 ## 1. Location & Scope
 
 ### Primary Structure
+
 - **Primary guidelines file:** `docs/development/documentation-guidelines.md` (this file)
 - **Topic areas (only create if multiple files are justified):**
   - Architecture: `docs/architecture/*.md`
@@ -24,6 +25,7 @@ Ensure all project documentation is consistent, discoverable, reviewable for IV&
   - Decisions: `docs/decisions.md` (architecture decisions log)
 
 ### Test Documentation
+
 - **Test validation docs:** Place lightweight README/validation notes adjacent to the test area
   - Example: `tests/unit/test_camera_discovery/README.md`
   - Refer back to this guidelines file for style and evidence conventions
@@ -34,10 +36,12 @@ Ensure all project documentation is consistent, discoverable, reviewable for IV&
 ## 2. File Naming & Organization
 
 ### Naming Conventions
+
 - Use **snake_case** (lowercase with underscores) for all documentation and code filenames
   - Examples: `camera_discovery_overview.md`, `capability_detection_validation.md`, `integration_acceptance_tests.md`
 
 ### Directory Structure Rules
+
 - Each topic folder should only exist if it contains **two or more** related documents
 - Avoid single-file subfolders unless grouping clearly anticipates growth
 - Keep high-level entrypoints with stable names:
@@ -68,12 +72,14 @@ Every substantive `.md` file (architecture decision, test validation, feature sp
 ```
 
 ### Required Sections
+
 1. **Purpose/Overview:** Brief statement of the document's goal and scope
 2. **Main Content:** Organized with descriptive headers (no generic "Details" or "Information")
 3. **Evidence/References:** Links to related code, tests, or other documents where applicable
 4. **Next Steps/Actions:** If the document drives implementation work
 
 ### Content Requirements
+
 - Use clear, descriptive section headers (sentence case preferred)
 - Include concrete examples where applicable
 - Link to relevant code files, test cases, or other documentation
@@ -84,12 +90,14 @@ Every substantive `.md` file (architecture decision, test validation, feature sp
 ## 4. Professional Standards
 
 ### Language and Tone
+
 - **No emojis, ASCII art, or decorative elements** in any documentation
 - Use clear, professional language appropriate for technical documentation
 - Avoid informal expressions, slang, or conversational asides
 - Write in active voice when possible
 
 ### Formatting Standards
+
 - Use standard Markdown formatting consistently
 - Code blocks must specify language for syntax highlighting
 - Use bullet points sparingly; prefer numbered lists for sequences or prose paragraphs for explanations
@@ -100,16 +108,19 @@ Every substantive `.md` file (architecture decision, test validation, feature sp
 ## 5. Progress Monitoring and Task Centralization
 
 ### Single Source of Truth for Progress
+
 - **ALL active TODOs, task lists, and implementation checklists** must be consolidated in `docs/roadmap.md`
 - **Do NOT** append new TODOs or checklists to other documentation files (e.g., `overview.md`, `decisions.md`, architecture docs)
 - **Do NOT** create separate sprint reports, progress files, or task tracking documents
 
 ### Preventing Documentation Creep
+
 - **No standalone progress documents:** All task tracking happens in the centralized roadmap only
 - **No outdated task lists:** If a task is moved or completed, update only the roadmap - do not leave copies elsewhere
 - **No non-validated reports:** Progress claims must have evidence (code/tests/documentation) before being marked complete
 
 ### Task Management Rules
+
 - New action items or decisions must be added to `docs/roadmap.md` only
 - Architecture documents remain stable and do not contain evolving TODOs
 - Any document claiming completion must reference the roadmap story and provide evidence
@@ -119,6 +130,7 @@ Every substantive `.md` file (architecture decision, test validation, feature sp
 ## 6. Professional Standards
 
 ## 6. Roadmap and IV&V Integration
+
 - Every document that describes implementation work **must** reference the corresponding roadmap story (e.g., "Story: E1/S3")
 - Documents describing completed work must include evidence section with specific file/line references
 
@@ -132,6 +144,7 @@ Follow the same standards as code (from `docs/development/principles.md`):
 
 ### Evidence Requirements
 For any document claiming implementation completion:
+
 - **File references:** Specific files and line ranges where behavior is implemented
 - **Test references:** Tests that validate the documented behavior
 - **Configuration examples:** Sample configurations demonstrating usage
@@ -142,12 +155,14 @@ For any document claiming implementation completion:
 ### Linking to Roadmap
 
 ### JSON-RPC Methods
+
 - All public API methods **must** be documented in `docs/api/json_rpc_methods.md`
 - Include request/response schemas with examples
 - Document error conditions and response codes
 - Provide at least one complete usage example per method
 
 ### Configuration Documentation
+
 - All configuration options must be documented with:
   - Purpose and default value
   - Valid ranges or options
@@ -157,12 +172,14 @@ For any document claiming implementation completion:
 ## 7. API Documentation Standards
 
 ### JSON-RPC Methods
+
 - All public API methods **must** be documented in `docs/api/json_rpc_methods.md`
 - Include request/response schemas with examples
 - Document error conditions and response codes
 - Provide at least one complete usage example per method
 
 ### Configuration Documentation
+
 - All configuration options must be documented with:
   - Purpose and default value
   - Valid ranges or options
@@ -174,11 +191,13 @@ For any document claiming implementation completion:
 ## 8. Architecture Documentation
 
 ### Stability Requirements
+
 - `docs/architecture/overview.md` must reflect **only approved, stable architecture**
 - Do **not** include process checklists, evolving TODOs, or implementation steps in architecture docs
 - Changes to architecture require explicit approval and entry in `docs/decisions.md`
 
 ### Decision Logging
+
 - Architectural and technical decisions belong in `docs/decisions.md`
 - Record **what was decided, when, and briefly why**
 - Do not include ongoing tasks or implementation details in decisions
@@ -188,11 +207,13 @@ For any document claiming implementation completion:
 ## 9. Test Documentation
 
 ### Unit Test Documentation
+
 - Each test module should include a brief header comment explaining its scope
 - Complex test scenarios should include setup/teardown documentation
 - Test README files should explain the testing strategy for that component
 
 ### Integration Test Documentation
+
 - Document test scenarios with clear success criteria
 - Include setup instructions and prerequisites
 - Specify expected outputs and failure modes
@@ -203,16 +224,19 @@ For any document claiming implementation completion:
 ## 10. Maintenance and Updates
 
 ### Version Control
+
 - Increment version number for significant changes to document structure or requirements
 - Update date stamp when making substantial content changes
 - Maintain change history for critical architecture or API documentation
 
 ### Review Process
+
 - All documentation changes follow the same review process as code
 - Architecture documentation requires explicit approval from project maintainer
 - API documentation must be validated against actual implementation
 
 ### Consistency Checks
+
 - Regularly audit documentation for compliance with these guidelines
 - Ensure all TODO/STOP items are tracked in roadmap
 - Verify all implementation claims have supporting evidence
@@ -221,58 +245,12 @@ For any document claiming implementation completion:
 
 ## 11. Common Patterns and Examples
 
-### Stability Requirements
-- `docs/architecture/overview.md` must reflect **only approved, stable architecture**
-- Do **not** include process checklists, evolving TODOs, or implementation steps in architecture docs
-- Changes to architecture require explicit approval and entry in `docs/decisions.md`
-
-### Decision Logging
-- Architectural and technical decisions belong in `docs/decisions.md`
-- Record **what was decided, when, and briefly why**
-- Do not include ongoing tasks or implementation details in decisions
-
----
-
-## 8. Test Documentation
-
-### Unit Test Documentation
-- Each test module should include a brief header comment explaining its scope
-- Complex test scenarios should include setup/teardown documentation
-- Test README files should explain the testing strategy for that component
-
-### Integration Test Documentation
-- Document test scenarios with clear success criteria
-- Include setup instructions and prerequisites
-- Specify expected outputs and failure modes
-- Provide troubleshooting guidance for common issues
-
----
-
-## 9. Maintenance and Updates
-
-### Version Control
-- Increment version number for significant changes to document structure or requirements
-- Update date stamp when making substantial content changes
-- Maintain change history for critical architecture or API documentation
-
-### Review Process
-- All documentation changes follow the same review process as code
-- Architecture documentation requires explicit approval from project maintainer
-- API documentation must be validated against actual implementation
-
-### Consistency Checks
-- Regularly audit documentation for compliance with these guidelines
-- Ensure all TODO/STOP items are tracked in roadmap
-- Verify all implementation claims have supporting evidence
-
----
-
-## 10. Common Patterns and Examples
-
 ### Linking Between Documents
+
 ```markdown
 See [Architecture Overview](../architecture/overview.md) for system design details.
 Refer to [Coding Standards](./coding_standards.md) for implementation requirements.
+```
 
 ---
 
@@ -293,6 +271,7 @@ Before finalizing any documentation:
 ## Performance Documentation Standards
 
 All performance requirements must include:
+
 - **Quantitative Targets**: Specific thresholds with measurement units
 - **Measurement Methodology**: How performance will be validated
 - **Baseline Conditions**: Environment and load conditions for measurements

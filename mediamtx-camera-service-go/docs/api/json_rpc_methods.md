@@ -8,18 +8,21 @@
 ## API Versioning Strategy
 
 ### Version Compatibility
+
 - **Current Version**: 2.0
 - **Backward Compatibility**: All 1.x clients supported
 - **Deprecation Policy**: 12-month notice for breaking changes
 - **Migration Path**: Clear upgrade guides for major versions
 
 ### Version Indicators
+
 - **API Version**: Included in response metadata
 - **Deprecation Warnings**: Notified via response headers
 - **Breaking Changes**: Documented in changelog
 - **Feature Flags**: Optional features can be enabled/disabled
 
 ### Deprecation Process
+
 1. **Announcement**: 12 months before deprecation
 2. **Warning Phase**: 6 months with deprecation warnings
 3. **Removal**: After 12 months, feature removed
@@ -32,7 +35,8 @@ This document describes all available JSON-RPC 2.0 methods provided by the Media
 ## Connection
 
 Connect to the WebSocket endpoint:
-```
+
+```text
 ws://localhost:8002/ws
 ```
 
@@ -41,25 +45,30 @@ ws://localhost:8002/ws
 **CRITICAL SECURITY UPDATE**: All API methods now require authentication and proper role-based authorization.
 
 ### Authentication Methods
+
 - **JWT Token**: Pass `auth_token` parameter with valid JWT token
 - **API Key**: Pass `auth_token` parameter with valid API key
 
 ### Role-Based Access Control
+
 - **viewer**: Read-only access to camera status, file listings, and basic information
 - **operator**: Viewer permissions + camera control operations (snapshots, recording)
 - **admin**: Full access to all features including system metrics and configuration
 
 ### Authentication Flow
+
 1. Call `authenticate` method with your token to establish session
 2. Include `auth_token` parameter in subsequent requests
 3. Server validates token and checks role permissions for each method
 
 ### authenticate
+
 Authenticate with the service using JWT token or API key.
 
 **Authentication:** Not required (this method handles authentication)
 
 **Parameters:**
+
 - auth_token: string - JWT token or API key (required)
 
 **Returns:** Authentication result with user role and session information
@@ -69,6 +78,7 @@ Authenticate with the service using JWT token or API key.
 **Implementation:** Validates JWT tokens or API keys using golang-jwt/jwt/v4, extracts user role and permissions, and establishes authenticated session for subsequent requests.
 
 **Example:**
+
 ```json
 // Request
 {
@@ -95,6 +105,7 @@ Authenticate with the service using JWT token or API key.
 ```
 
 **Response Fields:**
+
 - `authenticated`: Whether authentication was successful (boolean)
 - `role`: User role ("admin", "operator", "viewer") (string)
 - `permissions`: List of granted permissions (array of strings)
@@ -102,6 +113,7 @@ Authenticate with the service using JWT token or API key.
 - `session_id`: Unique session identifier (string)
 
 **Error Response (Invalid Token):**
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -121,6 +133,7 @@ Authenticate with the service using JWT token or API key.
 ## Performance Guarantees
 
 All API methods adhere to Go implementation performance targets:
+
 - **Status Methods** (get_camera_list, get_camera_status, ping): <50ms response time
 - **Control Methods** (take_snapshot, start_recording, stop_recording): <100ms response time
 - **WebSocket Notifications**: <20ms delivery latency from event occurrence
@@ -132,6 +145,7 @@ Performance measured from request receipt to response transmission at service le
 ## Core Methods
 
 ### ping
+
 Health check method that returns "pong".
 
 **Authentication:** Required (viewer role)
@@ -143,6 +157,7 @@ Health check method that returns "pong".
 **Status:** ✅ Implemented
 
 **Example:**
+
 ```json
 // Request
 {
@@ -160,9 +175,11 @@ Health check method that returns "pong".
 ```
 
 **Response Fields:**
+
 - `pong`: Server response message (string)
 
 ### get_camera_list
+
 Get list of all discovered cameras with their current status.
 
 **Authentication:** Required (viewer role)
@@ -176,6 +193,7 @@ Get list of all discovered cameras with their current status.
 **Implementation:** Integrates with camera discovery monitor to return real connected cameras with live status and stream URLs.
 
 **Example:**
+
 ```json
 // Request
 {
@@ -210,6 +228,7 @@ Get list of all discovered cameras with their current status.
 ```
 
 **Response Fields:**
+
 - `cameras`: Array of camera information objects (array)
   - `device`: Camera device identifier (string)
   - `status`: Camera status ("connected", "disconnected", "error") (string)
@@ -225,11 +244,13 @@ Get list of all discovered cameras with their current status.
 ## Camera Control Methods
 
 ### get_camera_status
+
 Get status for a specific camera device.
 
 **Authentication:** Required (viewer role)
 
 **Parameters:**
+
 - device: string - Camera identifier (e.g., "camera0", "camera1") (required)
 
 **Returns:** Camera status object with all standard fields and metrics
@@ -239,6 +260,7 @@ Get status for a specific camera device.
 **Implementation:** Aggregates data from camera discovery monitor (device info, capabilities) and MediaMTX controller (stream status, metrics) with intelligent fallbacks.
 
 **Example:**
+
 ```json
 // Request
 {
@@ -279,6 +301,7 @@ Get status for a specific camera device.
 ```
 
 **Response Fields:**
+
 - `device`: Camera device identifier (string)
 - `status`: Camera status ("connected", "disconnected", "error") (string)
 - `name`: Human-readable camera name (string)
@@ -294,11 +317,13 @@ Get status for a specific camera device.
   - `resolutions`: Supported resolutions (array of strings)
 
 ### get_camera_capabilities
+
 Get detailed capabilities and supported formats for a specific camera device.
 
 **Authentication:** Required (viewer role)
 
 **Parameters:**
+
 - device: string - Camera device identifier (required, e.g., "camera0", "camera1")
 
 **Returns:** Camera capabilities object with supported formats, resolutions, and FPS options
@@ -308,6 +333,7 @@ Get detailed capabilities and supported formats for a specific camera device.
 **Implementation:** Queries camera discovery monitor for device capabilities, formats, and supported configurations. Provides real-time capability detection with validation status.
 
 **Example:**
+
 ```json
 // Request
 {
@@ -334,6 +360,7 @@ Get detailed capabilities and supported formats for a specific camera device.
 ```
 
 **Response Fields:**
+
 - `device`: Camera device identifier (string)
 - `formats`: Array of supported pixel formats (array of strings)
 - `resolutions`: Array of supported resolutions (array of strings)
@@ -341,6 +368,7 @@ Get detailed capabilities and supported formats for a specific camera device.
 - `validation_status`: Capability validation status ("none", "disconnected", "confirmed") (string)
 
 **Error Response (Camera Not Found):**
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -357,12 +385,14 @@ Get detailed capabilities and supported formats for a specific camera device.
 
 ## Recording and Snapshot Methods
 
-### take_snapshot  
+### take_snapshot
+
 Capture a snapshot from the specified camera.
 
 **Authentication:** Required (operator role)
 
 **Parameters:**
+
 - device: string - Camera identifier (e.g., "camera0", "camera1") (required)
 - filename: string - Custom filename (optional)
 
@@ -373,6 +403,7 @@ Capture a snapshot from the specified camera.
 **Implementation:** Uses FFmpeg to capture real snapshots from RTSP streams via MediaMTX controller with proper error handling and file management.
 
 **Example:**
+
 ```json
 // Request
 {
@@ -401,6 +432,7 @@ Capture a snapshot from the specified camera.
 ```
 
 **Response Fields:**
+
 - `device`: Camera device identifier (string)
 - `filename`: Generated snapshot filename (string)
 - `status`: Snapshot status ("success", "failed") (string)
@@ -409,11 +441,13 @@ Capture a snapshot from the specified camera.
 - `file_path`: Full file path to saved snapshot (string)
 
 ### start_recording
+
 Start recording video from the specified camera.
 
 **Authentication:** Required (operator role)
 
 **Parameters:**
+
 - device: string - Camera device identifier (required, e.g., "camera0", "camera1")
 - duration: number - Recording duration in seconds (optional)
 - format: string - Recording format ("fmp4", "mp4", "mkv") (optional, defaults to "fmp4")
@@ -425,6 +459,7 @@ Start recording video from the specified camera.
 **Implementation:** Manages recording through MediaMTX path-based recording with RTSP keepalive triggering, duration management, and proper file organization. Uses STANAG 4609 compliant fmp4 format by default.
 
 **Example:**
+
 ```json
 // Request
 {
@@ -453,6 +488,7 @@ Start recording video from the specified camera.
 ```
 
 **Response Fields:**
+
 - `device`: Camera device identifier (string)
 - `filename`: Generated recording filename (string)
 - `status`: Recording status ("RECORDING", "FAILED") (string)
@@ -460,11 +496,13 @@ Start recording video from the specified camera.
 - `format`: Recording format ("fmp4", "mp4", "mkv") (string)
 
 ### stop_recording
+
 Stop active recording for the specified camera.
 
 **Authentication:** Required (operator role)
 
 **Parameters:**
+
 - device: string - Camera device identifier (required, e.g., "camera0", "camera1")
 
 **Returns:** Recording completion information with final file details
@@ -474,6 +512,7 @@ Stop active recording for the specified camera.
 **Implementation:** Properly terminates recording through MediaMTX path-based recording with accurate duration calculation, file size reporting, and RTSP keepalive cleanup.
 
 **Example:**
+
 ```json
 // Request
 {
@@ -503,6 +542,7 @@ Stop active recording for the specified camera.
 ```
 
 **Response Fields:**
+
 - `device`: Camera device identifier (string)
 - `filename`: Generated recording filename (string)
 - `status`: Recording status ("STOPPED", "FAILED") (string)
@@ -517,11 +557,13 @@ Stop active recording for the specified camera.
 ## Streaming Methods
 
 ### start_streaming
+
 Start a live streaming session for the specified camera device.
 
 **Authentication:** Required (operator role)
 
 **Parameters:**
+
 - device: string - Camera device identifier (required, e.g., "camera0", "camera1")
 
 **Returns:** Stream information object with stream URL and session details
@@ -531,6 +573,7 @@ Start a live streaming session for the specified camera device.
 **Implementation:** Uses StreamManager to create FFmpeg process for device-to-stream conversion with STANAG4609 parameters. Stream is optimized for live viewing with automatic cleanup after inactivity.
 
 **Example:**
+
 ```json
 // Request
 {
@@ -559,6 +602,7 @@ Start a live streaming session for the specified camera device.
 ```
 
 **Response Fields:**
+
 - `device`: Camera device identifier (string)
 - `stream_name`: Generated stream name (string)
 - `stream_url`: Stream URL for consumption (string)
@@ -568,11 +612,13 @@ Start a live streaming session for the specified camera device.
 - `ffmpeg_command`: FFmpeg command used (string)
 
 ### stop_streaming
+
 Stop the active streaming session for the specified camera device.
 
 **Authentication:** Required (operator role)
 
 **Parameters:**
+
 - device: string - Camera device identifier (required, e.g., "camera0", "camera1")
 
 **Returns:** Stream termination information with final session details
@@ -582,6 +628,7 @@ Stop the active streaming session for the specified camera device.
 **Implementation:** Properly terminates FFmpeg process and cleans up MediaMTX path. If other consumers are using the same stream, the stream continues running.
 
 **Example:**
+
 ```json
 // Request
 {
@@ -610,14 +657,17 @@ Stop the active streaming session for the specified camera device.
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 ### get_stream_url
+
 Get the stream URL for a specific camera device without starting a new stream.
 
 **Authentication:** Required (viewer role)
 
 **Parameters:**
+
 - device: string - Camera device identifier (required, e.g., "camera0", "camera1")
 
 **Returns:** Stream URL information and availability status
@@ -627,6 +677,7 @@ Get the stream URL for a specific camera device without starting a new stream.
 **Implementation:** Returns the stream URL for client applications to connect to. If no stream is active, provides the URL that would be used when a stream is started.
 
 **Example:**
+
 ```json
 // Request
 {
@@ -654,14 +705,17 @@ Get the stream URL for a specific camera device without starting a new stream.
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 ### get_stream_status
+
 Get detailed status information for a specific camera stream.
 
 **Authentication:** Required (viewer role)
 
 **Parameters:**
+
 - device: string - Camera device identifier (required, e.g., "camera0", "camera1")
 
 **Returns:** Detailed stream status with metrics and performance data
@@ -671,6 +725,7 @@ Get detailed status information for a specific camera stream.
 **Implementation:** Provides comprehensive stream status including FFmpeg process health, MediaMTX path status, and real-time metrics.
 
 **Example:**
+
 ```json
 // Request
 {
@@ -713,9 +768,11 @@ Get detailed status information for a specific camera stream.
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 **Error Response (Stream Not Found):**
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -733,14 +790,16 @@ Get detailed status information for a specific camera stream.
 
 ---
 
-## File Management Methods
+## Recording File Management
 
 ### list_recordings
+
 List available recording files with metadata and pagination support.
 
 **Authentication:** Required (viewer role)
 
 **Parameters:**
+
 - limit: number - Maximum number of files to return (optional)
 - offset: number - Number of files to skip for pagination (optional)
 
@@ -751,6 +810,7 @@ List available recording files with metadata and pagination support.
 **Implementation:** Scans recordings directory, provides file metadata, and supports pagination for large file collections.
 
 **Example:**
+
 ```json
 // Request
 {
@@ -784,13 +844,15 @@ List available recording files with metadata and pagination support.
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 ---
 
-## System Management Methods
+## System Metrics and Monitoring
 
 ### get_metrics
+
 Get system performance metrics and statistics.
 
 **Authentication:** Required (admin role)
@@ -802,6 +864,7 @@ Get system performance metrics and statistics.
 **Status:** ✅ Implemented
 
 **Example:**
+
 ```json
 // Request
 {
@@ -829,11 +892,13 @@ Get system performance metrics and statistics.
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 }
 
 ### get_streams
+
 Get list of all active streams from MediaMTX.
 
 **Authentication:** Required (viewer role)
@@ -847,6 +912,7 @@ Get list of all active streams from MediaMTX.
 **Implementation:** Integrates with MediaMTX controller to return real-time stream status and metrics using Go's net/http client for REST API communication.
 
 **Example:**
+
 ```json
 // Request
 {
@@ -879,6 +945,7 @@ Get list of all active streams from MediaMTX.
 ```
 
 **Response Fields:**
+
 - `name`: Stream name (string)
 - `source`: FFmpeg command or source configuration (string)
 - `ready`: Stream readiness status (boolean)
@@ -886,9 +953,11 @@ Get list of all active streams from MediaMTX.
 - `bytes_sent`: Total bytes sent for this stream (integer)
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 **Error Response (MediaMTX Unavailable):**
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -910,6 +979,7 @@ Get list of all active streams from MediaMTX.
 The server sends real-time notifications for camera events.
 
 ### camera_status_update
+
 **NOTIFICATION EVENT** - Sent when a camera connects, disconnects, or changes status.
 
 **Type:** Server-to-Client Notification (not callable method)
@@ -921,6 +991,7 @@ The server sends real-time notifications for camera events.
 **Implementation:** Broadcasts real-time camera events from discovery monitor with proper field filtering per API specification.
 
 **Example:**
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -941,11 +1012,13 @@ The server sends real-time notifications for camera events.
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 **Note:** These are server-generated notifications, not client-callable methods. Clients should listen for these events rather than calling them.
 
 ### recording_status_update
+
 **NOTIFICATION EVENT** - Sent when recording starts, stops, or encounters an error.
 
 **Type:** Server-to-Client Notification (not callable method)
@@ -957,6 +1030,7 @@ The server sends real-time notifications for camera events.
 **Implementation:** Provides real-time recording status updates with proper field filtering and error handling.
 
 **Example:**
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -977,6 +1051,7 @@ The server sends real-time notifications for camera events.
 All error responses follow a consistent JSON-RPC 2.0 error format with standardized error codes and structured data.
 
 ### Standard Error Response Format
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -994,6 +1069,7 @@ All error responses follow a consistent JSON-RPC 2.0 error format with standardi
 ```
 
 ### Error Response Fields
+
 - `code`: Integer error code (negative for application errors)
 - `message`: Human-readable error message
 - `data`: Optional structured error data containing:
@@ -1003,16 +1079,17 @@ All error responses follow a consistent JSON-RPC 2.0 error format with standardi
 
 ### Go Error Response Types
 
-
 ## Error Codes
 
 ### Standard JSON-RPC 2.0 Error Codes
+
 - **-32600**: Invalid Request
 - **-32601**: Method not found
 - **-32602**: Invalid parameters
 - **-32603**: Internal server error
 
 ### Service-Specific Error Codes
+
 - **-32001**: Authentication failed or token expired
 - **-32002**: Rate limit exceeded
 - **-32003**: Insufficient permissions
@@ -1024,6 +1101,7 @@ All error responses follow a consistent JSON-RPC 2.0 error format with standardi
 - **-32009**: Stream not found or not active
 
 ### Enhanced Recording Management Error Codes
+
 - **-1000**: Camera not found
 - **-1001**: Camera not available
 - **-1002**: Recording in progress
@@ -1035,14 +1113,16 @@ All error responses follow a consistent JSON-RPC 2.0 error format with standardi
 ---
 
 
-## File Management Methods
+## Snapshot File Management
 
 ### list_snapshots
+
 List available snapshot files with metadata and pagination support.
 
 **Authentication:** Required (viewer role)
 
 **Parameters:**
+
 - limit: number - Maximum number of files to return (optional)
 - offset: number - Number of files to skip for pagination (optional)
 
@@ -1053,6 +1133,7 @@ List available snapshot files with metadata and pagination support.
 **Implementation:** Scans snapshots directory, provides file metadata, and supports pagination for large file collections.
 
 **Example:**
+
 ```json
 // Request
 {
@@ -1086,14 +1167,17 @@ List available snapshot files with metadata and pagination support.
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 ### get_recording_info
+
 Get detailed information about a specific recording file.
 
 **Authentication:** Required (viewer role)
 
 **Parameters:**
+
 - filename: string - Name of the recording file (required)
 
 **Returns:** Object containing recording file metadata and information
@@ -1101,6 +1185,7 @@ Get detailed information about a specific recording file.
 **Status:** ✅ Implemented
 
 **Example:**
+
 ```json
 // Request
 {
@@ -1127,14 +1212,17 @@ Get detailed information about a specific recording file.
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 ### get_snapshot_info
+
 Get detailed information about a specific snapshot file.
 
 **Authentication:** Required (viewer role)
 
 **Parameters:**
+
 - filename: string - Name of the snapshot file (required)
 
 **Returns:** Object containing snapshot file metadata and information
@@ -1142,6 +1230,7 @@ Get detailed information about a specific snapshot file.
 **Status:** ✅ Implemented
 
 **Example:**
+
 ```json
 // Request
 {
@@ -1167,14 +1256,17 @@ Get detailed information about a specific snapshot file.
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 ### delete_recording
+
 Delete a specific recording file.
 
 **Authentication:** Required (operator role)
 
 **Parameters:**
+
 - filename: string - Name of the recording file to delete (required)
 
 **Returns:** Object containing deletion status and confirmation
@@ -1182,6 +1274,7 @@ Delete a specific recording file.
 **Status:** ✅ Implemented
 
 **Example:**
+
 ```json
 // Request
 {
@@ -1206,14 +1299,17 @@ Delete a specific recording file.
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 ### delete_snapshot
+
 Delete a specific snapshot file.
 
 **Authentication:** Required (operator role)
 
 **Parameters:**
+
 - filename: string - Name of the snapshot file to delete (required)
 
 **Returns:** Object containing deletion status and confirmation
@@ -1221,6 +1317,7 @@ Delete a specific snapshot file.
 **Status:** ✅ Implemented
 
 **Example:**
+
 ```json
 // Request
 {
@@ -1245,9 +1342,11 @@ Delete a specific snapshot file.
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 ### get_storage_info
+
 Get storage space information and usage statistics.
 
 **Authentication:** Required (admin role)
@@ -1259,6 +1358,7 @@ Get storage space information and usage statistics.
 **Status:** ✅ Implemented
 
 **Example:**
+
 ```json
 // Request
 {
@@ -1284,14 +1384,17 @@ Get storage space information and usage statistics.
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 ### set_retention_policy
+
 Configure file retention policies for automatic cleanup.
 
 **Authentication:** Required (admin role)
 
 **Parameters:**
+
 - policy_type: string - Type of retention policy ("age", "size", "manual") (required)
 - max_age_days: number - Maximum age in days for age-based retention (optional)
 - max_size_gb: number - Maximum size in GB for size-based retention (optional)
@@ -1302,6 +1405,7 @@ Configure file retention policies for automatic cleanup.
 **Status:** ✅ Implemented
 
 **Example:**
+
 ```json
 // Request
 {
@@ -1329,9 +1433,11 @@ Configure file retention policies for automatic cleanup.
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 ### cleanup_old_files
+
 Manually trigger cleanup of old files based on retention policies.
 
 **Authentication:** Required (admin role)
@@ -1343,6 +1449,7 @@ Manually trigger cleanup of old files based on retention policies.
 **Status:** ✅ Implemented
 
 **Example:**
+
 ```json
 // Request
 {
@@ -1365,13 +1472,15 @@ Manually trigger cleanup of old files based on retention policies.
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 ---
 
-## System Management Methods
+## System Status and Health
 
 ### get_status
+
 Get system status and health information.
 
 **Authentication:** Required (admin role)
@@ -1383,6 +1492,7 @@ Get system status and health information.
 **Status:** ✅ Implemented
 
 **Example:**
+
 ```json
 // Request
 {
@@ -1409,9 +1519,11 @@ Get system status and health information.
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 ### get_server_info
+
 Get server configuration and capability information.
 
 **Authentication:** Required (admin role)
@@ -1423,6 +1535,7 @@ Get server configuration and capability information.
 **Status:** ✅ Implemented
 
 **Example:**
+
 ```json
 // Request
 {
@@ -1449,6 +1562,7 @@ Get server configuration and capability information.
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 ---
@@ -1456,11 +1570,13 @@ Get server configuration and capability information.
 ## Event Subscription Methods
 
 ### subscribe_events
+
 Subscribe to real-time event notifications for specific topics.
 
 **Authentication:** Required (viewer role)
 
 **Parameters:**
+
 - topics: array - Array of event topics to subscribe to (required)
 - filters: object - Optional filters for event filtering (optional)
 
@@ -1471,6 +1587,7 @@ Subscribe to real-time event notifications for specific topics.
 **Implementation:** Manages client subscriptions to event topics through the EventManager with support for topic-based filtering and real-time event delivery.
 
 **Example:**
+
 ```json
 // Request
 {
@@ -1500,14 +1617,17 @@ Subscribe to real-time event notifications for specific topics.
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 ### unsubscribe_events
+
 Unsubscribe from event notifications for specific topics or all topics.
 
 **Authentication:** Required (viewer role)
 
 **Parameters:**
+
 - topics: array - Array of event topics to unsubscribe from (optional, if not provided unsubscribes from all)
 
 **Returns:** Unsubscription confirmation with unsubscribed topics
@@ -1517,6 +1637,7 @@ Unsubscribe from event notifications for specific topics or all topics.
 **Implementation:** Removes client subscriptions from event topics through the EventManager, supporting selective unsubscription or complete unsubscription.
 
 **Example:**
+
 ```json
 // Request
 {
@@ -1540,9 +1661,11 @@ Unsubscribe from event notifications for specific topics or all topics.
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 ### get_subscription_stats
+
 Get statistics about event subscriptions including global stats and client-specific subscriptions.
 
 **Authentication:** Required (viewer role)
@@ -1556,6 +1679,7 @@ Get statistics about event subscriptions including global stats and client-speci
 **Implementation:** Provides comprehensive subscription statistics through the EventManager including global subscription counts, topic popularity, and client-specific subscription details.
 
 **Example:**
+
 ```json
 // Request
 {
@@ -1585,9 +1709,11 @@ Get statistics about event subscriptions including global stats and client-speci
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 **Available Event Topics:**
+
 - `camera.connected` - Camera device connected
 - `camera.disconnected` - Camera device disconnected
 - `camera.status_change` - Camera status changed
@@ -1604,11 +1730,13 @@ Get statistics about event subscriptions including global stats and client-speci
 ## External Stream Discovery Methods
 
 ### discover_external_streams
+
 Discover external RTSP streams including UAVs and other network-based video sources.
 
 **Authentication:** Required (operator role)
 
 **Parameters:**
+
 - skydio_enabled: boolean - Enable Skydio UAV discovery (optional, default: true)
 - generic_enabled: boolean - Enable generic UAV discovery (optional, default: false)
 - force_rescan: boolean - Force rescan even if recent scan exists (optional, default: false)
@@ -1621,6 +1749,7 @@ Discover external RTSP streams including UAVs and other network-based video sour
 **Implementation:** Performs network scanning to discover external RTSP streams with configurable parameters for different UAV models and network ranges.
 
 **Example:**
+
 ```json
 // Request
 {
@@ -1695,14 +1824,17 @@ Discover external RTSP streams including UAVs and other network-based video sour
 ```
 
 **Response Fields:**
+
 - See the JSON response example above for field descriptions and types
 
 ### add_external_stream
+
 Add an external RTSP stream to the system for management and monitoring.
 
 **Authentication:** Required (operator role)
 
 **Parameters:**
+
 - stream_url: string - RTSP URL of the external stream (required)
 - stream_name: string - Human-readable name for the stream (required)
 - stream_type: string - Type of stream (optional, default: "generic_rtsp")
@@ -1712,6 +1844,7 @@ Add an external RTSP stream to the system for management and monitoring.
 **Status:** ✅ Implemented
 
 **Example:**
+
 ```json
 // Request
 {
@@ -1740,11 +1873,13 @@ Add an external RTSP stream to the system for management and monitoring.
 ```
 
 ### remove_external_stream
+
 Remove an external stream from the system.
 
 **Authentication:** Required (operator role)
 
 **Parameters:**
+
 - stream_url: string - RTSP URL of the stream to remove (required)
 
 **Returns:** Stream removal confirmation
@@ -1752,6 +1887,7 @@ Remove an external stream from the system.
 **Status:** ✅ Implemented
 
 **Example:**
+
 ```json
 // Request
 {
@@ -1776,6 +1912,7 @@ Remove an external stream from the system.
 ```
 
 ### get_external_streams
+
 Get all currently discovered and managed external streams.
 
 **Authentication:** Required (viewer role)
@@ -1787,6 +1924,7 @@ Get all currently discovered and managed external streams.
 **Status:** ✅ Implemented
 
 **Example:**
+
 ```json
 // Request
 {
@@ -1848,11 +1986,13 @@ Get all currently discovered and managed external streams.
 ```
 
 ### set_discovery_interval
+
 Configure the automatic discovery scan interval for external streams.
 
 **Authentication:** Required (admin role)
 
 **Parameters:**
+
 - scan_interval: number - Scan interval in seconds (0 = on-demand only, >0 = periodic scanning)
 
 **Returns:** Configuration update confirmation
@@ -1860,6 +2000,7 @@ Configure the automatic discovery scan interval for external streams.
 **Status:** ✅ Implemented
 
 **Example:**
+
 ```json
 // Request
 {
@@ -1889,34 +2030,42 @@ Configure the automatic discovery scan interval for external streams.
 ## HTTP File Download Endpoints
 
 ### GET /files/recordings/{filename}
+
 Download a recording file via HTTP.
 
 **Parameters:**
+
 - filename: string - Name of the recording file to download
 
 **Headers:**
+
 - Authorization: Bearer {jwt_token} or X-API-Key: {api_key}
 
 **Returns:** File content with appropriate Content-Type and Content-Disposition headers
 
 **Example:**
+
 ```bash
 curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
      http://localhost:8002/files/recordings/camera0_2025-01-15_14-30-00.fmp4
 ```
 
 ### GET /files/snapshots/{filename}
+
 Download a snapshot file via HTTP.
 
 **Parameters:**
+
 - filename: string - Name of the snapshot file to download
 
 **Headers:**
+
 - Authorization: Bearer {jwt_token} or X-API-Key: {api_key}
 
 **Returns:** File content with appropriate Content-Type and Content-Disposition headers
 
 **Example:**
+
 ```bash
 curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
      http://localhost:8002/files/snapshots/snapshot_2025-01-15_14-30-00.jpg
@@ -1927,53 +2076,64 @@ curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
 ## API Validation Rules
 
 ### Parameter Validation
+
 All API parameters are validated according to the following rules:
 
 #### String Parameters
+
 - **Camera identifiers**: Must match pattern `camera[0-9]+` (e.g., "camera0", "camera1")
 - **Filenames**: Must be valid filename characters, no path traversal
 - **JWT tokens**: Must be valid JWT format
 - **API keys**: Must be 32+ character alphanumeric strings
 
 #### Numeric Parameters
+
 - **Duration**: Must be positive integer (1-86400 seconds)
 - **File sizes**: Must be non-negative integers
 - **Limits**: Must be positive integers (1-1000)
 - **Offsets**: Must be non-negative integers
 
 #### Boolean Parameters
+
 - **Enabled flags**: Must be true/false values
 - **Success flags**: Must be true/false values
 
 ### Response Validation
+
 All responses are validated to ensure:
 
 #### Required Fields
+
 - All documented fields must be present
 - No additional fields beyond documented API
 - Consistent field types across all responses
 
 #### Type Constraints
+
 - **Timestamps**: ISO 8601 format strings
 - **File sizes**: int64 for large file support
 - **Durations**: int64 for precise timing
 - **Percentages**: float64 for decimal precision
 
 ### Error Handling
+
 - All errors return standardized JSON-RPC 2.0 error format
 - Error codes are consistent across all methods
 - Error messages provide actionable information
 - Error data includes technical details and suggestions
 
 ### Response Metadata
+
 All responses include optional metadata for debugging and monitoring:
 
 #### Performance Metrics
+
 - **Processing time**: Time taken to process the request
 - **Server timestamp**: When the response was generated
 - **Request ID**: Unique identifier for request tracing
 
 #### Example Response with Metadata
+
 ```json
 {
   "jsonrpc": "2.0",
@@ -1996,6 +2156,7 @@ All responses include optional metadata for debugging and monitoring:
 ## Implementation Notes
 
 **Go-Specific Optimizations:**
+
 - **Goroutines:** Efficient concurrent handling of multiple WebSocket connections
 - **Channels:** Thread-safe communication between components
 - **Context:** Proper cancellation and timeout handling
@@ -2003,12 +2164,14 @@ All responses include optional metadata for debugging and monitoring:
 - **Structured Logging:** JSON-formatted logs with correlation IDs
 
 **Performance Characteristics:**
+
 - **Response Time:** <100ms for 95% of requests (5x improvement over Python)
 - **Concurrency:** 1000+ simultaneous WebSocket connections (10x improvement)
 - **Memory Usage:** <60MB base footprint (50% reduction)
 - **CPU Usage:** <50% sustained usage (30% reduction)
 
 **API Compatibility:**
+
 - **100% JSON-RPC Compatibility:** Identical protocol and message formats
 - **Authentication:** Same JWT and API key mechanisms
 - **Error Codes:** Identical error codes and response formats
@@ -2020,6 +2183,5 @@ All responses include optional metadata for debugging and monitoring:
 **Last Updated:** 2025-01-15  
 **Implementation Status:** All core methods, notifications, and event subscription system implemented and operational  
 **Performance Status:** 5x improvement over Python implementation achieved, 100x+ event system performance improvement
-```
 
 

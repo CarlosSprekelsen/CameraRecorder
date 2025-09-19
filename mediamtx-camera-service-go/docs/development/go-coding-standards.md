@@ -31,12 +31,14 @@ mediamtx-camera-service-go/
 ```
 
 ### Package Naming Conventions
+
 - Use **snake_case** for package names (e.g., `camera_discovery`, `json_rpc`)
 - Keep package names short and descriptive
 - Avoid generic names like `utils`, `helpers`, or `common`
 - Use plural names for packages containing multiple related types
 
 ### File Naming Conventions
+
 - Use **snake_case** for Go files (e.g., `camera_monitor.go`, `websocket_server.go`)
 - Group related functionality in the same file
 - Keep files under 500 lines when possible
@@ -47,12 +49,14 @@ mediamtx-camera-service-go/
 ## 2. Code Style and Formatting
 
 ### Go Formatting
+
 - Use `gofmt` for automatic formatting
 - Follow standard Go formatting conventions
 - Use `golangci-lint` for comprehensive linting
 - Configure IDE to format on save
 
 ### Naming Conventions
+
 - **Variables:** Use camelCase (e.g., `cameraList`, `maxConnections`)
 - **Constants:** Use PascalCase for exported, camelCase for unexported
 - **Functions:** Use camelCase (e.g., `getCameraStatus`, `startRecording`)
@@ -60,6 +64,7 @@ mediamtx-camera-service-go/
 - **Interfaces:** Use PascalCase with descriptive names (e.g., `CameraMonitor`, `StreamManager`)
 
 ### Comments and Documentation
+
 - Follow Go documentation conventions
 - Use `//` for single-line comments
 - Use `/* */` for multi-line comments

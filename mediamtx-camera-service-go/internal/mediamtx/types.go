@@ -320,6 +320,7 @@ type MediaMTXController interface {
 	AddExternalStream(ctx context.Context, stream *ExternalStream) (*AddExternalStreamResponse, error)
 	RemoveExternalStream(ctx context.Context, streamURL string) (*RemoveExternalStreamResponse, error)
 	GetExternalStreams(ctx context.Context) (*GetExternalStreamsResponse, error)
+	SetDiscoveryInterval(interval int) (*SetDiscoveryIntervalResponse, error)
 
 	// Recording operations (device-based, no session IDs)
 	StartRecording(ctx context.Context, device string, options *PathConf) (*StartRecordingResponse, error)

@@ -20,7 +20,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
@@ -34,12 +33,14 @@ import (
 // - Auto-stop timer management for duration-based recordings
 // - RTSP keepalive coordination for on-demand stream activation
 // - Recording operations for both V4L2 devices and external RTSP streams
+// - Enhanced metadata extraction and duration tracking
 //
 // ARCHITECTURE:
 // - Operates with cameraID as primary identifier
 // - MediaMTX path names match camera identifiers
-// - Minimal local state (timers map for auto-stop functionality)
+// - Enhanced timer management with metadata tracking
 // - Query MediaMTX API directly for recording status
+// - Integrated MetadataManager for video duration parsing
 //
 // API INTEGRATION:
 // - Returns JSON-RPC API-ready responses
@@ -57,26 +58,25 @@ type RecordingManager struct {
 	streamManager     StreamManager
 	keepaliveReader   *RTSPKeepaliveReader
 
-	// Optional timers for auto-stop functionality
-	timers sync.Map // cameraID -> *time.Timer (also serves as recording state tracker)
+	// Enhanced timer management with metadata
+	timerManager    *RecordingTimerManager
+	metadataManager *MetadataManager
 }
 
 // NOTE: MediaMTXRecordingConfig removed - using PathConf from api_types.go instead
 // This ensures single source of truth with MediaMTX swagger.json specification
 
-// IsRecording checks if a camera is currently recording using the timers map
-// This provides minimal state tracking for event correlation without duplicating MediaMTX state
+// IsRecording checks if a camera is currently recording using the enhanced timer manager
+// This provides enhanced state tracking for event correlation without duplicating MediaMTX state
 func (rm *RecordingManager) IsRecording(cameraID string) bool {
-	_, exists := rm.timers.Load(cameraID)
-	return exists // If timer exists, recording is active
+	return rm.timerManager.IsRecording(cameraID)
 }
 
 // forceStopRecording forcefully stops recording (for device disconnection scenarios)
 // This cleans up local state without trying to communicate with MediaMTX
 func (rm *RecordingManager) forceStopRecording(cameraID string) {
-	// Stop and remove any auto-stop timer
-	if timer, exists := rm.timers.LoadAndDelete(cameraID); exists {
-		timer.(*time.Timer).Stop()
+	// Stop and remove any auto-stop timer using enhanced timer manager
+	if rm.timerManager.DeleteTimer(cameraID) {
 		rm.logger.WithField("cameraID", cameraID).Info("Forced stop recording due to device disconnection")
 	}
 
@@ -104,7 +104,7 @@ type MediaMTXRecordingSegment struct {
 }
 
 // NewRecordingManager creates a new MediaMTX-based recording manager
-func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamManager StreamManager, config *config.MediaMTXConfig, recordingConfig *config.RecordingConfig, configIntegration *ConfigIntegration, logger *logging.Logger) *RecordingManager {
+func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamManager StreamManager, ffmpegManager FFmpegManager, config *config.MediaMTXConfig, recordingConfig *config.RecordingConfig, configIntegration *ConfigIntegration, logger *logging.Logger) *RecordingManager {
 	// Use centralized configuration - no need to create component-specific defaults
 	// All recording configuration comes from the centralized config system
 	// Recording settings are derived from the centralized MediaMTXConfig
@@ -118,7 +118,9 @@ func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamM
 		pathManager:       pathManager,
 		streamManager:     streamManager,
 		keepaliveReader:   NewRTSPKeepaliveReader(config, logger),
-		// No local state needed - query MediaMTX directly for recording status
+		// Enhanced components for metadata and timer management
+		timerManager:    NewRecordingTimerManager(logger),
+		metadataManager: NewMetadataManager(configIntegration, ffmpegManager, logger),
 	}
 }
 
@@ -185,17 +187,32 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, cameraID string,
 
 	// Set up auto-stop timer if recordDeleteAfter is specified
 	// Note: Using recordDeleteAfter as the auto-stop duration for backward compatibility
+	var recordingDuration time.Duration
 	if options != nil && options.RecordDeleteAfter != "" {
 		if duration, err := time.ParseDuration(options.RecordDeleteAfter); err == nil {
-			rm.setAutoStopTimer(cameraID, duration) // Use cameraID (camera identifier) as key
+			recordingDuration = duration
 			rm.logger.WithFields(logging.Fields{
 				"cameraID": cameraID,
 				"duration": duration,
-			}).Debug("Set auto-stop timer for recording")
+			}).Debug("Parsed auto-stop duration for recording")
 		} else {
 			rm.logger.WithError(err).WithField("recordDeleteAfter", options.RecordDeleteAfter).Warn("Invalid recordDeleteAfter format, ignoring auto-stop timer")
 		}
 	}
+
+	// Create enhanced recording timer with metadata
+	rm.timerManager.CreateTimer(cameraID, devicePath, recordingDuration, func() {
+		rm.logger.WithField("cameraID", cameraID).Info("Auto-stopping recording after duration")
+
+		// Stop recording using cameraID (camera identifier) as path name
+		ctx := context.Background()
+		if err := rm.disableRecordingOnPath(ctx, cameraID); err != nil {
+			rm.logger.WithError(err).WithField("cameraID", cameraID).Error("Failed to auto-stop recording")
+		}
+
+		// Stop RTSP keepalive
+		rm.stopRTSPKeepalive(cameraID)
+	})
 
 	// Build API-ready response with rich recording metadata
 	format := "fmp4" // Default format from config
@@ -257,15 +274,23 @@ func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename strin
 		format = strings.TrimPrefix(ext, ".")
 	}
 
-	// TODO: Parse video duration from ffprobe output (ffprobe already integrated)
-	// INVESTIGATION: ffprobe is already used in snapshot_manager.go:1021-1027 for image metadata
-	// CURRENT: Hardcoded duration = 0 placeholder for all recordings
-	// SOLUTION: Use same ffprobe integration pattern for video files:
-	//   ffprobe -v quiet -print_format json -show_format [video_file]
-	//   Parse JSON: result.format.duration (string, convert to float64)
-	// REFERENCE: MediaMTX recordings stored at config.RecordingsPath with .mp4/.fmp4 extensions
-	// EFFORT: 3-4 hours - implement ffprobe video parsing similar to image metadata
-	duration := float64(0) // Placeholder
+	// Extract video duration using MetadataManager
+	duration := float64(0) // Default fallback
+	if rm.metadataManager != nil {
+		metadata, err := rm.metadataManager.ExtractVideoMetadata(ctx, filePath)
+		if err != nil {
+			rm.logger.WithError(err).WithField("file_path", filePath).Warn("Failed to extract video metadata, using default duration")
+		} else if metadata.Success && metadata.Duration != nil {
+			duration = *metadata.Duration
+			rm.logger.WithFields(logging.Fields{
+				"filename": filename,
+				"duration": duration,
+				"codec":    metadata.VideoCodec,
+			}).Debug("Video duration extracted successfully")
+		} else {
+			rm.logger.WithField("file_path", filePath).Debug("Video metadata extraction succeeded but no duration found")
+		}
+	}
 
 	// Build API-ready response with rich metadata
 	response := &GetRecordingInfoResponse{
@@ -287,24 +312,47 @@ func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename strin
 	return response, nil
 }
 
-// DeleteRecording deletes a recording file via MediaMTX API
+// DeleteRecording deletes a recording file from the filesystem
 func (rm *RecordingManager) DeleteRecording(ctx context.Context, filename string) error {
-	rm.logger.WithField("filename", filename).Info("Deleting recording via MediaMTX API")
+	rm.logger.WithField("filename", filename).Info("Deleting recording file")
 
 	// Validate filename
 	if filename == "" {
 		return fmt.Errorf("filename cannot be empty")
 	}
 
-	// TODO: Implement recording deletion via MediaMTX API integration
-	// INVESTIGATION: MediaMTX v3 API has DELETE /v3/recordings/delete/{name} endpoint
-	// CURRENT: Returns "not yet implemented" error, complex filename parsing was removed
-	// SOLUTION: Use MediaMTX client.Delete() with endpoint "/v3/recordings/delete/" + recordingName
-	// REFERENCE: MediaMTX API docs, existing client.Get() pattern in GetRecordingsList():440
-	// FILENAME FORMAT: MediaMTX uses path_timestamp format (e.g., "camera0_2025-01-15_14-30-00")
-	// EFFORT: 4-6 hours - implement MediaMTX DELETE API call with proper error handling
-	// The complex filename parsing was over-engineered and fragile
-	return fmt.Errorf("recording deletion not yet implemented - requires MediaMTX API investigation")
+	// Get recordings directory path from canonical configuration
+	recordingsPath := rm.config.RecordingsPath
+	if recordingsPath == "" {
+		return fmt.Errorf("recordings path not configured")
+	}
+
+	// Construct full file path using canonical config
+	filePath := filepath.Join(recordingsPath, filename)
+
+	// Check if file exists
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return fmt.Errorf("recording file not found: %s", filename)
+	}
+
+	// Check if it's a file (not a directory)
+	fileInfo, err := os.Stat(filePath)
+	if err != nil {
+		return fmt.Errorf("error accessing file: %w", err)
+	}
+
+	if fileInfo.IsDir() {
+		return fmt.Errorf("path is not a file: %s", filename)
+	}
+
+	// Delete the file directly from filesystem
+	if err := os.Remove(filePath); err != nil {
+		rm.logger.WithError(err).WithField("filename", filename).Error("Error deleting recording file")
+		return fmt.Errorf("error deleting recording file: %w", err)
+	}
+
+	rm.logger.WithField("filename", filename).Info("Recording file deleted successfully")
+	return nil
 }
 
 // StopRecording stops recording and returns API-ready response with actual metadata
@@ -342,32 +390,44 @@ func (rm *RecordingManager) StopRecording(ctx context.Context, cameraID string) 
 		return nil, fmt.Errorf("failed to disable recording on path: %w", err)
 	}
 
-	// Cancel any auto-stop timer
-	if timer, exists := rm.timers.LoadAndDelete(cameraID); exists {
-		timer.(*time.Timer).Stop()
-		rm.logger.WithField("cameraID", cameraID).Debug("Cancelled auto-stop timer")
-	}
-
-	// Get timer info for duration calculation
+	// Get timer info for accurate duration calculation using enhanced timer manager
 	var startTime time.Time
 	var duration float64
-	if _, exists := rm.timers.Load(cameraID); exists {
-		// TODO: Track actual start time in timer metadata for accurate duration calculation
-		// INVESTIGATION: timers sync.Map only stores *time.Timer, no metadata about start time
-		// CURRENT: Using placeholder time.Now().Add(-time.Hour) for duration calculation
-		// SOLUTION: Change timers map value from *time.Timer to custom struct:
-		//   type RecordingTimer struct { Timer *time.Timer; StartTime time.Time; CameraID string }
-		// USAGE: Store start time when timer created in setAutoStopTimer():658
-		// EFFORT: 2-3 hours - refactor timers map structure and update all timer operations
-		startTime = time.Now().Add(-time.Hour) // Placeholder - need to track start time
-		duration = time.Since(startTime).Seconds()
+	if recordingInfo, exists := rm.timerManager.GetRecordingInfo(cameraID); exists {
+		startTime = recordingInfo.StartTime
+		duration = recordingInfo.GetDurationSeconds()
+		rm.logger.WithFields(logging.Fields{
+			"cameraID":   cameraID,
+			"start_time": startTime,
+			"duration":   duration,
+		}).Debug("Retrieved accurate recording duration from timer manager")
 	} else {
+		// Fallback if timer info not available
 		startTime = time.Now().Add(-time.Hour) // Placeholder
 		duration = 3600                        // Placeholder
+		rm.logger.WithField("cameraID", cameraID).Warn("Timer info not found, using placeholder duration")
 	}
+
+	// Cancel any auto-stop timer after getting the info
+	rm.timerManager.DeleteTimer(cameraID)
 
 	// Generate expected filename based on MediaMTX recording pattern
 	filename := fmt.Sprintf("%s_%s.mp4", cameraID, startTime.Format("2006-01-02_15-04-05"))
+
+	// Get actual file size using MetadataManager
+	fileSize := int64(1024) // Default fallback
+	if rm.metadataManager != nil {
+		recordingPath := filepath.Join(rm.config.RecordingsPath, filename)
+		if actualSize, err := rm.metadataManager.GetFileSize(recordingPath); err == nil {
+			fileSize = actualSize
+			rm.logger.WithFields(logging.Fields{
+				"filename":  filename,
+				"file_size": fileSize,
+			}).Debug("Actual file size retrieved successfully")
+		} else {
+			rm.logger.WithError(err).WithField("filename", filename).Warn("Failed to get actual file size, using fallback")
+		}
+	}
 
 	// Build API-ready response with actual recording metadata
 	response := &StopRecordingResponse{
@@ -377,14 +437,8 @@ func (rm *RecordingManager) StopRecording(ctx context.Context, cameraID string) 
 		StartTime: startTime.Format(time.RFC3339),
 		EndTime:   time.Now().Format(time.RFC3339),
 		Duration:  duration,
-		FileSize:  1024, // TODO: Get actual file size from MediaMTX API or filesystem
-		// INVESTIGATION: MediaMTX API /v3/recordings/list returns segments but no file sizes
-		// CURRENT: Hardcoded 1024 bytes placeholder for all recordings
-		// SOLUTION: Use os.Stat() on recording file path or enhance MediaMTX API query
-		// FILE PATH: config.RecordingsPath + "/" + filename (with proper extension)
-		// ALTERNATIVE: Query MediaMTX /v3/recordings/get/{name} if available in v3 API
-		// EFFORT: 2-3 hours - implement file size retrieval with filesystem fallback
-		Format: "fmp4",
+		FileSize:  fileSize,
+		Format:    "fmp4",
 	}
 
 	rm.logger.WithFields(logging.Fields{
@@ -678,27 +732,5 @@ func (rm *RecordingManager) stopRTSPKeepalive(cameraID string) {
 	rm.keepaliveReader.StopKeepalive(cameraID)
 }
 
-// setAutoStopTimer sets up an auto-stop timer for a recording
-func (rm *RecordingManager) setAutoStopTimer(cameraID string, duration time.Duration) {
-	timer := time.AfterFunc(duration, func() {
-		rm.logger.WithField("cameraID", cameraID).Info("Auto-stopping recording after duration")
-
-		// Stop recording using cameraID (camera identifier) as path name
-		ctx := context.Background()
-		if err := rm.disableRecordingOnPath(ctx, cameraID); err != nil {
-			rm.logger.WithError(err).WithField("cameraID", cameraID).Error("Failed to auto-stop recording")
-		}
-
-		// Stop RTSP keepalive
-		rm.stopRTSPKeepalive(cameraID)
-
-		// Remove timer
-		rm.timers.Delete(cameraID)
-	})
-
-	rm.timers.Store(cameraID, timer)
-	rm.logger.WithFields(logging.Fields{
-		"cameraID": cameraID,
-		"duration": duration,
-	}).Debug("Set auto-stop timer for recording")
-}
+// Note: setAutoStopTimer method removed - functionality moved to RecordingTimerManager.CreateTimer()
+// This provides enhanced timer management with metadata tracking and accurate duration calculation

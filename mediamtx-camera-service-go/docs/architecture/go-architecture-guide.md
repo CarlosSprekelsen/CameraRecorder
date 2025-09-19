@@ -71,14 +71,16 @@ end note
 
 ### 2.1 Exposed Interfaces (Inbound)
 
-**JSON-RPC 2.0 API (Primary External Interface)**
+#### JSON-RPC 2.0 API (Primary External Interface)
+
 - **Protocol:** WebSocket over TCP
 - **Port:** 8002
 - **Documentation:** `docs/api/json_rpc_methods.md`
 - **Authentication:** JWT Bearer tokens
 - **Clients:** Web browsers, mobile apps, desktop applications
 
-**Recording Architecture Notes:**
+#### Recording Architecture Notes
+
 - **Path Reuse:** Single MediaMTX path ("camera0") handles both streaming AND recording simultaneously
 - **File Management:** Recording filenames are independent of path names (configured via recordPath)
 - **Pattern Support:** MediaMTX handles timestamp patterns in filenames (e.g., camera0_%Y-%m-%d_%H-%M-%S.mp4)
@@ -114,18 +116,21 @@ end note
 
 ### 2.2 Consumed Interfaces (Outbound)
 
-**MediaMTX REST API (External Dependency)**
+#### MediaMTX REST API (External Dependency)
+
 - **Protocol:** HTTP/1.1
 - **Endpoint:** http://localhost:9997/v3/
 - **Purpose:** Stream path management, configuration
 - **Required Version:** MediaMTX v1.0+
 
-**V4L2 Hardware Interface**
+#### V4L2 Hardware Interface
+
 - **Protocol:** Linux system calls
 - **Devices:** /dev/video* character devices
 - **Purpose:** Direct camera hardware access
 
-**Linux Device Event Source (NEW)**
+#### Linux Device Event Source
+
 - **Primary:** udev (netlink; add/remove/change)
 - **Fallback:** fsnotify on `/dev` for `/dev/video*`
 - **Purpose:** Push-based propagation of device lifecycle (no index polling)
@@ -152,6 +157,9 @@ note bottom of http
   • GET /v3/config/paths/list
   • POST /v3/config/paths/add/{name}
   • DELETE /v3/config/paths/delete/{name}
+  • GET /v3/recordings/list
+  • GET /v3/recordings/get/{name}
+  • DELETE /v3/recordings/deletesegment (path+start params)
 end note
 
 @enduml
@@ -159,9 +167,119 @@ end note
 
 ---
 
-## 3. Internal Component Architecture
+## 3. MediaMTX Recording Deletion Architecture
 
-### 3.1 Component Structure
+### 3.1 Recording Data Model
+
+MediaMTX manages recording files using a **filesystem-based approach** where individual files are stored independently:
+
+```plantuml
+@startuml RecordingDataModel
+title MediaMTX Recording Data Model - Filesystem-Based Architecture
+
+class RecordingFile {
+  +filename: string
+  +path: string
+  +createdAt: time
+  +size: int64
+}
+
+class Configuration {
+  +recordingsPath: string
+  +defaults: PathConf
+}
+
+class FileSystem {
+  +recordings: RecordingFile[]
+}
+
+RecordingFile ||--|| Configuration : configured by
+RecordingFile ||--|| FileSystem : stored in
+
+note right of RecordingFile
+Recording File Structure:
+• filename: camera0_2025-01-15_14-30-00.mp4
+• path: /opt/camera-service/recordings/
+• Independent files managed by MediaMTX
+• No complex segment tracking required
+end note
+
+note right of Configuration
+Configuration Integration:
+• Centralized path management
+• No hardcoded values
+• Canonical configuration approach
+• rm.config.RecordingsPath
+end note
+
+@enduml
+```
+
+### 3.2 Deletion Architecture
+
+Recording deletion uses **direct filesystem operations** following the same pattern as snapshot deletion:
+
+```plantuml
+@startuml DeletionArchitecture
+title Recording Deletion Architecture - Filesystem-Based
+
+participant "Client" as C
+participant "WebSocket Server" as WS
+participant "Controller" as CTRL
+participant "RecordingManager" as RM
+participant "Configuration" as CFG
+participant "FileSystem" as FS
+
+== Deletion Flow ==
+C -> WS: delete_recording(filename)
+WS -> CTRL: DeleteRecording(filename)
+CTRL -> RM: DeleteRecording(filename)
+RM -> CFG: GetConfig().RecordingsPath
+CFG --> RM: recordingsPath
+RM -> FS: os.Remove(filePath)
+FS --> RM: Success/Error
+RM --> CTRL: Result
+CTRL --> WS: Response
+WS --> C: JSON-RPC Response
+
+== Error Handling ==
+alt File not found
+  FS --> RM: os.IsNotExist(err)
+  RM --> CTRL: "recording file not found"
+end
+
+alt Permission denied
+  FS --> RM: Permission error
+  RM --> CTRL: "failed to delete recording file"
+end
+
+@enduml
+```
+
+### 3.3 Implementation Pattern
+
+**ARCHITECTURE DECISION**: Use **direct filesystem deletion** following the established pattern from SnapshotManager.
+
+**Implementation Requirements:**
+
+1. **Use canonical configuration** for recordings path (`rm.config.RecordingsPath`)
+2. **Direct filesystem operations** using `os.Remove()`
+3. **No MediaMTX API calls** for deletion
+4. **Consistent error handling** with proper validation
+5. **No hardcoded paths** or magic numbers
+
+**Implementation Pattern:**
+
+- **Input**: `camera0_2025-01-15_14-30-00.mp4`
+- **Path Resolution**: `filepath.Join(recordingsPath, filename)`
+- **File Operation**: `os.Remove(filePath)`
+- **MediaMTX Impact**: None - files are independent
+
+---
+
+## 4. Internal Component Architecture
+
+### 4.1 Component Structure
 
 ```plantuml
 @startuml InternalComponents
@@ -204,15 +322,17 @@ end note
 @enduml
 ```
 
-### 3.2 Component Responsibilities
+### 4.2 Component Responsibilities
 
-**WebSocket Server (Protocol Layer)**
+#### WebSocket Server (Protocol Layer)
+
 - JSON-RPC 2.0 protocol implementation
 - WebSocket connection management (1000+ concurrent)
 - Authentication enforcement
 - **Constraint:** NO business logic - delegates all operations
 
-**MediaMTX Controller (Business Logic Layer)**
+#### MediaMTX Controller (Business Logic Layer)
+
 - Camera operations coordination
 - Stream lifecycle management
 - API abstraction (camera0 ↔ /dev/video0)
@@ -221,7 +341,8 @@ end note
 - **Mapping Rule:** External identifiers (`camera0`) map to **discovered devices only**; no synthetic indices
 - **Pattern:** Single Source of Truth for all operations
 
-**Recording Manager (Sub-component of MediaMTX Controller)**
+#### Recording Manager (Sub-component of MediaMTX Controller)
+
 - Recording state management via MediaMTX API
 - Path configuration via PATCH operations
 - Auto-stop timer management
@@ -230,7 +351,8 @@ end note
 - **Pattern:** Stateless recording - query MediaMTX for status
 - **Sequence (hard invariant):** PATCH record flag → Start RTSP keepalive → Set timer (if duration specified)
 
-**Camera Monitor (Hardware Abstraction Layer)**
+#### Camera Monitor (Hardware Abstraction Layer)
+
 - **Mode:** Event-first, Polling-fallback
 - **Device Discovery:** udev/fsnotify events (add/remove/change)
 - **Polling Fallback:** Slow periodic reconcile when events unavailable
@@ -242,7 +364,8 @@ end note
   4. Provide lookups for abstraction mapping (cameraX ↔ /dev/videoN)
 - **Integration:** Interface-based design with dependency injection
 
-**Path Manager (Configuration & Activation)**
+#### Path Manager (Configuration & Activation)
+
 - **Contract:** Create → **Skip readiness check for on-demand paths** → Patch (retry)
 - **Idempotent Create:** Config add if missing; "already exists" = success
 - **On-Demand Paths:** Skip readiness checks - paths activate when accessed, not when created
@@ -250,7 +373,8 @@ end note
 - **Per-Path Mutex:** Serialize operations for a path across callers
 - **Map Parameter Contract:** All `map[string]interface{}` params are optional; `nil` means "no options". PathManager never mutates caller-supplied maps.
 
-**Security Framework (Cross-Cutting Layer)**
+#### Security Framework (Cross-Cutting Layer)
+
 - JWT token management
 - Role-based access control (viewer/operator/admin)
 - Session management
@@ -268,29 +392,14 @@ Some components are optional based on configuration and may be nil:
 | externalDiscovery | ❌ No | Only if external streams enabled |
 | pathIntegration | ❌ No | Only if auto-path creation enabled |
 
-**Pattern Rules:**
+#### Pattern Rules
+
 1. Optional components may be nil
 2. ALL methods MUST check for nil before use
 3. Return graceful errors or empty results for nil components
 4. Document optional nature in constructor
 
-**Implementation Pattern:**
-```go
-// Helper methods for consistent checking
-func (c *controller) hasExternalDiscovery() bool {
-    return c.externalDiscovery != nil
-}
-
-// All methods must check before use
-func (c *controller) RemoveExternalStream(ctx context.Context, streamURL string) error {
-    if !c.hasExternalDiscovery() {
-        return fmt.Errorf("external stream discovery is not configured")
-    }
-    // Safe to use c.externalDiscovery
-}
-```
-
-**MediaMTX Controller - SINGLE SOURCE OF TRUTH**
+#### MediaMTX Controller - SINGLE SOURCE OF TRUTH
 
 ```plantuml
 @startuml ControllerAuthority
@@ -546,7 +655,7 @@ title Multi-Tier Snapshot Architecture - Performance Optimization
 start
 :Snapshot Request;
 
-partition "Tier 0: V4L2 Direct (NEW - FASTEST)" {
+partition "Tier 0: V4L2 Direct (FASTEST)" {
     :Direct V4L2 capture;
     if (USB device?) then (yes)
         :Capture frame directly;
@@ -588,12 +697,13 @@ partition "Tier 3: Stream Activation" {
 ```
 
 **Performance Targets:**
+
 - Tier 0: <100ms (USB only)
 - Tier 1: <200ms (direct capture)
 - Tier 2: <300ms (stream reuse)
 - Tier 3: <500ms (stream creation)
 
-### 4.2.1 Device Event Flow (NEW)
+### 4.2.1 Device Event Flow
 
 ```plantuml
 @startuml DeviceEventFlow
@@ -823,6 +933,7 @@ note over F: Process terminated\nResources freed
 ```
 
 **CRITICAL UNDERSTANDING:**
+
 - **FFmpeg processes are NOT always running** - they start on-demand
 - **Zero resource usage when idle** - no CPU/memory consumption
 - **Automatic cleanup** - processes terminate after configured idle time
@@ -958,9 +1069,9 @@ end note
 
 ---
 
-## 5. Physical Architecture
+## 6. Physical Architecture
 
-### 5.1 Deployment Architecture
+### 6.1 Deployment Architecture
 
 ```plantuml
 @startuml DeploymentArchitecture
@@ -993,23 +1104,25 @@ clients --> service : WebSocket API\nHost Network
 @enduml
 ```
 
-### 5.3 Container Deployment Strategy
+### 6.3 Container Deployment Strategy
 
-**Option 1: Separate Containers (Recommended)**
+#### Option 1: Separate Containers
+
 - **Advantages:**
   - Independent scaling of MediaMTX and camera service
   - Separate lifecycle management and updates
   - Better resource isolation and fault isolation
   - Follows microservices architecture principles
 
-**Option 2: Single Container**
+#### Option 2: Single Container (Recommended)
+
 - **Advantages:**
   - Simpler deployment and management
   - Faster inter-process communication
   - Shared resource utilization
   - Reduced network overhead
 
-**Recommendation:** Separate containers for production deployments to enable independent scaling and lifecycle management. Single container acceptable for development or resource-constrained environments.
+**Recommendation:** Separate containers for production deployments enable independent scaling and lifecycle management. Single container acceptable for development or resource-constrained environments. DTS is closer to the second use.
 
 ### 5.2 Network Architecture
 
@@ -1219,31 +1332,116 @@ stop
 
 ---
 
-## 8. Quality Attributes
+## 8. Video Source Architecture Strategy
 
-### 8.1 Performance Architecture
+### 8.1 Source Type Comparison Matrix
+
+| **Aspect** | **Local V4L2 Sources** | **External RTSP Sources** |
+|------------|------------------------|---------------------------|
+| **Source Identification** | `/dev/video0`, `/dev/video1` | `rtsp://192.168.42.10:5554/subject` |
+| **Camera ID Mapping** | `camera0` ↔ `/dev/video0` | `camera0` ↔ `rtsp://192.168.42.10:5554/subject` |
+| **MediaMTX Path Creation** | `RunOnDemand` = FFmpeg command | `Source` = RTSP URL directly |
+| **On-Demand Behavior** | ✅ FFmpeg starts when client connects | ✅ RTSP proxy starts when client connects |
+| **Recording Activation** | Requires RTSP keepalive for immediate start | Requires RTSP keepalive for immediate start |
+| **Path Configuration** | `opts.RunOnDemand = ffmpegCommand` | `pathConfig.Source = rtspURL` |
+| **MediaMTX Process** | Starts FFmpeg subprocess | Starts RTSP proxy/relay |
+| **Resource Usage** | FFmpeg process per active path | RTSP proxy per active path |
+| **Streaming Operations** | FFmpeg transcodes V4L2 → RTSP | MediaMTX relays RTSP → RTSP |
+| **Snapshot Operations** | Multi-tier: V4L2 direct → FFmpeg → RTSP | RTSP capture only |
+| **Hardware Dependencies** | USB device availability | Network connectivity |
+| **Failure Modes** | Device disconnection, driver issues | Network timeouts, stream unavailable |
+| **Keepalive Purpose** | Triggers on-demand FFmpeg startup | Triggers on-demand RTSP proxy startup |
+| **Process Lifecycle** | Starts/stops with client demand | Starts/stops with client demand |
+| **CPU Impact** | Higher (video transcoding) | Lower (stream relaying) |
+| **Network Impact** | Local (USB → MediaMTX) | Higher (external → MediaMTX) |
+| **STANAG 4609 Support** | Via MediaMTX fmp4 recording | Native RTSP stream compliance |
+
+### 8.2 Universal On-Demand Architecture
+
+```plantuml
+@startuml UniversalOnDemand
+title Universal On-Demand Process Architecture
+
+participant "Operation Request" as req
+participant "MediaMTX Path" as path
+participant "RTSP Keepalive" as keep
+participant "Process (FFmpeg/Relay)" as proc
+participant "Video Source" as source
+
+== Streaming Operation ==
+req -> path : Configure for streaming
+req -> keep : Client RTSP connection
+keep -> path : Trigger runOnDemand
+path -> proc : Start FFmpeg/relay
+proc -> source : Begin capture/relay
+source -> proc : Video data
+proc -> path : RTSP stream
+path -> req : Stream available
+
+== Recording Operation ==
+req -> path : Configure for recording + streaming
+req -> keep : Service keepalive connection
+keep -> path : Trigger runOnDemand
+path -> proc : Start FFmpeg/relay
+proc -> source : Begin capture/relay
+source -> proc : Video data
+proc -> path : RTSP stream
+path -> path : Record stream to file
+path -> req : Recording active
+
+== Snapshot Operation ==
+req -> path : Configure for temporary streaming
+req -> keep : Temporary RTSP connection
+keep -> path : Trigger runOnDemand
+path -> proc : Start FFmpeg/relay
+proc -> source : Capture single frame
+source -> proc : Frame data
+proc -> path : RTSP stream
+path -> req : Frame available
+req -> keep : Cleanup connection
+keep -> path : Stop if idle
+
+note right of keep
+  RTSP Keepalive Critical:
+  • Required for both V4L2 and RTSP
+  • Enables immediate activation
+  • Maintains process during ops
+  • Automatic cleanup on idle
+end note
+@enduml
+```
+
+---
+
+## 9. Quality Attributes
+
+### 9.1 Performance Architecture
 
 **Response Time Optimization:**
+
 - **Tier 0 Snapshots:** Direct V4L2 access (<200ms)
 - **Connection Pooling:** Reuse MediaMTX connections
 - **Event System:** O(log n) client notification scaling
 - **Memory Management:** Object pooling for high-frequency operations
 
 **Concurrency Design:**
+
 - **Goroutine-Based:** Non-blocking concurrent operations
 - **Channel Communication:** Lock-free inter-component communication
 - **Context Cancellation:** Graceful operation termination
 - **Resource Limiting:** Bounded goroutine pools
 
-### 8.2 Reliability Architecture
+### 9.2 Reliability Architecture
 
 **Fault Tolerance:**
+
 - **Multi-Tier Fallback:** Snapshot capture tier degradation
 - **Circuit Breaker:** MediaMTX communication protection
 - **Health Monitoring:** Component status tracking
 - **Graceful Degradation:** Partial functionality under failure
 
 **Error Handling:**
+
 - **Structured Errors:** Consistent error response format
 - **Error Propagation:** Clean error context preservation
 - **Recovery Mechanisms:** Automatic retry with exponential backoff (PATCH), per-path serialization
@@ -1283,9 +1481,10 @@ end note
 @enduml
 ```
 
-### 8.3 Scalability Architecture
+### 9.3 Scalability Architecture
 
 **Horizontal Scaling Readiness:**
+
 - **Stateless Design:** Session state externalization capability; device map can be externalized if clustered
 - **Resource Separation:** Compute vs storage separation
 - **Event Distribution:** External event system integration ready
@@ -1293,11 +1492,12 @@ end note
 
 ---
 
-## 9. Design Principles
+## 10. Design Principles
 
-### 9.1 Architectural Principles Applied
+### 10.1 Architectural Principles Applied
 
 **Path Reuse Principle:**
+
 - MediaMTX paths are reusable resources, not per-session entities
 - One path can handle multiple functions (streaming + recording)
 - Path names are simple identifiers, not complex unique strings
@@ -1305,93 +1505,108 @@ end note
 - On-demand paths skip readiness checks and activate when accessed
 
 **Single Responsibility Principle:**
+
 - Each component has one clear responsibility
 - Clean separation between protocol, business logic, and hardware
 - Interface-based design enables component substitution
 
 **Dependency Inversion Principle:**
+
 - High-level modules don't depend on low-level modules
 - Both depend on abstractions (interfaces)
 - Enables testing and component replacement
 - **DeviceEventSource** abstracts udev/fsnotify vs polling
 
 **Open/Closed Principle:**
+
 - Components open for extension via interfaces
 - Closed for modification through stable contracts
 - Plugin architecture ready for future extensions
 
 ---
 
-## 10. Architectural Debt
+## 11. Architectural Debt
 
-### 10.1 Current Technical Debt
+### 11.1 Current Technical Debt
 
 **Performance Optimization Debt:**
+
 - FFmpeg process management could be optimized with process pooling
 - Memory allocation patterns could benefit from object pooling
 - Network connection pooling not yet implemented
 
 **Monitoring and Observability Debt:**
+
 - Distributed tracing not implemented
 - Advanced metrics collection could be enhanced
 - Performance analytics could be more comprehensive
 
 **Extensibility Debt:**
+
 - Plugin architecture interfaces defined but not fully implemented
 - External authentication providers not yet supported
 - Advanced camera types (IP cameras) have basic support only
 
-### 10.2 Debt Prioritization
+### 11.2 Debt Prioritization
 
 **High Priority:**
+
 - Process management optimization for production scalability
 - Enhanced error handling and recovery mechanisms
 
 **Medium Priority:**
+
 - Advanced monitoring and observability features
 - External authentication provider integration
 
 **Low Priority:**
+
 - Plugin architecture full implementation
 - Advanced analytics integration points
 
-### 10.3 Recording Architecture Decisions
+### 11.3 Recording Architecture Decisions
 
 **Decision: Stateless Recording Architecture**
+
 - **Rationale:** MediaMTX is the source of truth for recording state
 - **Benefits:** No local state management, simpler error handling, better scalability
 - **Implementation:** Query MediaMTX API for recording status, use timers only for auto-stop
 
 **Decision: Single Path for Recording and Streaming**
+
 - **Rationale:** MediaMTX supports simultaneous streaming and recording on one path
 - **Benefits:** Simpler architecture, resource efficiency, fewer FFmpeg processes
 - **Implementation:** Use PATCH to toggle recording flag on existing paths
 
 **Decision: Simple Path Naming Convention**
+
 - **Rationale:** Path names are identifiers, not filenames
 - **Convention:** camera0, camera1 (no timestamps or complex identifiers)
 - **File Naming:** Handled by MediaMTX recordPath patterns (%Y-%m-%d_%H-%M-%S)
 
 **Decision: Path Reuse Strategy**
+
 - **Rationale:** Paths persist across recording sessions
 - **Benefits:** Faster recording start, no path creation overhead
 - **Implementation:** Check for existing path before creation, reuse when possible
 
 **Decision: STANAG 4609 Compliance via fmp4**
+
 - **Rationale:** MediaMTX natively supports STANAG 4609 with fmp4 format
 - **Implementation:** Set recordFormat: "fmp4" in path configuration
 - **Benefits:** Military-grade video standard compliance without custom code
 
 **Decision: Minimal State Management**
+
 - **Rationale:** Only store what's absolutely necessary for operation
 - **State:** timers[device] → *time.Timer for auto-stop functionality
 - **Benefits:** Reduced complexity, no session state synchronization issues
 
 ---
 
-## 11. Testing Architecture
+## 12. Testing Architecture
 
-### 11.1 Test Hierarchy
+### 12.1 Test Hierarchy
 
 ```plantuml
 @startuml TestArchitecture
@@ -1430,7 +1645,7 @@ package "Test Helpers" {
 @enduml
 ```
 
-### 11.2 Test Environment Requirements (updated)
+### 12.2 Test Environment Requirements (updated)
 
 | Test Type | MediaMTX | Hardware | Duration | Purpose |
 |-----------|----------|----------|----------|---------|
@@ -1440,7 +1655,64 @@ package "Test Helpers" {
 
 ---
 
-**Document Status:** Production Architecture Documentation  
-**Last Updated:** 2025-09-12  
-**Review Cycle:** Quarterly architecture reviews  
-**Document Maintenance:** Architecture changes require PM and IV&V approval
+## 13. Service Discovery Integration Architecture
+
+### 13.1 Multi-Sensor Ecosystem Integration
+
+The MediaMTX Camera Service operates as a specialized video sensor container within a broader multi-sensor ecosystem, coordinating with:
+
+- **Service Discovery Aggregator**: Central control plane for identity, configuration, and discovery
+- **Platform Management Services**: Configuration distribution and identity management
+- **Peer Sensor Containers**: Serial sensors, environmental sensors, and other specialized services
+- **Client Applications**: Multi-platform applications discovering and consuming video services
+
+**Integration Pattern:**
+
+1. **Container → Aggregator**: Service registration, health reporting, capability announcement
+2. **Client → Aggregator**: Service discovery, endpoint resolution  
+3. **Client → Container**: Direct data consumption (streaming, recording, control)
+
+### 13.2 Always-On Container Principle
+
+- **Automatic Device Detection**: Containers detect and claim assigned video sources
+- **Hub OS Integration**: VID:PID-based device routing to appropriate containers
+- **Lifecycle Management**: Containers manage their own lifecycle and report health status
+- **Event-Driven Operation**: Graceful handling of device connect/disconnect events
+
+---
+
+## 14. JSON-RPC 2.0 Frontend Architecture
+
+### 14.1 Multi-Platform Client Support
+
+**Supported Platforms:**
+
+- **Android Applications**: Native mobile video integration
+- **iOS Applications**: Native mobile video integration
+- **Web Browsers**: JavaScript WebSocket integration
+- **Desktop Applications**: Cross-platform desktop support
+
+**Protocol Benefits:**
+
+- **Structured Communication**: JSON-RPC 2.0 standard compliance
+- **Real-time Operations**: WebSocket-based immediate response
+- **Event Notifications**: Push-based status updates
+- **Error Standardization**: Consistent error handling across platforms
+
+### 14.2 Client-Agnostic API Design
+
+**Unified Interface Benefits:**
+
+- Same API surface across all client platforms
+- Consistent authentication and authorization model
+- Platform-independent error handling
+- Simplified SDK development and maintenance
+
+---
+
+**Document Status:** IEEE 42010/Arc42/C4 Compliant Professional Architecture Guide  
+**Standards Applied:** IEEE 42010 (Stakeholder Concerns), Arc42 (Solution Strategy), C4 Model (Hierarchical Views)  
+**Scope Coverage:** Complete distributed video sensor ecosystem including JSON-RPC frontend, multi-tier snapshots, service discovery  
+**Last Updated:** 2025-01-18  
+**Review Cycle:** Quarterly architecture reviews with stakeholder validation  
+**Document Maintenance:** Architecture changes require formal approval process

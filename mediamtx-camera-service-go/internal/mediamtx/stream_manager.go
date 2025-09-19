@@ -26,6 +26,69 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
+// StreamMetadata represents metadata for stream tracking and analytics
+type StreamMetadata struct {
+	CameraID     string                 `json:"camera_id"`
+	DevicePath   string                 `json:"device_path"`
+	StartTime    time.Time              `json:"start_time"`
+	LastActivity time.Time              `json:"last_activity"`
+	ActivityLog  []StreamActivity       `json:"activity_log"`
+	IsActive     bool                   `json:"is_active"`
+	UseCase      StreamUseCase          `json:"use_case"`
+	Metadata     map[string]interface{} `json:"metadata"`
+	CreatedAt    time.Time              `json:"created_at"`
+}
+
+// StreamActivity represents an activity event in stream lifecycle
+type StreamActivity struct {
+	Timestamp   time.Time              `json:"timestamp"`
+	Event       string                 `json:"event"` // "created", "started", "stopped", "error"
+	Description string                 `json:"description"`
+	Data        map[string]interface{} `json:"data,omitempty"`
+}
+
+// AddActivity adds an activity event to the stream metadata
+func (sm *StreamMetadata) AddActivity(event, description string, data map[string]interface{}) {
+	activity := StreamActivity{
+		Timestamp:   time.Now(),
+		Event:       event,
+		Description: description,
+		Data:        data,
+	}
+
+	sm.ActivityLog = append(sm.ActivityLog, activity)
+	sm.LastActivity = activity.Timestamp
+
+	// Keep only last 50 activities to prevent memory bloat
+	if len(sm.ActivityLog) > 50 {
+		sm.ActivityLog = sm.ActivityLog[len(sm.ActivityLog)-50:]
+	}
+}
+
+// GetDuration returns the duration since stream start
+func (sm *StreamMetadata) GetDuration() time.Duration {
+	if sm.StartTime.IsZero() {
+		return 0
+	}
+	return time.Since(sm.StartTime)
+}
+
+// GetLastActivityISO returns last activity time in ISO 8601 format
+func (sm *StreamMetadata) GetLastActivityISO() string {
+	if sm.LastActivity.IsZero() {
+		return ""
+	}
+	return sm.LastActivity.Format(time.RFC3339)
+}
+
+// GetStartTimeISO returns start time in ISO 8601 format
+func (sm *StreamMetadata) GetStartTimeISO() string {
+	if sm.StartTime.IsZero() {
+		return ""
+	}
+	return sm.StartTime.Format(time.RFC3339)
+}
+
 // streamManager manages MediaMTX stream lifecycle and FFmpeg process coordination.
 //
 // RESPONSIBILITIES:
@@ -33,11 +96,13 @@ import (
 // - FFmpeg command generation and process coordination
 // - Stream status monitoring and health checks
 // - API-ready response formatting for stream operations
+// - Enhanced start time and activity tracking
 //
 // ARCHITECTURE:
 // - Operates with cameraID as primary identifier
 // - Converts to devicePath only when generating FFmpeg commands
 // - Uses MediaMTX api_types.go for all operations
+// - Enhanced metadata tracking for stream analytics
 //
 // API INTEGRATION:
 // - Returns JSON-RPC API-ready responses
@@ -50,10 +115,13 @@ type streamManager struct {
 	configIntegration *ConfigIntegration
 	logger            *logging.Logger
 	useCaseConfigs    map[StreamUseCase]UseCaseConfig
-	keepaliveReader   *RTSPKeepaliveReader // ADD THIS
+	keepaliveReader   *RTSPKeepaliveReader
 
 	// FFmpeg command caching for performance - using sync.Map for lock-free reads
 	ffmpegCommands sync.Map // device path -> cached FFmpeg command
+
+	// Enhanced stream tracking with metadata
+	streamMetadata sync.Map // cameraID -> *StreamMetadata
 }
 
 // NewStreamManager creates a new MediaMTX stream manager
@@ -149,6 +217,29 @@ func (sm *streamManager) startStreamForUseCase(ctx context.Context, cameraID str
 		"stream_name": streamName,
 	}).Info("Starting stream with cameraID as path name")
 
+	// Create or update stream metadata for tracking
+	now := time.Now()
+	metadata := &StreamMetadata{
+		CameraID:     cameraID,
+		DevicePath:   devicePath,
+		StartTime:    now,
+		LastActivity: now,
+		ActivityLog:  []StreamActivity{},
+		IsActive:     false, // Will be set to true when stream is successfully created
+		UseCase:      useCase,
+		Metadata:     make(map[string]interface{}),
+		CreatedAt:    now,
+	}
+
+	metadata.AddActivity("creating", "Stream creation initiated", map[string]interface{}{
+		"use_case":    useCase,
+		"device_path": devicePath,
+		"stream_name": streamName,
+	})
+
+	// Store metadata for tracking
+	sm.streamMetadata.Store(cameraID, metadata)
+
 	// Build FFmpeg command using devicePath (only place where devicePath is needed)
 	ffmpegCommand := sm.buildFFmpegCommand(devicePath, streamName)
 
@@ -194,6 +285,16 @@ func (sm *streamManager) startStreamForUseCase(ctx context.Context, cameraID str
 
 		if isAlreadyExists {
 			sm.logger.WithField("stream_name", streamName).Info("MediaMTX path already exists, treating as success")
+
+			// Update metadata for existing stream
+			if metadata, exists := sm.streamMetadata.Load(cameraID); exists {
+				streamMeta := metadata.(*StreamMetadata)
+				streamMeta.AddActivity("reused", "Existing MediaMTX path reused", map[string]interface{}{
+					"stream_name": streamName,
+				})
+				streamMeta.IsActive = true
+			}
+
 			// Return a mock stream response for idempotent success
 			stream := &Path{
 				Name:     streamName,
@@ -209,6 +310,16 @@ func (sm *streamManager) startStreamForUseCase(ctx context.Context, cameraID str
 
 	// PathManager.CreatePath succeeded - create stream response
 	sm.logger.WithField("stream_name", streamName).Info("MediaMTX path created successfully")
+
+	// Update metadata for successful creation
+	if metadata, exists := sm.streamMetadata.Load(cameraID); exists {
+		streamMeta := metadata.(*StreamMetadata)
+		streamMeta.AddActivity("created", "MediaMTX path created successfully", map[string]interface{}{
+			"stream_name": streamName,
+			"on_demand":   true,
+		})
+		streamMeta.IsActive = true
+	}
 
 	stream := &Path{
 		Name:     streamName,
@@ -542,13 +653,28 @@ func (sm *streamManager) GetStreamStatus(ctx context.Context, cameraID string) (
 		StreamURL:    sm.GenerateStreamURL(cameraID),
 		Viewers:      len(stream.Readers),
 		BytesSent:    stream.BytesSent,
-		StartTime:    "", // TODO: Add proper start time tracking
-		LastActivity: "", // TODO: Add proper activity tracking
+		StartTime:    "",
+		LastActivity: "",
 	}
 
-	if stream.ReadyTime != nil {
-		response.StartTime = *stream.ReadyTime
-		response.LastActivity = *stream.ReadyTime
+	// Enhanced start time and activity tracking using stream metadata
+	if metadata, exists := sm.streamMetadata.Load(cameraID); exists {
+		streamMeta := metadata.(*StreamMetadata)
+		response.StartTime = streamMeta.GetStartTimeISO()
+		response.LastActivity = streamMeta.GetLastActivityISO()
+
+		sm.logger.WithFields(logging.Fields{
+			"camera_id":     cameraID,
+			"start_time":    response.StartTime,
+			"last_activity": response.LastActivity,
+			"duration":      streamMeta.GetDuration(),
+		}).Debug("Enhanced stream status with metadata tracking")
+	} else {
+		// Fallback to stream ReadyTime if metadata not available
+		if stream.ReadyTime != nil {
+			response.StartTime = *stream.ReadyTime
+			response.LastActivity = *stream.ReadyTime
+		}
 	}
 
 	return response, nil
@@ -626,12 +752,33 @@ func (sm *streamManager) StopStream(ctx context.Context, cameraID string) error 
 	// Delete the stream from MediaMTX
 	err := sm.DeleteStream(ctx, streamName)
 	if err != nil {
+		// Update metadata for error
+		if metadata, exists := sm.streamMetadata.Load(cameraID); exists {
+			streamMeta := metadata.(*StreamMetadata)
+			streamMeta.AddActivity("error", "Failed to stop stream", map[string]interface{}{
+				"error": err.Error(),
+			})
+		}
+
 		sm.logger.WithFields(logging.Fields{
 			"cameraID":    cameraID,
 			"stream_name": streamName,
 			"error":       err.Error(),
 		}).Error("Failed to stop stream")
 		return fmt.Errorf("failed to stop stream: %w", err)
+	}
+
+	// Update metadata for successful stop and clean up
+	if metadata, exists := sm.streamMetadata.Load(cameraID); exists {
+		streamMeta := metadata.(*StreamMetadata)
+		streamMeta.AddActivity("stopped", "Stream stopped successfully", map[string]interface{}{
+			"stream_name": streamName,
+			"duration":    streamMeta.GetDuration().String(),
+		})
+		streamMeta.IsActive = false
+
+		// Clean up metadata after successful stop (optional)
+		// sm.streamMetadata.Delete(cameraID)
 	}
 
 	sm.logger.WithFields(logging.Fields{

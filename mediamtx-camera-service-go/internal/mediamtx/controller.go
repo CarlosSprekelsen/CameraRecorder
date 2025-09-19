@@ -268,7 +268,7 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 	streamManager := NewStreamManager(client, pathManager, mediaMTXConfig, recordingConfig, configIntegration, logger)
 
 	// Create recording manager (using existing client and pathManager)
-	recordingManager := NewRecordingManager(client, pathManager, streamManager, mediaMTXConfig, recordingConfig, configIntegration, logger)
+	recordingManager := NewRecordingManager(client, pathManager, streamManager, ffmpegManager, mediaMTXConfig, recordingConfig, configIntegration, logger)
 
 	// Create snapshot manager with configuration integration
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)

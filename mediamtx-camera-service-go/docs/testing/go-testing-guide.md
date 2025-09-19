@@ -7,12 +7,14 @@
 ## 1. Core Principles
 
 ### 🚨 **CRITICAL: Authorization & Documentation**
+
 - **STOP before modifying any code** - Investigate and understand first
 - **Get explicit authorization** before making changes
 - **Document findings** with evidence
 - **Maintain requirements traceability** - Every test must trace to requirements
 
 ### 🚨 **API Documentation is Ground Truth**
+
 - **API Documentation**: `docs/api/json_rpc_methods.md` - ONLY source for API behavior
 - **Health Endpoints**: `docs/api/health-endpoints.md` - ONLY source for health API
 - **Tests validate API compliance** - Not implementation details
@@ -21,6 +23,7 @@
 ## 2. Test Organization
 
 ### Directory Structure
+
 ```
 internal/                          # Source + unit tests
 ├── mediamtx/
@@ -36,10 +39,12 @@ tests/                             # Integration & performance tests
 ```
 
 ### Package Declaration Rules
+
 - **Unit tests**: `package mediamtx` (same as source - can test private functions)
 - **Integration tests**: `package mediamtx_test` (external - only public API)
 
 ### File Naming Convention
+
 - **Unit**: `<component>_test.go` (e.g., `client_test.go`)
 - **Integration**: `test_<feature>_integration.go`
 - **One file per feature** - no variants (_real, _v2)
@@ -47,6 +52,7 @@ tests/                             # Integration & performance tests
 ## 3. Requirements Traceability (MANDATORY)
 
 ### Test File Header Format
+
 ```go
 /*
 Module: MediaMTX Health Monitoring
@@ -68,6 +74,7 @@ func TestHealthMonitor_CheckHealth(t *testing.T) {
 ```
 
 ### Requirements Coverage Tracking
+
 - **Document**: `docs/testing/requirements_coverage_analysis.md`
 - **Baseline**: 161 frozen requirements
 - **Target Coverage**:
@@ -78,11 +85,13 @@ func TestHealthMonitor_CheckHealth(t *testing.T) {
 ## 4. Running Tests
 
 ### Before Running Any Tests
+
 ```bash
 source .test_env  # Sets JWT secret and test paths
 ```
 
 ### Unit Tests (Standard Go)
+
 ```bash
 go test ./internal/mediamtx/              # Run all
 go test ./internal/mediamtx/ -v           # Verbose
@@ -91,12 +100,14 @@ go test ./internal/mediamtx/ -run TestHealth  # Specific test
 ```
 
 ### Integration Tests (Require Build Tags)
+
 ```bash
 go test -tags=integration ./tests/integration/
 go test -tags=integration ./tests/integration/ -run TestMediaMTX
 ```
 
 ### Build Tags for Integration Tests
+
 ```go
 //go:build integration
 // +build integration
@@ -107,12 +118,14 @@ package mediamtx_test
 ## 5. Testing Approach
 
 ### Use Real Components
+
 - ✅ **Real MediaMTX service** (via systemd)
 - ✅ **Real filesystem** (use temp directories)  
 - ✅ **Real WebSocket connections**
 - ✅ **Real JWT tokens** with test secrets
 
 ### Only Mock External Dependencies
+
 - External APIs (third-party services)
 - Time operations (when testing timeouts)
 - Hardware not available in test environment
@@ -120,6 +133,7 @@ package mediamtx_test
 ## 6. API Compliance Testing
 
 ### Every API Test Must Validate Against Documentation
+
 ```go
 func TestGetCameraStatus_APICompliance(t *testing.T) {
     // REQ-API-002: JSON-RPC 2.0 protocol implementation
@@ -147,6 +161,7 @@ func TestGetCameraStatus_APICompliance(t *testing.T) {
 ## 7. Common Test Patterns
 
 ### Unit Test Example
+
 ```go
 // internal/mediamtx/client_test.go
 package mediamtx
@@ -167,6 +182,7 @@ func TestClient_parseHealthResponse(t *testing.T) {
 ```
 
 ### Integration Test Example
+
 ```go
 // tests/integration/test_mediamtx_integration.go
 //go:build integration
@@ -191,6 +207,7 @@ func TestMediaMTX_RealSystemIntegration(t *testing.T) {
 ```
 
 ### Using Test Utilities
+
 ```go
 import "github.com/camerarecorder/mediamtx-camera-service-go/tests/utils"
 
@@ -208,6 +225,7 @@ func TestWithEnvironment(t *testing.T) {
 ## 8. Port Management
 
 ### Test Servers (Use Dynamic Ports)
+
 ```go
 // For test WebSocket servers - use GetFreePort
 port := testtestutils.GetFreePort()
@@ -216,6 +234,7 @@ server.Start()
 ```
 
 ### Real Services (Keep Hardcoded)
+
 ```go
 // MediaMTX ports - DO NOT CHANGE
 mediamtx.NewClient("http://localhost:9997")  // API port
@@ -234,6 +253,7 @@ hlsURL := "http://localhost:8888/"            // HLS port
 ## 10. Quality Checklist
 
 ### Before Submitting Tests
+
 - [ ] **Requirements documented** in test file header
 - [ ] **REQ-XXX references** in test functions
 - [ ] **API compliance** validated against documentation
@@ -254,12 +274,14 @@ hlsURL := "http://localhost:8888/"            // HLS port
 ## 11. Test Categories
 
 ### Primary Classification (Required)
+
 - **Unit**: Component isolation tests
 - **Integration**: Component interaction tests
 - **Performance**: Load and stress tests
 - **Security**: Authentication and authorization tests
 
 ### Build Tag Usage
+
 ```go
 // Unit tests - NO tags needed
 package mediamtx
@@ -278,7 +300,9 @@ package performance_test
 ## 12. Compliance Requirements
 
 ### API Compliance Audit
+
 Every test calling server APIs must:
+
 1. Use exact request format from API documentation
 2. Validate all documented response fields
 3. Check documented error codes and messages
@@ -286,6 +310,7 @@ Every test calling server APIs must:
 5. Never test undocumented behavior
 
 ### Test Quality Gates
+
 - **Critical Requirements**: 100% coverage required
 - **High Priority Requirements**: 95% coverage required
 - **Overall Coverage**: 90% coverage required
@@ -314,6 +339,7 @@ go test ./internal/mediamtx/ -run TestHealthMonitor
 ```
 
 **Remember**: 
+
 - Requirements traceability is MANDATORY
 - API documentation is the source of truth
 - Get authorization before changes
