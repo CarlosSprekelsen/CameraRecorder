@@ -151,7 +151,7 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 			Warn("Converting 'publisher' source to on-demand configuration")
 
 		// Check if this is for a camera device
-		devicePath := pm.getDevicePathFromCameraIdentifier(name)
+		devicePath := GetDevicePathFromCameraIdentifier(name)
 		if devicePath != "" && strings.HasPrefix(devicePath, "/dev/video") {
 			// Create an on-demand FFmpeg command for the camera
 			source = fmt.Sprintf(
@@ -180,7 +180,7 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 	}
 
 	// Get device path for logging context
-	devicePath := pm.getDevicePathFromCameraIdentifier(name)
+	devicePath := GetDevicePathFromCameraIdentifier(name)
 	if devicePath == "" {
 		devicePath = source // fallback to source if not a camera identifier
 	}
@@ -384,7 +384,7 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config *PathC
 	}
 
 	// Get device path for logging context
-	devicePath := pm.getDevicePathFromCameraIdentifier(name)
+	devicePath := GetDevicePathFromCameraIdentifier(name)
 	if devicePath == "" {
 		devicePath = name // fallback if not a camera identifier
 	}
@@ -848,7 +848,7 @@ func (pm *pathManager) GetCameraStatus(ctx context.Context, device string) (*Get
 	}
 
 	// Get actual device path using abstraction layer
-	devicePath := pm.getDevicePathFromCameraIdentifier(device)
+	devicePath := GetDevicePathFromCameraIdentifier(device)
 
 	// Get camera from camera monitor
 	cameraDevice, exists := pm.cameraMonitor.GetDevice(devicePath)
@@ -892,7 +892,7 @@ func (pm *pathManager) GetCameraCapabilities(ctx context.Context, device string)
 	}
 
 	// Get actual device path using abstraction layer
-	devicePath := pm.getDevicePathFromCameraIdentifier(device)
+	devicePath := GetDevicePathFromCameraIdentifier(device)
 
 	// Get camera from camera monitor
 	cameraDevice, exists := pm.cameraMonitor.GetDevice(devicePath)
@@ -957,7 +957,7 @@ func (pm *pathManager) ValidateCameraDevice(ctx context.Context, device string) 
 	}
 
 	// Get actual device path using abstraction layer
-	devicePath := pm.getDevicePathFromCameraIdentifier(device)
+	devicePath := GetDevicePathFromCameraIdentifier(device)
 
 	// Check if camera exists
 	_, exists := pm.cameraMonitor.GetDevice(devicePath)
@@ -976,7 +976,7 @@ func (pm *pathManager) ValidateCameraDevice(ctx context.Context, device string) 
 func (pm *pathManager) GetPathForCamera(cameraID string) (string, bool) {
 	// Direct mapping: camera0 -> camera0 (MediaMTX path name = camera identifier)
 	// But check if device actually exists
-	devicePath := pm.getDevicePathFromCameraIdentifier(cameraID)
+	devicePath := GetDevicePathFromCameraIdentifier(cameraID)
 
 	pm.mappingMutex.RLock()
 	defer pm.mappingMutex.RUnlock()
@@ -1004,14 +1004,14 @@ func (pm *pathManager) GetCameraForPath(pathName string) (string, bool) {
 	}
 
 	// Return camera identifier using abstraction layer
-	cameraID := pm.getCameraIdentifierFromDevicePath(devicePath)
+	cameraID := GetMediaMTXPathName(devicePath)
 	return cameraID, true
 }
 
 // GetDevicePathForCamera gets the actual USB device path for a camera identifier
 // This is the main abstraction: camera0 -> /dev/video0
 func (pm *pathManager) GetDevicePathForCamera(cameraID string) (string, bool) {
-	devicePath := pm.getDevicePathFromCameraIdentifier(cameraID)
+	devicePath := GetDevicePathFromCameraIdentifier(cameraID)
 
 	// Check if device actually exists via camera monitor
 	if pm.cameraMonitor != nil {
@@ -1026,7 +1026,7 @@ func (pm *pathManager) GetDevicePathForCamera(cameraID string) (string, bool) {
 // GetCameraForDevicePath gets the camera identifier for a USB device path
 // This is the reverse abstraction: /dev/video0 -> camera0
 func (pm *pathManager) GetCameraForDevicePath(devicePath string) (string, bool) {
-	cameraID := pm.getCameraIdentifierFromDevicePath(devicePath)
+	cameraID := GetMediaMTXPathName(devicePath)
 
 	// Check if device actually exists via camera monitor
 	if pm.cameraMonitor != nil {
@@ -1036,32 +1036,6 @@ func (pm *pathManager) GetCameraForDevicePath(devicePath string) (string, bool) 
 
 	// Fallback: return converted identifier without validation
 	return cameraID, true
-}
-
-// Abstraction Layer Methods - Consolidated in PathManager
-
-// getCameraIdentifierFromDevicePath converts a device path to a camera identifier
-// Example: /dev/video0 -> camera0
-func (pm *pathManager) getCameraIdentifierFromDevicePath(devicePath string) string {
-	// Extract the number from /dev/video{N}
-	if strings.HasPrefix(devicePath, "/dev/video") {
-		number := strings.TrimPrefix(devicePath, "/dev/video")
-		return fmt.Sprintf("camera%s", number)
-	}
-	// Fallback: return the device path as-is
-	return devicePath
-}
-
-// getDevicePathFromCameraIdentifier converts a camera identifier to a device path
-// Example: camera0 -> /dev/video0
-func (pm *pathManager) getDevicePathFromCameraIdentifier(cameraID string) string {
-	// Extract the number from camera{N}
-	if strings.HasPrefix(cameraID, "camera") {
-		number := strings.TrimPrefix(cameraID, "camera")
-		return fmt.Sprintf("/dev/video%s", number)
-	}
-	// If input is a device path, return as-is
-	return cameraID
 }
 
 // GetMetrics returns the current path manager metrics
