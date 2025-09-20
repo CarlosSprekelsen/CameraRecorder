@@ -14,6 +14,8 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package mediamtx
 
 import (
+	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -249,4 +251,24 @@ func (ri *RecordingInfo) GetEndTimeISO() string {
 		return endTime.Format(time.RFC3339)
 	}
 	return ""
+}
+
+// StopAll stops all active recording timers with context timeout
+func (rtm *RecordingTimerManager) StopAll(ctx context.Context) error {
+	var stoppedTimers []string
+
+	// Collect all timer keys
+	rtm.timers.Range(func(key, value interface{}) bool {
+		cameraID := key.(string)
+		stoppedTimers = append(stoppedTimers, cameraID)
+		return true
+	})
+
+	// Stop each timer
+	for _, cameraID := range stoppedTimers {
+		rtm.DeleteTimer(cameraID)
+	}
+
+	rtm.logger.WithField("stopped_count", fmt.Sprintf("%d", len(stoppedTimers))).Info("All recording timers stopped")
+	return nil
 }

@@ -301,6 +301,10 @@ type CameraConfig struct {
 	// Device discovery configuration
 	DiscoveryMode        string  `mapstructure:"discovery_mode"`         // "event-first" (default) or "poll-only"
 	FallbackPollInterval float64 `mapstructure:"fallback_poll_interval"` // default 90s for reconcile fallback
+
+	// Resource management configuration
+	MaxEventHandlerGoroutines int           `mapstructure:"max_event_handler_goroutines"` // default 10
+	EventHandlerTimeout       time.Duration `mapstructure:"event_handler_timeout"`        // default 5s
 }
 
 // LoggingConfig represents logging configuration.
@@ -333,6 +337,10 @@ type RecordingConfig struct {
 	FileNamePattern  string `mapstructure:"file_name_pattern"`  // e.g., "%device_%Y%m%d_%H%M%S"
 	UseDeviceSubdirs bool   `mapstructure:"use_device_subdirs"` // Create subdirs per device
 	RecordFormat     string `mapstructure:"record_format"`      // e.g., "fmp4" for STANAG 4609
+
+	// Resource management configuration for RTSP keepalive processes
+	MaxRestartCount int           `mapstructure:"max_restart_count"` // default 3
+	ProcessTimeout  time.Duration `mapstructure:"process_timeout"`   // default 5s
 }
 
 // SnapshotConfig represents snapshot configuration.

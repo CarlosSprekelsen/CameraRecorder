@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os/exec"
 	"sync"
+	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
@@ -35,6 +37,11 @@ type RTSPKeepaliveReader struct {
 	config        *config.MediaMTXConfig
 	logger        *logging.Logger
 	activeReaders sync.Map // map[pathName]*keepaliveSession
+
+	// Resource management
+	running         int32 // Atomic flag for running state
+	maxRestartCount int   // Maximum restart attempts per session
+	resourceStats   *KeepaliveResourceStats
 }
 
 type keepaliveSession struct {
@@ -43,13 +50,45 @@ type keepaliveSession struct {
 	cmd      *exec.Cmd
 	cancel   context.CancelFunc
 	done     chan struct{}
+
+	// Resource management
+	restartCount int32 // Atomic counter for restart attempts
+	startTime    time.Time
+}
+
+// KeepaliveResourceStats tracks resource usage for the keepalive reader
+type KeepaliveResourceStats struct {
+	ActiveSessions       int64 `json:"active_sessions"`
+	TotalSessionsStarted int64 `json:"total_sessions_started"`
+	TotalSessionsStopped int64 `json:"total_sessions_stopped"`
+	ProcessRestarts      int64 `json:"process_restarts"`
+	ProcessFailures      int64 `json:"process_failures"`
 }
 
 // NewRTSPKeepaliveReader creates a new keepalive reader manager
 func NewRTSPKeepaliveReader(config *config.MediaMTXConfig, logger *logging.Logger) *RTSPKeepaliveReader {
 	return &RTSPKeepaliveReader{
-		config: config,
-		logger: logger,
+		config:          config,
+		logger:          logger,
+		running:         0, // Initially not running
+		maxRestartCount: 3, // Default maximum restart attempts
+		resourceStats:   &KeepaliveResourceStats{},
+	}
+}
+
+// NewRTSPKeepaliveReaderWithConfig creates a new keepalive reader manager with recording config
+func NewRTSPKeepaliveReaderWithConfig(config *config.MediaMTXConfig, recordingConfig *config.RecordingConfig, logger *logging.Logger) *RTSPKeepaliveReader {
+	maxRestartCount := 3 // Default
+	if recordingConfig != nil && recordingConfig.MaxRestartCount > 0 {
+		maxRestartCount = recordingConfig.MaxRestartCount
+	}
+
+	return &RTSPKeepaliveReader{
+		config:          config,
+		logger:          logger,
+		running:         0, // Initially not running
+		maxRestartCount: maxRestartCount,
+		resourceStats:   &KeepaliveResourceStats{},
 	}
 }
 
@@ -72,10 +111,12 @@ func (kr *RTSPKeepaliveReader) StartKeepalive(ctx context.Context, pathName stri
 	ctx, cancel := context.WithCancel(ctx)
 
 	session := &keepaliveSession{
-		pathName: pathName,
-		rtspURL:  rtspURL,
-		cancel:   cancel,
-		done:     make(chan struct{}),
+		pathName:     pathName,
+		rtspURL:      rtspURL,
+		cancel:       cancel,
+		done:         make(chan struct{}),
+		restartCount: 0,
+		startTime:    time.Now(),
 	}
 
 	// Start the keepalive reader
@@ -86,6 +127,10 @@ func (kr *RTSPKeepaliveReader) StartKeepalive(ctx context.Context, pathName stri
 
 	// Store the session
 	kr.activeReaders.Store(pathName, session)
+
+	// Update statistics
+	atomic.AddInt64(&kr.resourceStats.ActiveSessions, 1)
+	atomic.AddInt64(&kr.resourceStats.TotalSessionsStarted, 1)
 
 	kr.logger.WithFields(logging.Fields{
 		"path":     pathName,
@@ -113,12 +158,17 @@ func (kr *RTSPKeepaliveReader) StopKeepalive(pathName string) error {
 	case <-session.done:
 		kr.logger.WithField("path", pathName).Info("Keepalive reader stopped gracefully")
 	case <-time.After(5 * time.Second):
-		// Force kill if not stopped gracefully
+		// Force kill process group if not stopped gracefully
 		if session.cmd != nil && session.cmd.Process != nil {
-			session.cmd.Process.Kill()
+			// Kill the entire process group to prevent orphaned processes
+			syscall.Kill(-session.cmd.Process.Pid, syscall.SIGKILL)
 		}
-		kr.logger.WithField("path", pathName).Warn("Keepalive reader force stopped")
+		kr.logger.WithField("path", pathName).Warn("Keepalive reader force stopped with process group kill")
 	}
+
+	// Update statistics
+	atomic.AddInt64(&kr.resourceStats.ActiveSessions, -1)
+	atomic.AddInt64(&kr.resourceStats.TotalSessionsStopped, 1)
 
 	return nil
 }
@@ -134,6 +184,12 @@ func (kr *RTSPKeepaliveReader) startReader(ctx context.Context, session *keepali
 		"-f", "null", // Null output format
 		"-", // Output to stdout (discarded)
 	)
+
+	// Set process group for proper cleanup - prevents orphaned processes
+	cmd.SysProcAttr = &syscall.SysProcAttr{
+		Setpgid: true, // Create new process group
+		Pgid:    0,    // Use process PID as group ID
+	}
 
 	// Suppress FFmpeg output unless debugging
 	// Note: We'll suppress output by default for cleaner logs
@@ -179,7 +235,8 @@ func (kr *RTSPKeepaliveReader) monitorReader(ctx context.Context, session *keepa
 		case <-ctx.Done():
 			// Context cancelled, stop monitoring
 			if session.cmd != nil && session.cmd.Process != nil {
-				session.cmd.Process.Kill()
+				// Kill the entire process group
+				syscall.Kill(-session.cmd.Process.Pid, syscall.SIGTERM)
 			}
 			return
 		default:
@@ -193,14 +250,36 @@ func (kr *RTSPKeepaliveReader) monitorReader(ctx context.Context, session *keepa
 				return
 			default:
 				if err != nil {
+					restartCount := atomic.AddInt32(&session.restartCount, 1)
+
+					// Check restart limit
+					if int(restartCount) > kr.maxRestartCount {
+						atomic.AddInt64(&kr.resourceStats.ProcessFailures, 1)
+						kr.logger.WithFields(logging.Fields{
+							"path":          session.pathName,
+							"restart_count": restartCount,
+							"max_restarts":  kr.maxRestartCount,
+							"error":         err.Error(),
+						}).Error("Keepalive reader exceeded maximum restart attempts, stopping")
+						return
+					}
+
+					atomic.AddInt64(&kr.resourceStats.ProcessRestarts, 1)
 					kr.logger.WithFields(logging.Fields{
-						"path":  session.pathName,
-						"error": err.Error(),
+						"path":          session.pathName,
+						"restart_count": restartCount,
+						"error":         err.Error(),
 					}).Warn("Keepalive reader exited, restarting...")
 
-					// Wait before restart to avoid rapid cycling using context-aware timeout
+					// Exponential backoff based on restart count
+					backoffDuration := time.Duration(restartCount) * 2 * time.Second
+					if backoffDuration > 30*time.Second {
+						backoffDuration = 30 * time.Second // Cap at 30 seconds
+					}
+
+					// Wait before restart using context-aware timeout
 					select {
-					case <-time.After(2 * time.Second):
+					case <-time.After(backoffDuration):
 						// Backoff period completed, proceed with restart
 					case <-ctx.Done():
 						// Context cancelled, exit early
@@ -209,7 +288,11 @@ func (kr *RTSPKeepaliveReader) monitorReader(ctx context.Context, session *keepa
 
 					// Restart the reader
 					if err := kr.startReader(ctx, session); err != nil {
-						kr.logger.WithError(err).Error("Failed to restart keepalive reader")
+						atomic.AddInt64(&kr.resourceStats.ProcessFailures, 1)
+						kr.logger.WithError(err).WithFields(logging.Fields{
+							"path":          session.pathName,
+							"restart_count": restartCount,
+						}).Error("Failed to restart keepalive reader")
 						return
 					}
 				}
@@ -241,4 +324,92 @@ func (kr *RTSPKeepaliveReader) GetActiveCount() int {
 func (kr *RTSPKeepaliveReader) IsActive(pathName string) bool {
 	_, exists := kr.activeReaders.Load(pathName)
 	return exists
+}
+
+// Resource Management Methods - Implementation of camera.ResourceManager and camera.CleanupManager interfaces
+
+// Start initializes the keepalive reader manager (implements camera.ResourceManager)
+func (kr *RTSPKeepaliveReader) Start(ctx context.Context) error {
+	if !atomic.CompareAndSwapInt32(&kr.running, 0, 1) {
+		return fmt.Errorf("keepalive reader manager is already running")
+	}
+
+	kr.logger.Info("RTSP keepalive reader manager started")
+	return nil
+}
+
+// Stop gracefully shuts down the keepalive reader manager (implements camera.ResourceManager)
+func (kr *RTSPKeepaliveReader) Stop(ctx context.Context) error {
+	if !atomic.CompareAndSwapInt32(&kr.running, 1, 0) {
+		kr.logger.Debug("Keepalive reader manager is already stopped")
+		return nil // Idempotent
+	}
+
+	kr.logger.Info("Stopping RTSP keepalive reader manager...")
+
+	// Stop all active readers
+	kr.StopAll()
+
+	kr.logger.Info("RTSP keepalive reader manager stopped successfully")
+	return nil
+}
+
+// IsRunning returns whether the keepalive reader manager is running (implements camera.ResourceManager)
+func (kr *RTSPKeepaliveReader) IsRunning() bool {
+	return atomic.LoadInt32(&kr.running) == 1
+}
+
+// Cleanup performs resource cleanup (implements camera.CleanupManager)
+func (kr *RTSPKeepaliveReader) Cleanup(ctx context.Context) error {
+	kr.logger.Info("Performing keepalive reader cleanup...")
+
+	// Force stop all active sessions
+	var sessionPaths []string
+	kr.activeReaders.Range(func(key, value interface{}) bool {
+		pathName := key.(string)
+		sessionPaths = append(sessionPaths, pathName)
+		return true
+	})
+
+	for _, pathName := range sessionPaths {
+		if sessionI, exists := kr.activeReaders.LoadAndDelete(pathName); exists {
+			session := sessionI.(*keepaliveSession)
+
+			// Cancel context
+			session.cancel()
+
+			// Force kill process group immediately during cleanup
+			if session.cmd != nil && session.cmd.Process != nil {
+				syscall.Kill(-session.cmd.Process.Pid, syscall.SIGKILL)
+			}
+
+			kr.logger.WithField("path", pathName).Debug("Force stopped keepalive reader during cleanup")
+		}
+	}
+
+	kr.logger.WithFields(logging.Fields{
+		"stopped_sessions": len(sessionPaths),
+	}).Info("Keepalive reader cleanup completed")
+	return nil
+}
+
+// GetResourceStats returns current resource usage statistics (implements camera.CleanupManager)
+func (kr *RTSPKeepaliveReader) GetResourceStats() map[string]interface{} {
+	// Update active sessions count
+	activeCount := int64(0)
+	kr.activeReaders.Range(func(_, _ interface{}) bool {
+		activeCount++
+		return true
+	})
+	atomic.StoreInt64(&kr.resourceStats.ActiveSessions, activeCount)
+
+	return map[string]interface{}{
+		"running":                kr.IsRunning(),
+		"active_sessions":        atomic.LoadInt64(&kr.resourceStats.ActiveSessions),
+		"total_sessions_started": atomic.LoadInt64(&kr.resourceStats.TotalSessionsStarted),
+		"total_sessions_stopped": atomic.LoadInt64(&kr.resourceStats.TotalSessionsStopped),
+		"process_restarts":       atomic.LoadInt64(&kr.resourceStats.ProcessRestarts),
+		"process_failures":       atomic.LoadInt64(&kr.resourceStats.ProcessFailures),
+		"max_restart_count":      kr.maxRestartCount,
+	}
 }

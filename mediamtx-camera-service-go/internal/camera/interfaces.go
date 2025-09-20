@@ -124,6 +124,36 @@ type MonitorStats struct {
 	// Removed mu sync.RWMutex - using atomic operations instead
 }
 
+// ResourceManager interface for components that need lifecycle management
+type ResourceManager interface {
+	Start(ctx context.Context) error
+	Stop(ctx context.Context) error
+	IsRunning() bool
+}
+
+// CleanupManager interface for components that need resource cleanup
+type CleanupManager interface {
+	Cleanup(ctx context.Context) error
+	GetResourceStats() map[string]interface{}
+}
+
+// BoundedWorkerPool interface for managing goroutine pools with resource limits
+type BoundedWorkerPool interface {
+	ResourceManager // Includes Start, Stop, IsRunning methods
+	Submit(ctx context.Context, task func(context.Context)) error
+	GetStats() WorkerPoolStats
+}
+
+// WorkerPoolStats represents statistics for a worker pool
+type WorkerPoolStats struct {
+	ActiveWorkers  int   `json:"active_workers"`
+	QueuedTasks    int   `json:"queued_tasks"`
+	CompletedTasks int64 `json:"completed_tasks"`
+	FailedTasks    int64 `json:"failed_tasks"`
+	TimeoutTasks   int64 `json:"timeout_tasks"`
+	MaxWorkers     int   `json:"max_workers"`
+}
+
 // CapabilityDetectionResult represents the result of device capability detection
 type CapabilityDetectionResult struct {
 	Detected              bool                   `json:"detected"`

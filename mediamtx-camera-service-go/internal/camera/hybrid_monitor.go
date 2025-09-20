@@ -111,6 +111,9 @@ type HybridCameraMonitor struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	wg     sync.WaitGroup
+
+	// Bounded worker pool for event handlers
+	eventWorkerPool BoundedWorkerPool
 }
 
 // CameraSource represents a camera source configuration
@@ -228,6 +231,19 @@ func NewHybridCameraMonitor(
 
 	// Initialize camera sources from configuration
 	monitor.initializeCameraSources()
+
+	// Initialize bounded worker pool for event handlers
+	// Use configuration values or defaults
+	maxWorkers := 10               // Default
+	taskTimeout := 5 * time.Second // Default
+	if cfg.Camera.MaxEventHandlerGoroutines > 0 {
+		maxWorkers = cfg.Camera.MaxEventHandlerGoroutines
+	}
+	if cfg.Camera.EventHandlerTimeout > 0 {
+		taskTimeout = cfg.Camera.EventHandlerTimeout
+	}
+
+	monitor.eventWorkerPool = NewBoundedWorkerPool(maxWorkers, taskTimeout, logger)
 
 	// Register for configuration hot-reload updates
 	monitor.configManager.AddUpdateCallback(monitor.handleConfigurationUpdate)
@@ -423,6 +439,18 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 	atomic.StoreInt64(&m.stats.ActiveTasks, 1)
 	m.stateLock.Unlock()
 
+	// Start the event worker pool
+	if err := m.eventWorkerPool.Start(m.ctx); err != nil {
+		// Re-acquire mutex for cleanup
+		m.startStopMutex.Lock()
+		atomic.StoreInt32(&m.running, 0)
+		if m.deviceEventSource != nil {
+			m.deviceEventSource.Close()
+		}
+		m.logger.WithError(err).WithField("mon_start_id", monStartID).Error("Failed to start event worker pool")
+		return fmt.Errorf("failed to start event worker pool: %w", err)
+	}
+
 	// Start monitoring goroutine AFTER releasing lock
 	m.logger.WithFields(logging.Fields{
 		"mon_start_id":     monStartID,
@@ -562,6 +590,13 @@ func (m *HybridCameraMonitor) Stop(ctx context.Context) error {
 
 	// Device event source is now properly closed and owned by this monitor
 
+	// Stop the event worker pool
+	if m.eventWorkerPool != nil {
+		if err := m.eventWorkerPool.Stop(ctx); err != nil {
+			m.logger.WithError(err).Warn("Error stopping event worker pool")
+		}
+	}
+
 	// Set running flag to 0 after device event source is closed
 	atomic.StoreInt32(&m.running, 0)
 
@@ -626,6 +661,31 @@ func (m *HybridCameraMonitor) GetMonitorStats() *MonitorStats {
 		DevicesConnected:           atomic.LoadInt64(&m.stats.DevicesConnected),
 	}
 	return &stats
+}
+
+// GetResourceStats returns resource management statistics (implements camera.CleanupManager)
+func (m *HybridCameraMonitor) GetResourceStats() map[string]interface{} {
+	stats := map[string]interface{}{
+		"running":                m.IsRunning(),
+		"known_devices_count":    len(m.knownDevices),
+		"active_event_handlers":  len(m.eventHandlers),
+		"active_event_callbacks": len(m.eventCallbacks),
+	}
+
+	// Add worker pool statistics if available
+	if m.eventWorkerPool != nil {
+		workerStats := m.eventWorkerPool.GetStats()
+		stats["worker_pool"] = map[string]interface{}{
+			"active_workers":  workerStats.ActiveWorkers,
+			"queued_tasks":    workerStats.QueuedTasks,
+			"completed_tasks": workerStats.CompletedTasks,
+			"failed_tasks":    workerStats.FailedTasks,
+			"timeout_tasks":   workerStats.TimeoutTasks,
+			"max_workers":     workerStats.MaxWorkers,
+		}
+	}
+
+	return stats
 }
 
 // TakeDirectSnapshot captures a snapshot directly via V4L2 (Tier 0 - Fastest)
@@ -1532,38 +1592,48 @@ func (m *HybridCameraMonitor) generateCameraEvent(ctx context.Context, eventType
 		DeviceInfo: device,
 	}
 
-	// Notify event handlers
+	// Notify event handlers using bounded worker pool
 	m.eventHandlersLock.RLock()
-	for _, handler := range m.eventHandlers {
-		go func(h CameraEventHandler) {
-			defer func() {
-				// Recover from panics in goroutine
-				if r := recover(); r != nil {
-					m.logger.WithFields(logging.Fields{
-						"handler_type": fmt.Sprintf("%T", h), // Keep fmt.Sprintf for type reflection
-						"panic":        r,
-						"action":       "panic_recovered",
-					}).Error("Recovered from panic in camera event handler")
-				}
-			}()
+	handlers := make([]CameraEventHandler, len(m.eventHandlers))
+	copy(handlers, m.eventHandlers)
+	m.eventHandlersLock.RUnlock()
 
-			if err := h.HandleCameraEvent(ctx, eventData); err != nil {
+	for _, handler := range handlers {
+		h := handler // Capture for closure
+		if err := m.eventWorkerPool.Submit(ctx, func(taskCtx context.Context) {
+			if err := h.HandleCameraEvent(taskCtx, eventData); err != nil {
 				m.logger.WithFields(logging.Fields{
 					"handler_type": fmt.Sprintf("%T", h), // Keep fmt.Sprintf for type reflection
 					"error":        err.Error(),
 					"action":       "event_handler_error",
 				}).Error("Error in camera event handler")
 			}
-		}(handler)
+		}); err != nil {
+			m.logger.WithFields(logging.Fields{
+				"handler_type": fmt.Sprintf("%T", h), // Keep fmt.Sprintf for type reflection
+				"error":        err.Error(),
+				"action":       "event_handler_submit_failed",
+			}).Warn("Failed to submit event handler to worker pool")
+		}
 	}
+
+	// Notify event callbacks using bounded worker pool
+	m.eventHandlersLock.RLock()
+	callbacks := make([]func(CameraEventData), len(m.eventCallbacks))
+	copy(callbacks, m.eventCallbacks)
 	m.eventHandlersLock.RUnlock()
 
-	// Notify event callbacks
-	m.eventHandlersLock.RLock()
-	for _, callback := range m.eventCallbacks {
-		go callback(eventData)
+	for _, callback := range callbacks {
+		cb := callback // Capture for closure
+		if err := m.eventWorkerPool.Submit(ctx, func(taskCtx context.Context) {
+			cb(eventData)
+		}); err != nil {
+			m.logger.WithFields(logging.Fields{
+				"error":  err.Error(),
+				"action": "event_callback_submit_failed",
+			}).Warn("Failed to submit event callback to worker pool")
+		}
 	}
-	m.eventHandlersLock.RUnlock()
 }
 
 // adjustPollingInterval adjusts polling interval based on system responsiveness

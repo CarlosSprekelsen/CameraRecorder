@@ -19,7 +19,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
+	"sort"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
@@ -61,6 +64,19 @@ type RecordingManager struct {
 	// Enhanced timer management with metadata
 	timerManager    *RecordingTimerManager
 	metadataManager *MetadataManager
+
+	// Circuit breaker for recording operations
+	recordingCircuitBreaker *CircuitBreaker
+
+	// Error recovery manager
+	errorRecoveryManager *ErrorRecoveryManager
+
+	// Error metrics collector
+	errorMetricsCollector *ErrorMetricsCollector
+
+	// Resource management
+	running       int32 // Atomic flag for running state
+	resourceStats *RecordingResourceStats
 }
 
 // NOTE: MediaMTXRecordingConfig removed - using PathConf from api_types.go instead
@@ -103,13 +119,23 @@ type MediaMTXRecordingSegment struct {
 	Start string `json:"start"`
 }
 
+// RecordingResourceStats tracks resource usage for the recording manager
+type RecordingResourceStats struct {
+	ActiveKeepaliveReaders int64 `json:"active_keepalive_readers"`
+	ActiveTimers           int64 `json:"active_timers"`
+	MetadataCacheSize      int64 `json:"metadata_cache_size"`
+	TotalRecordingsStarted int64 `json:"total_recordings_started"`
+	TotalRecordingsStopped int64 `json:"total_recordings_stopped"`
+	RecordingErrors        int64 `json:"recording_errors"`
+}
+
 // NewRecordingManager creates a new MediaMTX-based recording manager
 func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamManager StreamManager, ffmpegManager FFmpegManager, config *config.MediaMTXConfig, recordingConfig *config.RecordingConfig, configIntegration *ConfigIntegration, logger *logging.Logger) *RecordingManager {
 	// Use centralized configuration - no need to create component-specific defaults
 	// All recording configuration comes from the centralized config system
 	// Recording settings are derived from the centralized MediaMTXConfig
 
-	return &RecordingManager{
+	rm := &RecordingManager{
 		client:            client,
 		config:            config,
 		recordingConfig:   recordingConfig,
@@ -117,20 +143,66 @@ func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamM
 		logger:            logger,
 		pathManager:       pathManager,
 		streamManager:     streamManager,
-		keepaliveReader:   NewRTSPKeepaliveReader(config, logger),
+		keepaliveReader:   NewRTSPKeepaliveReaderWithConfig(config, recordingConfig, logger),
 		// Enhanced components for metadata and timer management
 		timerManager:    NewRecordingTimerManager(logger),
 		metadataManager: NewMetadataManager(configIntegration, ffmpegManager, logger),
+		// Circuit breaker for recording operations
+		recordingCircuitBreaker: NewCircuitBreaker("recording", CircuitBreakerConfig{
+			FailureThreshold: 3,                // Open after 3 failures
+			RecoveryTimeout:  30 * time.Second, // Wait 30 seconds before half-open
+			MaxFailures:      10,               // Permanent open after 10 failures
+		}, logger),
+		// Error recovery manager
+		errorRecoveryManager: NewErrorRecoveryManager(logger),
+		// Error metrics collector
+		errorMetricsCollector: NewErrorMetricsCollector(logger),
+		// Resource management
+		running:       0, // Initially not running
+		resourceStats: &RecordingResourceStats{},
 	}
+
+	// Initialize error recovery strategies
+	rm.errorRecoveryManager.RegisterStrategy(NewRecordingRecoveryStrategy(rm, logger))
+
+	// Initialize error metrics collector
+	rm.errorMetricsCollector.Initialize()
+
+	return rm
 }
 
 // StartRecording starts recording and returns API-ready response with rich metadata
 func (rm *RecordingManager) StartRecording(ctx context.Context, cameraID string, options *PathConf) (*StartRecordingResponse, error) {
+	// Add panic recovery for recording operations
+	defer func() {
+		if r := recover(); r != nil {
+			stack := make([]byte, 4096)
+			length := runtime.Stack(stack, false)
+			rm.logger.WithFields(logging.Fields{
+				"camera_id":   cameraID,
+				"panic":       r,
+				"stack_trace": string(stack[:length]),
+				"operation":   "StartRecording",
+			}).Error("Panic recovered in StartRecording")
+		}
+	}()
+
 	// Input validation
 	if strings.TrimSpace(cameraID) == "" {
 		return nil, fmt.Errorf("camera ID cannot be empty")
 	}
 
+	// Execute recording operation directly
+	result, err := rm.executeStartRecording(ctx, cameraID, options)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+// executeStartRecording performs the actual recording start operation
+func (rm *RecordingManager) executeStartRecording(ctx context.Context, cameraID string, options *PathConf) (*StartRecordingResponse, error) {
 	// Convert camera identifier to device path for internal operations
 	// MediaMTX path name = camera identifier (camera0), but we need device path for validation
 	devicePath, exists := rm.pathManager.GetDevicePathForCamera(cameraID)
@@ -156,9 +228,38 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, cameraID string,
 		if err != nil {
 			return nil, fmt.Errorf("failed to build recording path configuration: %w", err)
 		}
+
+		// Create path with error recovery
 		err = rm.pathManager.CreatePath(ctx, pathName, devicePath, pathOptions)
 		if err != nil {
-			return nil, fmt.Errorf("failed to create path %s: %w", pathName, err)
+			// Attempt error recovery for path creation
+			errorCtx := &ErrorContext{
+				Component:   "RecordingManager",
+				Operation:   "CreatePath",
+				CameraID:    cameraID,
+				PathName:    pathName,
+				Timestamp:   time.Now(),
+				Severity:    SeverityError,
+				Recoverable: true,
+			}
+
+			// Record error metrics
+			rm.errorMetricsCollector.RecordError("RecordingManager", "error", true)
+
+			recoveryErr := rm.errorRecoveryManager.HandleError(ctx, errorCtx, err)
+			if recoveryErr != nil {
+				// Record recovery failure
+				rm.errorMetricsCollector.RecordRecoveryAttempt(false)
+				return nil, fmt.Errorf("failed to create path %s: %w", pathName, recoveryErr)
+			}
+
+			// Record recovery success
+			rm.errorMetricsCollector.RecordRecoveryAttempt(true)
+
+			rm.logger.WithFields(logging.Fields{
+				"camera_id": cameraID,
+				"path_name": pathName,
+			}).Info("Path creation recovered from error")
 		}
 	}
 
@@ -174,6 +275,7 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, cameraID string,
 	// Enable recording by patching the path configuration
 	err = rm.enableRecordingOnPath(ctx, pathName, options)
 	if err != nil {
+		rm.updateRecordingStats(true, true) // Recording start attempt with error
 		return nil, fmt.Errorf("failed to enable recording on path: %w", err)
 	}
 
@@ -182,6 +284,7 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, cameraID string,
 	if err != nil {
 		// If keepalive fails, disable recording
 		rm.disableRecordingOnPath(ctx, pathName)
+		rm.updateRecordingStats(true, true) // Recording start attempt with error
 		return nil, fmt.Errorf("failed to start RTSP keepalive: %w", err)
 	}
 
@@ -234,6 +337,9 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, cameraID string,
 		Format:    format,
 	}
 
+	// Update statistics
+	rm.updateRecordingStats(true, false)
+
 	rm.logger.WithFields(logging.Fields{
 		"cameraID":       cameraID,
 		"filename":       filename,
@@ -248,6 +354,20 @@ func (rm *RecordingManager) StartRecording(ctx context.Context, cameraID string,
 // GetRecordingInfo gets detailed information about a specific recording file
 // GetRecordingInfo returns API-ready recording information with rich metadata
 func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename string) (*GetRecordingInfoResponse, error) {
+	// Add panic recovery for recording operations
+	defer func() {
+		if r := recover(); r != nil {
+			stack := make([]byte, 4096)
+			length := runtime.Stack(stack, false)
+			rm.logger.WithFields(logging.Fields{
+				"filename":    filename,
+				"panic":       r,
+				"stack_trace": string(stack[:length]),
+				"operation":   "GetRecordingInfo",
+			}).Error("Panic recovered in GetRecordingInfo")
+		}
+	}()
+
 	rm.logger.WithField("filename", filename).Debug("Getting API-ready recording info")
 
 	// Get basic file metadata first
@@ -314,6 +434,20 @@ func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename strin
 
 // DeleteRecording deletes a recording file from the filesystem
 func (rm *RecordingManager) DeleteRecording(ctx context.Context, filename string) error {
+	// Add panic recovery for recording operations
+	defer func() {
+		if r := recover(); r != nil {
+			stack := make([]byte, 4096)
+			length := runtime.Stack(stack, false)
+			rm.logger.WithFields(logging.Fields{
+				"filename":    filename,
+				"panic":       r,
+				"stack_trace": string(stack[:length]),
+				"operation":   "DeleteRecording",
+			}).Error("Panic recovered in DeleteRecording")
+		}
+	}()
+
 	rm.logger.WithField("filename", filename).Info("Deleting recording file")
 
 	// Validate filename
@@ -440,6 +574,9 @@ func (rm *RecordingManager) StopRecording(ctx context.Context, cameraID string) 
 		FileSize:  fileSize,
 		Format:    "fmp4",
 	}
+
+	// Update statistics
+	rm.updateRecordingStats(false, false)
 
 	rm.logger.WithFields(logging.Fields{
 		"cameraID":  cameraID,
@@ -587,46 +724,76 @@ func (rm *RecordingManager) convertRecordingToFileMetadata(recording *MediaMTXRe
 	return files
 }
 
-// CleanupOldRecordings removes recording files based on age and count limits
-func (rm *RecordingManager) CleanupOldRecordings(ctx context.Context, maxAge time.Duration, maxCount int) error {
+// CleanupOldRecordings removes recording files based on age, count, and size limits using centralized configuration
+func (rm *RecordingManager) CleanupOldRecordings(ctx context.Context, maxAge time.Duration, maxCount int, maxSize int64) (deletedCount int, spaceFreed int64, err error) {
 	rm.logger.WithFields(logging.Fields{
 		"max_age":   maxAge,
 		"max_count": maxCount,
+		"max_size":  maxSize,
 	}).Info("Starting cleanup of old recordings")
 
 	// Get recordings list
-	recordings, err := rm.GetRecordingsList(ctx, 1000, 0) // Get up to 1000 recordings
+	recordings, err := rm.GetRecordingsList(ctx, 10000, 0) // Get up to 10000 recordings for comprehensive cleanup
 	if err != nil {
-		return fmt.Errorf("failed to get recordings list: %w", err)
+		return 0, 0, fmt.Errorf("failed to get recordings list: %w", err)
 	}
 
 	if recordings == nil || len(recordings.Files) == 0 {
 		rm.logger.Debug("No recordings found for cleanup")
-		return nil
+		return 0, 0, nil
 	}
 
-	// Sort by creation time (oldest first)
+	// Sort by creation time (oldest first) for consistent cleanup order
+	sort.Slice(recordings.Files, func(i, j int) bool {
+		return recordings.Files[i].CreatedAt.Before(recordings.Files[j].CreatedAt)
+	})
+
 	cutoffTime := time.Now().Add(-maxAge)
-	deletedCount := 0
+	deletedCount = 0
+	spaceFreed = 0
+
+	// Calculate current total size if size-based cleanup is enabled
+	var currentTotalSize int64
+	if maxSize > 0 {
+		for _, item := range recordings.Files {
+			currentTotalSize += item.FileSize
+		}
+	}
 
 	for _, item := range recordings.Files {
-		// Check if we've reached the max count limit
-		if len(recordings.Files)-deletedCount <= maxCount {
-			break
+		shouldDelete := false
+
+		// Check age constraint
+		if item.CreatedAt.Before(cutoffTime) {
+			shouldDelete = true
 		}
 
-		// Check if recording exceeds maximum age
-		if item.CreatedAt.Before(cutoffTime) {
+		// Check count constraint (keep newest files up to maxCount)
+		if len(recordings.Files)-deletedCount > maxCount {
+			shouldDelete = true
+		}
+
+		// Check size constraint (delete oldest files until under maxSize)
+		if maxSize > 0 && currentTotalSize > maxSize {
+			shouldDelete = true
+		}
+
+		if shouldDelete {
 			if err := rm.DeleteRecording(ctx, item.FileName); err != nil {
 				rm.logger.WithError(err).WithField("filename", item.FileName).Warn("Failed to delete old recording")
 				continue
 			}
 			deletedCount++
+			spaceFreed += item.FileSize
+			currentTotalSize -= item.FileSize
 		}
 	}
 
-	rm.logger.WithField("deleted_count", fmt.Sprintf("%d", deletedCount)).Info("Recording cleanup completed")
-	return nil
+	rm.logger.WithFields(logging.Fields{
+		"deleted_count": deletedCount,
+		"space_freed":   spaceFreed,
+	}).Info("Recording cleanup completed")
+	return deletedCount, spaceFreed, nil
 }
 
 // generateRandomString generates a random string of specified length
@@ -653,7 +820,7 @@ func (rm *RecordingManager) getRecordFormat() string {
 
 // isPathRecording checks if a path is currently recording by querying MediaMTX
 func (rm *RecordingManager) isPathRecording(ctx context.Context, cameraID string) (bool, error) {
-	endpoint := fmt.Sprintf("/v3/config/paths/get/%s", cameraID)
+	endpoint := FormatConfigPathsGet(cameraID)
 	data, err := rm.client.Get(ctx, endpoint)
 	if err != nil {
 		return false, fmt.Errorf("failed to get path config: %w", err)
@@ -698,7 +865,7 @@ func (rm *RecordingManager) enableRecordingOnPath(ctx context.Context, cameraID 
 		}
 	}
 
-	endpoint := fmt.Sprintf("/v3/config/paths/patch/%s", cameraID)
+	endpoint := FormatConfigPathsPatch(cameraID)
 	jsonData, err := marshalUpdatePathRequest(recordConfig)
 	if err != nil {
 		return fmt.Errorf("failed to marshal PathConf record config: %w", err)
@@ -713,7 +880,7 @@ func (rm *RecordingManager) disableRecordingOnPath(ctx context.Context, cameraID
 		Record: false,
 	}
 
-	endpoint := fmt.Sprintf("/v3/config/paths/patch/%s", cameraID)
+	endpoint := FormatConfigPathsPatch(cameraID)
 	jsonData, err := marshalUpdatePathRequest(recordConfig)
 	if err != nil {
 		return fmt.Errorf("failed to marshal PathConf record config: %w", err)
@@ -730,6 +897,150 @@ func (rm *RecordingManager) startRTSPKeepalive(ctx context.Context, cameraID str
 // stopRTSPKeepalive stops the RTSP reader for a path
 func (rm *RecordingManager) stopRTSPKeepalive(cameraID string) {
 	rm.keepaliveReader.StopKeepalive(cameraID)
+}
+
+// Resource Management Methods - Implementation of camera.ResourceManager and camera.CleanupManager interfaces
+
+// Start initializes the recording manager (implements camera.ResourceManager)
+func (rm *RecordingManager) Start(ctx context.Context) error {
+	if !atomic.CompareAndSwapInt32(&rm.running, 0, 1) {
+		return fmt.Errorf("recording manager is already running")
+	}
+
+	rm.logger.Info("Recording manager started")
+	return nil
+}
+
+// Stop gracefully shuts down the recording manager (implements camera.ResourceManager)
+func (rm *RecordingManager) Stop(ctx context.Context) error {
+	if !atomic.CompareAndSwapInt32(&rm.running, 1, 0) {
+		rm.logger.Debug("Recording manager is already stopped")
+		return nil // Idempotent
+	}
+
+	rm.logger.Info("Stopping recording manager...")
+
+	// Stop all keepalive readers
+	if rm.keepaliveReader != nil {
+		rm.keepaliveReader.StopAll()
+		rm.logger.Debug("All keepalive readers stopped")
+	}
+
+	// Clean up all active timers with context timeout
+	if rm.timerManager != nil {
+		if err := rm.timerManager.StopAll(ctx); err != nil {
+			rm.logger.WithError(err).Warn("Error stopping timer manager")
+		}
+		rm.logger.Debug("All recording timers stopped")
+	}
+
+	// Close metadata manager resources if it implements io.Closer
+	if rm.metadataManager != nil {
+		if closer, ok := interface{}(rm.metadataManager).(interface{ Close() error }); ok {
+			if err := closer.Close(); err != nil {
+				rm.logger.WithError(err).Warn("Error closing metadata manager")
+			}
+		}
+		rm.logger.Debug("Metadata manager resources cleaned up")
+	}
+
+	rm.logger.Info("Recording manager stopped successfully")
+	return nil
+}
+
+// IsRunning returns whether the recording manager is running (implements camera.ResourceManager)
+func (rm *RecordingManager) IsRunning() bool {
+	return atomic.LoadInt32(&rm.running) == 1
+}
+
+// Cleanup performs resource cleanup (implements camera.CleanupManager)
+func (rm *RecordingManager) Cleanup(ctx context.Context) error {
+	rm.logger.Info("Performing recording manager cleanup...")
+
+	// Force stop all active recordings
+	activeRecordings := rm.timerManager.ListActiveRecordings()
+	for _, recording := range activeRecordings {
+		rm.logger.WithField("camera_id", recording.CameraID).Info("Force stopping active recording during cleanup")
+
+		// Stop recording without waiting for graceful shutdown
+		if err := rm.disableRecordingOnPath(ctx, recording.CameraID); err != nil {
+			rm.logger.WithError(err).WithField("camera_id", recording.CameraID).Warn("Failed to stop recording during cleanup")
+		}
+
+		// Stop keepalive
+		rm.stopRTSPKeepalive(recording.CameraID)
+
+		// Remove timer
+		rm.timerManager.DeleteTimer(recording.CameraID)
+
+		atomic.AddInt64(&rm.resourceStats.TotalRecordingsStopped, 1)
+	}
+
+	rm.logger.WithField("stopped_recordings", fmt.Sprintf("%d", len(activeRecordings))).Info("Recording manager cleanup completed")
+	return nil
+}
+
+// GetResourceStats returns current resource usage statistics (implements camera.CleanupManager)
+func (rm *RecordingManager) GetResourceStats() map[string]interface{} {
+	// Update stats with current values
+	atomic.StoreInt64(&rm.resourceStats.ActiveKeepaliveReaders, int64(rm.keepaliveReader.GetActiveCount()))
+	atomic.StoreInt64(&rm.resourceStats.ActiveTimers, int64(len(rm.timerManager.ListActiveRecordings())))
+
+	// Get metadata cache size if available
+	if rm.metadataManager != nil {
+		if cacheProvider, ok := interface{}(rm.metadataManager).(interface{ GetCacheSize() int }); ok {
+			atomic.StoreInt64(&rm.resourceStats.MetadataCacheSize, int64(cacheProvider.GetCacheSize()))
+		}
+	}
+
+	return map[string]interface{}{
+		"running":                  rm.IsRunning(),
+		"active_keepalive_readers": atomic.LoadInt64(&rm.resourceStats.ActiveKeepaliveReaders),
+		"active_timers":            atomic.LoadInt64(&rm.resourceStats.ActiveTimers),
+		"metadata_cache_size":      atomic.LoadInt64(&rm.resourceStats.MetadataCacheSize),
+		"total_recordings_started": atomic.LoadInt64(&rm.resourceStats.TotalRecordingsStarted),
+		"total_recordings_stopped": atomic.LoadInt64(&rm.resourceStats.TotalRecordingsStopped),
+		"recording_errors":         atomic.LoadInt64(&rm.resourceStats.RecordingErrors),
+	}
+}
+
+// GetErrorMetrics returns current error metrics and alert status
+func (rm *RecordingManager) GetErrorMetrics() map[string]interface{} {
+	metrics := rm.errorMetricsCollector.GetMetrics()
+	alertStatus := rm.errorMetricsCollector.GetAlertStatus()
+	uptime := rm.errorMetricsCollector.GetUptime()
+
+	return map[string]interface{}{
+		"metrics": map[string]interface{}{
+			"total_errors":        metrics.TotalErrors,
+			"errors_by_component": metrics.ErrorsByComponent,
+			"errors_by_severity":  metrics.ErrorsBySeverity,
+			"recovery_attempts":   metrics.RecoveryAttempts,
+			"recovery_successes":  metrics.RecoverySuccesses,
+			"recovery_failures":   metrics.RecoveryFailures,
+			"last_error_time":     metrics.LastErrorTime,
+			"last_recovery_time":  metrics.LastRecoveryTime,
+		},
+		"alerts": alertStatus,
+		"uptime": uptime.String(),
+		"circuit_breaker": map[string]interface{}{
+			"state":         rm.recordingCircuitBreaker.GetState(),
+			"failure_count": rm.recordingCircuitBreaker.GetFailureCount(),
+		},
+	}
+}
+
+// updateRecordingStats updates recording statistics
+func (rm *RecordingManager) updateRecordingStats(started bool, error bool) {
+	if started {
+		atomic.AddInt64(&rm.resourceStats.TotalRecordingsStarted, 1)
+	} else {
+		atomic.AddInt64(&rm.resourceStats.TotalRecordingsStopped, 1)
+	}
+
+	if error {
+		atomic.AddInt64(&rm.resourceStats.RecordingErrors, 1)
+	}
 }
 
 // Note: setAutoStopTimer method removed - functionality moved to RecordingTimerManager.CreateTimer()
