@@ -31,6 +31,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// Helper function to get map keys for debugging
+func getMapKeys(m map[string]interface{}) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
 // createMediaMTXControllerForTest creates an individual MediaMTX controller for each test
 // This ensures true test isolation and enables parallel test execution
 func createMediaMTXControllerForTest(t *testing.T) mediamtx.MediaMTXController {
@@ -886,11 +895,33 @@ func TestWebSocketMethods_DeleteRecording(t *testing.T) {
 		t.Logf("Recording start failed: %+v", startRecordingResponse.Error)
 	}
 	require.Nil(t, startRecordingResponse.Error, "Recording start should succeed")
-	
-	// Log the recording response to see what filename is created
+
+	// Extract the actual filename from the response
+	var recordingFilename string
 	if startRecordingResponse.Result != nil {
-		t.Logf("Recording start response: %+v", startRecordingResponse.Result)
+		t.Logf("Full recording response: %+v", startRecordingResponse.Result)
+		if resultMap, ok := startRecordingResponse.Result.(map[string]interface{}); ok {
+			if filename, exists := resultMap["filename"]; exists {
+				if filenameStr, ok := filename.(string); ok {
+					recordingFilename = filenameStr
+					t.Logf("Extracted filename: %s", recordingFilename)
+				}
+			} else {
+				t.Logf("No 'filename' key in result map")
+			}
+		} else {
+			t.Logf("Result is not a map[string]interface{}")
+		}
+	} else {
+		t.Logf("No result in response")
 	}
+
+	// If we couldn't extract the filename, use a default
+	if recordingFilename == "" {
+		recordingFilename = "test_recording.mp4"
+	}
+
+	t.Logf("Using recording filename: %s", recordingFilename)
 
 	// Stop the recording to create the file
 	stopRecordingMessage := CreateTestMessage("stop_recording", map[string]interface{}{
@@ -899,13 +930,9 @@ func TestWebSocketMethods_DeleteRecording(t *testing.T) {
 	stopRecordingResponse := SendTestMessage(t, conn, stopRecordingMessage)
 	require.Nil(t, stopRecordingResponse.Error, "Recording stop should succeed")
 
-	// For now, skip the delete test since we need to figure out the actual filename
-	// TODO: Extract filename from start_recording response
-	t.Skip("Skipping delete_recording test - need to extract actual filename from response")
-	
 	// Send delete_recording message
 	message := CreateTestMessage("delete_recording", map[string]interface{}{
-		"filename": "test_recording.mp4",
+		"filename": recordingFilename,
 	})
 	response := SendTestMessage(t, conn, message)
 
@@ -921,8 +948,9 @@ func TestWebSocketMethods_DeleteSnapshot(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use the same pattern as working MediaMTX tests - use the helper's controller
+	// which is properly initialized with camera monitor and readiness waiting
+	controller := helper.GetMediaMTXController(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -945,25 +973,34 @@ func TestWebSocketMethods_DeleteSnapshot(t *testing.T) {
 	}
 	require.Nil(t, takeSnapshotResponse.Error, "Snapshot creation should succeed")
 
+	// Validate that a file was actually created (like MediaMTX tests do)
+	require.NotNil(t, takeSnapshotResponse.Result, "Snapshot should return result with file info")
+
+	// Debug: Log the actual response structure
+	t.Logf("Snapshot response result: %+v", takeSnapshotResponse.Result)
+
 	// Extract the actual filename from the response
 	var snapshotFilename string
-	if takeSnapshotResponse.Result != nil {
-		if resultMap, ok := takeSnapshotResponse.Result.(map[string]interface{}); ok {
-			if filePath, exists := resultMap["file_path"]; exists {
-				if pathStr, ok := filePath.(string); ok {
-					// Extract just the filename from the full path
-					snapshotFilename = filepath.Base(pathStr)
-				}
+	if resultMap, ok := takeSnapshotResponse.Result.(map[string]interface{}); ok {
+		t.Logf("Result is a map with keys: %v", getMapKeys(resultMap))
+		if filePath, exists := resultMap["file_path"]; exists {
+			if pathStr, ok := filePath.(string); ok {
+				// Extract just the filename from the full path
+				snapshotFilename = filepath.Base(pathStr)
+				t.Logf("Snapshot created with filename: %s", snapshotFilename)
+
+				// Validate file actually exists (like MediaMTX tests do)
+				require.FileExists(t, pathStr, "Snapshot file should actually exist on disk")
 			}
+		} else {
+			t.Logf("No 'file_path' key in result map")
 		}
+	} else {
+		t.Logf("Result is not a map[string]interface{}")
 	}
-	
-	// If we couldn't extract the filename, use a default
-	if snapshotFilename == "" {
-		snapshotFilename = "test_snapshot.jpg"
-	}
-	
-	t.Logf("Using snapshot filename: %s", snapshotFilename)
+
+	// If we couldn't extract the filename, the test should fail
+	require.NotEmpty(t, snapshotFilename, "Should be able to extract filename from snapshot response")
 
 	// Send delete_snapshot message
 	message := CreateTestMessage("delete_snapshot", map[string]interface{}{
@@ -1380,6 +1417,23 @@ func TestWebSocketMethods_GetRecordingInfo(t *testing.T) {
 	startRecordingResponse := SendTestMessage(t, conn, startRecordingMessage)
 	require.Nil(t, startRecordingResponse.Error, "Recording start should succeed")
 
+	// Extract the actual filename from the response
+	var recordingFilename string
+	if startRecordingResponse.Result != nil {
+		if resultMap, ok := startRecordingResponse.Result.(map[string]interface{}); ok {
+			if filename, exists := resultMap["filename"]; exists {
+				if filenameStr, ok := filename.(string); ok {
+					recordingFilename = filenameStr
+				}
+			}
+		}
+	}
+
+	// If we couldn't extract the filename, use a default
+	if recordingFilename == "" {
+		recordingFilename = "test_recording.mp4"
+	}
+
 	// Stop the recording to create the file
 	stopRecordingMessage := CreateTestMessage("stop_recording", map[string]interface{}{
 		"device": "camera0",
@@ -1389,7 +1443,7 @@ func TestWebSocketMethods_GetRecordingInfo(t *testing.T) {
 
 	// Send get_recording_info message
 	message := CreateTestMessage("get_recording_info", map[string]interface{}{
-		"filename": "test_recording.mp4",
+		"filename": recordingFilename,
 	})
 	response := SendTestMessage(t, conn, message)
 
@@ -1438,7 +1492,7 @@ func TestWebSocketMethods_GetSnapshotInfo(t *testing.T) {
 			}
 		}
 	}
-	
+
 	// If we couldn't extract the filename, use a default
 	if snapshotFilename == "" {
 		snapshotFilename = "test_snapshot.jpg"

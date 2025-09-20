@@ -48,7 +48,7 @@ const (
 	TestTimeoutMedium   = 200 * time.Millisecond // Medium operations (cleanup, polling)
 	TestTimeoutLong     = 500 * time.Millisecond // Long operations (path readiness, connection)
 	TestTimeoutVeryLong = 1 * time.Second        // Very long operations (FFmpeg startup)
-	TestTimeoutExtreme  = 3 * time.Second        // Extreme operations (recording completion)
+	TestTimeoutExtreme  = 10 * time.Second       // Extreme operations (recording completion - allow time for on-demand startup)
 
 	// Test Performance Thresholds
 	TestThresholdFastShutdown   = 100 * time.Millisecond // Fast shutdown should complete within this
