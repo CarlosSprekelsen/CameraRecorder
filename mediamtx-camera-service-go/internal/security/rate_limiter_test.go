@@ -6,6 +6,7 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/time/rate"
 )
 
 // =============================================================================
@@ -102,22 +103,147 @@ func TestEnhancedRateLimiter_SetMethodRateLimit(t *testing.T) {
 func TestEnhancedRateLimiter_CheckLimit(t *testing.T) {
 	t.Parallel()
 
-	logger := logging.CreateTestLogger(t, nil)
-	limiter := NewEnhancedRateLimiter(logger, nil)
+	// Test basic successful requests
+	t.Run("successful_requests", func(t *testing.T) {
+		logger := logging.CreateTestLogger(t, nil)
+		limiter := NewEnhancedRateLimiter(logger, nil)
 
-	// Test basic rate limiting
-	method := "test_method"
-	clientID := "test_client"
+		method := "test_method"
+		clientID := "test_client"
 
-	// First request should succeed
-	err := limiter.CheckLimit(method, clientID)
-	assert.NoError(t, err, "First request should succeed")
-
-	// Multiple requests should also succeed (within limits)
-	for i := 0; i < 5; i++ {
+		// First request should succeed
 		err := limiter.CheckLimit(method, clientID)
-		assert.NoError(t, err, "Request %d should succeed", i+2)
-	}
+		assert.NoError(t, err, "First request should succeed")
+
+		// Multiple requests should also succeed (within limits)
+		for i := 0; i < 5; i++ {
+			err := limiter.CheckLimit(method, clientID)
+			assert.NoError(t, err, "Request %d should succeed", i+2)
+		}
+	})
+
+	// Test blocked client scenario
+	t.Run("blocked_client", func(t *testing.T) {
+		logger := logging.CreateTestLogger(t, nil)
+		limiter := NewEnhancedRateLimiter(logger, nil)
+
+		// Manually block a client
+		limiter.mutex.Lock()
+		limiter.blockedClients["blocked_client"] = time.Now()
+		limiter.mutex.Unlock()
+
+		err := limiter.CheckLimit("test_method", "blocked_client")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "client blocked due to rate limit violations")
+	})
+
+	// Test client unblocking after duration
+	t.Run("client_unblock_after_duration", func(t *testing.T) {
+		logger := logging.CreateTestLogger(t, nil)
+		limiter := NewEnhancedRateLimiter(logger, nil)
+
+		// Block client with old timestamp
+		limiter.mutex.Lock()
+		limiter.blockedClients["old_blocked_client"] = time.Now().Add(-2 * time.Hour)
+		limiter.mutex.Unlock()
+
+		// Should succeed as block duration has passed
+		err := limiter.CheckLimit("test_method", "old_blocked_client")
+		assert.NoError(t, err)
+
+		// Verify client is unblocked
+		limiter.mutex.Lock()
+		_, stillBlocked := limiter.blockedClients["old_blocked_client"]
+		limiter.mutex.Unlock()
+		assert.False(t, stillBlocked)
+	})
+
+	// Test new client creation and tracking
+	t.Run("new_client_creation", func(t *testing.T) {
+		logger := logging.CreateTestLogger(t, nil)
+		limiter := NewEnhancedRateLimiter(logger, nil)
+
+		err := limiter.CheckLimit("test_method", "new_client")
+		assert.NoError(t, err)
+
+		// Verify client was created
+		limiter.mutex.Lock()
+		clientLimit, exists := limiter.clientLimits["new_client"]
+		limiter.mutex.Unlock()
+
+		assert.True(t, exists)
+		assert.Equal(t, int64(1), clientLimit.RequestCount)
+	})
+
+	// Test method-specific rate limit
+	t.Run("method_specific_rate_limit", func(t *testing.T) {
+		logger := logging.CreateTestLogger(t, nil)
+		config := &TestSecurityConfig{}
+		limiter := NewEnhancedRateLimiter(logger, config)
+
+		// Set a restrictive method limit
+		limiter.SetMethodRateLimit("restricted_method", &RateLimitConfig{
+			RequestsPerSecond: 0.1, // Very low limit
+			BurstSize:         1,
+		})
+
+		// First request should succeed
+		err := limiter.CheckLimit("restricted_method", "client1")
+		assert.NoError(t, err)
+
+		// Immediate second request should fail method limit
+		err = limiter.CheckLimit("restricted_method", "client1")
+		if err != nil {
+			assert.Contains(t, err.Error(), "rate limit exceeded for method restricted_method")
+		}
+	})
+
+	// Test client rate limit per minute exceeded
+	t.Run("client_rate_limit_per_minute", func(t *testing.T) {
+		logger := logging.CreateTestLogger(t, nil)
+		limiter := NewEnhancedRateLimiter(logger, nil)
+		clientID := "heavy_client"
+
+		// Simulate client exceeding per-minute limit
+		limiter.mutex.Lock()
+		limiter.clientLimits[clientID] = &ClientRateLimit{
+			Limiter:      rate.NewLimiter(rate.Every(time.Second), 100),
+			LastAccess:   time.Now(),
+			RequestCount: int64(limiter.maxRequestsPerMinute + 1), // Exceed limit
+			BlockedCount: 0,
+		}
+		limiter.mutex.Unlock()
+
+		err := limiter.CheckLimit("test_method", clientID)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "client rate limit exceeded")
+	})
+
+	// Test client blocking after excessive requests
+	t.Run("client_blocking_excessive_requests", func(t *testing.T) {
+		logger := logging.CreateTestLogger(t, nil)
+		limiter := NewEnhancedRateLimiter(logger, nil)
+		clientID := "excessive_client"
+
+		// Simulate client with high request count and blocked count
+		limiter.mutex.Lock()
+		limiter.clientLimits[clientID] = &ClientRateLimit{
+			Limiter:      rate.NewLimiter(rate.Every(time.Second), 100),
+			LastAccess:   time.Now(),
+			RequestCount: int64(limiter.maxRequestsPerMinute + 1), // Exceed limit
+			BlockedCount: 5,                                       // At blocking threshold
+		}
+		limiter.mutex.Unlock()
+
+		err := limiter.CheckLimit("test_method", clientID)
+		assert.Error(t, err)
+
+		// Check if client is now blocked
+		limiter.mutex.Lock()
+		_, isBlocked := limiter.blockedClients[clientID]
+		limiter.mutex.Unlock()
+		assert.True(t, isBlocked)
+	})
 }
 
 func TestEnhancedRateLimiter_ResetClientLimits(t *testing.T) {

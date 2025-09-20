@@ -25,7 +25,8 @@ func TestPathFallback(t *testing.T) {
 	validator := NewPathValidator(cfg, logger)
 
 	// Test recording path validation
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	result, err := validator.ValidateRecordingPath(ctx)
 
 	if err != nil {
@@ -64,7 +65,8 @@ func TestPathValidatorCaching(t *testing.T) {
 		validationPeriod: TestValidationPeriodShort, // Very short for testing
 	}
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// First validation
 	result1, err1 := validator.ValidateRecordingPath(ctx)
@@ -121,7 +123,8 @@ func TestPathValidatorErrorHandling(t *testing.T) {
 	// Create path validator
 	validator := NewPathValidator(cfg, logger)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test recording path validation (should fail)
 	_, err := validator.ValidateRecordingPath(ctx)

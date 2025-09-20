@@ -266,7 +266,8 @@ func (h *MediaMTXTestHelper) WaitForServerReady(t *testing.T, timeout time.Durat
 
 // TestMediaMTXHealth tests the MediaMTX health check
 func (h *MediaMTXTestHelper) TestMediaMTXHealth(t *testing.T) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err := h.client.HealthCheck(ctx)
 	if err != nil {
 		return fmt.Errorf("MediaMTX health check failed: %w", err)
@@ -277,7 +278,8 @@ func (h *MediaMTXTestHelper) TestMediaMTXHealth(t *testing.T) error {
 
 // TestMediaMTXPaths tests the MediaMTX paths endpoint
 func (h *MediaMTXTestHelper) TestMediaMTXPaths(t *testing.T) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	data, err := h.client.Get(ctx, MediaMTXPathsList)
 	if err != nil {
 		return fmt.Errorf("failed to get paths: %w", err)
@@ -294,7 +296,8 @@ func (h *MediaMTXTestHelper) TestMediaMTXPaths(t *testing.T) error {
 
 // TestMediaMTXConfigPaths tests the MediaMTX config paths endpoint
 func (h *MediaMTXTestHelper) TestMediaMTXConfigPaths(t *testing.T) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	data, err := h.client.Get(ctx, MediaMTXConfigPathsList)
 	if err != nil {
 		return fmt.Errorf("failed to get config paths: %w", err)
@@ -311,7 +314,8 @@ func (h *MediaMTXTestHelper) TestMediaMTXConfigPaths(t *testing.T) error {
 
 // TestMediaMTXFailure tests MediaMTX server failure scenarios
 func (h *MediaMTXTestHelper) TestMediaMTXFailure(t *testing.T) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test invalid endpoint
 	_, err := h.client.Get(ctx, "/v3/invalid/endpoint")
@@ -585,7 +589,7 @@ func (h *MediaMTXTestHelper) GetAvailableCameraIdentifierWithReadiness(ctx conte
 
 // WaitForControllerReadiness waits for controller to become ready using event-driven pattern
 func (h *MediaMTXTestHelper) WaitForControllerReadiness(ctx context.Context, controller MediaMTXController) error {
-	// Use existing event infrastructure - NO TIMEOUTS
+	// Use existing event infrastructure with safety timeout
 	readinessChan := controller.SubscribeToReadiness()
 
 	// Check if already ready
@@ -593,12 +597,20 @@ func (h *MediaMTXTestHelper) WaitForControllerReadiness(ctx context.Context, con
 		return nil
 	}
 
+	// Add safety timeout to prevent infinite hangs if caller context has no timeout
+	safetyTimeout := 30 * time.Second
+	safetyCtx, cancel := context.WithTimeout(ctx, safetyTimeout)
+	defer cancel()
+
 	// Wait for readiness event
 	select {
 	case <-readinessChan:
 		return nil // Controller became ready
-	case <-ctx.Done():
-		return ctx.Err() // Context cancelled
+	case <-safetyCtx.Done():
+		if safetyCtx.Err() == context.DeadlineExceeded {
+			return fmt.Errorf("controller readiness timeout after %v - controller never became ready", safetyTimeout)
+		}
+		return safetyCtx.Err() // Context cancelled by caller
 	}
 }
 
@@ -831,7 +843,8 @@ func createConfigManagerWithFixtureInternal(t *testing.T, fixtureName string) *c
 
 // CreateTestPath creates a test path with proper configuration
 func (h *MediaMTXTestHelper) CreateTestPath(t *testing.T, name string) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// First, check if path exists in runtime
 	if _, err := h.client.Get(ctx, FormatPathsGet(name)); err == nil {
@@ -877,7 +890,8 @@ func (h *MediaMTXTestHelper) CreateTestPath(t *testing.T, name string) error {
 
 // DeleteTestPath deletes a test path
 func (h *MediaMTXTestHelper) DeleteTestPath(t *testing.T, name string) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err := h.client.Delete(ctx, FormatConfigPathsDelete(name))
 	if err != nil {
 		return fmt.Errorf("failed to delete test path %s: %w", name, err)
@@ -888,7 +902,8 @@ func (h *MediaMTXTestHelper) DeleteTestPath(t *testing.T, name string) error {
 
 // GetPathInfo gets information about a specific path
 func (h *MediaMTXTestHelper) GetPathInfo(t *testing.T, name string) ([]byte, error) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	data, err := h.client.Get(ctx, FormatPathsGet(name))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get path info for %s: %w", name, err)
@@ -898,7 +913,8 @@ func (h *MediaMTXTestHelper) GetPathInfo(t *testing.T, name string) ([]byte, err
 
 // ForceCleanupRuntimePaths forcefully cleans up runtime paths by disconnecting publishers
 func (h *MediaMTXTestHelper) ForceCleanupRuntimePaths(t *testing.T) error {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Get all runtime paths
 	data, err := h.client.Get(ctx, MediaMTXPathsList)
@@ -957,7 +973,8 @@ func (h *MediaMTXTestHelper) cleanupMediaMTXPaths(t *testing.T) {
 		return
 	}
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Get all paths from MediaMTX
 	data, err := h.client.Get(ctx, MediaMTXPathsList)
@@ -985,21 +1002,27 @@ func (h *MediaMTXTestHelper) cleanupMediaMTXPaths(t *testing.T) {
 		if h.isTestPath(path.Name) {
 			testPathCount++
 
-			// CRITICAL: Disable recording on test paths for proper test isolation
-			// This prevents "path already recording" errors in subsequent tests
-			disableRecordingConfig := map[string]interface{}{
-				"record": false,
-			}
-			if configData, err := json.Marshal(disableRecordingConfig); err == nil {
-				endpoint := fmt.Sprintf("/v3/config/paths/patch/%s", path.Name)
-				if patchErr := h.client.Patch(ctx, endpoint, configData); patchErr != nil {
-					t.Logf("Warning: Failed to disable recording on test path %s: %v", path.Name, patchErr)
-				} else {
-					t.Logf("Disabled recording on test path: %s", path.Name)
+			// CRITICAL: Delete test paths to stop streaming processes and free camera devices
+			// This prevents "device busy" errors and resource leaks in subsequent tests
+			endpoint := fmt.Sprintf("/v3/config/paths/delete/%s", path.Name)
+			if deleteErr := h.client.Delete(ctx, endpoint); deleteErr != nil {
+				// If deletion fails, try to disable recording as fallback
+				t.Logf("Warning: Failed to delete test path %s: %v, trying to disable recording", path.Name, deleteErr)
+				disableRecordingConfig := map[string]interface{}{
+					"record": false,
 				}
+				if configData, err := json.Marshal(disableRecordingConfig); err == nil {
+					patchEndpoint := fmt.Sprintf("/v3/config/paths/patch/%s", path.Name)
+					if patchErr := h.client.Patch(ctx, patchEndpoint, configData); patchErr != nil {
+						t.Logf("Warning: Failed to disable recording on test path %s: %v", path.Name, patchErr)
+					} else {
+						t.Logf("Disabled recording on test path: %s", path.Name)
+					}
+				}
+				t.Logf("Test path in runtime: %s (recording disabled, will be cleaned up automatically when unused)", path.Name)
+			} else {
+				t.Logf("Successfully deleted test path: %s (streaming processes stopped, camera device freed)", path.Name)
 			}
-
-			t.Logf("Test path in runtime: %s (recording disabled, will be cleaned up automatically when unused)", path.Name)
 		}
 	}
 
@@ -1122,7 +1145,8 @@ func GetRTSPInputValidationScenarios() []InputValidationTestScenario {
 // TestRTSPInputValidation tests RTSP connection manager input validation
 // This function is designed to catch dangerous bugs, not just achieve coverage
 func (h *MediaMTXTestHelper) TestRTSPInputValidation(t *testing.T, rtspManager RTSPConnectionManager) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	scenarios := GetRTSPInputValidationScenarios()
 
 	for _, scenario := range scenarios {
@@ -1157,7 +1181,8 @@ func (h *MediaMTXTestHelper) TestRTSPInputValidation(t *testing.T, rtspManager R
 // TestControllerInputValidation tests controller input validation
 // This function is designed to catch dangerous bugs in controller methods
 func (h *MediaMTXTestHelper) TestControllerInputValidation(t *testing.T, controller MediaMTXController) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test RTSP connection input validation through controller
 	t.Run("RTSP_Connections_Input_Validation", func(t *testing.T) {
@@ -1230,7 +1255,8 @@ func (h *MediaMTXTestHelper) TestControllerInputValidation(t *testing.T, control
 
 // TestInputValidationBoundaryConditions tests boundary conditions that can cause dangerous bugs
 func (h *MediaMTXTestHelper) TestInputValidationBoundaryConditions(t *testing.T, controller MediaMTXController) {
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	t.Run("Boundary_Conditions", func(t *testing.T) {
 		// Test boundary conditions that could cause integer overflow or underflow

@@ -34,7 +34,8 @@ func TestController_GetConfig_ReqMTX003(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -68,7 +69,8 @@ func TestController_UpdateConfig_ReqMTX003(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -121,7 +123,8 @@ func TestController_UpdateConfig_InvalidConfig_ReqMTX004(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -175,7 +178,8 @@ func TestController_GetConfig_NotRunning_ReqMTX004(t *testing.T) {
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Try to get configuration when controller is not running
 	_, err = controller.GetConfig(ctx)
@@ -193,7 +197,8 @@ func TestController_UpdateConfig_NotRunning_ReqMTX004(t *testing.T) {
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create a valid configuration
 	config := &config.MediaMTXConfig{

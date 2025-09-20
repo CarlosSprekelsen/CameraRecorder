@@ -35,7 +35,8 @@ func TestRecordingManager_ResourceLifecycle(t *testing.T) {
 	assert.False(t, rm.IsRunning())
 
 	// Test start
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err := rm.Start(ctx)
 	require.NoError(t, err)
 	assert.True(t, rm.IsRunning())
@@ -62,7 +63,8 @@ func TestRecordingManager_ResourceCleanup(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	rm := helper.GetRecordingManager()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	err := rm.Start(ctx)
 	require.NoError(t, err)
@@ -97,7 +99,8 @@ func TestRecordingManager_StatsTracking(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	rm := helper.GetRecordingManager()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	err := rm.Start(ctx)
 	require.NoError(t, err)
@@ -123,7 +126,8 @@ func TestRecordingManager_KeepaliveIntegration(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	rm := helper.GetRecordingManager()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	err := rm.Start(ctx)
 	require.NoError(t, err)
@@ -146,7 +150,8 @@ func TestRecordingManager_TimerIntegration(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	rm := helper.GetRecordingManager()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	err := rm.Start(ctx)
 	require.NoError(t, err)
@@ -176,7 +181,8 @@ func TestRecordingManager_GracefulShutdown(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	rm := helper.GetRecordingManager()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	err := rm.Start(ctx)
 	require.NoError(t, err)

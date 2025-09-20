@@ -32,38 +32,6 @@ type ExternalStream struct {
 }
 
 // ExternalDiscoveryConfig represents discovery configuration
-type ExternalDiscoveryConfig struct {
-	Enabled            bool                  `json:"enabled"`
-	ScanInterval       int                   `json:"scan_interval"`
-	ScanTimeout        int                   `json:"scan_timeout"`
-	MaxConcurrentScans int                   `json:"max_concurrent_scans"`
-	EnableStartupScan  bool                  `json:"enable_startup_scan"`
-	Skydio             SkydioDiscoveryConfig `json:"skydio"`
-	GenericUAV         GenericUAVConfig      `json:"generic_uav"`
-}
-
-// SkydioDiscoveryConfig represents Skydio-specific configuration
-type SkydioDiscoveryConfig struct {
-	Enabled           bool     `json:"enabled"`
-	NetworkRanges     []string `json:"network_ranges"`
-	EOPort            int      `json:"eo_port"`
-	IRPort            int      `json:"ir_port"`
-	EOStreamPath      string   `json:"eo_stream_path"`
-	IRStreamPath      string   `json:"ir_stream_path"`
-	EnableBothStreams bool     `json:"enable_both_streams"`
-	KnownIPs          []string `json:"known_ips"`
-}
-
-// GenericUAVConfig represents generic UAV configuration
-type GenericUAVConfig struct {
-	Enabled       bool     `json:"enabled"`
-	NetworkRanges []string `json:"network_ranges"`
-	CommonPorts   []int    `json:"common_ports"`
-	StreamPaths   []string `json:"stream_paths"`
-	KnownIPs      []string `json:"known_ips"`
-}
-
-// DiscoveryOptions represents options for discovery operations
 type DiscoveryOptions struct {
 	SkydioEnabled  bool `json:"skydio_enabled"`
 	GenericEnabled bool `json:"generic_enabled"`

@@ -50,7 +50,8 @@ func TestClient_Get_ReqMTX001(t *testing.T) {
 	// Server is ready via shared test helper
 
 	client := helper.GetClient()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test GET request to paths list endpoint (from swagger.json)
 	data, err := client.Get(ctx, MediaMTXPathsList)
@@ -74,7 +75,8 @@ func TestClient_Post_ReqMTX001(t *testing.T) {
 	// Server is ready via shared test helper
 
 	client := helper.GetClient()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test POST request to create path endpoint (from swagger.json)
 	pathData := `{"name":"test_path","source":"publisher"}`
@@ -96,7 +98,8 @@ func TestClient_Put_ReqMTX001(t *testing.T) {
 	// Server is ready via shared test helper
 
 	client := helper.GetClient()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// First create a path
 	pathData := `{"name":"test_put_path","source":"publisher"}`
@@ -123,7 +126,8 @@ func TestClient_Delete_ReqMTX001(t *testing.T) {
 	// Server is ready via shared test helper
 
 	client := helper.GetClient()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// First create a path
 	pathData := `{"name":"test_delete_path","source":"publisher"}`
@@ -144,7 +148,8 @@ func TestClient_HealthCheck_ReqMTX004(t *testing.T) {
 	// Server is ready via shared test helper
 
 	client := helper.GetClient()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test health check
 	err := client.HealthCheck(ctx)
@@ -160,7 +165,8 @@ func TestClient_ErrorHandling_ReqMTX007(t *testing.T) {
 	// Server is ready via shared test helper
 
 	client := helper.GetClient()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test invalid endpoint
 	_, err := client.Get(ctx, "/v3/invalid/endpoint")
@@ -184,7 +190,8 @@ func TestClient_APICompliance_ReqMTX001(t *testing.T) {
 	// Server is ready via shared test helper
 
 	client := helper.GetClient()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test paths list endpoint compliance with swagger.json
 	data, err := client.Get(ctx, MediaMTXPathsList)
@@ -225,7 +232,8 @@ func TestClient_PutMethod_ReqMTX001(t *testing.T) {
 	// Server is ready via shared test helper
 
 	client := helper.GetClient()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test PUT request with valid data
 	testData := []byte(`{"test": "data"}`)
@@ -285,7 +293,8 @@ func TestClient_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	// Server is ready via shared test helper
 
 	client := helper.GetClient()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test concurrent GET requests
 	done := make(chan bool, 3)

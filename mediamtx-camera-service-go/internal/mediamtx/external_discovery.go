@@ -41,7 +41,17 @@ type ExternalStreamDiscovery struct {
 }
 
 // NewExternalStreamDiscovery creates a new external stream discovery instance
-func NewExternalStreamDiscovery(config *config.ExternalDiscoveryConfig, logger *logging.Logger) *ExternalStreamDiscovery {
+// Following the centralized configuration architecture pattern used by other components
+func NewExternalStreamDiscovery(configIntegration *ConfigIntegration, logger *logging.Logger) *ExternalStreamDiscovery {
+	// Get configuration through centralized ConfigIntegration (architectural compliance)
+	config, err := configIntegration.GetExternalDiscoveryConfig()
+	if err != nil {
+		logger.WithError(err).Warn("Failed to get external discovery config - discovery will be disabled")
+		// For now, set to nil and add defensive checks in methods
+		// TODO: Create proper default config once types are unified
+		config = nil
+	}
+
 	return &ExternalStreamDiscovery{
 		config:            config,
 		logger:            logger,
@@ -53,6 +63,12 @@ func NewExternalStreamDiscovery(config *config.ExternalDiscoveryConfig, logger *
 // Start initializes the external discovery system
 func (esd *ExternalStreamDiscovery) Start(ctx context.Context) error {
 	esd.logger.Info("Starting external stream discovery")
+
+	// Defensive check for nil config (prevents production crashes)
+	if esd.config == nil {
+		esd.logger.Warn("External discovery disabled - no configuration available")
+		return fmt.Errorf("external stream discovery is not configured")
+	}
 
 	// Perform startup scan if enabled
 	if esd.config.EnableStartupScan {
@@ -118,6 +134,11 @@ func (esd *ExternalStreamDiscovery) Stop(ctx context.Context) error {
 
 // DiscoverExternalStreams performs external stream discovery
 func (esd *ExternalStreamDiscovery) DiscoverExternalStreams(ctx context.Context, options DiscoveryOptions) (*DiscoveryResult, error) {
+	// Defensive check for nil config (prevents production crashes)
+	if esd.config == nil {
+		return nil, fmt.Errorf("external stream discovery is not configured")
+	}
+
 	// Check if scan is already in progress
 	if !atomic.CompareAndSwapInt32(&esd.scanInProgress, 0, 1) {
 		return nil, fmt.Errorf("discovery scan already in progress")

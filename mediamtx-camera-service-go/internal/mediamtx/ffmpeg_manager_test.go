@@ -58,7 +58,8 @@ func TestFFmpegManager_SnapshotOnly_ReqMTX002(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_snapshots")
@@ -98,7 +99,8 @@ func TestFFmpegManager_StartProcess_ReqMTX002(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_processes")
@@ -138,7 +140,8 @@ func TestFFmpegManager_StopProcess_ReqMTX002(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_stop")
@@ -190,7 +193,8 @@ func TestFFmpegManager_IsProcessRunning_ReqMTX002(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_running")
@@ -275,7 +279,8 @@ func TestFFmpegManager_ErrorHandling_ReqMTX007(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_errors")
@@ -316,7 +321,8 @@ func TestFFmpegManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_concurrent")
@@ -376,7 +382,8 @@ func TestFFmpegManager_PerformanceMetrics_ReqMTX002(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_metrics")

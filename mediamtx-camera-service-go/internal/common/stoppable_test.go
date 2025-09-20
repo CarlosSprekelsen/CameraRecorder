@@ -277,3 +277,49 @@ func TestStoppable_RealWorldScenarios(t *testing.T) {
 		assert.Less(t, elapsed, 100*time.Millisecond, "Should timeout quickly")
 	})
 }
+
+// TestStopWithTimeout tests the helper function
+func TestStopWithTimeout(t *testing.T) {
+	t.Run("successful_stop_with_timeout", func(t *testing.T) {
+		mock := newMockStoppable(nil)
+
+		start := time.Now()
+		err := StopWithTimeout(mock, 5*time.Second)
+		elapsed := time.Since(start)
+
+		require.NoError(t, err, "StopWithTimeout should succeed")
+		assert.False(t, mock.IsRunning(), "Should not be running after stop")
+		assert.Less(t, elapsed, 100*time.Millisecond, "Should complete quickly")
+	})
+
+	t.Run("stop_with_timeout_error", func(t *testing.T) {
+		expectedError := errors.New("stop failed")
+		mock := newMockStoppable(func(ctx context.Context) error {
+			return expectedError
+		})
+
+		err := StopWithTimeout(mock, 5*time.Second)
+		require.Error(t, err, "StopWithTimeout should return error")
+		assert.Equal(t, expectedError, err, "Should return the expected error")
+	})
+
+	t.Run("stop_with_timeout_exceeds", func(t *testing.T) {
+		mock := newMockStoppable(func(ctx context.Context) error {
+			// Simulate work that takes longer than timeout
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(200 * time.Millisecond):
+				return nil
+			}
+		})
+
+		start := time.Now()
+		err := StopWithTimeout(mock, 50*time.Millisecond)
+		elapsed := time.Since(start)
+
+		require.Error(t, err, "StopWithTimeout should timeout")
+		assert.Contains(t, err.Error(), "context deadline exceeded", "Should indicate timeout")
+		assert.Less(t, elapsed, 100*time.Millisecond, "Should timeout quickly")
+	})
+}

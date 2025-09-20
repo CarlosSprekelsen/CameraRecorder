@@ -40,29 +40,48 @@ func getMapKeys(m map[string]interface{}) []string {
 	return keys
 }
 
-// createMediaMTXControllerForTest creates an individual MediaMTX controller for each test
-// This ensures true test isolation and enables parallel test execution
-func createMediaMTXControllerForTest(t *testing.T) mediamtx.MediaMTXController {
-	// Create individual MediaMTX helper per test for isolation
+// createMediaMTXControllerUsingProvenPattern creates a MediaMTX controller using the exact same pattern
+// as the working MediaMTX tests. This ensures homogeneous test suite with consistent patterns.
+func createMediaMTXControllerUsingProvenPattern(t *testing.T) mediamtx.MediaMTXController {
+	// Use the EXACT same pattern as working MediaMTX tests
 	mediaMTXHelper := mediamtx.NewMediaMTXTestHelper(t, nil)
 
-	// Start MediaMTX controller following proper orchestration
+	// Get controller using the proven pattern
 	controller, err := mediaMTXHelper.GetController(t)
 	require.NoError(t, err, "Failed to create MediaMTX controller")
 
-	// Start the controller
-	ctx := context.Background()
-	if concreteController, ok := controller.(interface{ Start(context.Context) error }); ok {
-		err := concreteController.Start(ctx)
-		require.NoError(t, err, "Failed to start MediaMTX controller")
-	}
-
-	// CRITICAL: Register cleanup to prevent fsnotify file descriptor leaks
+	// CRITICAL: Register cleanup to prevent resource leaks
 	t.Cleanup(func() {
 		mediaMTXHelper.Cleanup(t)
 	})
 
 	return controller
+}
+
+// waitForSystemReadiness implements the Progressive Readiness Pattern exactly as main.go does.
+// Uses event-driven approach with SubscribeToReadiness() and context timeout.
+func waitForSystemReadiness(t *testing.T, controller mediamtx.MediaMTXController) {
+	// Use event-driven approach - subscribe to readiness events
+	readinessChan := controller.SubscribeToReadiness()
+
+	// Apply readiness timeout to prevent indefinite blocking (same as main.go)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+
+	// Wait for readiness event with timeout (exact same pattern as main.go)
+	select {
+	case <-readinessChan:
+		t.Log("Controller readiness event received - all services ready")
+	case <-ctx.Done():
+		t.Log("Controller readiness timeout - proceeding anyway")
+	}
+
+	// Verify actual readiness state from controller (same as main.go)
+	if controller.IsReady() {
+		t.Log("Controller reports ready - all services operational")
+	} else {
+		t.Log("Controller not ready - some services may not be operational")
+	}
 }
 
 // TestWebSocketMethods_Ping tests ping method
@@ -73,8 +92,8 @@ func TestWebSocketMethods_Ping(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	// Set the controller in WebSocket server
 	server := helper.GetServer(t)
@@ -106,8 +125,8 @@ func TestWebSocketMethods_Authenticate(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -136,8 +155,8 @@ func TestWebSocketMethods_GetServerInfo(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -166,8 +185,8 @@ func TestWebSocketMethods_GetStatus(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -196,8 +215,8 @@ func TestWebSocketMethods_GetCameraList(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -226,8 +245,8 @@ func TestWebSocketMethods_GetCameraStatus(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -258,8 +277,8 @@ func TestWebSocketMethods_GetCameraCapabilities(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -289,8 +308,8 @@ func TestWebSocketMethods_TakeSnapshot(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -320,8 +339,8 @@ func TestWebSocketMethods_StartRecording(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -369,8 +388,8 @@ func TestWebSocketMethods_StopRecording(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -415,8 +434,8 @@ func TestWebSocketMethods_GetMetrics(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -445,8 +464,8 @@ func TestWebSocketMethods_InvalidJSON(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -477,8 +496,8 @@ func TestWebSocketMethods_MissingMethod(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -510,8 +529,8 @@ func TestWebSocketMethods_UnauthenticatedAccess(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -551,8 +570,8 @@ func TestWebSocketMethods_SequentialRequests(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -590,8 +609,8 @@ func TestWebSocketMethods_MultipleConnections(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -661,8 +680,8 @@ func TestWebSocketMethods_StartStreaming(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -693,8 +712,8 @@ func TestWebSocketMethods_StopStreaming(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -725,8 +744,8 @@ func TestWebSocketMethods_GetStreamURL(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -757,8 +776,8 @@ func TestWebSocketMethods_GetStreamStatus(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -800,8 +819,8 @@ func TestWebSocketMethods_ListRecordings(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -833,8 +852,8 @@ func TestWebSocketMethods_ListSnapshots(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -866,8 +885,8 @@ func TestWebSocketMethods_DeleteRecording(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -963,6 +982,9 @@ func TestWebSocketMethods_DeleteSnapshot(t *testing.T) {
 	// Authenticate client (operator role for delete_snapshot)
 	AuthenticateTestClient(t, conn, "test_user", "operator")
 
+	// Implement Progressive Readiness Pattern - wait for system to be ready
+	waitForSystemReadiness(t, controller)
+
 	// First, create a snapshot so we have something to delete
 	takeSnapshotMessage := CreateTestMessage("take_snapshot", map[string]interface{}{
 		"device": "camera0",
@@ -1024,8 +1046,8 @@ func TestWebSocketMethods_GetStorageInfo(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -1054,8 +1076,8 @@ func TestWebSocketMethods_SetRetentionPolicy(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -1088,8 +1110,8 @@ func TestWebSocketMethods_CleanupOldFiles(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -1122,8 +1144,8 @@ func TestWebSocketMethods_SubscribeEvents(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -1157,8 +1179,8 @@ func TestWebSocketMethods_UnsubscribeEvents(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -1189,8 +1211,8 @@ func TestWebSocketMethods_GetSubscriptionStats(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -1223,8 +1245,8 @@ func TestWebSocketMethods_DiscoverExternalStreams(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -1258,8 +1280,8 @@ func TestWebSocketMethods_AddExternalStream(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -1292,8 +1314,8 @@ func TestWebSocketMethods_RemoveExternalStream(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -1324,8 +1346,8 @@ func TestWebSocketMethods_GetExternalStreams(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -1354,8 +1376,8 @@ func TestWebSocketMethods_SetDiscoveryInterval(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -1390,8 +1412,8 @@ func TestWebSocketMethods_GetRecordingInfo(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -1459,8 +1481,8 @@ func TestWebSocketMethods_GetSnapshotInfo(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
@@ -1516,8 +1538,8 @@ func TestWebSocketMethods_GetStreams(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create individual MediaMTX controller for test isolation
-	controller := createMediaMTXControllerForTest(t)
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)

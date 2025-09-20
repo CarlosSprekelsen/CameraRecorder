@@ -1,3 +1,6 @@
+//go:build testhelpers
+// +build testhelpers
+
 /*
 Security Test Helpers
 

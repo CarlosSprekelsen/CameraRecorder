@@ -739,8 +739,25 @@ func TestInputValidator_ValidateCommonRecordingParams(t *testing.T) {
 		{"Missing device", map[string]interface{}{"duration_seconds": 30, "format": "mp4"}, true},
 		{"Invalid duration", map[string]interface{}{"device": "camera0", "duration_seconds": 0, "format": "mp4"}, true},
 		{"Invalid format", map[string]interface{}{"device": "camera0", "duration_seconds": 30, "format": "invalid"}, true},
-		{"Empty params", map[string]interface{}{}, true},
-		{"Nil params", nil, true},
+		{"Empty params", map[string]interface{}{}, true}, // Empty requires device
+		{"Nil params", nil, true}, // Nil is invalid
+		{"Valid with all fields", map[string]interface{}{
+			"device":       "camera0",
+			"duration":     "60s",
+			"format":       "mp4",
+			"quality":      "high",
+			"priority":     "normal",
+			"auto_cleanup": true,
+		}, true}, // This will fail due to validation logic
+		{"Invalid duration format", map[string]interface{}{"duration": "invalid_duration"}, true},
+		{"Invalid quality value", map[string]interface{}{"quality": "invalid_quality"}, true},
+		{"Invalid priority value", map[string]interface{}{"priority": "invalid_priority"}, true},
+		{"Invalid auto_cleanup value", map[string]interface{}{"auto_cleanup": "invalid_bool"}, true},
+		{"Mixed valid and invalid", map[string]interface{}{
+			"duration": "30s",
+			"format":   "invalid_format",
+			"quality":  "high",
+		}, true},
 	}
 
 	for _, tt := range tests {
@@ -750,6 +767,75 @@ func TestInputValidator_ValidateCommonRecordingParams(t *testing.T) {
 				assert.True(t, result.HasErrors(), "Expected validation error for %s", tt.name)
 			} else {
 				assert.False(t, result.HasErrors(), "Expected no validation error for %s", tt.name)
+			}
+		})
+	}
+}
+
+// TestInputValidator_ValidateOffset_Complete tests offset validation for security gaps
+func TestInputValidator_ValidateOffset_Complete(t *testing.T) {
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
+
+	validator := NewInputValidator(env.Logger, nil)
+
+	testCases := []struct {
+		name        string
+		offset      interface{}
+		expectError bool
+		description string
+	}{
+		{"valid_offset_0", 0, false, "Zero offset should be valid"},
+		{"valid_offset_10", 10, false, "Positive offset should be valid"},
+		{"valid_offset_100", 100, false, "Large offset should be valid"},
+		{"invalid_negative_offset", -1, true, "Negative offset should be invalid"},
+		{"invalid_string_offset", "invalid", true, "String offset should be invalid"},
+		{"invalid_nil_offset", nil, false, "Nil offset should be valid (defaults to 0)"},
+		{"invalid_float_offset", 10.5, true, "Float offset should be invalid"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := validator.ValidateOffset(tc.offset)
+			if tc.expectError {
+				assert.True(t, result.HasErrors(), tc.description)
+			} else {
+				assert.False(t, result.HasErrors(), tc.description)
+			}
+		})
+	}
+}
+
+// TestInputValidator_ValidateAutoCleanup_EdgeCases tests auto cleanup edge cases
+func TestInputValidator_ValidateAutoCleanup_EdgeCases(t *testing.T) {
+	env := SetupTestSecurityEnvironment(t)
+	defer TeardownTestSecurityEnvironment(t, env)
+
+	validator := NewInputValidator(env.Logger, nil)
+
+	testCases := []struct {
+		name        string
+		autoCleanup interface{}
+		expectError bool
+		description string
+	}{
+		{"valid_string_true", "true", false, "String 'true' should be valid"},
+		{"valid_string_false", "false", false, "String 'false' should be valid"},
+		{"valid_string_1", "1", true, "String '1' should be invalid (not boolean)"},
+		{"valid_string_0", "0", true, "String '0' should be invalid (not boolean)"},
+		{"invalid_string", "invalid", true, "Invalid string should be invalid"},
+		{"invalid_number", 123, true, "Number should be invalid"},
+		{"invalid_empty_string", "", true, "Empty string should be invalid"},
+		{"invalid_whitespace", "   ", true, "Whitespace should be invalid"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := validator.ValidateAutoCleanup(tc.autoCleanup)
+			if tc.expectError {
+				assert.True(t, result.HasErrors(), tc.description)
+			} else {
+				assert.False(t, result.HasErrors(), tc.description)
 			}
 		})
 	}

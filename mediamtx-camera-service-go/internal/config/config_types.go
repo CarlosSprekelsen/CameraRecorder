@@ -385,6 +385,8 @@ type Config struct {
 	Security        SecurityConfig        `mapstructure:"security"`
 	Storage         StorageConfig         `mapstructure:"storage"`
 	RetentionPolicy RetentionPolicyConfig `mapstructure:"retention_policy"`
+	// External stream discovery configuration (architectural compliance)
+	ExternalDiscovery ExternalDiscoveryConfig `mapstructure:"external_discovery"`
 	// Server operation defaults
 	ServerDefaults ServerDefaults `mapstructure:"server_defaults"`
 }

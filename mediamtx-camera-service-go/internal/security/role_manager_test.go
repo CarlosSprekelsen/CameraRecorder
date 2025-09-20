@@ -224,6 +224,99 @@ func TestPermissionChecker_AdditionalEdgeCases(t *testing.T) {
 	})
 }
 
+// TestPermissionChecker_GetPermissionsForRole tests the GetPermissionsForRole function
+// CRITICAL SECURITY TEST: This function determines what permissions a role has
+func TestPermissionChecker_GetPermissionsForRole(t *testing.T) {
+	t.Parallel()
+
+	checker := NewPermissionChecker()
+
+	testCases := []struct {
+		name        string
+		roleStr     string
+		expected    []string
+		description string
+	}{
+		{
+			name:        "admin_permissions",
+			roleStr:     "admin",
+			expected:    []string{"view", "control", "admin"},
+			description: "Admin should have all permission categories",
+		},
+		{
+			name:        "operator_permissions",
+			roleStr:     "operator",
+			expected:    []string{"view", "control"},
+			description: "Operator should have view and control permissions",
+		},
+		{
+			name:        "viewer_permissions",
+			roleStr:     "viewer",
+			expected:    []string{"view"},
+			description: "Viewer should have only view permissions",
+		},
+		{
+			name:        "invalid_role",
+			roleStr:     "invalid",
+			expected:    []string{},
+			description: "Invalid role should return empty permissions",
+		},
+		{
+			name:        "empty_role",
+			roleStr:     "",
+			expected:    []string{},
+			description: "Empty role should return empty permissions",
+		},
+		{
+			name:        "uppercase_role",
+			roleStr:     "ADMIN",
+			expected:    []string{"view", "control", "admin"},
+			description: "Uppercase role should work (case insensitive)",
+		},
+		{
+			name:        "numeric_role",
+			roleStr:     "123",
+			expected:    []string{},
+			description: "Numeric role should return empty permissions",
+		},
+		{
+			name:        "special_chars_role",
+			roleStr:     "admin@#$",
+			expected:    []string{},
+			description: "Role with special characters should return empty permissions",
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			result := checker.GetPermissionsForRole(tc.roleStr)
+			assert.Equal(t, tc.expected, result, tc.description)
+		})
+	}
+}
+
+// TestRole_String tests the String method for complete coverage
+func TestRole_String(t *testing.T) {
+	t.Parallel()
+
+	testCases := []struct {
+		role     Role
+		expected string
+	}{
+		{RoleViewer, "viewer"},
+		{RoleOperator, "operator"},
+		{RoleAdmin, "admin"},
+		{Role(999), "unknown"}, // Test unknown role
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.expected, func(t *testing.T) {
+			result := tc.role.String()
+			assert.Equal(t, tc.expected, result)
+		})
+	}
+}
+
 // Performance benchmarks for permission checker
 func BenchmarkPermissionChecker_HasPermission(b *testing.B) {
 	checker := NewPermissionChecker()

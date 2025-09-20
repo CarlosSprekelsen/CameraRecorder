@@ -53,7 +53,8 @@ func TestRecordingManager_StartRecording_ReqMTX002(t *testing.T) {
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
@@ -105,7 +106,8 @@ func TestRecordingManager_StopRecording_ReqMTX002(t *testing.T) {
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
@@ -149,7 +151,8 @@ func TestRecordingManager_GetRecordingsListAPI_ReqMTX002(t *testing.T) {
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test 1: Call MediaMTX /v3/recordings/list API endpoint directly
 	response, err := recordingManager.GetRecordingsList(ctx, 10, 0)
@@ -184,7 +187,8 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Use a unique camera ID to avoid conflicts
 	timestamp := time.Now().Format("20060102_150405")
@@ -291,7 +295,8 @@ func TestRecordingManager_APISchemaCompliance_ReqMTX001(t *testing.T) {
 
 	// Server is ready via shared test helper
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test 1: Validate /v3/recordings/list response matches RecordingList schema
 	data, err := helper.GetClient().Get(ctx, "/v3/recordings/list?itemsPerPage=10&page=0")
@@ -340,7 +345,8 @@ func TestRecordingManager_APIErrorHandling_ReqMTX004(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test 1: Invalid path should return 404 error as per swagger.json
 	// Use test-prefixed name to ensure proper cleanup
@@ -384,7 +390,8 @@ func TestRecordingManager_ErrorHandling_ReqMTX007(t *testing.T) {
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
@@ -415,7 +422,8 @@ func TestRecordingManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
@@ -462,7 +470,8 @@ func TestRecordingManager_StartRecordingWithSegments_ReqMTX002(t *testing.T) {
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")

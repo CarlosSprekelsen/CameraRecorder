@@ -29,7 +29,8 @@ func TestStreamManager_PanicRecovery(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test panic recovery in StartStream
 	t.Run("StartStream_PanicRecovery", func(t *testing.T) {
@@ -99,7 +100,8 @@ func TestStreamManager_ErrorHandling(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	t.Run("ErrorHandling_InvalidCameraID", func(t *testing.T) {
 		// Test error handling with invalid camera ID
@@ -135,7 +137,8 @@ func TestStreamManager_StreamLifecycle_ErrorHandling(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	t.Run("StreamLifecycle_StartStop_ErrorHandling", func(t *testing.T) {
 		cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
@@ -189,7 +192,8 @@ func TestStreamManager_ErrorHandlingRobustness(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	t.Run("ErrorHandling_MultipleOperations", func(t *testing.T) {
 		// Test multiple error scenarios to ensure robustness
@@ -285,7 +289,8 @@ func TestStreamManager_ErrorHandling_RealCamera(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	t.Run("RealCamera_ErrorHandling", func(t *testing.T) {
 		cameraID, err := helper.GetAvailableCameraIdentifier(ctx)

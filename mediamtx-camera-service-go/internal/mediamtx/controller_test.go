@@ -68,7 +68,8 @@ func TestController_GetHealth_ReqMTX004(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -128,7 +129,8 @@ func TestController_GetMetrics_ReqMTX004(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -159,7 +161,8 @@ func TestController_GetSystemMetrics_ReqMTX004(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -190,7 +193,8 @@ func TestController_GetPaths_ReqMTX003(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -222,7 +226,8 @@ func TestController_GetStreams_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -262,7 +267,8 @@ func TestController_GetStream_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test getting a non-existent stream (should return error)
 	_, err = controller.GetStream(ctx, "non_existent_stream")
@@ -372,7 +378,8 @@ func TestController_GetConfig_ReqMTX001(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -404,7 +411,8 @@ func TestController_ListRecordings_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -435,7 +443,8 @@ func TestController_ListSnapshots_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -467,7 +476,8 @@ func TestController_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -529,7 +539,8 @@ func TestController_StartRecording_ReqMTX002(t *testing.T) {
 	controller := getFreshController(t, "TestController_StartRecording_ReqMTX002")
 
 	// USE EXISTING: Start controller using the same pattern as working tests
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err := controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -637,7 +648,8 @@ func TestController_StopRecording_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 	defer func() {
@@ -690,7 +702,8 @@ func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 	defer func() {
@@ -760,7 +773,8 @@ func TestController_StreamManagement_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 	defer func() {
@@ -789,7 +803,8 @@ func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 	controller := getFreshController(t, "TestController_AdvancedRecording_ReqMTX002")
 
 	// Start the controller if not already started
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err := controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -840,7 +855,8 @@ func TestController_StreamRecording_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Controller orchestration should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err)
 
@@ -864,8 +880,9 @@ func TestController_StreamRecording_ReqMTX002(t *testing.T) {
 
 	// Verify stream properties - stream is GetStreamURLResponse, not a Path
 	assert.NotEmpty(t, stream.StreamURL, "Stream URL should not be empty")
-	// Note: Path struct doesn't have URL field - source is in Path.Source
-	assert.True(t, stream.Ready, "Stream should be ready after FFmpeg startup (abstraction layer handles timing)")
+	// Note: Per architecture - on-demand streams activate when accessed, not when created
+	// Therefore stream.Ready may be false initially until a client connects
+	assert.Contains(t, stream.StreamURL, cameraID, "Stream URL should contain camera identifier")
 
 	// Test getting stream status
 	status, err := controller.GetStreamStatus(ctx, cameraID)
@@ -891,7 +908,8 @@ func TestController_HealthMonitoring_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring capabilities
 	controller := getFreshController(t, "TestController_HealthMonitoring_ReqMTX004")
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err := controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -925,7 +943,8 @@ func TestController_PathManagement_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
 	controller := getFreshController(t, "TestController_PathManagement_ReqMTX003")
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err := controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -972,7 +991,8 @@ func TestController_RTSPOperations_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: RTSP connection management
 	controller := getFreshController(t, "TestController_RTSPOperations_ReqMTX004")
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err := controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -1011,7 +1031,8 @@ func TestController_AdvancedSnapshot_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 	controller := getFreshController(t, "TestController_AdvancedSnapshot_ReqMTX002")
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err := controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -1088,7 +1109,8 @@ func TestController_SetSystemEventNotifier_ReqMTX004(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 	defer func() {
@@ -1148,7 +1170,8 @@ func TestController_CreateStream_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 	defer func() {
@@ -1188,7 +1211,8 @@ func TestController_DeleteStream_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 	defer func() {
@@ -1222,7 +1246,8 @@ func TestControllerWithConfigManagerFunction_ReqMTX001(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Verify controller can be started and stopped
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller should start successfully")
 
@@ -1246,7 +1271,8 @@ func TestController_InputValidation_DangerousBugs(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -1275,7 +1301,8 @@ func TestController_InputValidationBoundaryConditions_DangerousBugs(t *testing.T
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -1304,7 +1331,8 @@ func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test concurrent start/stop operations - should be handled gracefully by controller
 	t.Run("concurrent_start_stop_race_condition", func(t *testing.T) {
@@ -1433,7 +1461,8 @@ func TestEventDrivenReadiness(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start controller in background
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -1510,7 +1539,8 @@ func TestParallelEventDrivenTests(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -1622,7 +1652,8 @@ func TestGracefulShutdown(t *testing.T) {
 		monitor := NewHealthMonitor(client, config, configIntegration, logger)
 
 		// Start components
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+		defer cancel()
 		err := monitor.Start(ctx)
 		require.NoError(t, err, "Health monitor start should succeed")
 
@@ -1650,7 +1681,8 @@ func TestGracefulShutdown(t *testing.T) {
 		pathIntegration := NewPathIntegration(pathManager, cameraMonitor, configIntegration, logger)
 
 		// Start components
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+		defer cancel()
 		err := pathIntegration.Start(ctx)
 		require.NoError(t, err, "Path integration start should succeed")
 
@@ -1674,7 +1706,8 @@ func TestGracefulShutdown(t *testing.T) {
 		require.NoError(t, err, "Controller creation should succeed")
 
 		// Start components
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+		defer cancel()
 		err = controller.Start(ctx)
 		require.NoError(t, err, "Controller start should succeed")
 
@@ -1756,7 +1789,8 @@ func TestGracefulShutdown(t *testing.T) {
 		monitor := NewHealthMonitor(client, config, configIntegration, logger)
 
 		// Start components
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+		defer cancel()
 		err := monitor.Start(ctx)
 		require.NoError(t, err, "Health monitor start should succeed")
 

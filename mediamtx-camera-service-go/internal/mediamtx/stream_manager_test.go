@@ -48,7 +48,8 @@ func TestStreamManager_CreateStream_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	testStreamName := "test_stream_" + time.Now().Format("20060102_150405")
 	testSource := "publisher"
 
@@ -76,7 +77,8 @@ func TestStreamManager_DeleteStream_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	testStreamName := "test_delete_stream_" + time.Now().Format("20060102_150405")
 
 	// Create a stream first
@@ -99,7 +101,8 @@ func TestStreamManager_StartStream_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Use existing test helper to get camera identifier - following established patterns
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
@@ -128,7 +131,8 @@ func TestStreamManager_GetStreamStatus_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Use existing test helper to get camera identifier - following established patterns
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
@@ -156,7 +160,8 @@ func TestStreamManager_ListStreamsAPI_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// List streams using new API-ready method
 	response, err := streamManager.ListStreams(ctx)
@@ -185,7 +190,8 @@ func TestStreamManager_GetStreamURL_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Use existing test helper to get camera identifier - following established patterns
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
@@ -216,7 +222,8 @@ func TestStreamManager_GetStream_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	testStreamName := "test_get_stream_" + time.Now().Format("20060102_150405")
 
 	// Create a stream first
@@ -247,7 +254,8 @@ func TestStreamManager_ListStreams_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// List all streams
 	streams, err := streamManager.ListStreams(ctx)
@@ -269,7 +277,8 @@ func TestStreamManager_StartRecordingStream_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	devicePath := "/dev/video0"
 
 	// Start recording stream
@@ -298,7 +307,8 @@ func TestStreamManager_StartStream_Viewing_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	devicePath := "/dev/video0"
 
 	// Start stream using single path approach (no separate viewing stream)
@@ -325,7 +335,8 @@ func TestStreamManager_StartStream_Snapshot_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	// Use test fixture for external RTSP source (Tier 3 scenario)
 	devicePath := helper.GetTestCameraDevice("network_failure")
 
@@ -353,7 +364,8 @@ func TestStreamManager_ErrorHandling_ReqMTX001(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test invalid stream name
 	_, err := streamManager.CreateStream(ctx, "", "publisher")

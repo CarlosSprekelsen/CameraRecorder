@@ -110,7 +110,8 @@ func TestRTSPConnectionManager_ListConnections_ReqMTX002(t *testing.T) {
 
 	// Use shared RTSP connection manager from test helper
 	rtspManager := helper.GetRTSPConnectionManager()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test listing connections with different pagination
 	testCases := []struct {
@@ -157,7 +158,8 @@ func TestRTSPConnectionManager_ListSessions_ReqMTX002(t *testing.T) {
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), config, logger)
 	require.NotNil(t, rtspManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test listing sessions
 	sessions, err := rtspManager.ListSessions(ctx, 0, 10)
@@ -191,7 +193,8 @@ func TestRTSPConnectionManager_GetConnectionHealth_ReqMTX004(t *testing.T) {
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), mediaMTXConfig, logger)
 	require.NotNil(t, rtspManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test health monitoring
 	health, err := rtspManager.GetConnectionHealth(ctx)
@@ -217,7 +220,8 @@ func TestRTSPConnectionManager_GetConnectionMetrics_ReqMTX004(t *testing.T) {
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), config, logger)
 	require.NotNil(t, rtspManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test metrics collection
 	metrics := rtspManager.GetConnectionMetrics(ctx)
@@ -265,7 +269,8 @@ func TestRTSPConnectionManager_Configuration_ReqMTX003(t *testing.T) {
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), mediaMTXConfig, logger)
 	require.NotNil(t, rtspManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test that configuration is applied
 	health, err := rtspManager.GetConnectionHealth(ctx)
@@ -297,7 +302,8 @@ func TestRTSPConnectionManager_ErrorHandling_ReqMTX004(t *testing.T) {
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), config, logger)
 	require.NotNil(t, rtspManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test getting non-existent connection
 	_, err := rtspManager.GetConnection(ctx, "non-existent-id")
@@ -331,7 +337,8 @@ func TestRTSPConnectionManager_Performance_ReqMTX002(t *testing.T) {
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), config, logger)
 	require.NotNil(t, rtspManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test multiple rapid calls
 	start := time.Now()
@@ -365,7 +372,8 @@ func TestRTSPConnectionManager_RealMediaMTXServer(t *testing.T) {
 	rtspManager := helper.GetRTSPConnectionManager()
 	require.NotNil(t, rtspManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test that we can interact with the real MediaMTX server
 	connections, err := rtspManager.ListConnections(ctx, 0, 10)
@@ -448,7 +456,8 @@ func TestRTSPConnectionManager_ConfigurationScenarios(t *testing.T) {
 	for _, scenario := range configScenarios {
 		t.Run(scenario.name, func(t *testing.T) {
 			rtspManager := helper.GetRTSPConnectionManager()
-			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 			// Test health monitoring with custom config
 			health, err := rtspManager.GetConnectionHealth(ctx)
@@ -486,7 +495,8 @@ func TestRTSPConnectionManager_ErrorScenarios(t *testing.T) {
 	// Server is ready via shared test helper
 
 	rtspManager := helper.GetRTSPConnectionManager()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test error scenarios
 	errorScenarios := []struct {
@@ -570,7 +580,8 @@ func TestRTSPConnectionManager_ConcurrentAccess(t *testing.T) {
 	// Server is ready via shared test helper
 
 	rtspManager := helper.GetRTSPConnectionManager()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test concurrent access
 	numGoroutines := 3
@@ -654,7 +665,8 @@ func TestRTSPConnectionManager_StressTest(t *testing.T) {
 	// Server is ready via shared test helper
 
 	rtspManager := helper.GetRTSPConnectionManager()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Stress test with rapid successive calls
 	start := time.Now()
@@ -716,7 +728,8 @@ func TestRTSPConnectionManager_IntegrationWithController(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test controller RTSP methods
 	connections, err := controller.ListRTSPConnections(ctx, 1, 10)
@@ -764,7 +777,8 @@ func TestRTSPConnectionManager_ErrorScenarios_DangerousBugs(t *testing.T) {
 
 	// Create RTSP connection manager
 	rtspManager := helper.GetRTSPConnectionManager()
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test the specific scenarios that were failing in the original tests
 	t.Run("negative_page_number_bug", func(t *testing.T) {

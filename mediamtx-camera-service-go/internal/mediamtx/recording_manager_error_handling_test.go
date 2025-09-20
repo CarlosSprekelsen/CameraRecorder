@@ -30,7 +30,8 @@ func TestRecordingManager_PanicRecovery(t *testing.T) {
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test panic recovery in StartRecording
 	t.Run("StartRecording_PanicRecovery", func(t *testing.T) {
@@ -198,7 +199,8 @@ func TestRecordingManager_ErrorHandlingIntegration(t *testing.T) {
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	t.Run("ErrorHandling_InvalidCameraID", func(t *testing.T) {
 		// Test error handling with invalid camera ID
@@ -308,7 +310,8 @@ func TestRecordingManager_ErrorHandlingRobustness(t *testing.T) {
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	t.Run("ErrorHandling_MultipleOperations", func(t *testing.T) {
 		// Test multiple error scenarios to ensure robustness

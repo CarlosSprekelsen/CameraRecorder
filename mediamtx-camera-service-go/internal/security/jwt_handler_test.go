@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/golang-jwt/jwt/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -355,4 +356,167 @@ func TestJWTHandler_ErrorHandling(t *testing.T) {
 	specialSecret := "!@#$%^&*()_+-=[]{}|;':\",./<>?"
 	_, err = NewJWTHandler(specialSecret, logger)
 	assert.NoError(t, err) // Should handle special characters
+}
+
+// TestJWTHandler_TokenValidation_ErrorPaths tests all JWT validation error paths
+// CRITICAL SECURITY TEST: Comprehensive error path coverage prevents vulnerabilities
+func TestJWTHandler_TokenValidation_ErrorPaths(t *testing.T) {
+	t.Parallel()
+
+	jwtHandler := TestJWTHandler(t)
+
+	t.Run("missing_required_fields", func(t *testing.T) {
+		// Test missing user_id
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"role": "viewer",
+			"iat":  time.Now().Unix(),
+			"exp":  time.Now().Add(time.Hour).Unix(),
+		})
+
+		tokenString, err := token.SignedString([]byte(jwtHandler.GetSecretKey()))
+		require.NoError(t, err)
+
+		_, err = jwtHandler.ValidateToken(tokenString)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "missing required field: user_id")
+	})
+
+	t.Run("invalid_role_values", func(t *testing.T) {
+		// Test invalid role string
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"user_id": "testuser",
+			"role":    "invalid_role",
+			"iat":     time.Now().Unix(),
+			"exp":     time.Now().Add(time.Hour).Unix(),
+		})
+
+		tokenString, err := token.SignedString([]byte(jwtHandler.GetSecretKey()))
+		require.NoError(t, err)
+
+		_, err = jwtHandler.ValidateToken(tokenString)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid role: invalid_role")
+	})
+
+	t.Run("non_string_role", func(t *testing.T) {
+		// Test non-string role
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"user_id": "testuser",
+			"role":    123, // Non-string role
+			"iat":     time.Now().Unix(),
+			"exp":     time.Now().Add(time.Hour).Unix(),
+		})
+
+		tokenString, err := token.SignedString([]byte(jwtHandler.GetSecretKey()))
+		require.NoError(t, err)
+
+		_, err = jwtHandler.ValidateToken(tokenString)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid role:")
+	})
+
+	t.Run("invalid_timestamp_types", func(t *testing.T) {
+		// Test invalid iat timestamp
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"user_id": "testuser",
+			"role":    "viewer",
+			"iat":     "invalid_timestamp", // String instead of number
+			"exp":     time.Now().Add(time.Hour).Unix(),
+		})
+
+		tokenString, err := token.SignedString([]byte(jwtHandler.GetSecretKey()))
+		require.NoError(t, err)
+
+		_, err = jwtHandler.ValidateToken(tokenString)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to validate JWT token")
+	})
+
+	t.Run("invalid_exp_timestamp", func(t *testing.T) {
+		// Test invalid exp timestamp
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"user_id": "testuser",
+			"role":    "viewer",
+			"iat":     time.Now().Unix(),
+			"exp":     "invalid_timestamp", // String instead of number
+		})
+
+		tokenString, err := token.SignedString([]byte(jwtHandler.GetSecretKey()))
+		require.NoError(t, err)
+
+		_, err = jwtHandler.ValidateToken(tokenString)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to validate JWT token")
+	})
+
+	t.Run("expired_token", func(t *testing.T) {
+		// Test expired token
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"user_id": "testuser",
+			"role":    "viewer",
+			"iat":     time.Now().Add(-2 * time.Hour).Unix(),
+			"exp":     time.Now().Add(-time.Hour).Unix(), // Expired 1 hour ago
+		})
+
+		tokenString, err := token.SignedString([]byte(jwtHandler.GetSecretKey()))
+		require.NoError(t, err)
+
+		_, err = jwtHandler.ValidateToken(tokenString)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to validate JWT token")
+	})
+
+	t.Run("whitespace_token", func(t *testing.T) {
+		// Test whitespace-only token
+		_, err := jwtHandler.ValidateToken("   \t\n   ")
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "token cannot be empty")
+	})
+
+	t.Run("malformed_jwt_structure", func(t *testing.T) {
+		// Test various malformed token structures
+		malformedTokens := []string{
+			"not.a.jwt",
+			"only.two.parts",
+			"too.many.parts.here.extra",
+			"invalid_base64.invalid_base64.invalid_base64",
+		}
+
+		for _, malformed := range malformedTokens {
+			_, err := jwtHandler.ValidateToken(malformed)
+			assert.Error(t, err, "Should reject malformed token: %s", malformed)
+			assert.Contains(t, err.Error(), "failed to validate JWT token")
+		}
+	})
+
+	t.Run("wrong_signature", func(t *testing.T) {
+		// Create token with different secret
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"user_id": "testuser",
+			"role":    "viewer",
+			"iat":     time.Now().Unix(),
+			"exp":     time.Now().Add(time.Hour).Unix(),
+		})
+
+		tokenString, err := token.SignedString([]byte("wrong_secret_key"))
+		require.NoError(t, err)
+
+		_, err = jwtHandler.ValidateToken(tokenString)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to validate JWT token")
+	})
+
+	t.Run("all_missing_fields", func(t *testing.T) {
+		// Test token with no required fields
+		token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+			"random_field": "random_value",
+		})
+
+		tokenString, err := token.SignedString([]byte(jwtHandler.GetSecretKey()))
+		require.NoError(t, err)
+
+		_, err = jwtHandler.ValidateToken(tokenString)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "missing required field:")
+	})
 }

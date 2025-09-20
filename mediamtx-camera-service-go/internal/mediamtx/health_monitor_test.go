@@ -73,7 +73,8 @@ func TestHealthMonitor_StartStop_ReqMTX004(t *testing.T) {
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Start health monitoring
 	err := healthMonitor.Start(ctx)
@@ -116,7 +117,8 @@ func TestHealthMonitor_GetStatus_ReqMTX004(t *testing.T) {
 	require.NotNil(t, status, "Status should not be nil")
 	assert.Equal(t, "healthy", status.Status, "Initial status should be healthy")
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Start monitoring
 	err := healthMonitor.Start(ctx)
@@ -161,7 +163,8 @@ func TestHealthMonitor_GetMetrics_ReqMTX004(t *testing.T) {
 	assert.Contains(t, metrics, "is_healthy", "Metrics should contain is_healthy")
 	assert.Contains(t, metrics, "failure_count", "Metrics should contain failure_count")
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Start monitoring
 	err := healthMonitor.Start(ctx)
@@ -329,7 +332,8 @@ func TestHealthMonitor_DebounceMechanism_ReqMTX004(t *testing.T) {
 	healthMonitor.SetSystemNotifier(mockNotifier)
 
 	// Test debounce mechanism with rapid successive failures
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Start the health monitor
 	err := healthMonitor.Start(ctx)
@@ -384,7 +388,8 @@ func TestHealthMonitor_AtomicOperations_ReqMTX004(t *testing.T) {
 	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
 
 	// Test concurrent access to ensure atomic operations work correctly
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Start the health monitor
 	err := healthMonitor.Start(ctx)
@@ -451,7 +456,8 @@ func TestHealthMonitor_StatusTransitions_ReqMTX004(t *testing.T) {
 	healthMonitor.SetSystemNotifier(mockNotifier)
 
 	// Test status transitions
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Start the health monitor
 	err := healthMonitor.Start(ctx)
@@ -505,7 +511,8 @@ func TestHealthMonitor_GetHealthAPI_ReqMTX004(t *testing.T) {
 	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
 
 	// Start health monitor
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err := healthMonitor.Start(ctx)
 	require.NoError(t, err, "Health monitor should start successfully")
 
@@ -564,7 +571,8 @@ func TestHealthMonitor_GetHealthAPI_APICompliance_ReqAPI001(t *testing.T) {
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	startTime := time.Now().Add(-30 * time.Minute)
 
 	// Test API compliance for GetHealthAPI method

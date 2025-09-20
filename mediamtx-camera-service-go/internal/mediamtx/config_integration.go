@@ -221,6 +221,16 @@ func (ci *ConfigIntegration) GetPerformanceConfig() (*config.PerformanceConfig, 
 	return &cfg.Performance, nil
 }
 
+// GetExternalDiscoveryConfig retrieves external discovery configuration
+func (ci *ConfigIntegration) GetExternalDiscoveryConfig() (*config.ExternalDiscoveryConfig, error) {
+	cfg := ci.configManager.GetConfig()
+	if cfg == nil {
+		return nil, fmt.Errorf("failed to get config: config is nil")
+	}
+
+	return &cfg.ExternalDiscovery, nil
+}
+
 // GetConfig retrieves the full configuration
 func (ci *ConfigIntegration) GetConfig() (*config.Config, error) {
 	cfg := ci.configManager.GetConfig()

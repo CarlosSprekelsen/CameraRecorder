@@ -18,7 +18,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -35,7 +34,8 @@ func TestExternalStreamDiscovery_DiscoverExternalStreams_ReqMTX001(t *testing.T)
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -74,7 +74,8 @@ func TestExternalStreamDiscovery_AddExternalStream_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -125,7 +126,8 @@ func TestExternalStreamDiscovery_RemoveExternalStream_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -193,7 +195,8 @@ func TestExternalStreamDiscovery_GetExternalStreams_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -251,7 +254,8 @@ func TestExternalStreamDiscovery_ErrorHandling_ReqMTX004(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -295,7 +299,8 @@ func TestExternalStreamDiscovery_OptionalComponent_ReqMTX004(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -344,15 +349,15 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		defer helper.Cleanup(t)
 
 		// Create external discovery directly
-		config := &config.ExternalDiscoveryConfig{
-			Enabled:      true,
-			ScanInterval: 30,
-		}
 		logger := helper.GetLogger()
-		discovery := NewExternalStreamDiscovery(config, logger)
+		// Use centralized configuration architecture
+		configManager := helper.GetConfigManager()
+		configIntegration := NewConfigIntegration(configManager, logger)
+		discovery := NewExternalStreamDiscovery(configIntegration, logger)
 
 		// Start discovery
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+		defer cancel()
 		err := discovery.Start(ctx)
 		require.NoError(t, err, "Discovery should start successfully")
 
@@ -373,15 +378,15 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		defer helper.Cleanup(t)
 
 		// Create external discovery directly
-		config := &config.ExternalDiscoveryConfig{
-			Enabled:      true,
-			ScanInterval: 30,
-		}
 		logger := helper.GetLogger()
-		discovery := NewExternalStreamDiscovery(config, logger)
+		// Use centralized configuration architecture
+		configManager := helper.GetConfigManager()
+		configIntegration := NewConfigIntegration(configManager, logger)
+		discovery := NewExternalStreamDiscovery(configIntegration, logger)
 
 		// Start discovery
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+		defer cancel()
 		err := discovery.Start(ctx)
 		require.NoError(t, err, "Discovery should start successfully")
 
@@ -403,15 +408,15 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		defer helper.Cleanup(t)
 
 		// Create external discovery directly
-		config := &config.ExternalDiscoveryConfig{
-			Enabled:      true,
-			ScanInterval: 30,
-		}
 		logger := helper.GetLogger()
-		discovery := NewExternalStreamDiscovery(config, logger)
+		// Use centralized configuration architecture
+		configManager := helper.GetConfigManager()
+		configIntegration := NewConfigIntegration(configManager, logger)
+		discovery := NewExternalStreamDiscovery(configIntegration, logger)
 
 		// Start discovery
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+		defer cancel()
 		err := discovery.Start(ctx)
 		require.NoError(t, err, "Discovery should start successfully")
 
@@ -442,15 +447,15 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		defer helper.Cleanup(t)
 
 		// Create external discovery directly
-		config := &config.ExternalDiscoveryConfig{
-			Enabled:      true,
-			ScanInterval: 30,
-		}
 		logger := helper.GetLogger()
-		discovery := NewExternalStreamDiscovery(config, logger)
+		// Use centralized configuration architecture
+		configManager := helper.GetConfigManager()
+		configIntegration := NewConfigIntegration(configManager, logger)
+		discovery := NewExternalStreamDiscovery(configIntegration, logger)
 
 		// Start discovery
-		ctx := context.Background()
+		ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+		defer cancel()
 		err := discovery.Start(ctx)
 		require.NoError(t, err, "Discovery should start successfully")
 
@@ -472,12 +477,11 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		defer helper.Cleanup(t)
 
 		// Create external discovery directly
-		config := &config.ExternalDiscoveryConfig{
-			Enabled:      true,
-			ScanInterval: 30,
-		}
 		logger := helper.GetLogger()
-		discovery := NewExternalStreamDiscovery(config, logger)
+		// Use centralized configuration architecture
+		configManager := helper.GetConfigManager()
+		configIntegration := NewConfigIntegration(configManager, logger)
+		discovery := NewExternalStreamDiscovery(configIntegration, logger)
 
 		// Stop without starting should not error
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -493,14 +497,17 @@ func TestExternalStreamDiscovery_DiscoverExternalStreamsAPI_ReqMTX002(t *testing
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Create external stream discovery using existing test infrastructure
+	// Create external stream discovery using centralized configuration architecture
 	logger := helper.GetLogger()
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, logger)
 
-	// Use nil config for now - ExternalDiscoveryConfig type doesn't exist yet
-	discovery := NewExternalStreamDiscovery(nil, logger)
+	// Use centralized config pattern (architectural compliance)
+	discovery := NewExternalStreamDiscovery(configIntegration, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test DiscoverExternalStreamsAPI method - new API-ready response
 	options := DiscoveryOptions{
@@ -534,11 +541,14 @@ func TestExternalStreamDiscovery_GetExternalStreamsAPI_ReqMTX002(t *testing.T) {
 	// Create external stream discovery using existing test infrastructure
 	logger := helper.GetLogger()
 
-	// Use nil config for now - ExternalDiscoveryConfig type doesn't exist yet
-	discovery := NewExternalStreamDiscovery(nil, logger)
+	// Use centralized config pattern (architectural compliance)
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, logger)
+	discovery := NewExternalStreamDiscovery(configIntegration, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test GetExternalStreamsAPI method - new API-ready response
 	response, err := discovery.GetExternalStreamsAPI(ctx)
@@ -562,11 +572,14 @@ func TestExternalStreamDiscovery_AddExternalStreamAPI_ReqMTX002(t *testing.T) {
 	// Create external stream discovery using existing test infrastructure
 	logger := helper.GetLogger()
 
-	// Use nil config for now - ExternalDiscoveryConfig type doesn't exist yet
-	discovery := NewExternalStreamDiscovery(nil, logger)
+	// Use centralized config pattern (architectural compliance)
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, logger)
+	discovery := NewExternalStreamDiscovery(configIntegration, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create test external stream
 	testStream := &ExternalStream{
@@ -605,11 +618,14 @@ func TestExternalStreamDiscovery_RemoveExternalStreamAPI_ReqMTX002(t *testing.T)
 	// Create external stream discovery using existing test infrastructure
 	logger := helper.GetLogger()
 
-	// Use nil config for now - ExternalDiscoveryConfig type doesn't exist yet
-	discovery := NewExternalStreamDiscovery(nil, logger)
+	// Use centralized config pattern (architectural compliance)
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, logger)
+	discovery := NewExternalStreamDiscovery(configIntegration, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// First add a test stream
 	testStream := &ExternalStream{

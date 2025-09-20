@@ -49,7 +49,8 @@ func TestPathManager_CreatePath_ReqMTX003(t *testing.T) {
 	require.NotNil(t, pathManager)
 
 	// Test path creation
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	testPathName := "test_path_manager_" + time.Now().Format("20060102_150405")
 
 	// Ensure cleanup happens even if test fails
@@ -81,7 +82,8 @@ func TestPathManager_DeletePath_ReqMTX003(t *testing.T) {
 	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	testPathName := "test_delete_path_" + time.Now().Format("20060102_150405")
 
 	// Create a path first
@@ -114,7 +116,8 @@ func TestPathManager_GetPath_ReqMTX003(t *testing.T) {
 	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	testPathName := "test_get_path_" + time.Now().Format("20060102_150405")
 
 	// Create a path first
@@ -145,7 +148,8 @@ func TestPathManager_ListPaths_ReqMTX003(t *testing.T) {
 	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// List all paths
 	paths, err := pathManager.ListPaths(ctx)
@@ -167,7 +171,8 @@ func TestPathManager_ValidatePath_ReqMTX003(t *testing.T) {
 	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	testPathName := "test_validate_path_" + time.Now().Format("20060102_150405")
 
 	// Create a path first
@@ -196,7 +201,8 @@ func TestPathManager_ErrorHandling_ReqMTX001(t *testing.T) {
 	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test invalid path name
 	err := pathManager.CreatePath(ctx, "", "publisher", nil)

@@ -106,7 +106,8 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002(t *testing.T) {
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)
 	require.NotNil(t, snapshotManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create snapshots directory
 	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
@@ -198,7 +199,8 @@ func TestSnapshotManager_GetSnapshotsList_ReqMTX002(t *testing.T) {
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)
 	require.NotNil(t, snapshotManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create snapshots directory
 	err = os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
@@ -273,7 +275,8 @@ func TestSnapshotManager_GetSnapshotInfo_ReqMTX002(t *testing.T) {
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)
 	require.NotNil(t, snapshotManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create snapshots directory
 	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
@@ -340,7 +343,8 @@ func TestSnapshotManager_DeleteSnapshotFile_ReqMTX002(t *testing.T) {
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)
 	require.NotNil(t, snapshotManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create snapshots directory
 	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
@@ -481,7 +485,8 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002(t *testing.T) {
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)
 	require.NotNil(t, snapshotManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create snapshots directory
 	err = os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
@@ -600,7 +605,8 @@ func TestSnapshotManager_ErrorHandling_ReqMTX004(t *testing.T) {
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)
 	require.NotNil(t, snapshotManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Test 1: GetSnapshotsList with unconfigured path
 	_, err := snapshotManager.GetSnapshotsList(ctx, 10, 0)
@@ -651,7 +657,8 @@ func TestSnapshotManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)
 	require.NotNil(t, snapshotManager)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 	// Create snapshots directory
 	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
@@ -736,7 +743,8 @@ func TestSnapshotManager_Tier1_USBDirectCapture_ReqMTX002(t *testing.T) {
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)
 
 	// Test Tier 1: USB Direct Capture
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	devicePath := "/dev/video0" // USB device path
 
 	// Create output directory
@@ -812,7 +820,8 @@ func TestSnapshotManager_Tier2_RTSPImmediateCapture_ReqMTX002(t *testing.T) {
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)
 
 	// Test Tier 2: RTSP Immediate Capture
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	devicePath := "/dev/video0" // USB device path (will be converted to stream name)
 
 	// Create output directory
@@ -895,7 +904,8 @@ func TestSnapshotManager_Tier3_RTSPStreamActivation_ReqMTX002(t *testing.T) {
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)
 
 	// Test Tier 3: RTSP Stream Activation
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	// Use test fixture for external RTSP source (expected to fail gracefully)
 	devicePath := helper.GetTestCameraDevice("network_failure")
 
@@ -993,7 +1003,8 @@ func TestSnapshotManager_MultiTierIntegration_ReqMTX002(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			ctx := context.Background()
+			ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 
 			// Create output directory
 			err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
@@ -1072,7 +1083,8 @@ func TestSnapshotManager_Tiers2And3_ReqMTX002(t *testing.T) {
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, helper.GetLogger())
 	require.NotNil(t, snapshotManager, "Snapshot manager should be created")
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	// Note: This test uses hardcoded device for testing snapshot manager functionality
 	// In real usage, device would come from GetCameraList()
 	device := "test_camera"
@@ -1169,7 +1181,8 @@ func TestSnapshotManager_Tier0_V4L2Direct_RealHardware(t *testing.T) {
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, helper.GetLogger())
 	require.NotNil(t, snapshotManager, "Snapshot manager should be created")
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	defer cancel()
 	device := availableDevices[0] // Use first available real device
 
 	// Ensure camera monitor is stopped after test
