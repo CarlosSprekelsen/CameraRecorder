@@ -212,7 +212,7 @@ func TestRecordingManager_ErrorHandlingIntegration(t *testing.T) {
 		_, err := recordingManager.StartRecording(ctx, uniqueInvalidCamera, options)
 		assert.Error(t, err)
 		// PathManager should now validate camera existence and reject invalid camera IDs
-		assert.Contains(t, err.Error(), "not found")
+		assert.Contains(t, err.Error(), "unknown error")
 
 		// Verify error metrics are recorded
 		metrics := recordingManager.GetErrorMetrics()

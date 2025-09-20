@@ -237,7 +237,7 @@ func TestController_GetStreams_ReqMTX002(t *testing.T) {
 	streams, err := controller.GetStreams(ctx)
 	require.NoError(t, err, "GetStreams should succeed")
 	require.NotNil(t, streams, "Streams should not be nil")
-	assert.IsType(t, []*Path{}, streams, "Streams should be a slice of Path pointers")
+	assert.IsType(t, &GetStreamsResponse{}, streams, "Streams should be a GetStreamsResponse pointer")
 }
 
 // TestController_GetStream_ReqMTX002 tests individual stream retrieval with real server

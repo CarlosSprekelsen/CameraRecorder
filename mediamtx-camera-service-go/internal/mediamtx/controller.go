@@ -1187,6 +1187,11 @@ func (c *controller) GetStreamURL(ctx context.Context, device string) (*GetStrea
 		return nil, fmt.Errorf("controller is not running")
 	}
 
+	// Add device validation before processing
+	if valid, err := c.ValidateCameraDevice(ctx, device); !valid || err != nil {
+		return nil, fmt.Errorf("invalid or inaccessible device: %s", device)
+	}
+
 	// Pure delegation to StreamManager - consolidates URL generation and status checking
 	return c.streamManager.GetStreamURL(ctx, device)
 }
@@ -1195,6 +1200,11 @@ func (c *controller) GetStreamURL(ctx context.Context, device string) (*GetStrea
 func (c *controller) GetStreamStatus(ctx context.Context, device string) (*GetStreamStatusResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
+	}
+
+	// Add device validation before processing
+	if valid, err := c.ValidateCameraDevice(ctx, device); !valid || err != nil {
+		return nil, fmt.Errorf("invalid or inaccessible device: %s", device)
 	}
 
 	// Pure delegation to StreamManager - already returns complete GetStreamStatusResponse
@@ -1228,9 +1238,9 @@ func (c *controller) GetCameraStatus(ctx context.Context, device string) (*GetCa
 		return nil, fmt.Errorf("controller not running")
 	}
 
-	// Validate device parameter
-	if device == "" {
-		return nil, fmt.Errorf("device parameter is required")
+	// Add device validation before processing
+	if valid, err := c.ValidateCameraDevice(ctx, device); !valid || err != nil {
+		return nil, fmt.Errorf("invalid or inaccessible device: %s", device)
 	}
 
 	// Delegate to PathManager (consolidates camera operations and abstraction layer)
@@ -1255,9 +1265,9 @@ func (c *controller) GetCameraCapabilities(ctx context.Context, device string) (
 		return nil, fmt.Errorf("controller not running")
 	}
 
-	// Validate device parameter
-	if device == "" {
-		return nil, fmt.Errorf("device parameter is required")
+	// Add device validation before processing
+	if valid, err := c.ValidateCameraDevice(ctx, device); !valid || err != nil {
+		return nil, fmt.Errorf("invalid or inaccessible device: %s", device)
 	}
 
 	// Delegate to PathManager (consolidates camera operations and abstraction layer)

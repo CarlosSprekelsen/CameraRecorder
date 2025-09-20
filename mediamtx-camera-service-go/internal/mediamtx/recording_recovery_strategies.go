@@ -145,6 +145,8 @@ func (rrs *RecordingRecoveryStrategy) recoverPathNotFound(ctx context.Context, e
 			"camera_id": errorCtx.CameraID,
 			"path_name": errorCtx.PathName,
 		}).Info("Successfully recreated path after not found error")
+	} else {
+		return fmt.Errorf("device path not found: no camera ID provided")
 	}
 
 	return nil
