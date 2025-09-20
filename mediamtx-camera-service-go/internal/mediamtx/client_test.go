@@ -196,8 +196,8 @@ func TestClient_APICompliance_ReqMTX001(t *testing.T) {
 	assert.Contains(t, responseStr, "itemCount", "Missing itemCount field per swagger.json")
 	assert.Contains(t, responseStr, "items", "Missing items field per swagger.json")
 
-	// Test mediaMTXConfig paths list endpoint compliance with swagger.json
-	data, err = client.Get(ctx, "/v3/mediaMTXConfig/paths/list")
+	// Test config paths list endpoint compliance with swagger.json
+	data, err = client.Get(ctx, "/v3/config/paths/list")
 	require.NoError(t, err, "Config paths list should succeed")
 
 	// Validate response structure matches swagger.json PathConfList schema
@@ -206,9 +206,9 @@ func TestClient_APICompliance_ReqMTX001(t *testing.T) {
 	assert.Contains(t, responseStr, "itemCount", "Missing itemCount field per swagger.json")
 	assert.Contains(t, responseStr, "items", "Missing items field per swagger.json")
 
-	// Test global mediaMTXConfig endpoint compliance with swagger.json
-	data, err = client.Get(ctx, "/v3/mediaMTXConfig/global/get")
-	require.NoError(t, err, "Global mediaMTXConfig get should succeed")
+	// Test global config endpoint compliance with swagger.json
+	data, err = client.Get(ctx, "/v3/config/global/get")
+	require.NoError(t, err, "Global config get should succeed")
 
 	// Validate response structure matches swagger.json GlobalConf schema
 	responseStr = string(data)

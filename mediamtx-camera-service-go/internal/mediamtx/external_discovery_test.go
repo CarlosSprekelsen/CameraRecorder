@@ -92,7 +92,7 @@ func TestExternalStreamDiscovery_AddExternalStream_ReqMTX002(t *testing.T) {
 		Type: "skydio",
 	}
 
-	err = controller.AddExternalStream(ctx, stream)
+	_, err = controller.AddExternalStream(ctx, stream)
 	require.NoError(t, err, "Adding external stream should succeed")
 
 	// Verify stream was added
@@ -102,7 +102,7 @@ func TestExternalStreamDiscovery_AddExternalStream_ReqMTX002(t *testing.T) {
 
 	// Find our added stream
 	found := false
-	for _, s := range streams {
+	for _, s := range streams.ExternalStreams {
 		if s.Name == stream.Name {
 			found = true
 			assert.Equal(t, stream.URL, s.URL, "Stream URL should match")
@@ -143,7 +143,7 @@ func TestExternalStreamDiscovery_RemoveExternalStream_ReqMTX002(t *testing.T) {
 		Type: "skydio",
 	}
 
-	err = controller.AddExternalStream(ctx, stream)
+	_, err = controller.AddExternalStream(ctx, stream)
 	require.NoError(t, err, "Adding external stream should succeed")
 
 	// Verify stream was added
@@ -153,7 +153,7 @@ func TestExternalStreamDiscovery_RemoveExternalStream_ReqMTX002(t *testing.T) {
 
 	// Find our added stream
 	found := false
-	for _, s := range streams {
+	for _, s := range streams.ExternalStreams {
 		if s.Name == stream.Name {
 			found = true
 			break
@@ -162,7 +162,7 @@ func TestExternalStreamDiscovery_RemoveExternalStream_ReqMTX002(t *testing.T) {
 	assert.True(t, found, "Added stream should be found before removal")
 
 	// Remove the stream
-	err = controller.RemoveExternalStream(ctx, stream.URL)
+	_, err = controller.RemoveExternalStream(ctx, stream.URL)
 	require.NoError(t, err, "Removing external stream should succeed")
 
 	// Verify stream was removed
@@ -172,7 +172,7 @@ func TestExternalStreamDiscovery_RemoveExternalStream_ReqMTX002(t *testing.T) {
 
 	// Verify stream is no longer in the list
 	found = false
-	for _, s := range streams {
+	for _, s := range streams.ExternalStreams {
 		if s.Name == stream.Name {
 			found = true
 			break
@@ -217,18 +217,18 @@ func TestExternalStreamDiscovery_GetExternalStreams_ReqMTX002(t *testing.T) {
 		Type: "skydio",
 	}
 
-	err = controller.AddExternalStream(ctx, stream)
+	_, err = controller.AddExternalStream(ctx, stream)
 	require.NoError(t, err, "Adding external stream should succeed")
 
 	// Get streams again and verify our stream is there
 	streams, err = controller.GetExternalStreams(ctx)
 	require.NoError(t, err, "Getting external streams should succeed")
 	require.NotNil(t, streams, "Streams should not be nil")
-	assert.GreaterOrEqual(t, len(streams), 1, "Should have at least one stream")
+	assert.GreaterOrEqual(t, len(streams.ExternalStreams), 1, "Should have at least one stream")
 
 	// Verify stream properties
 	found := false
-	for _, s := range streams {
+	for _, s := range streams.ExternalStreams {
 		if s.Name == stream.Name {
 			found = true
 			assert.Equal(t, stream.URL, s.URL, "Stream URL should match")
@@ -263,7 +263,7 @@ func TestExternalStreamDiscovery_ErrorHandling_ReqMTX004(t *testing.T) {
 	}()
 
 	// Test behavior when external discovery is not configured (optional component)
-	err = controller.AddExternalStream(ctx, nil)
+	_, err = controller.AddExternalStream(ctx, nil)
 	assert.Error(t, err, "Adding stream should fail when external discovery not configured")
 	assert.Contains(t, err.Error(), "not configured", "Error should indicate external discovery not configured")
 
@@ -273,12 +273,12 @@ func TestExternalStreamDiscovery_ErrorHandling_ReqMTX004(t *testing.T) {
 		URL:  "", // Empty URL should fail
 		Type: "skydio",
 	}
-	err = controller.AddExternalStream(ctx, invalidStream)
+	_, err = controller.AddExternalStream(ctx, invalidStream)
 	assert.Error(t, err, "Adding stream should fail when external discovery not configured")
 	assert.Contains(t, err.Error(), "not configured", "Error should indicate external discovery not configured")
 
 	// Test removing non-existent stream (should fail due to not configured)
-	err = controller.RemoveExternalStream(ctx, "rtsp://nonexistent:6554/stream")
+	_, err = controller.RemoveExternalStream(ctx, "rtsp://nonexistent:6554/stream")
 	assert.Error(t, err, "Removing stream should fail when external discovery not configured")
 	assert.Contains(t, err.Error(), "not configured", "Error should indicate external discovery not configured")
 }
@@ -327,12 +327,12 @@ func TestExternalStreamDiscovery_OptionalComponent_ReqMTX004(t *testing.T) {
 		URL:  "rtsp://192.168.42.10:6554/infrared",
 		Type: "skydio",
 	}
-	err = controller.AddExternalStream(ctx, stream)
+	_, err = controller.AddExternalStream(ctx, stream)
 	assert.Error(t, err, "AddExternalStream should error when not configured")
 	assert.Contains(t, err.Error(), "not configured", "Error should indicate external discovery not configured")
 
 	// Test RemoveExternalStream returns error when not configured
-	err = controller.RemoveExternalStream(ctx, "rtsp://192.168.42.10:6554/infrared")
+	_, err = controller.RemoveExternalStream(ctx, "rtsp://192.168.42.10:6554/infrared")
 	assert.Error(t, err, "RemoveExternalStream should error when not configured")
 	assert.Contains(t, err.Error(), "not configured", "Error should indicate external discovery not configured")
 }
@@ -494,10 +494,10 @@ func TestExternalStreamDiscovery_DiscoverExternalStreamsAPI_ReqMTX002(t *testing
 	defer helper.Cleanup(t)
 
 	// Create external stream discovery using existing test infrastructure
-	configManager := helper.GetConfigManager()
 	logger := helper.GetLogger()
 
-	discovery := NewExternalStreamDiscovery(configManager, logger)
+	// Use nil config for now - ExternalDiscoveryConfig type doesn't exist yet
+	discovery := NewExternalStreamDiscovery(nil, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
 	ctx := context.Background()
@@ -532,10 +532,10 @@ func TestExternalStreamDiscovery_GetExternalStreamsAPI_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Create external stream discovery using existing test infrastructure
-	configManager := helper.GetConfigManager()
 	logger := helper.GetLogger()
 
-	discovery := NewExternalStreamDiscovery(configManager, logger)
+	// Use nil config for now - ExternalDiscoveryConfig type doesn't exist yet
+	discovery := NewExternalStreamDiscovery(nil, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
 	ctx := context.Background()
@@ -560,10 +560,10 @@ func TestExternalStreamDiscovery_AddExternalStreamAPI_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Create external stream discovery using existing test infrastructure
-	configManager := helper.GetConfigManager()
 	logger := helper.GetLogger()
 
-	discovery := NewExternalStreamDiscovery(configManager, logger)
+	// Use nil config for now - ExternalDiscoveryConfig type doesn't exist yet
+	discovery := NewExternalStreamDiscovery(nil, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
 	ctx := context.Background()
@@ -603,10 +603,10 @@ func TestExternalStreamDiscovery_RemoveExternalStreamAPI_ReqMTX002(t *testing.T)
 	defer helper.Cleanup(t)
 
 	// Create external stream discovery using existing test infrastructure
-	configManager := helper.GetConfigManager()
 	logger := helper.GetLogger()
 
-	discovery := NewExternalStreamDiscovery(configManager, logger)
+	// Use nil config for now - ExternalDiscoveryConfig type doesn't exist yet
+	discovery := NewExternalStreamDiscovery(nil, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
 	ctx := context.Background()

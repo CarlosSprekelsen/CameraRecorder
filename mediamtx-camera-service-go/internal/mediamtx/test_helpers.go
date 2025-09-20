@@ -112,6 +112,7 @@ type MediaMTXTestHelper struct {
 	configIntegration     *ConfigIntegration        // Centralized config integration for all managers
 	pathManager           PathManager
 	streamManager         StreamManager
+	ffmpegManager         FFmpegManager
 	recordingManager      *RecordingManager
 	rtspConnectionManager RTSPConnectionManager
 	cameraMonitor         camera.CameraMonitor
@@ -119,6 +120,7 @@ type MediaMTXTestHelper struct {
 	// Race-free initialization using sync.Once
 	pathManagerOnce      sync.Once
 	streamManagerOnce    sync.Once
+	ffmpegManagerOnce    sync.Once
 	recordingManagerOnce sync.Once
 	cameraMonitorOnce    sync.Once
 }
@@ -391,18 +393,28 @@ func (h *MediaMTXTestHelper) GetStreamManager() StreamManager {
 	return h.streamManager
 }
 
+// GetFFmpegManager returns a shared FFmpeg manager instance
+func (h *MediaMTXTestHelper) GetFFmpegManager() FFmpegManager {
+	h.ffmpegManagerOnce.Do(func() {
+		// Use centralized MediaMTX config
+		h.ffmpegManager = NewFFmpegManager(h.mediaMTXConfig, h.logger)
+	})
+	return h.ffmpegManager
+}
+
 // GetRecordingManager returns a shared recording manager instance
 func (h *MediaMTXTestHelper) GetRecordingManager() *RecordingManager {
 	h.recordingManagerOnce.Do(func() {
 		// Use centralized MediaMTX config and ConfigIntegration
 		pathManager := h.GetPathManager()
 		streamManager := h.GetStreamManager()
+		ffmpegManager := h.GetFFmpegManager()
 
 		// Get recording configuration
 		cfg := h.configManager.GetConfig()
 		recordingConfig := &cfg.Recording
 
-		h.recordingManager = NewRecordingManager(h.client, pathManager, streamManager, h.mediaMTXConfig, recordingConfig, h.configIntegration, h.logger)
+		h.recordingManager = NewRecordingManager(h.client, pathManager, streamManager, ffmpegManager, h.mediaMTXConfig, recordingConfig, h.configIntegration, h.logger)
 	})
 	return h.recordingManager
 }
@@ -529,6 +541,7 @@ func (h *MediaMTXTestHelper) GetAvailableCameraDevice(ctx context.Context) (stri
 
 // GetAvailableCameraIdentifier returns a camera identifier (camera0) for Controller API testing
 // This follows the architecture: External APIs use camera identifiers, not device paths
+// DEPRECATED: Use GetAvailableCameraIdentifierWithReadiness for Progressive Readiness compliance
 func (h *MediaMTXTestHelper) GetAvailableCameraIdentifier(ctx context.Context) (string, error) {
 	// Get available device path first
 	devicePath, err := h.GetAvailableCameraDevice(ctx)
@@ -545,6 +558,145 @@ func (h *MediaMTXTestHelper) GetAvailableCameraIdentifier(ctx context.Context) (
 
 	// For other device types, return as-is (external streams, etc.)
 	return devicePath, nil
+}
+
+// GetAvailableCameraIdentifierWithReadiness returns a camera identifier using Progressive Readiness pattern
+// This properly implements event-driven discovery instead of filesystem scanning
+func (h *MediaMTXTestHelper) GetAvailableCameraIdentifierWithReadiness(ctx context.Context) (string, error, bool) {
+	// Get controller to check discovered cameras through proper architecture
+	controller, err := h.GetController(&testing.T{})
+	if err != nil {
+		return "", err, false
+	}
+
+	// Check if controller is ready (includes camera monitor readiness)
+	if !controller.IsReady() {
+		return "", nil, false // Not ready yet - graceful
+	}
+
+	// Get camera monitor directly to check connected cameras
+	if controllerImpl, ok := controller.(*controller); ok && controllerImpl.cameraMonitor != nil {
+		cameras := controllerImpl.cameraMonitor.GetConnectedCameras()
+		if len(cameras) == 0 {
+			return "", nil, false // No cameras discovered yet - graceful
+		}
+
+		// Convert first device path to camera identifier
+		for devicePath := range cameras {
+			if strings.HasPrefix(devicePath, "/dev/video") {
+				deviceNum := strings.TrimPrefix(devicePath, "/dev/video")
+				return fmt.Sprintf("camera%s", deviceNum), nil, true
+			}
+		}
+	}
+
+	return "", nil, false // No suitable cameras found
+}
+
+// WaitForCameraWithReadiness waits for camera discovery using Progressive Readiness pattern
+func (h *MediaMTXTestHelper) WaitForCameraWithReadiness(ctx context.Context, timeout time.Duration) (string, error) {
+	// Create timeout context
+	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+
+	// Subscribe to controller readiness events
+	controller, err := h.GetController(&testing.T{})
+	if err != nil {
+		return "", fmt.Errorf("failed to get controller: %w", err)
+	}
+
+	// Use event-driven waiting instead of polling
+	readinessChan := controller.SubscribeToReadiness()
+
+	// Check immediately first
+	if cameraID, err, ready := h.GetAvailableCameraIdentifierWithReadiness(ctx); ready {
+		return cameraID, err
+	}
+
+	// Wait for readiness events
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-readinessChan:
+			// Controller became ready, check for cameras
+			if cameraID, err, ready := h.GetAvailableCameraIdentifierWithReadiness(ctx); ready {
+				return cameraID, err
+			}
+		case <-ticker.C:
+			// Periodic check as fallback
+			if cameraID, err, ready := h.GetAvailableCameraIdentifierWithReadiness(ctx); ready {
+				return cameraID, err
+			}
+		case <-timeoutCtx.Done():
+			return "", fmt.Errorf("timeout waiting for camera discovery (Progressive Readiness allows this)")
+		}
+	}
+}
+
+// TakeSnapshotWithReadiness attempts to take a snapshot using Progressive Readiness pattern
+func (h *MediaMTXTestHelper) TakeSnapshotWithReadiness(ctx context.Context, timeout time.Duration) (*TakeSnapshotResponse, error) {
+	// Wait for camera with readiness
+	cameraID, err := h.WaitForCameraWithReadiness(ctx, timeout)
+	if err != nil {
+		return nil, fmt.Errorf("camera not available within timeout: %w", err)
+	}
+
+	// Get controller
+	controller, err := h.GetController(&testing.T{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get controller: %w", err)
+	}
+
+	// Attempt snapshot with graceful handling
+	options := &SnapshotOptions{
+		Format:  "jpg",
+		Quality: 85,
+	}
+
+	snapshot, err := controller.TakeAdvancedSnapshot(ctx, cameraID, options)
+	if err != nil {
+		// Progressive Readiness: graceful handling of not-ready-yet
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "not accessible") {
+			return nil, fmt.Errorf("camera not ready for snapshot yet (Progressive Readiness): %w", err)
+		}
+		return nil, err
+	}
+
+	return snapshot, nil
+}
+
+// StartRecordingWithReadiness attempts to start recording using Progressive Readiness pattern
+func (h *MediaMTXTestHelper) StartRecordingWithReadiness(ctx context.Context, timeout time.Duration) (*StartRecordingResponse, error) {
+	// Wait for camera with readiness
+	cameraID, err := h.WaitForCameraWithReadiness(ctx, timeout)
+	if err != nil {
+		return nil, fmt.Errorf("camera not available within timeout: %w", err)
+	}
+
+	// Get controller
+	controller, err := h.GetController(&testing.T{})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get controller: %w", err)
+	}
+
+	// Attempt recording with graceful handling
+	options := &PathConf{
+		Record:       true,
+		RecordFormat: "fmp4",
+	}
+
+	response, err := controller.StartRecording(ctx, cameraID, options)
+	if err != nil {
+		// Progressive Readiness: graceful handling of not-ready-yet
+		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "not accessible") {
+			return nil, fmt.Errorf("camera not ready for recording yet (Progressive Readiness): %w", err)
+		}
+		return nil, err
+	}
+
+	return response, nil
 }
 
 // GetTestCameraDevice returns a test camera device from fixtures
@@ -620,8 +772,8 @@ func (h *MediaMTXTestHelper) getFallbackDevice(scenario string) string {
 // GetController creates a MediaMTX controller with proper dependencies
 func (h *MediaMTXTestHelper) GetController(t *testing.T) (MediaMTXController, error) {
 	// Use shared config manager to prevent multiple instances
-	configManager := h.GetConfigManager()
 	cameraMonitor := h.GetCameraMonitor()
+	configManager := h.GetConfigManager()
 	logger := h.GetLogger()
 
 	return ControllerWithConfigManager(configManager, cameraMonitor, logger)

@@ -113,7 +113,7 @@ func TestStreamManager_StartStream_ReqMTX002(t *testing.T) {
 	// Validate API-ready response format per JSON-RPC documentation
 	assert.Equal(t, cameraID, response.Device, "Response device should match camera ID")
 	assert.NotEmpty(t, response.StreamURL, "Response should include stream URL")
-	assert.True(t, response.Available, "Response should indicate stream is available")
+	assert.True(t, response.Ready, "Response should indicate stream is ready")
 	assert.Contains(t, response.StreamURL, cameraID, "Stream URL should contain camera ID")
 }
 
@@ -200,7 +200,7 @@ func TestStreamManager_GetStreamURL_ReqMTX002(t *testing.T) {
 	assert.Equal(t, cameraID, response.Device, "Response device should match camera ID")
 	assert.NotEmpty(t, response.StreamURL, "Response should include stream URL")
 	assert.Contains(t, response.StreamURL, cameraID, "Stream URL should contain camera ID")
-	assert.True(t, response.Available, "Response should indicate stream availability")
+	assert.True(t, response.Ready, "Response should indicate stream readiness")
 }
 
 // TestStreamManager_GetStream_ReqMTX002 tests stream retrieval
@@ -253,7 +253,7 @@ func TestStreamManager_ListStreams_ReqMTX002(t *testing.T) {
 	streams, err := streamManager.ListStreams(ctx)
 	require.NoError(t, err, "Stream listing should succeed")
 	require.NotNil(t, streams, "Streams list should not be nil")
-	assert.GreaterOrEqual(t, len(streams), 0, "Should return at least 0 streams")
+	assert.GreaterOrEqual(t, streams.Total, 0, "Should return at least 0 streams")
 }
 
 // TestStreamManager_StartRecordingStream_ReqMTX002 tests recording stream creation
@@ -277,11 +277,11 @@ func TestStreamManager_StartRecordingStream_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Recording stream creation should succeed")
 	require.NotNil(t, stream, "Created recording stream should not be nil")
 	// Note: This test uses real device name for testing stream manager functionality
-	// The stream name should match the actual device being used
-	assert.NotEmpty(t, stream.Name, "Recording stream should have a valid name")
+	// The stream device should match the actual device being used
+	assert.NotEmpty(t, stream.Device, "Recording stream should have a valid device")
 
 	// Clean up
-	err = streamManager.DeleteStream(ctx, stream.Name)
+	err = streamManager.DeleteStream(ctx, stream.Device)
 	require.NoError(t, err, "Stream deletion should succeed")
 }
 
@@ -305,10 +305,10 @@ func TestStreamManager_StartStream_Viewing_ReqMTX002(t *testing.T) {
 	stream, err := streamManager.StartStream(ctx, devicePath)
 	require.NoError(t, err, "Stream creation should succeed")
 	require.NotNil(t, stream, "Created stream should not be nil")
-	assert.NotEmpty(t, stream.Name, "Stream name should not be empty")
+	assert.NotEmpty(t, stream.Device, "Stream device should not be empty")
 
 	// Clean up
-	err = streamManager.DeleteStream(ctx, stream.Name)
+	err = streamManager.DeleteStream(ctx, stream.Device)
 	require.NoError(t, err, "Stream deletion should succeed")
 }
 
@@ -333,10 +333,10 @@ func TestStreamManager_StartStream_Snapshot_ReqMTX002(t *testing.T) {
 	stream, err := streamManager.StartStream(ctx, devicePath)
 	require.NoError(t, err, "Stream creation should succeed")
 	require.NotNil(t, stream, "Created stream should not be nil")
-	assert.NotEmpty(t, stream.Name, "Stream name should not be empty")
+	assert.NotEmpty(t, stream.Device, "Stream device should not be empty")
 
 	// Clean up
-	err = streamManager.DeleteStream(ctx, stream.Name)
+	err = streamManager.DeleteStream(ctx, stream.Device)
 	require.NoError(t, err, "Stream deletion should succeed")
 }
 

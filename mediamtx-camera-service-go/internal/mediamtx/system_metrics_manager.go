@@ -272,15 +272,8 @@ func (sm *SystemMetricsManager) GetMetricsAPI(ctx context.Context) (*GetMetricsR
 		}
 	}
 
-	// Get MediaMTX server metrics using existing parseMetricsResponse method
-	mediaMTXMetrics := make(map[string]interface{})
-	if sm.client != nil {
-		if metrics, err := sm.client.GetMediaMTXMetrics(ctx); err == nil {
-			mediaMTXMetrics["server_metrics"] = metrics
-		} else {
-			sm.logger.WithError(err).Debug("Failed to get MediaMTX server metrics")
-		}
-	}
+	// MediaMTX server metrics would be handled by HealthMonitor if needed
+	// SystemMetricsManager focuses on system-level metrics only
 
 	// Build API-ready response
 	response := &GetMetricsResponse{
@@ -289,7 +282,6 @@ func (sm *SystemMetricsManager) GetMetricsAPI(ctx context.Context) (*GetMetricsR
 		CameraMetrics:    cameraMetrics,
 		RecordingMetrics: recordingMetrics,
 		StreamMetrics:    streamMetrics,
-		ComponentMetrics: mediaMTXMetrics,
 	}
 
 	return response, nil

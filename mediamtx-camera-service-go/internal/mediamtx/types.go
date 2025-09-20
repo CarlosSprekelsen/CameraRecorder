@@ -437,6 +437,7 @@ type MediaMTXClient interface {
 
 	// Health check
 	HealthCheck(ctx context.Context) error
+	GetDetailedHealth(ctx context.Context) (*HealthStatus, error)
 
 	// Connection management
 	Close() error

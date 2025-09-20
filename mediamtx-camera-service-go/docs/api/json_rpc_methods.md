@@ -1112,7 +1112,6 @@ All error responses follow a consistent JSON-RPC 2.0 error format with standardi
 
 ---
 
-
 ## Snapshot File Management
 
 ### list_snapshots
@@ -2183,5 +2182,3 @@ All responses include optional metadata for debugging and monitoring:
 **Last Updated:** 2025-01-15  
 **Implementation Status:** All core methods, notifications, and event subscription system implemented and operational  
 **Performance Status:** 5x improvement over Python implementation achieved, 100x+ event system performance improvement
-
-

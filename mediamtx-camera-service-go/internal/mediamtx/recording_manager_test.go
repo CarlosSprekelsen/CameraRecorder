@@ -65,7 +65,10 @@ func TestRecordingManager_StartRecording_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Should be able to get available camera identifier")
 
 	// Start recording using new API-ready signature
-	options := map[string]interface{}{}
+	options := &PathConf{
+		Record:       true,
+		RecordFormat: "fmp4",
+	}
 	response, err := recordingManager.StartRecording(ctx, cameraID, options)
 	require.NoError(t, err, "Recording should start successfully")
 	require.NotNil(t, response, "StartRecording should return API-ready response")
@@ -114,7 +117,10 @@ func TestRecordingManager_StopRecording_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Should be able to get available camera identifier")
 
 	// Start recording using new API-ready signature
-	options := map[string]interface{}{}
+	options := &PathConf{
+		Record:       true,
+		RecordFormat: "fmp4",
+	}
 	startResponse, err := recordingManager.StartRecording(ctx, cameraID, options)
 	require.NoError(t, err, "Recording should start successfully")
 	require.NotNil(t, startResponse, "StartRecording should return API-ready response")
@@ -188,10 +194,10 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 
 	// Option 1: Create path with concrete source (not "publisher")
 	// This creates a configuration path that can be properly managed
-	options := map[string]interface{}{
-		"record":       true,
-		"recordPath":   outputPath,
-		"recordFormat": "fmp4",
+	options := &PathConf{
+		Record:       true,
+		RecordPath:   outputPath,
+		RecordFormat: "fmp4",
 	}
 
 	session, err := recordingManager.StartRecording(ctx, devicePath, options)
@@ -209,10 +215,10 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 				t.Logf("Found existing path: %+v", path)
 
 				// Just patch the existing path to enable recording
-				recordConfig := map[string]interface{}{
-					"record":       true,
-					"recordPath":   outputPath,
-					"recordFormat": "fmp4",
+				recordConfig := &PathConf{
+					Record:       true,
+					RecordPath:   outputPath,
+					RecordFormat: "fmp4",
 				}
 
 				if patchErr := pathManager.PatchPath(ctx, cameraID, recordConfig); patchErr != nil {
@@ -221,14 +227,13 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 					cameraID = fmt.Sprintf("%s_alt", cameraID)
 					session, err = recordingManager.StartRecording(ctx, devicePath, options)
 				} else {
-					// Successfully patched, create a mock session
-					session = &RecordingSession{
-						ID:         fmt.Sprintf("rec_%s", cameraID),
-						Device:     cameraID,
-						DevicePath: devicePath,
-						FilePath:   outputPath,
-						Status:     "active",
-						StartTime:  time.Now(),
+					// Successfully patched, create a mock response
+					session = &StartRecordingResponse{
+						Device:    cameraID,
+						Filename:  fmt.Sprintf("rec_%s.mp4", cameraID),
+						Status:    "RECORDING",
+						StartTime: time.Now().Format(time.RFC3339),
+						Format:    "fmp4",
 					}
 					err = nil
 				}
@@ -237,9 +242,9 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 	}
 
 	require.NoError(t, err, "Recording should start successfully")
-	require.NotNil(t, session, "Recording session should not be nil")
-	assert.Equal(t, "active", session.Status)
-	assert.Equal(t, "camera0", session.DevicePath)
+	require.NotNil(t, session, "Recording response should not be nil")
+	assert.Equal(t, "RECORDING", session.Status)
+	assert.Equal(t, cameraID, session.Device)
 
 	// Verify path was created in MediaMTX
 	pathManager := helper.GetPathManager()
@@ -271,7 +276,7 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 	}
 
 	// Stop recording
-	err = recordingManager.StopRecording(ctx, session.ID)
+	_, err = recordingManager.StopRecording(ctx, session.Device)
 	assert.NoError(t, err, "Recording should stop successfully")
 
 	// Clean up - try to delete the path if it's a config path
@@ -387,12 +392,14 @@ func TestRecordingManager_ErrorHandling_ReqMTX007(t *testing.T) {
 	require.NoError(t, err)
 
 	// Test invalid device path
-	options := map[string]interface{}{}
+	options := &PathConf{
+		Record: true,
+	}
 	_, err = recordingManager.StartRecording(ctx, "", options)
 	assert.Error(t, err, "Empty device path should fail")
 
 	// Test stopping non-existent session
-	err = recordingManager.StopRecording(ctx, "non-existent-id")
+	_, err = recordingManager.StopRecording(ctx, "non-existent-id")
 	assert.Error(t, err, "Stopping non-existent session should fail")
 }
 
@@ -417,13 +424,15 @@ func TestRecordingManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 
 	// Start multiple recordings concurrently
 	const numRecordings = 3 // Reduced for real server testing
-	sessions := make([]*RecordingSession, numRecordings)
+	sessions := make([]*StartRecordingResponse, numRecordings)
 	errors := make([]error, numRecordings)
 
 	for i := 0; i < numRecordings; i++ {
 		go func(index int) {
 			devicePath := "/dev/video0" // Use same device for real server
-			options := map[string]interface{}{}
+			options := &PathConf{
+				Record: true,
+			}
 			session, err := recordingManager.StartRecording(ctx, devicePath, options)
 			sessions[index] = session
 			errors[index] = err
@@ -463,21 +472,19 @@ func TestRecordingManager_StartRecordingWithSegments_ReqMTX002(t *testing.T) {
 	devicePath := "/dev/video0"
 
 	// Test MediaMTX recording configuration options
-	options := map[string]interface{}{
-		"recordFormat":          "mp4",
-		"recordPartDuration":    "10s",
-		"recordSegmentDuration": "1h",
-		"recordDeleteAfter":     "24h",
+	options := &PathConf{
+		Record:       true,
+		RecordFormat: "mp4",
 	}
 
 	session, err := recordingManager.StartRecording(ctx, devicePath, options)
 	require.NoError(t, err, "Recording with MediaMTX config should start successfully")
-	require.NotNil(t, session, "Recording session should not be nil")
+	require.NotNil(t, session, "Recording response should not be nil")
 
-	// Verify session is created with configuration
-	assert.NotEmpty(t, session.ID, "Session should have ID")
-	assert.Equal(t, "camera0", session.DevicePath)
+	// Verify response is created with configuration
+	assert.NotEmpty(t, session.Filename, "Response should have filename")
+	assert.Equal(t, "RECORDING", session.Status)
 
 	// Clean up
-	recordingManager.StopRecording(ctx, session.ID)
+	_, _ = recordingManager.StopRecording(ctx, session.Device)
 }

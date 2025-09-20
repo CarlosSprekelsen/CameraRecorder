@@ -42,7 +42,9 @@ func TestNewHealthMonitor_ReqMTX004(t *testing.T) {
 	logger := logging.CreateTestLogger(t, nil)
 	// Use test fixture logging level instead of hardcoded logrus
 
-	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, logger)
+	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
 	assert.True(t, healthMonitor.IsHealthy(), "Should be healthy initially")
 	assert.False(t, healthMonitor.IsCircuitOpen(), "Circuit should not be open initially")
@@ -66,7 +68,9 @@ func TestHealthMonitor_StartStop_ReqMTX004(t *testing.T) {
 	logger := logging.CreateTestLogger(t, nil)
 	// Use test fixture logging level instead of hardcoded logrus
 
-	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, logger)
+	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor)
 
 	ctx := context.Background()
@@ -102,7 +106,9 @@ func TestHealthMonitor_GetStatus_ReqMTX004(t *testing.T) {
 	logger := logging.CreateTestLogger(t, nil)
 	// Use test fixture logging level instead of hardcoded logrus
 
-	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, logger)
+	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor)
 
 	// Get initial status
@@ -144,7 +150,9 @@ func TestHealthMonitor_GetMetrics_ReqMTX004(t *testing.T) {
 	logger := logging.CreateTestLogger(t, nil)
 	// Use test fixture logging level instead of hardcoded logrus
 
-	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, logger)
+	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor)
 
 	// Get initial metrics
@@ -187,7 +195,9 @@ func TestHealthMonitor_RecordSuccess_ReqMTX004(t *testing.T) {
 	logger := logging.CreateTestLogger(t, nil)
 	// Use test fixture logging level instead of hardcoded logrus
 
-	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, logger)
+	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor)
 
 	// Record success
@@ -221,7 +231,9 @@ func TestHealthMonitor_RecordFailure_ReqMTX004(t *testing.T) {
 	logger := logging.CreateTestLogger(t, nil)
 	// Use test fixture logging level instead of hardcoded logrus
 
-	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, logger)
+	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor)
 
 	// Record failure
@@ -279,7 +291,9 @@ func TestHealthMonitor_Configuration_ReqMTX004(t *testing.T) {
 			logger := logging.CreateTestLogger(t, nil)
 			// Use test fixture logging level instead of hardcoded logrus
 
-			healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
+			configManager := helper.GetConfigManager()
+			configIntegration := NewConfigIntegration(configManager, logger)
+			healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 			require.NotNil(t, healthMonitor, "Health monitor should be created")
 
 			// Test health state
@@ -305,7 +319,9 @@ func TestHealthMonitor_DebounceMechanism_ReqMTX004(t *testing.T) {
 	}
 	logger := helper.GetLogger()
 
-	healthMonitor := NewHealthMonitor(client, config, logger)
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, logger)
+	healthMonitor := NewHealthMonitor(client, config, configIntegration, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
 
 	// Create mock system event notifier
@@ -362,7 +378,9 @@ func TestHealthMonitor_AtomicOperations_ReqMTX004(t *testing.T) {
 	}
 	logger := helper.GetLogger()
 
-	healthMonitor := NewHealthMonitor(client, config, logger)
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, logger)
+	healthMonitor := NewHealthMonitor(client, config, configIntegration, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
 
 	// Test concurrent access to ensure atomic operations work correctly
@@ -423,7 +441,9 @@ func TestHealthMonitor_StatusTransitions_ReqMTX004(t *testing.T) {
 	}
 	logger := helper.GetLogger()
 
-	healthMonitor := NewHealthMonitor(client, config, logger)
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, logger)
+	healthMonitor := NewHealthMonitor(client, config, configIntegration, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
 
 	// Create mock system event notifier
@@ -479,7 +499,9 @@ func TestHealthMonitor_GetHealthAPI_ReqMTX004(t *testing.T) {
 	}
 	logger := logging.CreateTestLogger(t, nil)
 
-	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, logger)
+	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
 
 	// Start health monitor
@@ -537,7 +559,9 @@ func TestHealthMonitor_GetHealthAPI_APICompliance_ReqAPI001(t *testing.T) {
 	}
 	logger := logging.CreateTestLogger(t, nil)
 
-	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, logger)
+	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
 
 	ctx := context.Background()
@@ -582,7 +606,9 @@ func TestHealthMonitor_GetHealthAPI_ErrorScenarios_ReqMTX004(t *testing.T) {
 	}
 	logger := logging.CreateTestLogger(t, nil)
 
-	healthMonitor := NewHealthMonitor(helper.GetClient(), config, logger)
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, logger)
+	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
 
 	// Test with cancelled context

@@ -84,8 +84,8 @@ func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 	// Test path creation with real MediaMTX server
 	testPathName := "test_camera_path"
 	source := "rtsp://test-source"
-	options := map[string]interface{}{
-		"record": true,
+	options := &PathConf{
+		Record: true,
 	}
 
 	// Create path using correct API signature
