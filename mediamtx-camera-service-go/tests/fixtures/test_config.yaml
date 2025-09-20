@@ -49,8 +49,8 @@ recording:
     max_size: 1073741824
     quality: high
     segment_duration: 300
-    # NO FILE EXTENSION - MediaMTX adds it
-    file_name_pattern: "test_%path_%Y%m%d_%H%M%S"
+    # NO FILE EXTENSION - MediaMTX adds it based on recordFormat
+    file_name_pattern: "%path_%Y-%m-%d_%H-%M-%S"
     use_device_subdirs: false  # Flat structure for tests
     record_format: "fmp4"
 retention_policy:

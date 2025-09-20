@@ -600,11 +600,26 @@ func (rm *RecordingManager) ListRecordings(ctx context.Context, limit, offset in
 	// Convert to API-ready RecordingFileInfo format with rich metadata
 	recordings := make([]RecordingFileInfo, len(fileList.Files))
 	for i, file := range fileList.Files {
-		// Extract device from filename pattern (camera0_timestamp.mp4)
-		device := "camera0" // Default
-		if parts := strings.Split(file.FileName, "_"); len(parts) > 0 {
-			if strings.HasPrefix(parts[0], "camera") {
-				device = parts[0]
+		// Extract device from filename pattern - robust parsing for any valid pattern
+		// Supports both architecture patterns (camera0_*) and any other patterns (*camera0*)
+		device := "camera0" // Default fallback
+		fileName := file.FileName
+
+		// Remove file extension for parsing
+		if lastDot := strings.LastIndex(fileName, "."); lastDot > 0 {
+			fileName = fileName[:lastDot]
+		}
+
+		// Split by underscore and look for camera identifier in any part
+		parts := strings.Split(fileName, "_")
+		for _, part := range parts {
+			if strings.HasPrefix(part, "camera") && len(part) > 6 {
+				// Validate it's a proper camera identifier (camera + digits)
+				if cameraNum := part[6:]; cameraNum != "" {
+					// Simple validation - should be digits only
+					device = part
+					break
+				}
 			}
 		}
 

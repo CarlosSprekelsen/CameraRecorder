@@ -86,6 +86,7 @@ type WebSocketTestHelper struct {
 	logger             *logging.Logger
 	server             *WebSocketServer
 	mediaMTXController mediamtx.MediaMTXController
+	mediaMTXHelper     *mediamtx.MediaMTXTestHelper // Store helper for cleanup
 	jwtHandler         *security.JWTHandler
 
 	// Race-free initialization using sync.Once
@@ -152,6 +153,11 @@ func (h *WebSocketTestHelper) Cleanup(t *testing.T) {
 		if err != nil {
 			t.Logf("Warning: Failed to stop WebSocket server: %v", err)
 		}
+	}
+
+	// CRITICAL: Cleanup MediaMTX controller to prevent fsnotify file descriptor leaks
+	if h.mediaMTXHelper != nil {
+		h.mediaMTXHelper.Cleanup(t)
 	}
 
 	if h.config.CleanupAfter && h.config.TestDataDir != "" {
@@ -226,6 +232,7 @@ func (h *WebSocketTestHelper) GetMediaMTXController(t *testing.T) mediamtx.Media
 		}
 
 		h.mediaMTXController = controller
+		h.mediaMTXHelper = helper // Store helper for cleanup
 	})
 
 	return h.mediaMTXController
@@ -404,7 +411,7 @@ func (h *WebSocketTestHelper) ValidateProgressiveReadiness(t *testing.T, server 
 
 	// Test 2: System should return readiness status instead of blocking
 	// FIXED: Use get_status (API-compliant) with admin role (API requirement)
-	AuthenticateTestClient(t, conn, "test_user", "viewer")
+	AuthenticateTestClient(t, conn, "test_user", "admin")
 
 	message := CreateTestMessage("get_status", nil)
 	response := SendTestMessage(t, conn, message)

@@ -73,8 +73,8 @@ recording:
   default_rotation_size: 104857600
   default_max_duration: 24h
   default_retention_days: 7
-  # New path management fields
-  file_name_pattern: "test_%path_%Y%m%d_%H%M%S"
+  # Architecture-compliant path management fields
+  file_name_pattern: "%path_%Y-%m-%d_%H-%M-%S"
   use_device_subdirs: false
   record_format: "fmp4"
 
@@ -88,8 +88,8 @@ snapshots:
   cleanup_interval: 3600
   max_age: 604800
   max_count: 1000
-  # New path management fields
-  file_name_pattern: "test_%device_%timestamp.jpg"
+  # Architecture-compliant path management fields  
+  file_name_pattern: "%device_%timestamp.jpg"
   use_device_subdirs: false
 
 ffmpeg:

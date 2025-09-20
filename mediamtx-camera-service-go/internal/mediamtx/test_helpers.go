@@ -979,15 +979,27 @@ func (h *MediaMTXTestHelper) cleanupMediaMTXPaths(t *testing.T) {
 	}
 
 	// For runtime paths, we can't delete them via config API
-	// Instead, we log them for debugging and rely on MediaMTX to clean them up automatically
-	// when they're no longer in use (no active sources/readers)
+	// But we MUST disable recording to ensure proper test isolation
 	testPathCount := 0
 	for _, path := range pathsResponse.Items {
 		if h.isTestPath(path.Name) {
 			testPathCount++
-			// Log test paths for debugging - they should be cleaned up automatically by MediaMTX
-			// when no longer in use (no active sources/readers)
-			t.Logf("Test path still in runtime: %s (will be cleaned up automatically when unused)", path.Name)
+
+			// CRITICAL: Disable recording on test paths for proper test isolation
+			// This prevents "path already recording" errors in subsequent tests
+			disableRecordingConfig := map[string]interface{}{
+				"record": false,
+			}
+			if configData, err := json.Marshal(disableRecordingConfig); err == nil {
+				endpoint := fmt.Sprintf("/v3/config/paths/patch/%s", path.Name)
+				if patchErr := h.client.Patch(ctx, endpoint, configData); patchErr != nil {
+					t.Logf("Warning: Failed to disable recording on test path %s: %v", path.Name, patchErr)
+				} else {
+					t.Logf("Disabled recording on test path: %s", path.Name)
+				}
+			}
+
+			t.Logf("Test path in runtime: %s (recording disabled, will be cleaned up automatically when unused)", path.Name)
 		}
 	}
 

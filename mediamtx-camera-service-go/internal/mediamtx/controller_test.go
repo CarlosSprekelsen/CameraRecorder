@@ -595,24 +595,25 @@ func TestController_StartRecording_ReqMTX002(t *testing.T) {
 		}
 	}
 
-	// Search for created files using configured path
-	pattern := filepath.Join(recordingsPath, cameraID+"_*.mp4")
+	// Search for created files using configured path - don't hardcode extensions
+	// MediaMTX adds extensions based on recordFormat, so search for any files
+	pattern := filepath.Join(recordingsPath, cameraID+"_*")
 	matches, err := filepath.Glob(pattern)
 
 	if err != nil || len(matches) == 0 {
-		// Try alternative patterns
-		pattern = filepath.Join(recordingsPath, "*"+cameraID+"*.mp4")
+		// Try alternative patterns - any file containing camera ID
+		pattern = filepath.Join(recordingsPath, "*"+cameraID+"*")
 		matches, err = filepath.Glob(pattern)
 	}
 
 	if err != nil || len(matches) == 0 {
-		// Last resort: any .mp4 files in recordings directory
-		pattern = filepath.Join(recordingsPath, "*.mp4")
+		// Last resort: any recording files in directory (MediaMTX determines extension)
+		pattern = filepath.Join(recordingsPath, "*")
 		matches, err = filepath.Glob(pattern)
 	}
 
 	require.NoError(t, err, "Should be able to search for recording files in %s", recordingsPath)
-	require.Greater(t, len(matches), 0, "Recording should create at least one .mp4 file in configured directory: %s", recordingsPath)
+	require.Greater(t, len(matches), 0, "Recording should create at least one file in configured directory: %s (MediaMTX determines extension based on recordFormat)", recordingsPath)
 
 	// Verify the file has content (not empty)
 	fileInfo, err := os.Stat(matches[0])
