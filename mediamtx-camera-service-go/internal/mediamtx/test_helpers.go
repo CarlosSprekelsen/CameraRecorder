@@ -146,7 +146,7 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 	// Create MediaMTX client configuration
 	clientConfig := &configpkg.MediaMTXConfig{
 		BaseURL:        testConfig.BaseURL,
-		HealthCheckURL: testConfig.BaseURL + "/v3/paths/list", // Correct Go MediaMTX health check endpoint
+		HealthCheckURL: testConfig.BaseURL + MediaMTXPathsList, // Correct Go MediaMTX health check endpoint
 		Timeout:        testConfig.Timeout,
 		ConnectionPool: configpkg.ConnectionPoolConfig{
 			MaxIdleConns:        10,
@@ -278,7 +278,7 @@ func (h *MediaMTXTestHelper) TestMediaMTXHealth(t *testing.T) error {
 // TestMediaMTXPaths tests the MediaMTX paths endpoint
 func (h *MediaMTXTestHelper) TestMediaMTXPaths(t *testing.T) error {
 	ctx := context.Background()
-	data, err := h.client.Get(ctx, "/v3/paths/list")
+	data, err := h.client.Get(ctx, MediaMTXPathsList)
 	if err != nil {
 		return fmt.Errorf("failed to get paths: %w", err)
 	}
@@ -295,7 +295,7 @@ func (h *MediaMTXTestHelper) TestMediaMTXPaths(t *testing.T) error {
 // TestMediaMTXConfigPaths tests the MediaMTX config paths endpoint
 func (h *MediaMTXTestHelper) TestMediaMTXConfigPaths(t *testing.T) error {
 	ctx := context.Background()
-	data, err := h.client.Get(ctx, "/v3/config/paths/list")
+	data, err := h.client.Get(ctx, MediaMTXConfigPathsList)
 	if err != nil {
 		return fmt.Errorf("failed to get config paths: %w", err)
 	}
@@ -321,7 +321,7 @@ func (h *MediaMTXTestHelper) TestMediaMTXFailure(t *testing.T) error {
 	t.Logf("Expected failure for invalid endpoint: %v", err)
 
 	// Test invalid path creation (using correct endpoint)
-	_, err = h.client.Post(ctx, "/v3/config/paths/add", []byte(`{"invalid": "data"}`))
+	_, err = h.client.Post(ctx, FormatConfigPathsAdd(""), []byte(`{"invalid": "data"}`))
 	if err == nil {
 		return fmt.Errorf("expected error for invalid path creation")
 	}
@@ -574,129 +574,32 @@ func (h *MediaMTXTestHelper) GetAvailableCameraIdentifierWithReadiness(ctx conte
 		return "", nil, false // Not ready yet - graceful
 	}
 
-	// Get camera monitor directly to check connected cameras
-	if controllerImpl, ok := controller.(*controller); ok && controllerImpl.cameraMonitor != nil {
-		cameras := controllerImpl.cameraMonitor.GetConnectedCameras()
-		if len(cameras) == 0 {
-			return "", nil, false // No cameras discovered yet - graceful
-		}
-
-		// Convert first device path to camera identifier
-		for devicePath := range cameras {
-			if strings.HasPrefix(devicePath, "/dev/video") {
-				deviceNum := strings.TrimPrefix(devicePath, "/dev/video")
-				return fmt.Sprintf("camera%s", deviceNum), nil, true
-			}
-		}
+	// Use the existing GetAvailableCameraIdentifier method since we can't access private fields
+	// This method uses filesystem scanning which should work if cameras exist
+	if cameraID, err := h.GetAvailableCameraIdentifier(ctx); err == nil {
+		return cameraID, nil, true
 	}
 
-	return "", nil, false // No suitable cameras found
+	return "", nil, false // No cameras found yet
 }
 
-// WaitForCameraWithReadiness waits for camera discovery using Progressive Readiness pattern
-func (h *MediaMTXTestHelper) WaitForCameraWithReadiness(ctx context.Context, timeout time.Duration) (string, error) {
-	// Create timeout context
-	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-
-	// Subscribe to controller readiness events
-	controller, err := h.GetController(&testing.T{})
-	if err != nil {
-		return "", fmt.Errorf("failed to get controller: %w", err)
-	}
-
-	// Use event-driven waiting instead of polling
+// WaitForControllerReadiness waits for controller to become ready using event-driven pattern
+func (h *MediaMTXTestHelper) WaitForControllerReadiness(ctx context.Context, controller MediaMTXController) error {
+	// Use existing event infrastructure - NO TIMEOUTS
 	readinessChan := controller.SubscribeToReadiness()
 
-	// Check immediately first
-	if cameraID, err, ready := h.GetAvailableCameraIdentifierWithReadiness(ctx); ready {
-		return cameraID, err
+	// Check if already ready
+	if controller.IsReady() {
+		return nil
 	}
 
-	// Wait for readiness events
-	ticker := time.NewTicker(100 * time.Millisecond)
-	defer ticker.Stop()
-
-	for {
-		select {
-		case <-readinessChan:
-			// Controller became ready, check for cameras
-			if cameraID, err, ready := h.GetAvailableCameraIdentifierWithReadiness(ctx); ready {
-				return cameraID, err
-			}
-		case <-ticker.C:
-			// Periodic check as fallback
-			if cameraID, err, ready := h.GetAvailableCameraIdentifierWithReadiness(ctx); ready {
-				return cameraID, err
-			}
-		case <-timeoutCtx.Done():
-			return "", fmt.Errorf("timeout waiting for camera discovery (Progressive Readiness allows this)")
-		}
+	// Wait for readiness event
+	select {
+	case <-readinessChan:
+		return nil // Controller became ready
+	case <-ctx.Done():
+		return ctx.Err() // Context cancelled
 	}
-}
-
-// TakeSnapshotWithReadiness attempts to take a snapshot using Progressive Readiness pattern
-func (h *MediaMTXTestHelper) TakeSnapshotWithReadiness(ctx context.Context, timeout time.Duration) (*TakeSnapshotResponse, error) {
-	// Wait for camera with readiness
-	cameraID, err := h.WaitForCameraWithReadiness(ctx, timeout)
-	if err != nil {
-		return nil, fmt.Errorf("camera not available within timeout: %w", err)
-	}
-
-	// Get controller
-	controller, err := h.GetController(&testing.T{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get controller: %w", err)
-	}
-
-	// Attempt snapshot with graceful handling
-	options := &SnapshotOptions{
-		Format:  "jpg",
-		Quality: 85,
-	}
-
-	snapshot, err := controller.TakeAdvancedSnapshot(ctx, cameraID, options)
-	if err != nil {
-		// Progressive Readiness: graceful handling of not-ready-yet
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "not accessible") {
-			return nil, fmt.Errorf("camera not ready for snapshot yet (Progressive Readiness): %w", err)
-		}
-		return nil, err
-	}
-
-	return snapshot, nil
-}
-
-// StartRecordingWithReadiness attempts to start recording using Progressive Readiness pattern
-func (h *MediaMTXTestHelper) StartRecordingWithReadiness(ctx context.Context, timeout time.Duration) (*StartRecordingResponse, error) {
-	// Wait for camera with readiness
-	cameraID, err := h.WaitForCameraWithReadiness(ctx, timeout)
-	if err != nil {
-		return nil, fmt.Errorf("camera not available within timeout: %w", err)
-	}
-
-	// Get controller
-	controller, err := h.GetController(&testing.T{})
-	if err != nil {
-		return nil, fmt.Errorf("failed to get controller: %w", err)
-	}
-
-	// Attempt recording with graceful handling
-	options := &PathConf{
-		Record:       true,
-		RecordFormat: "fmp4",
-	}
-
-	response, err := controller.StartRecording(ctx, cameraID, options)
-	if err != nil {
-		// Progressive Readiness: graceful handling of not-ready-yet
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "not accessible") {
-			return nil, fmt.Errorf("camera not ready for recording yet (Progressive Readiness): %w", err)
-		}
-		return nil, err
-	}
-
-	return response, nil
 }
 
 // GetTestCameraDevice returns a test camera device from fixtures
@@ -931,12 +834,12 @@ func (h *MediaMTXTestHelper) CreateTestPath(t *testing.T, name string) error {
 	ctx := context.Background()
 
 	// First, check if path exists in runtime
-	if _, err := h.client.Get(ctx, "/v3/paths/get/"+name); err == nil {
+	if _, err := h.client.Get(ctx, FormatPathsGet(name)); err == nil {
 		t.Logf("Path %s already exists in runtime, attempting cleanup", name)
 		h.ForceCleanupRuntimePaths(t)
 
 		// Check again after cleanup
-		if _, err := h.client.Get(ctx, "/v3/paths/get/"+name); err == nil {
+		if _, err := h.client.Get(ctx, FormatPathsGet(name)); err == nil {
 			// Path still exists, try a different approach
 			// Create a unique name with timestamp
 			name = fmt.Sprintf("%s_%d", name, time.Now().Unix())
@@ -958,7 +861,7 @@ func (h *MediaMTXTestHelper) CreateTestPath(t *testing.T, name string) error {
 		return fmt.Errorf("failed to marshal path config: %w", err)
 	}
 
-	_, err = h.client.Post(ctx, "/v3/config/paths/add/"+name, data)
+	_, err = h.client.Post(ctx, FormatConfigPathsAdd(name), data)
 	if err != nil {
 		// Check if it's "already exists" error
 		if strings.Contains(err.Error(), "already exists") {
@@ -975,7 +878,7 @@ func (h *MediaMTXTestHelper) CreateTestPath(t *testing.T, name string) error {
 // DeleteTestPath deletes a test path
 func (h *MediaMTXTestHelper) DeleteTestPath(t *testing.T, name string) error {
 	ctx := context.Background()
-	err := h.client.Delete(ctx, "/v3/config/paths/delete/"+name)
+	err := h.client.Delete(ctx, FormatConfigPathsDelete(name))
 	if err != nil {
 		return fmt.Errorf("failed to delete test path %s: %w", name, err)
 	}
@@ -986,7 +889,7 @@ func (h *MediaMTXTestHelper) DeleteTestPath(t *testing.T, name string) error {
 // GetPathInfo gets information about a specific path
 func (h *MediaMTXTestHelper) GetPathInfo(t *testing.T, name string) ([]byte, error) {
 	ctx := context.Background()
-	data, err := h.client.Get(ctx, "/v3/paths/get/"+name)
+	data, err := h.client.Get(ctx, FormatPathsGet(name))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get path info for %s: %w", name, err)
 	}
@@ -998,7 +901,7 @@ func (h *MediaMTXTestHelper) ForceCleanupRuntimePaths(t *testing.T) error {
 	ctx := context.Background()
 
 	// Get all runtime paths
-	data, err := h.client.Get(ctx, "/v3/paths/list")
+	data, err := h.client.Get(ctx, MediaMTXPathsList)
 	if err != nil {
 		return fmt.Errorf("failed to get paths: %w", err)
 	}
@@ -1057,7 +960,7 @@ func (h *MediaMTXTestHelper) cleanupMediaMTXPaths(t *testing.T) {
 	ctx := context.Background()
 
 	// Get all paths from MediaMTX
-	data, err := h.client.Get(ctx, "/v3/paths/list")
+	data, err := h.client.Get(ctx, MediaMTXPathsList)
 	if err != nil {
 		t.Logf("Warning: Failed to get paths for cleanup: %v", err)
 		return

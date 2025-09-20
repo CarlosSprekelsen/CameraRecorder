@@ -73,7 +73,7 @@ func (ci *ConfigIntegration) GetMediaMTXConfig() (*config.MediaMTXConfig, error)
 	mediaMTXConfig := &config.MediaMTXConfig{
 		// Core MediaMTX settings
 		BaseURL:        fmt.Sprintf("http://%s:%d", cfg.MediaMTX.Host, cfg.MediaMTX.APIPort),
-		HealthCheckURL: fmt.Sprintf("http://%s:%d/v3/paths/list", cfg.MediaMTX.Host, cfg.MediaMTX.APIPort),
+		HealthCheckURL: fmt.Sprintf("http://%s:%d%s", cfg.MediaMTX.Host, cfg.MediaMTX.APIPort, MediaMTXPathsList),
 		Timeout:        time.Duration(cfg.MediaMTX.HealthCheckInterval) * time.Second,
 		RetryAttempts:  3, // Default value
 		RetryDelay:     time.Duration(cfg.MediaMTX.HealthMaxBackoffInterval) * time.Second,

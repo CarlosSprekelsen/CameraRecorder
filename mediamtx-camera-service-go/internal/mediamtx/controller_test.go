@@ -724,18 +724,21 @@ func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
 	}
 	require.True(t, isReady, "Controller should become ready with camera discovery")
 
-	// Test snapshot using Progressive Readiness pattern
-	// Use new Progressive Readiness helper that respects event-driven architecture
-	snapshot, err := helper.TakeSnapshotWithReadiness(ctx, 10*time.Second)
-	if err != nil {
-		// Progressive Readiness: graceful handling of not-ready scenarios
-		if strings.Contains(err.Error(), "timeout") || strings.Contains(err.Error(), "not ready") {
-			t.Skipf("Camera not ready within timeout - Progressive Readiness allows this: %v", err)
-			return
-		}
-		// Unexpected error
-		require.NoError(t, err, "Unexpected snapshot error")
+	// Wait for controller readiness using existing event infrastructure
+	err = helper.WaitForControllerReadiness(ctx, controller)
+	require.NoError(t, err, "Controller should become ready via events")
+
+	// Get available camera using existing helper (now that controller is ready)
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
+
+	options := &SnapshotOptions{
+		Format:  "jpg",
+		Quality: 85,
 	}
+
+	snapshot, err := controller.TakeAdvancedSnapshot(ctx, cameraID, options)
+	require.NoError(t, err, "Snapshot should work after proper readiness")
 	require.NotNil(t, snapshot, "Snapshot should not be nil")
 
 	// Verify snapshot properties
@@ -805,31 +808,13 @@ func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Test advanced recording - wait for actual camera discovery completion
-	var cameraID string
+	// Wait for controller readiness using existing event infrastructure
+	err = helper.WaitForControllerReadiness(ctx, controller)
+	require.NoError(t, err, "Controller should become ready via events")
 
-	// Wait for camera discovery to complete by checking actual camera availability
-	for i := 0; i < 50; i++ { // 5 seconds max
-		if controller.IsReady() {
-			// Try to get camera from the discovered cameras
-			if cameras := controller.GetReadinessState()["available_cameras"]; cameras != nil {
-				if cameraList, ok := cameras.([]string); ok && len(cameraList) > 0 {
-					cameraID = cameraList[0]
-					break
-				}
-			}
-			// Fallback: try the old method to see if it works
-			if id, err := helper.GetAvailableCameraIdentifier(ctx); err == nil {
-				cameraID = id
-				break
-			}
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-
-	if cameraID == "" {
-		t.Fatalf("No camera discovered after controller became ready - this indicates a real bug")
-	}
+	// Get available camera using existing helper (now that controller is ready)
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
 
 	options := &PathConf{
 		Record:       true,
@@ -837,12 +822,10 @@ func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 	}
 
 	response, err := controller.StartRecording(ctx, cameraID, options)
-	if err != nil {
-		t.Logf("Advanced recording failed: %v", err)
-		require.NoError(t, err, "Recording should work with discovered camera")
-	}
-
+	require.NoError(t, err, "Advanced recording should work after proper readiness")
 	require.NotNil(t, response, "Recording response should not be nil")
+
+	// Verify recording properties
 	assert.NotEmpty(t, response.Device, "Device should be set")
 	assert.Equal(t, "RECORDING", response.Status, "Recording should be active")
 
@@ -875,27 +858,16 @@ func TestController_StreamRecording_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Test stream recording using Progressive Readiness pattern
-	// Wait for camera discovery before attempting streaming
-	cameraID, err := helper.WaitForCameraWithReadiness(ctx, 10*time.Second)
-	if err != nil {
-		// Progressive Readiness: graceful handling
-		if strings.Contains(err.Error(), "timeout") {
-			t.Skipf("Camera not ready within timeout - Progressive Readiness allows this: %v", err)
-			return
-		}
-		require.NoError(t, err, "Unexpected error getting camera")
-	}
+	// Wait for controller readiness using existing event infrastructure
+	err = helper.WaitForControllerReadiness(ctx, controller)
+	require.NoError(t, err, "Controller should become ready via events")
+
+	// Get available camera using existing helper (now that controller is ready)
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
 
 	stream, err := controller.StartStreaming(ctx, cameraID)
-	if err != nil {
-		// Progressive Readiness: graceful handling of not-ready scenarios
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "not accessible") {
-			t.Skipf("Camera not ready for streaming yet - Progressive Readiness allows this: %v", err)
-			return
-		}
-		require.NoError(t, err, "Unexpected streaming error")
-	}
+	require.NoError(t, err, "Stream recording should work after proper readiness")
 	require.NotNil(t, stream, "Stream should not be nil")
 
 	// Verify stream properties - stream is GetStreamURLResponse, not a Path
@@ -1057,33 +1029,13 @@ func TestController_AdvancedSnapshot_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Test TakeAdvancedSnapshot - wait for actual camera discovery completion
-	// The cameras ARE being discovered, we just need to wait for the right moment
-	var cameraID string
-	var snapshotErr error
+	// Wait for controller readiness using existing event infrastructure
+	err = helper.WaitForControllerReadiness(ctx, controller)
+	require.NoError(t, err, "Controller should become ready via events")
 
-	// Wait for camera discovery to complete by checking actual camera availability
-	for i := 0; i < 50; i++ { // 5 seconds max
-		if controller.IsReady() {
-			// Try to get camera from the discovered cameras
-			if cameras := controller.GetReadinessState()["available_cameras"]; cameras != nil {
-				if cameraList, ok := cameras.([]string); ok && len(cameraList) > 0 {
-					cameraID = cameraList[0]
-					break
-				}
-			}
-			// Fallback: try the old method to see if it works
-			if id, err := helper.GetAvailableCameraIdentifier(ctx); err == nil {
-				cameraID = id
-				break
-			}
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-
-	if cameraID == "" {
-		t.Fatalf("No camera discovered after controller became ready - this indicates a real bug")
-	}
+	// Get available camera using existing helper (now that controller is ready)
+	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	require.NoError(t, err, "Should be able to get available camera identifier")
 
 	options := &SnapshotOptions{
 		Format:  "jpg",
@@ -1091,13 +1043,10 @@ func TestController_AdvancedSnapshot_ReqMTX002(t *testing.T) {
 	}
 
 	snapshot, err := controller.TakeAdvancedSnapshot(ctx, cameraID, options)
-	if err != nil {
-		t.Logf("Advanced snapshot failed: %v", err)
-		// This should work now that we have a real camera
-		require.NoError(t, err, "Snapshot should work with discovered camera")
-	}
-
+	require.NoError(t, err, "Advanced snapshot should work after proper readiness")
 	require.NotNil(t, snapshot, "Snapshot should not be nil")
+
+	// Verify snapshot properties
 	assert.NotEmpty(t, snapshot.Device, "Device should be set")
 	assert.NotEmpty(t, snapshot.Filename, "Filename should be set")
 
@@ -1107,7 +1056,7 @@ func TestController_AdvancedSnapshot_ReqMTX002(t *testing.T) {
 		"Snapshot path should start with configured snapshots path from fixture: %s", expectedPath)
 	assert.Contains(t, snapshot.FilePath, snapshot.Device, "File path should contain camera identifier")
 	assert.Contains(t, snapshot.FilePath, ".jpg", "File path should have .jpg extension")
-	t.Log("Advanced snapshot successful")
+	t.Log("Advanced snapshot successful using event-driven readiness")
 
 	// Test GetAdvancedSnapshot
 	advancedSnapshot, exists := controller.GetAdvancedSnapshot("test_snapshot_id")

@@ -520,8 +520,9 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002(t *testing.T) {
 	}
 
 	// Test 1: Cleanup old snapshots (older than 1 hour)
-	err = snapshotManager.CleanupOldSnapshots(ctx, 1*time.Hour, 10)
+	deletedCount, spaceFreed, err := snapshotManager.CleanupOldSnapshots(ctx, 1*time.Hour, 10, 1024*1024*100) // 100MB max size
 	require.NoError(t, err, "CleanupOldSnapshots should succeed")
+	t.Logf("Deleted %d snapshots, freed %d bytes", deletedCount, spaceFreed)
 
 	// Verify old snapshots were removed from memory and files were deleted
 	for i, filename := range testSnapshots {
@@ -556,8 +557,9 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002(t *testing.T) {
 	}
 
 	// Cleanup with max count of 3
-	err = snapshotManager.CleanupOldSnapshots(ctx, 24*time.Hour, 3)
+	deletedCount, spaceFreed, err = snapshotManager.CleanupOldSnapshots(ctx, 24*time.Hour, 3, 1024*1024*100) // 100MB max size
 	require.NoError(t, err, "CleanupOldSnapshots with max count should succeed")
+	t.Logf("Deleted %d snapshots, freed %d bytes", deletedCount, spaceFreed)
 
 	// Verify only 3 files remain (newest ones)
 	entries, err := os.ReadDir(mediaMTXConfig.SnapshotsPath)

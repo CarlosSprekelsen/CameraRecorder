@@ -1,0 +1,1 @@
+package main; import "fmt"; func main() { const MediaMTXAPIVersion = "v3"; fmt.Printf("Config Paths Add: /%s/config/paths/add/test\n", MediaMTXAPIVersion); fmt.Printf("Expected: /v3/config/paths/add/test\n"); }

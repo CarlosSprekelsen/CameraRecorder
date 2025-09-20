@@ -190,7 +190,7 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 		"device_path": devicePath,
 		"path_name":   name,
 		"method":      "POST",
-		"endpoint":    fmt.Sprintf("/v3/config/paths/add/%s", name),
+		"endpoint":    FormatConfigPathsAdd(name),
 		"source":      source,
 		"options":     options,
 	}).Debug("Creating MediaMTX path")
@@ -198,6 +198,17 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 	// Enhanced validation for better user experience and software resilience
 	if err := pm.validatePathName(name); err != nil {
 		return fmt.Errorf("invalid path name: %w", err)
+	}
+
+	// Validate camera device exists if this is a camera path
+	if strings.HasPrefix(name, "camera") {
+		exists, err := pm.ValidateCameraDevice(ctx, name)
+		if err != nil {
+			return fmt.Errorf("failed to validate camera device %s: %w", name, err)
+		}
+		if !exists {
+			return fmt.Errorf("camera %s not found: camera device does not exist", name)
+		}
 	}
 
 	if err := pm.validateSource(source, opts); err != nil {
@@ -311,10 +322,10 @@ func (pm *pathManager) createPathInternal(ctx context.Context, name, source stri
 	pm.logger.WithFields(logging.Fields{
 		"name": name,
 		"data": string(data),
-		"url":  fmt.Sprintf("/v3/config/paths/add/%s", name),
+		"url":  FormatConfigPathsAdd(name),
 	}).Info("Sending CreatePath request to MediaMTX - FULL REQUEST")
 
-	response, err := pm.client.Post(ctx, fmt.Sprintf("/v3/config/paths/add/%s", name), data)
+	response, err := pm.client.Post(ctx, FormatConfigPathsAdd(name), data)
 	pm.logger.WithFields(logging.Fields{
 		"path_name": name,
 		"error":     err,
@@ -329,7 +340,7 @@ func (pm *pathManager) createPathInternal(ctx context.Context, name, source stri
 			"device_path":   devicePath,
 			"path_name":     name,
 			"method":        "POST",
-			"endpoint":      fmt.Sprintf("/v3/config/paths/add/%s", name),
+			"endpoint":      FormatConfigPathsAdd(name),
 			"status":        "failed",
 			"body":          truncateString(string(data), 200), // Trimmed body
 			"error_type":    fmt.Sprintf("%T", err),
@@ -363,7 +374,7 @@ func (pm *pathManager) createPathInternal(ctx context.Context, name, source stri
 		"device_path": devicePath,
 		"path_name":   name,
 		"method":      "POST",
-		"endpoint":    fmt.Sprintf("/v3/config/paths/add/%s", name),
+		"endpoint":    FormatConfigPathsAdd(name),
 		"status":      "success",
 	}).Info("MediaMTX path created successfully")
 	return nil
@@ -394,7 +405,7 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config *PathC
 		"device_path": devicePath,
 		"path_name":   name,
 		"method":      "PATCH",
-		"endpoint":    fmt.Sprintf("/v3/config/paths/patch/%s", name),
+		"endpoint":    FormatConfigPathsPatch(name),
 		"config":      patchConfig,
 	}).Debug("Patching MediaMTX path configuration")
 
@@ -413,20 +424,20 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config *PathC
 	for attempt, backoff := range backoffs {
 		pm.logger.WithFields(logging.Fields{
 			"path_name":    name,
-			"url":          fmt.Sprintf("/v3/config/paths/patch/%s", name),
+			"url":          FormatConfigPathsPatch(name),
 			"json_payload": string(data),
 			"config":       config,
 			"attempt":      attempt + 1,
 		}).Debug("Sending PATCH request to MediaMTX")
 
-		err = pm.client.Patch(ctx, fmt.Sprintf("/v3/config/paths/patch/%s", name), data)
+		err = pm.client.Patch(ctx, FormatConfigPathsPatch(name), data)
 		if err == nil {
 			pm.logger.WithFields(logging.Fields{
 				"camera_id":   name,
 				"device_path": devicePath,
 				"path_name":   name,
 				"method":      "PATCH",
-				"endpoint":    fmt.Sprintf("/v3/config/paths/patch/%s", name),
+				"endpoint":    FormatConfigPathsPatch(name),
 				"status":      "success",
 			}).Info("MediaMTX path configuration patched successfully")
 			return nil
@@ -461,7 +472,7 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config *PathC
 				"device_path": devicePath,
 				"path_name":   name,
 				"method":      "PATCH",
-				"endpoint":    fmt.Sprintf("/v3/config/paths/patch/%s", name),
+				"endpoint":    FormatConfigPathsPatch(name),
 				"status":      "failed",
 				"body":        truncateString(string(data), 200), // Trimmed body
 				"attempt":     attempt + 1,
@@ -546,7 +557,7 @@ func (pm *pathManager) DeletePath(ctx context.Context, name string) error {
 	pm.logger.WithField("name", name).Debug("Deleting MediaMTX path")
 
 	// Try to delete via config API first
-	err := pm.client.Delete(ctx, fmt.Sprintf("/v3/config/paths/delete/%s", name))
+	err := pm.client.Delete(ctx, FormatConfigPathsDelete(name))
 	if err != nil {
 		// Check if this is a "not found" error
 		errorMsg := err.Error()
@@ -581,7 +592,7 @@ func (pm *pathManager) DeletePath(ctx context.Context, name string) error {
 func (pm *pathManager) GetPath(ctx context.Context, name string) (*Path, error) {
 	pm.logger.WithField("name", name).Debug("Getting MediaMTX path")
 
-	data, err := pm.client.Get(ctx, fmt.Sprintf("/v3/paths/get/%s", name))
+	data, err := pm.client.Get(ctx, FormatPathsGet(name))
 	if err != nil {
 		return nil, NewPathErrorWithErr(name, "get_path", "failed to get path", err)
 	}
@@ -598,7 +609,7 @@ func (pm *pathManager) GetPath(ctx context.Context, name string) (*Path, error) 
 func (pm *pathManager) ListPaths(ctx context.Context) ([]*PathConf, error) {
 	pm.logger.Debug("Listing MediaMTX path configurations")
 
-	data, err := pm.client.Get(ctx, "/v3/config/paths/list")
+	data, err := pm.client.Get(ctx, MediaMTXConfigPathsList)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list path configurations: %w", err)
 	}
@@ -616,7 +627,7 @@ func (pm *pathManager) ListPaths(ctx context.Context) ([]*PathConf, error) {
 func (pm *pathManager) GetRuntimePaths(ctx context.Context) ([]*Path, error) {
 	pm.logger.Debug("Getting MediaMTX runtime paths")
 
-	data, err := pm.client.Get(ctx, "/v3/paths/list")
+	data, err := pm.client.Get(ctx, MediaMTXPathsList)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get runtime paths: %w", err)
 	}

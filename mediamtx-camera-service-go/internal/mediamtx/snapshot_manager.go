@@ -669,12 +669,16 @@ func (sm *SnapshotManager) DeleteSnapshot(ctx context.Context, snapshotID string
 	return nil
 }
 
-// CleanupOldSnapshots cleans up snapshots based on age and count
-func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.Duration, maxCount int) error {
+// CleanupOldSnapshots cleans up snapshots based on age, count, and size limits using centralized configuration
+func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.Duration, maxCount int, maxSize int64) (deletedCount int, spaceFreed int64, err error) {
 	sm.logger.WithFields(logging.Fields{
 		"max_age":   maxAge,
 		"max_count": maxCount,
+		"max_size":  maxSize,
 	}).Info("Cleaning up old snapshots")
+
+	deletedCount = 0
+	spaceFreed = 0
 
 	// Note: sync.Map doesn't need locking for individual operations
 	// but we need to collect all snapshots first for consistent cleanup
@@ -682,7 +686,7 @@ func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.
 	// Get snapshots directory path from configuration
 	snapshotsDir := sm.config.SnapshotsPath
 	if snapshotsDir == "" {
-		return fmt.Errorf("snapshots path not configured")
+		return 0, 0, fmt.Errorf("snapshots path not configured")
 	}
 
 	// Check if directory exists
@@ -694,7 +698,7 @@ func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.
 		entries, err := os.ReadDir(snapshotsDir)
 		if err != nil {
 			sm.logger.WithError(err).WithField("directory", snapshotsDir).Error("Error reading snapshots directory")
-			return fmt.Errorf("failed to read snapshots directory: %w", err)
+			return 0, 0, fmt.Errorf("failed to read snapshots directory: %w", err)
 		}
 
 		// Process files and collect metadata
@@ -730,30 +734,44 @@ func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.
 			return files[i].ModifiedAt.Before(files[j].ModifiedAt)
 		})
 
-		// Delete files based on age threshold
 		cutoffTime := time.Now().Add(-maxAge)
 
-		for _, file := range files {
-			if file.ModifiedAt.Before(cutoffTime) {
-				filePath := filepath.Join(snapshotsDir, file.FileName)
-				if err := sm.deleteSnapshotFile(filePath); err != nil {
-					sm.logger.WithError(err).WithField("filename", file.FileName).Error("Failed to delete old snapshot file")
-					continue
-				}
+		// Calculate current total size if size-based cleanup is enabled
+		var currentTotalSize int64
+		if maxSize > 0 {
+			for _, file := range files {
+				currentTotalSize += file.FileSize
 			}
 		}
 
-		// Delete excess files if we have too many (keep newest files)
-		if len(files) > maxCount {
-			excessCount := len(files) - maxCount
-			// Delete earliest files first
-			for i := 0; i < excessCount && i < len(files); i++ {
-				file := files[i]
+		// Delete files based on age, count, and size constraints
+		for _, file := range files {
+			shouldDelete := false
+
+			// Check age constraint
+			if file.ModifiedAt.Before(cutoffTime) {
+				shouldDelete = true
+			}
+
+			// Check count constraint (keep newest files up to maxCount)
+			if len(files)-deletedCount > maxCount {
+				shouldDelete = true
+			}
+
+			// Check size constraint (delete oldest files until under maxSize)
+			if maxSize > 0 && currentTotalSize > maxSize {
+				shouldDelete = true
+			}
+
+			if shouldDelete {
 				filePath := filepath.Join(snapshotsDir, file.FileName)
 				if err := sm.deleteSnapshotFile(filePath); err != nil {
-					sm.logger.WithError(err).WithField("filename", file.FileName).Error("Failed to delete excess snapshot file")
+					sm.logger.WithError(err).WithField("filename", file.FileName).Error("Failed to delete snapshot file")
 					continue
 				}
+				deletedCount++
+				spaceFreed += file.FileSize
+				currentTotalSize -= file.FileSize
 			}
 		}
 	}
@@ -771,30 +789,56 @@ func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.
 		return snapshots[i].Created.Before(snapshots[j].Created)
 	})
 
-	// Delete snapshots from memory - lock-free operations with sync.Map
-	deletedCount := 0
+	cutoffTime := time.Now().Add(-maxAge)
 
+	// Calculate current total size of in-memory snapshots if size-based cleanup is enabled
+	var currentSnapshotSize int64
+	if maxSize > 0 {
+		for _, snapshot := range snapshots {
+			// For in-memory snapshots, we estimate size or use file size if available
+			if fileInfo, err := os.Stat(snapshot.FilePath); err == nil {
+				currentSnapshotSize += fileInfo.Size()
+			}
+		}
+	}
+
+	// Delete snapshots from memory based on age, count, and size constraints
 	for _, snapshot := range snapshots {
-		// Check age
-		if time.Since(snapshot.Created) > maxAge {
+		shouldDelete := false
+
+		// Check age constraint
+		if snapshot.Created.Before(cutoffTime) {
+			shouldDelete = true
+		}
+
+		// Check count constraint (keep newest snapshots up to maxCount)
+		if len(snapshots)-deletedCount > maxCount {
+			shouldDelete = true
+		}
+
+		// Check size constraint (delete oldest snapshots until under maxSize)
+		if maxSize > 0 && currentSnapshotSize > maxSize {
+			shouldDelete = true
+		}
+
+		if shouldDelete {
 			sm.snapshots.Delete(snapshot.ID)
+
+			// Add to space freed if file exists
+			if fileInfo, err := os.Stat(snapshot.FilePath); err == nil {
+				spaceFreed += fileInfo.Size()
+				currentSnapshotSize -= fileInfo.Size()
+			}
+
 			deletedCount++
 		}
 	}
 
-	// Delete excess snapshots from memory if we have too many
-	// Note: sync.Map doesn't have len(), so we use the snapshots slice length
-	if len(snapshots) > maxCount {
-		excessCount := len(snapshots) - maxCount
-		for i := 0; i < excessCount && i < len(snapshots); i++ {
-			snapshot := snapshots[i]
-			sm.snapshots.Delete(snapshot.ID)
-			deletedCount++
-		}
-	}
-
-	sm.logger.WithField("deleted_count", strconv.Itoa(deletedCount)).Info("Snapshot cleanup completed")
-	return nil
+	sm.logger.WithFields(logging.Fields{
+		"deleted_count": deletedCount,
+		"space_freed":   spaceFreed,
+	}).Info("Snapshot cleanup completed")
+	return deletedCount, spaceFreed, nil
 }
 
 // buildAdvancedSnapshotCommand builds an advanced FFmpeg command for snapshots

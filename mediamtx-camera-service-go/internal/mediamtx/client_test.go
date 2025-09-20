@@ -53,7 +53,7 @@ func TestClient_Get_ReqMTX001(t *testing.T) {
 	ctx := context.Background()
 
 	// Test GET request to paths list endpoint (from swagger.json)
-	data, err := client.Get(ctx, "/v3/paths/list")
+	data, err := client.Get(ctx, MediaMTXPathsList)
 	require.NoError(t, err, "GET request should succeed")
 	assert.NotNil(t, data, "Response data should not be nil")
 	assert.Greater(t, len(data), 0, "Response should contain data")
@@ -78,12 +78,12 @@ func TestClient_Post_ReqMTX001(t *testing.T) {
 
 	// Test POST request to create path endpoint (from swagger.json)
 	pathData := `{"name":"test_path","source":"publisher"}`
-	data, err := client.Post(ctx, "/v3/mediaMTXConfig/paths/add/test_path", []byte(pathData))
+	data, err := client.Post(ctx, FormatConfigPathsAdd("test_path"), []byte(pathData))
 	require.NoError(t, err, "POST request should succeed")
 	assert.NotNil(t, data, "Response data should not be nil")
 
 	// Clean up - delete the test path
-	err = client.Delete(ctx, "/v3/mediaMTXConfig/paths/delete/test_path")
+	err = client.Delete(ctx, FormatConfigPathsDelete("test_path"))
 	require.NoError(t, err, "DELETE request should succeed")
 }
 
@@ -100,17 +100,17 @@ func TestClient_Put_ReqMTX001(t *testing.T) {
 
 	// First create a path
 	pathData := `{"name":"test_put_path","source":"publisher"}`
-	_, err := client.Post(ctx, "/v3/mediaMTXConfig/paths/add/test_put_path", []byte(pathData))
+	_, err := client.Post(ctx, FormatConfigPathsAdd("test_put_path"), []byte(pathData))
 	require.NoError(t, err, "POST request should succeed")
 
 	// Test POST request to replace path endpoint (from swagger.json)
 	updateData := `{"name":"test_put_path","source":"publisher","maxReaders":5}`
-	data, err := client.Post(ctx, "/v3/mediaMTXConfig/paths/replace/test_put_path", []byte(updateData))
+	data, err := client.Post(ctx, FormatConfigPathsReplace("test_put_path"), []byte(updateData))
 	require.NoError(t, err, "POST request should succeed")
 	assert.NotNil(t, data, "Response data should not be nil")
 
 	// Clean up - delete the test path
-	err = client.Delete(ctx, "/v3/mediaMTXConfig/paths/delete/test_put_path")
+	err = client.Delete(ctx, FormatConfigPathsDelete("test_put_path"))
 	require.NoError(t, err, "DELETE request should succeed")
 }
 
@@ -127,11 +127,11 @@ func TestClient_Delete_ReqMTX001(t *testing.T) {
 
 	// First create a path
 	pathData := `{"name":"test_delete_path","source":"publisher"}`
-	_, err := client.Post(ctx, "/v3/mediaMTXConfig/paths/add/test_delete_path", []byte(pathData))
+	_, err := client.Post(ctx, FormatConfigPathsAdd("test_delete_path"), []byte(pathData))
 	require.NoError(t, err, "POST request should succeed")
 
 	// Test DELETE request to delete path endpoint (from swagger.json)
-	err = client.Delete(ctx, "/v3/mediaMTXConfig/paths/delete/test_delete_path")
+	err = client.Delete(ctx, FormatConfigPathsDelete("test_delete_path"))
 	require.NoError(t, err, "DELETE request should succeed")
 }
 
@@ -167,11 +167,11 @@ func TestClient_ErrorHandling_ReqMTX007(t *testing.T) {
 	assert.Error(t, err, "Invalid endpoint should return error")
 
 	// Test invalid path creation (missing required fields per swagger.json)
-	_, err = client.Post(ctx, "/v3/mediaMTXConfig/paths/add", []byte(`{"invalid": "data"}`))
+	_, err = client.Post(ctx, FormatConfigPathsAdd(""), []byte(`{"invalid": "data"}`))
 	assert.Error(t, err, "Invalid path creation should return error")
 
 	// Test deleting non-existent path
-	err = client.Delete(ctx, "/v3/mediaMTXConfig/paths/delete/test_non_existent_path")
+	err = client.Delete(ctx, FormatConfigPathsDelete("test_non_existent_path"))
 	assert.Error(t, err, "Deleting non-existent path should return error")
 }
 
@@ -187,7 +187,7 @@ func TestClient_APICompliance_ReqMTX001(t *testing.T) {
 	ctx := context.Background()
 
 	// Test paths list endpoint compliance with swagger.json
-	data, err := client.Get(ctx, "/v3/paths/list")
+	data, err := client.Get(ctx, MediaMTXPathsList)
 	require.NoError(t, err, "Paths list should succeed")
 
 	// Validate response structure matches swagger.json PathList schema
@@ -197,7 +197,7 @@ func TestClient_APICompliance_ReqMTX001(t *testing.T) {
 	assert.Contains(t, responseStr, "items", "Missing items field per swagger.json")
 
 	// Test config paths list endpoint compliance with swagger.json
-	data, err = client.Get(ctx, "/v3/config/paths/list")
+	data, err = client.Get(ctx, MediaMTXConfigPathsList)
 	require.NoError(t, err, "Config paths list should succeed")
 
 	// Validate response structure matches swagger.json PathConfList schema
@@ -207,7 +207,7 @@ func TestClient_APICompliance_ReqMTX001(t *testing.T) {
 	assert.Contains(t, responseStr, "items", "Missing items field per swagger.json")
 
 	// Test global config endpoint compliance with swagger.json
-	data, err = client.Get(ctx, "/v3/config/global/get")
+	data, err = client.Get(ctx, MediaMTXConfigGlobalGet)
 	require.NoError(t, err, "Global config get should succeed")
 
 	// Validate response structure matches swagger.json GlobalConf schema
@@ -229,7 +229,7 @@ func TestClient_PutMethod_ReqMTX001(t *testing.T) {
 
 	// Test PUT request with valid data
 	testData := []byte(`{"test": "data"}`)
-	response, err := client.Put(ctx, "/v3/mediaMTXConfig/paths/edit/test_path", testData)
+	response, err := client.Put(ctx, "/v3/invalid/endpoint", testData)
 
 	// PUT may fail due to invalid path, but method should be called without panic
 	// This tests the Put method execution path
@@ -290,19 +290,19 @@ func TestClient_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	done := make(chan bool, 3)
 
 	go func() {
-		_, err := client.Get(ctx, "/v3/paths/list")
+		_, err := client.Get(ctx, MediaMTXPathsList)
 		assert.NoError(t, err, "Concurrent GET should succeed")
 		done <- true
 	}()
 
 	go func() {
-		_, err := client.Get(ctx, "/v3/mediaMTXConfig/paths/list")
+		_, err := client.Get(ctx, MediaMTXConfigPathsList)
 		assert.NoError(t, err, "Concurrent GET should succeed")
 		done <- true
 	}()
 
 	go func() {
-		_, err := client.Get(ctx, "/v3/mediaMTXConfig/global/get")
+		_, err := client.Get(ctx, MediaMTXConfigGlobalGet)
 		assert.NoError(t, err, "Concurrent GET should succeed")
 		done <- true
 	}()

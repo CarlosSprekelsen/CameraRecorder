@@ -210,7 +210,7 @@ func (s *WebSocketServer) registerBuiltinMethods() {
 
 // registerMethod registers a JSON-RPC method handler
 func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, version string) {
-	// Wrap the handler to ensure security and metrics are always applied
+	// Wrap the handler to ensure security, readiness, and metrics are always applied
 	wrappedHandler := func(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 		startTime := time.Now()
 
@@ -227,6 +227,16 @@ func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, ver
 				JSONRPC: "2.0",
 				Error:   NewJsonRpcError(INSUFFICIENT_PERMISSIONS, "insufficient_permissions", err.Error(), "Check user role and permissions"),
 			}, nil
+		}
+
+		// Progressive Readiness: Check controller readiness for non-authentication methods
+		if name != "authenticate" && name != "ping" {
+			if !s.isSystemReady() {
+				return &JsonRpcResponse{
+					JSONRPC: "2.0",
+					Error:   NewJsonRpcError(-32503, "service_initializing", "Service is still initializing, please retry", "Wait for service to complete startup"),
+				}, nil
+			}
 		}
 
 		// Call the original handler

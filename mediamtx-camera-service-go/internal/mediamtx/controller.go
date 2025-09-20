@@ -237,7 +237,7 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 
 			// Apply configuration to MediaMTX
 			ctx := context.Background()
-			err = client.Patch(ctx, "/v3/config/global/patch", configData)
+			err = client.Patch(ctx, MediaMTXConfigGlobalPatch, configData)
 			if err != nil {
 				logger.WithError(err).Warn("Failed to override MediaMTX paths - continuing with defaults")
 				// Don't fail completely - MediaMTX will use its defaults
@@ -533,18 +533,19 @@ func (c *controller) GetServerInfo(ctx context.Context) (*GetServerInfoResponse,
 	return response, nil
 }
 
-// CleanupOldFiles performs cleanup of old files based on retention policy.
-// Implements file lifecycle management for recording and snapshot storage.
-// TODO: FIX HARD CODING VIOLATION - Use centralized configuration for cleanup policies
-// INVESTIGATION: Cleanup uses hardcoded values instead of config.RetentionPolicy
-// CURRENT: Hardcoded 7-day retention and 1000-file limits in cleanup logic
-// SOLUTION: Use configIntegration.GetRetentionPolicy() for:
-//   - MaxAge from config.RetentionPolicy.MaxAgeDays (default.yaml:176)
-//   - MaxSize from config.RetentionPolicy.MaxSizeGB (default.yaml:177)
-//   - Auto-cleanup from config.RetentionPolicy.AutoCleanup (default.yaml:178)
+// CleanupOldFiles performs cleanup of old files based on retention policy using centralized configuration.
+// Implements file lifecycle management for recording and snapshot storage with support for
+// age-based, count-based, and size-based cleanup strategies.
 //
-// REFERENCE: config/default.yaml:173-179 retention_policy section
-// EFFORT: 2-3 hours - replace hardcoded values with centralized config
+// Pure delegation pattern: Controller orchestrates cleanup by delegating to manager methods
+// and aggregating results for API response. All business logic resides in managers.
+//
+// Supports both retention policy types:
+// - Age-based: Removes files older than MaxAgeDays and excess files beyond MaxCount
+// - Size-based: Removes oldest files until total storage is under MaxSizeGB limit
+//
+// Returns accurate counts of removed recordings, snapshots, and space freed using
+// centralized configuration from configIntegration.GetCleanupLimits().
 func (c *controller) CleanupOldFiles(ctx context.Context) (*CleanupOldFilesResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
@@ -565,74 +566,39 @@ func (c *controller) CleanupOldFiles(ctx context.Context) (*CleanupOldFilesRespo
 	var deletedCount int
 	var totalSize int64
 
-	switch cfg.RetentionPolicy.Type {
-	case "age":
-		// Age-based cleanup using centralized configuration
-		maxAge, maxCount, _, err := c.configIntegration.GetCleanupLimits()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get cleanup limits: %v", err)
-		}
-
-		// Clean up recordings based on retention policy
-		if err := c.recordingManager.CleanupOldRecordings(ctx, maxAge, maxCount); err != nil {
-			return nil, fmt.Errorf("failed to cleanup old recordings: %v", err)
-		} else {
-			deletedCount += 1
-		}
-
-		// Clean up snapshots based on retention policy
-		if err := c.snapshotManager.CleanupOldSnapshots(ctx, maxAge, maxCount); err != nil {
-			return nil, fmt.Errorf("failed to cleanup old snapshots: %v", err)
-		} else {
-			deletedCount += 1
-		}
-	case "size":
-		// Size-based cleanup using centralized configuration
-		maxAge, maxCount, maxSize, err := c.configIntegration.GetCleanupLimits()
-		if err != nil {
-			return nil, fmt.Errorf("failed to get cleanup limits: %v", err)
-		}
-
-		// TODO: Implement size-based cleanup logic using maxSize
-		// For now, using age/count-based cleanup as fallback
-		_ = maxSize // Acknowledge unused variable
-
-		// Clean up recordings based on retention policy
-		if err := c.recordingManager.CleanupOldRecordings(ctx, maxAge, maxCount); err != nil {
-			return nil, fmt.Errorf("failed to cleanup old recordings: %v", err)
-		} else {
-			deletedCount += 1
-		}
-
-		// Clean up snapshots based on retention policy
-		if err := c.snapshotManager.CleanupOldSnapshots(ctx, maxAge, maxCount); err != nil {
-			return nil, fmt.Errorf("failed to cleanup old snapshots: %v", err)
-		} else {
-			deletedCount += 1
-		}
+	// Get cleanup limits from centralized configuration
+	maxAge, maxCount, maxSize, err := c.configIntegration.GetCleanupLimits()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get cleanup limits: %v", err)
 	}
+
+	// Pure delegation to manager methods - pass size parameter for both age and size-based cleanup
+	var recordingsRemoved, snapshotsRemoved int
+	var recordingsSpaceFreed, snapshotsSpaceFreed int64
+
+	// Clean up recordings using extended manager method
+	recordingsRemoved, recordingsSpaceFreed, err = c.recordingManager.CleanupOldRecordings(ctx, maxAge, maxCount, maxSize)
+	if err != nil {
+		return nil, fmt.Errorf("failed to cleanup old recordings: %v", err)
+	}
+
+	// Clean up snapshots using extended manager method
+	snapshotsRemoved, snapshotsSpaceFreed, err = c.snapshotManager.CleanupOldSnapshots(ctx, maxAge, maxCount, maxSize)
+	if err != nil {
+		return nil, fmt.Errorf("failed to cleanup old snapshots: %v", err)
+	}
+
+	// Aggregate results from manager methods
+	deletedCount = recordingsRemoved + snapshotsRemoved
+	totalSize = recordingsSpaceFreed + snapshotsSpaceFreed
 
 	// Build API-ready response using CleanupOldFilesResponse from rpc_types.go
 	response := &CleanupOldFilesResponse{
-		RecordingsRemoved: deletedCount, // TODO: Track recordings vs snapshots separately in cleanup operations
-		// INVESTIGATION: Current cleanup doesn't distinguish between recordings and snapshots
-		// CURRENT: Single deletedCount used for both RecordingsRemoved and SnapshotsRemoved
-		// SOLUTION: Separate cleanup operations:
-		//   - Call recordingManager.CleanupOldRecordings() for recordings count
-		//   - Call snapshotManager.CleanupOldSnapshots() for snapshots count
-		//   - Sum totals for SpaceFreed calculation
-		// REFERENCE: recordingManager.CleanupOldRecordings():512 already exists
-		// EFFORT: 2-3 hours - implement separate cleanup tracking and aggregation
-		SnapshotsRemoved: 0, // TODO: Track snapshots removed separately from recordings
-		// INVESTIGATION: SnapshotsRemoved hardcoded to 0, should track actual snapshot deletions
-		// CURRENT: No snapshot cleanup tracking, only recording cleanup counted
-		// SOLUTION: Implement snapshotManager.CleanupOldSnapshots() method similar to recordings
-		// DEPENDENCY: Requires separate cleanup operations (see RecordingsRemoved TODO above)
-		// REFERENCE: recordingManager.CleanupOldRecordings():512 pattern to follow
-		// EFFORT: 3-4 hours - implement snapshot cleanup with proper counting
-		SpaceFreed: totalSize,
-		Status:     "completed",
-		Message:    fmt.Sprintf("Cleaned up %d files, freed %d bytes", deletedCount, totalSize),
+		RecordingsRemoved: recordingsRemoved,
+		SnapshotsRemoved:  snapshotsRemoved,
+		SpaceFreed:        totalSize,
+		Status:            "completed",
+		Message:           fmt.Sprintf("Cleaned up %d files (%d recordings, %d snapshots), freed %d bytes", deletedCount, recordingsRemoved, snapshotsRemoved, totalSize),
 	}
 	return response, nil
 }

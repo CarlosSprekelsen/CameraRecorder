@@ -108,7 +108,7 @@ func (c *client) Delete(ctx context.Context, path string) error {
 
 // HealthCheck performs a health check request
 func (c *client) HealthCheck(ctx context.Context) error {
-	req, err := http.NewRequestWithContext(ctx, "GET", c.baseURL+"/v3/paths/list", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", c.baseURL+MediaMTXPathsList, nil)
 	if err != nil {
 		return err
 	}
@@ -136,7 +136,7 @@ func (c *client) HealthCheck(ctx context.Context) error {
 // GetDetailedHealth performs a health check and returns detailed status using parseHealthResponse
 func (c *client) GetDetailedHealth(ctx context.Context) (*HealthStatus, error) {
 	// Get detailed health from MediaMTX health endpoint
-	data, err := c.Get(ctx, "/v3/config/global/get")
+	data, err := c.Get(ctx, MediaMTXConfigGlobalGet)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get detailed health: %w", err)
 	}

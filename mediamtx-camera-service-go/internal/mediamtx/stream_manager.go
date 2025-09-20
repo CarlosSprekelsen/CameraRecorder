@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -166,6 +167,20 @@ func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *co
 
 // StartStream starts a stream for a camera using cameraID-first architecture
 func (sm *streamManager) StartStream(ctx context.Context, cameraID string) (*GetStreamURLResponse, error) {
+	// Add panic recovery for stream operations
+	defer func() {
+		if r := recover(); r != nil {
+			stack := make([]byte, 4096)
+			length := runtime.Stack(stack, false)
+			sm.logger.WithFields(logging.Fields{
+				"camera_id":   cameraID,
+				"panic":       r,
+				"stack_trace": string(stack[:length]),
+				"operation":   "StartStream",
+			}).Error("Panic recovered in StartStream")
+		}
+	}()
+
 	// Validate dependencies are initialized
 	if sm.pathManager == nil {
 		return nil, fmt.Errorf("PathManager not initialized")
@@ -196,6 +211,21 @@ func (sm *streamManager) StartStream(ctx context.Context, cameraID string) (*Get
 
 // startStreamForUseCase starts a stream for the specified use case
 func (sm *streamManager) startStreamForUseCase(ctx context.Context, cameraID string, useCase StreamUseCase) (*Path, error) {
+	// Add panic recovery for stream operations
+	defer func() {
+		if r := recover(); r != nil {
+			stack := make([]byte, 4096)
+			length := runtime.Stack(stack, false)
+			sm.logger.WithFields(logging.Fields{
+				"camera_id":   cameraID,
+				"use_case":    useCase,
+				"panic":       r,
+				"stack_trace": string(stack[:length]),
+				"operation":   "startStreamForUseCase",
+			}).Error("Panic recovered in startStreamForUseCase")
+		}
+	}()
+
 	// Get devicePath only when needed for FFmpeg command generation
 	devicePath, exists := sm.pathManager.GetDevicePathForCamera(cameraID)
 	if !exists {
@@ -828,6 +858,19 @@ func (sm *streamManager) GetStreamURL(ctx context.Context, cameraID string) (*Ge
 
 // EnableRecording enables recording on the stable path for a camera
 func (sm *streamManager) EnableRecording(ctx context.Context, cameraID string) error {
+	// Add panic recovery for stream operations
+	defer func() {
+		if r := recover(); r != nil {
+			stack := make([]byte, 4096)
+			length := runtime.Stack(stack, false)
+			sm.logger.WithFields(logging.Fields{
+				"camera_id":   cameraID,
+				"panic":       r,
+				"stack_trace": string(stack[:length]),
+				"operation":   "EnableRecording",
+			}).Error("Panic recovered in EnableRecording")
+		}
+	}()
 
 	// Serialize create→ready→patch operations per path using per-path mutex
 	pathMutex := sm.pathManager.(*pathManager).getPathMutex(cameraID)
