@@ -369,7 +369,10 @@ end note
 - **Contract:** Create → **Skip readiness check for on-demand paths** → Patch (retry)
 - **Idempotent Create:** Config add if missing; "already exists" = success
 - **On-Demand Paths:** Skip readiness checks - paths activate when accessed, not when created
-- **Patch Resilience:** Exponential backoff on 404/409; include path/device context in errors
+- **Patch Resilience:** Exponential backoff on 404/409/400; include path/device context in errors
+- **Error Handling:** Enhanced HTTP status code handling with structured error parsing per swagger.json
+- **Response Validation:** Comprehensive response validation for PathList, PathConf, and RecordingList schemas
+- **Circuit Breaker:** Configurable thresholds (default: 5 failures, 60s recovery, 15 max failures)
 - **Per-Path Mutex:** Serialize operations for a path across callers
 - **Map Parameter Contract:** All `map[string]interface{}` params are optional; `nil` means "no options". PathManager never mutates caller-supplied maps.
 

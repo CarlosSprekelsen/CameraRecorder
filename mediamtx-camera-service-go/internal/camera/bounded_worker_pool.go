@@ -40,6 +40,7 @@ type DefaultBoundedWorkerPool struct {
 	// State management
 	running  int32 // Atomic flag
 	stopChan chan struct{}
+	stopOnce sync.Once // Ensures single channel close operation
 }
 
 // NewBoundedWorkerPool creates a new bounded worker pool
@@ -218,8 +219,10 @@ func (pool *DefaultBoundedWorkerPool) Stop(ctx context.Context) error {
 
 	pool.logger.Info("Stopping bounded worker pool...")
 
-	// Signal stop to all workers
-	close(pool.stopChan)
+	// Signal stop to all workers - use sync.Once to prevent double-close
+	pool.stopOnce.Do(func() {
+		close(pool.stopChan)
+	})
 
 	// Wait for all workers to complete with timeout
 	done := make(chan struct{})

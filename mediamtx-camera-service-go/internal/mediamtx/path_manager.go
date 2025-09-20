@@ -453,9 +453,12 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config *PathC
 
 		isRetryable := strings.Contains(errorMsg, "404") ||
 			strings.Contains(errorMsg, "409") ||
+			strings.Contains(errorMsg, "400") ||
 			strings.Contains(errorMsg, "path not found") ||
 			strings.Contains(errorMsg, "already exists") ||
-			strings.Contains(errorMsg, "busy")
+			strings.Contains(errorMsg, "busy") ||
+			strings.Contains(errorMsg, "bad request") ||
+			strings.Contains(errorMsg, "invalid configuration")
 
 		pm.logger.WithFields(logging.Fields{
 			"path_name":    name,

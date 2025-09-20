@@ -147,12 +147,8 @@ func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamM
 		// Enhanced components for metadata and timer management
 		timerManager:    NewRecordingTimerManager(logger),
 		metadataManager: NewMetadataManager(configIntegration, ffmpegManager, logger),
-		// Circuit breaker for recording operations
-		recordingCircuitBreaker: NewCircuitBreaker("recording", CircuitBreakerConfig{
-			FailureThreshold: 3,                // Open after 3 failures
-			RecoveryTimeout:  30 * time.Second, // Wait 30 seconds before half-open
-			MaxFailures:      10,               // Permanent open after 10 failures
-		}, logger),
+		// Circuit breaker for recording operations (configurable)
+		recordingCircuitBreaker: NewCircuitBreaker("recording", getCircuitBreakerConfig(*configIntegration), logger),
 		// Error recovery manager
 		errorRecoveryManager: NewErrorRecoveryManager(logger),
 		// Error metrics collector
@@ -1045,3 +1041,27 @@ func (rm *RecordingManager) updateRecordingStats(started bool, error bool) {
 
 // Note: setAutoStopTimer method removed - functionality moved to RecordingTimerManager.CreateTimer()
 // This provides enhanced timer management with metadata tracking and accurate duration calculation
+
+// getCircuitBreakerConfig returns circuit breaker configuration with defaults
+func getCircuitBreakerConfig(configIntegration ConfigIntegration) CircuitBreakerConfig {
+	config, _ := configIntegration.GetMediaMTXConfig()
+
+	// Use configured values if available, otherwise use sensible defaults
+	cbConfig := CircuitBreakerConfig{
+		FailureThreshold: config.CircuitBreaker.FailureThreshold,
+		RecoveryTimeout:  config.CircuitBreaker.RecoveryTimeout,
+		MaxFailures:      config.CircuitBreaker.MaxFailures,
+	}
+
+	if cbConfig.FailureThreshold == 0 {
+		cbConfig.FailureThreshold = 5 // Default: 5 failures before opening
+	}
+	if cbConfig.RecoveryTimeout == 0 {
+		cbConfig.RecoveryTimeout = 60 * time.Second // Default: 60 seconds recovery
+	}
+	if cbConfig.MaxFailures == 0 {
+		cbConfig.MaxFailures = 15 // Default: 15 failures before permanent open
+	}
+
+	return cbConfig
+}

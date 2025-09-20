@@ -237,23 +237,14 @@ func (c *client) doRequest(ctx context.Context, method, path string, data []byte
 // This function parses the response from /v3/paths/list endpoint and returns []*Path
 func parsePathListResponse(data []byte) ([]*Path, error) {
 	// Handle empty response
-	if len(data) == 0 {
-		return nil, NewMediaMTXErrorWithOp(0, "empty response body", "MediaMTX returned empty response", "parse_path_list")
-	}
-
-	// Handle null JSON
-	if string(data) == "null" {
-		return nil, NewMediaMTXErrorWithOp(0, "null response body", "MediaMTX returned null response", "parse_path_list")
+	// Use comprehensive response validation
+	if err := validateMediaMTXResponse(data, "PathList"); err != nil {
+		return nil, NewMediaMTXErrorWithOp(0, "response validation failed", err.Error(), "parse_path_list")
 	}
 
 	var response PathList
 	if err := json.Unmarshal(data, &response); err != nil {
 		return nil, NewMediaMTXErrorWithOp(0, "failed to parse paths list response", err.Error(), "parse_path_list")
-	}
-
-	// Validate required fields
-	if response.Items == nil {
-		return nil, NewMediaMTXErrorWithOp(0, "missing required field", "response missing 'items' field", "parse_path_list")
 	}
 
 	paths := make([]*Path, len(response.Items))
@@ -267,24 +258,14 @@ func parsePathListResponse(data []byte) ([]*Path, error) {
 // parsePathConfListResponse parses the MediaMTX path configuration list response
 // This function parses the response from /v3/config/paths/list endpoint and returns []*PathConf
 func parsePathConfListResponse(data []byte) ([]*PathConf, error) {
-	// Handle empty response
-	if len(data) == 0 {
-		return nil, NewMediaMTXErrorWithOp(0, "empty response body", "MediaMTX returned empty response", "parse_path_conf_list")
-	}
-
-	// Handle null JSON
-	if string(data) == "null" {
-		return nil, NewMediaMTXErrorWithOp(0, "null response body", "MediaMTX returned null response", "parse_path_conf_list")
+	// Use comprehensive response validation
+	if err := validateMediaMTXResponse(data, "PathList"); err != nil {
+		return nil, NewMediaMTXErrorWithOp(0, "response validation failed", err.Error(), "parse_path_conf_list")
 	}
 
 	var response PathConfList
 	if err := json.Unmarshal(data, &response); err != nil {
 		return nil, NewMediaMTXErrorWithOp(0, "failed to parse path configuration list response", err.Error(), "parse_path_conf_list")
-	}
-
-	// Validate required fields
-	if response.Items == nil {
-		return nil, NewMediaMTXErrorWithOp(0, "missing required field", "response missing 'items' field", "parse_path_conf_list")
 	}
 
 	paths := make([]*PathConf, len(response.Items))
@@ -429,4 +410,89 @@ func marshalCreateUSBPathRequest(name, ffmpegCommand string) ([]byte, error) {
 		"runOnDemandRestart": true,
 	}
 	return json.Marshal(request)
+}
+
+// validateMediaMTXResponse validates MediaMTX API responses for structural integrity
+func validateMediaMTXResponse(data []byte, expectedSchema string) error {
+	// Check for null/empty responses
+	if len(data) == 0 {
+		return fmt.Errorf("empty response body")
+	}
+
+	if string(data) == "null" {
+		return fmt.Errorf("null response body")
+	}
+
+	// Validate JSON structure
+	var rawResponse map[string]interface{}
+	if err := json.Unmarshal(data, &rawResponse); err != nil {
+		return fmt.Errorf("invalid JSON response: %w", err)
+	}
+
+	// Schema-specific validation
+	switch expectedSchema {
+	case "PathList":
+		return validatePathListSchema(rawResponse)
+	case "PathConf":
+		return validatePathConfSchema(rawResponse)
+	case "RecordingList":
+		return validateRecordingListSchema(rawResponse)
+	}
+
+	return nil
+}
+
+// validatePathListSchema validates PathList response structure per swagger.json
+func validatePathListSchema(data map[string]interface{}) error {
+	requiredFields := []string{"pageCount", "itemCount", "items"}
+	for _, field := range requiredFields {
+		if _, exists := data[field]; !exists {
+			return fmt.Errorf("missing required field: %s", field)
+		}
+	}
+
+	// Validate items is array
+	if items, ok := data["items"].([]interface{}); ok {
+		for i, item := range items {
+			if _, ok := item.(map[string]interface{}); !ok {
+				return fmt.Errorf("invalid item at index %d: expected object", i)
+			}
+		}
+	} else {
+		return fmt.Errorf("items field must be an array")
+	}
+
+	return nil
+}
+
+// validatePathConfSchema validates PathConf response structure per swagger.json
+func validatePathConfSchema(data map[string]interface{}) error {
+	// PathConf can have various optional fields, but should be an object
+	if data == nil {
+		return fmt.Errorf("path configuration cannot be null")
+	}
+	return nil
+}
+
+// validateRecordingListSchema validates RecordingList response structure per swagger.json
+func validateRecordingListSchema(data map[string]interface{}) error {
+	requiredFields := []string{"pageCount", "itemCount", "items"}
+	for _, field := range requiredFields {
+		if _, exists := data[field]; !exists {
+			return fmt.Errorf("missing required field: %s", field)
+		}
+	}
+
+	// Validate items is array
+	if items, ok := data["items"].([]interface{}); ok {
+		for i, item := range items {
+			if _, ok := item.(map[string]interface{}); !ok {
+				return fmt.Errorf("invalid recording item at index %d: expected object", i)
+			}
+		}
+	} else {
+		return fmt.Errorf("items field must be an array")
+	}
+
+	return nil
 }

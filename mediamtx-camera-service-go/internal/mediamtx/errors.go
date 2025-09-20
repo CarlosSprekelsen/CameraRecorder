@@ -116,7 +116,20 @@ func NewMediaMTXErrorFromHTTP(statusCode int, body []byte) *MediaMTXError {
 	message := "unknown error"
 	details := string(body)
 
+	// Parse structured error from swagger.json Error schema
+	var errorResponse struct {
+		Error string `json:"error"`
+	}
+	if len(body) > 0 {
+		json.Unmarshal(body, &errorResponse)
+		if errorResponse.Error != "" {
+			details = errorResponse.Error
+		}
+	}
+
 	switch statusCode {
+	case 400:
+		message = "bad request"
 	case 401:
 		message = "unauthorized access"
 	case 403:
@@ -125,6 +138,8 @@ func NewMediaMTXErrorFromHTTP(statusCode int, body []byte) *MediaMTXError {
 		message = "resource not found"
 	case 409:
 		message = "resource conflict"
+	case 422:
+		message = "validation error"
 	case 500:
 		message = "internal server error"
 	case 502:
@@ -134,7 +149,7 @@ func NewMediaMTXErrorFromHTTP(statusCode int, body []byte) *MediaMTXError {
 	case 504:
 		message = "gateway timeout"
 	default:
-		// Keep the default "unknown error" message for unknown status codes
+		message = fmt.Sprintf("unexpected status code: %d", statusCode)
 	}
 
 	return &MediaMTXError{

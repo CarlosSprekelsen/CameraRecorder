@@ -102,6 +102,9 @@ type MediaMTXConfig struct {
 	RunOnDemandStartTimeout string `mapstructure:"run_on_demand_start_timeout"`
 	RunOnDemandCloseAfter   string `mapstructure:"run_on_demand_close_after"`
 
+	// Circuit breaker configuration for recording operations
+	CircuitBreaker CircuitBreakerConfig `mapstructure:"circuit_breaker"`
+
 	// Recording configuration
 	RecordPartDuration    string `mapstructure:"record_part_duration"`
 	RecordSegmentDuration string `mapstructure:"record_segment_duration"`
@@ -111,7 +114,6 @@ type MediaMTXConfig struct {
 	Timeout        time.Duration        `mapstructure:"timeout"`
 	RetryAttempts  int                  `mapstructure:"retry_attempts"`
 	RetryDelay     time.Duration        `mapstructure:"retry_delay"`
-	CircuitBreaker CircuitBreakerConfig `mapstructure:"circuit_breaker"`
 	ConnectionPool ConnectionPoolConfig `mapstructure:"connection_pool"`
 
 	// Health monitoring defaults
