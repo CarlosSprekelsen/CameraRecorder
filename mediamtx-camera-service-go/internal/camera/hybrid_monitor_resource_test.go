@@ -155,6 +155,9 @@ func TestHybridMonitor_GracefulShutdownWithWorkerPool(t *testing.T) {
 	err = monitor.Start(ctx)
 	require.NoError(t, err)
 
+	// Wait for startup events to complete to ensure test isolation
+	time.Sleep(QuickTestTimeout)
+
 	// Add slow event handler
 	var handlerStarted, handlerCompleted int32
 	handler := &TestEventHandler{
@@ -228,6 +231,11 @@ func TestHybridMonitor_WorkerPoolFailureHandling(t *testing.T) {
 		},
 	}
 
+	// Get baseline statistics before adding handler (account for startup events)
+	time.Sleep(QuickTestTimeout) // Wait for startup events to complete
+	baselineStats := monitor.eventWorkerPool.GetStats()
+	baselineFailures := baselineStats.FailedTasks
+
 	monitor.AddEventHandler(handler)
 
 	// Generate event
@@ -246,9 +254,12 @@ func TestHybridMonitor_WorkerPoolFailureHandling(t *testing.T) {
 	assert.True(t, monitor.IsRunning())
 	assert.True(t, monitor.eventWorkerPool.IsRunning())
 
-	// Verify worker pool recorded the failure
-	workerStats := monitor.eventWorkerPool.GetStats()
-	assert.Equal(t, int64(1), workerStats.FailedTasks)
+	// Verify worker pool recorded exactly 1 additional failure
+	finalStats := monitor.eventWorkerPool.GetStats()
+	expectedFailures := baselineFailures + 1
+	assert.Equal(t, expectedFailures, finalStats.FailedTasks,
+		"Should have exactly 1 additional failed task (baseline: %d, expected: %d)",
+		baselineFailures, expectedFailures)
 }
 
 // TestEventHandler is a simple test implementation following existing patterns

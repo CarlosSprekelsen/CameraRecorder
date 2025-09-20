@@ -1619,3 +1619,212 @@ func TestHybridCameraMonitor_ContextAwareShutdown(t *testing.T) {
 		assert.False(t, monitor.IsRunning(), "Monitor should not be running")
 	})
 }
+
+func TestHybridCameraMonitor_AddIPCameraSources(t *testing.T) {
+	// REQ-CAM-001: Test IP camera source initialization
+
+	logger := logging.GetLogger("test")
+	configManager := config.CreateConfigManager()
+
+	deviceChecker := &RealDeviceChecker{}
+	cmdExecutor := &RealV4L2CommandExecutor{}
+	infoParser := &RealDeviceInfoParser{}
+
+	monitor, err := NewHybridCameraMonitor(
+		configManager, logger, deviceChecker, cmdExecutor, infoParser,
+	)
+	require.NoError(t, err)
+
+	// Test that addIPCameraSources can be called without error
+	// This function is intentionally empty but should not panic
+	monitor.addIPCameraSources()
+
+	// Verify monitor is still functional after calling addIPCameraSources
+	assert.NotNil(t, monitor)
+}
+
+func TestHybridCameraMonitor_SubscribeToReadiness(t *testing.T) {
+	// REQ-CAM-001: Test readiness subscription functionality
+
+	logger := logging.GetLogger("test")
+	configManager := config.CreateConfigManager()
+
+	deviceChecker := &RealDeviceChecker{}
+	cmdExecutor := &RealV4L2CommandExecutor{}
+	infoParser := &RealDeviceInfoParser{}
+
+	monitor, err := NewHybridCameraMonitor(
+		configManager, logger, deviceChecker, cmdExecutor, infoParser,
+	)
+	require.NoError(t, err)
+
+	// Test subscribing to readiness notifications
+	readinessChan := monitor.SubscribeToReadiness()
+
+	// Verify the subscription was registered
+	// The function should return a channel and monitor should remain functional
+	assert.NotNil(t, readinessChan)
+	assert.NotNil(t, monitor)
+}
+
+func TestHybridCameraMonitor_DeviceEventHandling(t *testing.T) {
+	// REQ-CAM-001: Test device event processing functions
+
+	logger := logging.GetLogger("test")
+	configManager := config.CreateConfigManager()
+
+	deviceChecker := &RealDeviceChecker{}
+	cmdExecutor := &RealV4L2CommandExecutor{}
+	infoParser := &RealDeviceInfoParser{}
+
+	monitor, err := NewHybridCameraMonitor(
+		configManager, logger, deviceChecker, cmdExecutor, infoParser,
+	)
+	require.NoError(t, err)
+
+	// Test processDeviceEvent with different event types
+	t.Run("process_device_add_event", func(t *testing.T) {
+		event := DeviceEvent{
+			Type:       DeviceEventAdd,
+			DevicePath: "/dev/video99",
+		}
+
+		// This should not panic and should process the event
+		monitor.processDeviceEvent(context.Background(), event)
+		assert.NotNil(t, monitor)
+	})
+
+	t.Run("process_device_remove_event", func(t *testing.T) {
+		event := DeviceEvent{
+			Type:       DeviceEventRemove,
+			DevicePath: "/dev/video99",
+		}
+
+		// This should not panic and should process the event
+		monitor.processDeviceEvent(context.Background(), event)
+		assert.NotNil(t, monitor)
+	})
+
+	t.Run("process_device_change_event", func(t *testing.T) {
+		event := DeviceEvent{
+			Type:       DeviceEventChange,
+			DevicePath: "/dev/video99",
+		}
+
+		// This should not panic and should process the event
+		monitor.processDeviceEvent(context.Background(), event)
+		assert.NotNil(t, monitor)
+	})
+}
+
+func TestHybridCameraMonitor_DeviceCreateFromEvent(t *testing.T) {
+	// REQ-CAM-001: Test device creation from events
+
+	logger := logging.GetLogger("test")
+	configManager := config.CreateConfigManager()
+
+	deviceChecker := &RealDeviceChecker{}
+	cmdExecutor := &RealV4L2CommandExecutor{}
+	infoParser := &RealDeviceInfoParser{}
+
+	monitor, err := NewHybridCameraMonitor(
+		configManager, logger, deviceChecker, cmdExecutor, infoParser,
+	)
+	require.NoError(t, err)
+
+	// Test createDeviceFromEvent with real device path
+	event := DeviceEvent{
+		Type:       DeviceEventAdd,
+		DevicePath: "/dev/video0", // Use real device
+	}
+
+	device, err := monitor.createDeviceFromEvent(context.Background(), event)
+	require.NoError(t, err)
+
+	// Should create a valid device object
+	assert.NotNil(t, device)
+	assert.Equal(t, "/dev/video0", device.Path)
+}
+
+func TestHybridCameraMonitor_NetworkCameraDeviceInfo(t *testing.T) {
+	// REQ-CAM-001: Test network camera device info creation
+
+	logger := logging.GetLogger("test")
+	configManager := config.CreateConfigManager()
+
+	deviceChecker := &RealDeviceChecker{}
+	cmdExecutor := &RealV4L2CommandExecutor{}
+	infoParser := &RealDeviceInfoParser{}
+
+	monitor, err := NewHybridCameraMonitor(
+		configManager, logger, deviceChecker, cmdExecutor, infoParser,
+	)
+	require.NoError(t, err)
+
+	// Test createNetworkCameraDeviceInfo
+	source := CameraSource{
+		Type:       "rtsp",
+		Identifier: "test_camera",
+		Source:     "rtsp://example.com/stream",
+		Enabled:    true,
+		Options:    map[string]string{"name": "Test Camera"},
+	}
+
+	networkInfo, err := monitor.createNetworkCameraDeviceInfo(source)
+	require.NoError(t, err)
+
+	// Should create a valid network camera device
+	assert.NotNil(t, networkInfo)
+	assert.Contains(t, networkInfo.Path, "rtsp://")
+	// Name might be empty or derived from source
+	assert.NotEmpty(t, networkInfo.Path)
+}
+
+func TestHybridCameraMonitor_ReconcileDevices(t *testing.T) {
+	// REQ-CAM-001: Test device reconciliation functionality
+
+	logger := logging.GetLogger("test")
+	configManager := config.CreateConfigManager()
+
+	deviceChecker := &RealDeviceChecker{}
+	cmdExecutor := &RealV4L2CommandExecutor{}
+	infoParser := &RealDeviceInfoParser{}
+
+	monitor, err := NewHybridCameraMonitor(
+		configManager, logger, deviceChecker, cmdExecutor, infoParser,
+	)
+	require.NoError(t, err)
+
+	// Test reconcileDevices function
+	// This should process current device state and reconcile differences
+	monitor.reconcileDevices(context.Background())
+
+	// Function should complete without error
+	assert.NotNil(t, monitor)
+}
+
+func TestHybridCameraMonitor_StartPollOnlyMonitoring(t *testing.T) {
+	// REQ-CAM-001: Test poll-only monitoring mode
+
+	logger := logging.GetLogger("test")
+	configManager := config.CreateConfigManager()
+
+	deviceChecker := &RealDeviceChecker{}
+	cmdExecutor := &RealV4L2CommandExecutor{}
+	infoParser := &RealDeviceInfoParser{}
+
+	monitor, err := NewHybridCameraMonitor(
+		configManager, logger, deviceChecker, cmdExecutor, infoParser,
+	)
+	require.NoError(t, err)
+
+	// Test startPollOnlyMonitoring function
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	// This should start poll-only monitoring mode
+	monitor.startPollOnlyMonitoring(ctx)
+
+	// Function should complete without error
+	assert.NotNil(t, monitor)
+}

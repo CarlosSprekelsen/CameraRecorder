@@ -12,6 +12,7 @@ package camera
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -221,4 +222,68 @@ func TestBoundedWorkerPool_HighConcurrencyStress(t *testing.T) {
 		"Cannot process more tasks than submitted")
 	assert.Greater(t, totalProcessed, int64(float64(totalExpectedTasks)*0.8),
 		"Should process at least 80%% of submitted tasks")
+}
+
+func TestBoundedWorkerPool_ConcurrentPanicStress(t *testing.T) {
+	// REQ-RESOURCE-001: Stress test concurrent panic recovery
+
+	logger := logging.GetLogger("test")
+	pool := NewBoundedWorkerPool(5, 50*time.Millisecond, logger)
+
+	ctx := context.Background()
+	err := pool.Start(ctx)
+	require.NoError(t, err)
+	defer pool.Stop(ctx)
+
+	// Submit many tasks that panic concurrently
+	numPanicTasks := 50
+	var wg sync.WaitGroup
+
+	for i := 0; i < numPanicTasks; i++ {
+		wg.Add(1)
+		taskID := i
+		err := pool.Submit(ctx, func(taskCtx context.Context) {
+			defer wg.Done()
+			// Vary the panic types to test different scenarios
+			if taskID%3 == 0 {
+				panic(fmt.Sprintf("test panic %d", taskID))
+			} else if taskID%3 == 1 {
+				panic(fmt.Errorf("test error panic %d", taskID))
+			} else {
+				panic(42) // Non-string panic
+			}
+		})
+		require.NoError(t, err)
+	}
+
+	wg.Wait()
+
+	// Wait for statistics to be updated
+	time.Sleep(100 * time.Millisecond)
+
+	// Verify all panics were caught and counted
+	stats := pool.GetStats()
+	assert.Equal(t, int64(numPanicTasks), stats.FailedTasks,
+		"All panic tasks should be counted as failed")
+	assert.Equal(t, int64(0), stats.CompletedTasks,
+		"No tasks should be marked as completed")
+	assert.Equal(t, int64(0), stats.TimeoutTasks,
+		"No tasks should timeout (they panic first)")
+
+	// Pool should still be running after all the panics
+	assert.True(t, pool.IsRunning(), "Pool should still be running after panics")
+
+	// Verify pool can still execute normal tasks after panic storm
+	wg.Add(1)
+	err = pool.Submit(ctx, func(taskCtx context.Context) {
+		defer wg.Done()
+		time.Sleep(10 * time.Millisecond) // Normal task
+	})
+	require.NoError(t, err)
+	wg.Wait()
+
+	// Verify the normal task completed successfully
+	finalStats := pool.GetStats()
+	assert.Equal(t, int64(1), finalStats.CompletedTasks,
+		"Normal task should complete after panic recovery")
 }

@@ -140,7 +140,15 @@ func (pool *DefaultBoundedWorkerPool) executeTask(ctx context.Context, task func
 		// Execute task with timeout awareness
 		taskDone := make(chan struct{})
 		go func() {
-			defer close(taskDone)
+			defer func() {
+				// Recover from panics in the task execution goroutine
+				if r := recover(); r != nil {
+					result.panicked = true
+					result.panic = r
+				}
+				// Always close the channel to signal completion
+				close(taskDone)
+			}()
 			task(taskCtx)
 		}()
 
@@ -177,7 +185,7 @@ func (pool *DefaultBoundedWorkerPool) executeTask(ctx context.Context, task func
 			pool.logger.Warn("Task finished with unknown result")
 		}
 	case <-pool.stopChan:
-		// Pool shutdown - wait briefly for result
+		// Pool shutdown - wait for result respecting context timeout
 		select {
 		case result = <-resultChan:
 			// Task finished during shutdown
@@ -188,10 +196,10 @@ func (pool *DefaultBoundedWorkerPool) executeTask(ctx context.Context, task func
 			} else {
 				atomic.AddInt64(&pool.failedTasks, 1)
 			}
-		case <-time.After(100 * time.Millisecond):
-			// Task didn't finish during grace period
+		case <-ctx.Done():
+			// Context timeout - respect caller's timeout instead of hardcoded 100ms
 			atomic.AddInt64(&pool.failedTasks, 1)
-			pool.logger.Debug("Task cancelled due to worker pool shutdown")
+			pool.logger.Debug("Task cancelled due to context timeout during shutdown")
 		}
 	}
 }

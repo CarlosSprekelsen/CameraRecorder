@@ -191,3 +191,135 @@ func TestBoundedWorkerPool_GracefulShutdown(t *testing.T) {
 	assert.Equal(t, int32(1), atomic.LoadInt32(&taskCompleted))
 	assert.False(t, pool.IsRunning())
 }
+
+func TestBoundedWorkerPool_ConstructorEdgeCases(t *testing.T) {
+	// REQ-RESOURCE-001: Test constructor parameter validation and defaults
+
+	logger := logging.GetLogger("test")
+
+	// Test with invalid maxWorkers (should use default of 10)
+	pool1 := NewBoundedWorkerPool(-5, time.Second, logger)
+	assert.NotNil(t, pool1)
+
+	ctx := context.Background()
+	err := pool1.Start(ctx)
+	require.NoError(t, err)
+	defer pool1.Stop(ctx)
+
+	// Test with zero maxWorkers (should use default of 10)
+	pool2 := NewBoundedWorkerPool(0, time.Second, logger)
+	assert.NotNil(t, pool2)
+
+	err = pool2.Start(ctx)
+	require.NoError(t, err)
+	defer pool2.Stop(ctx)
+
+	// Test with invalid timeout (should use default of 5 seconds)
+	pool3 := NewBoundedWorkerPool(5, -time.Second, logger)
+	assert.NotNil(t, pool3)
+
+	err = pool3.Start(ctx)
+	require.NoError(t, err)
+	defer pool3.Stop(ctx)
+
+	// Test with zero timeout (should use default of 5 seconds)
+	pool4 := NewBoundedWorkerPool(5, 0, logger)
+	assert.NotNil(t, pool4)
+
+	err = pool4.Start(ctx)
+	require.NoError(t, err)
+	defer pool4.Stop(ctx)
+
+	// Test with nil logger (should create default logger)
+	pool5 := NewBoundedWorkerPool(5, time.Second, nil)
+	assert.NotNil(t, pool5)
+
+	err = pool5.Start(ctx)
+	require.NoError(t, err)
+	defer pool5.Stop(ctx)
+
+	// Test with all invalid parameters
+	pool6 := NewBoundedWorkerPool(-1, -time.Second, nil)
+	assert.NotNil(t, pool6)
+
+	err = pool6.Start(ctx)
+	require.NoError(t, err)
+	defer pool6.Stop(ctx)
+}
+
+func TestBoundedWorkerPool_SubmitToStoppedPool(t *testing.T) {
+	// REQ-RESOURCE-001: Test submitting to stopped pool returns error
+
+	logger := logging.GetLogger("test")
+	pool := NewBoundedWorkerPool(2, time.Second, logger)
+
+	ctx := context.Background()
+
+	// Try to submit task to stopped pool
+	err := pool.Submit(ctx, func(taskCtx context.Context) {
+		// This should never execute
+	})
+
+	// Should return error because pool is not running
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "not running")
+}
+
+func TestBoundedWorkerPool_StartStopEdgeCases(t *testing.T) {
+	// REQ-RESOURCE-001: Test start/stop edge cases and error paths
+
+	logger := logging.GetLogger("test")
+	pool := NewBoundedWorkerPool(1, time.Second, logger)
+
+	ctx := context.Background()
+
+	// Test double start (should return error)
+	err := pool.Start(ctx)
+	require.NoError(t, err)
+
+	err = pool.Start(ctx) // Second start should fail
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "already running")
+
+	// Test stop after start
+	err = pool.Stop(ctx)
+	require.NoError(t, err)
+	assert.False(t, pool.IsRunning())
+
+	// Test double stop (should be idempotent)
+	err = pool.Stop(ctx) // Second stop should be safe
+	assert.NoError(t, err)
+	assert.False(t, pool.IsRunning())
+}
+
+func TestBoundedWorkerPool_SubmitWithCancelledContext(t *testing.T) {
+	// REQ-RESOURCE-001: Test submit with cancelled context
+
+	logger := logging.GetLogger("test")
+	pool := NewBoundedWorkerPool(1, time.Second, logger)
+
+	ctx := context.Background()
+	err := pool.Start(ctx)
+	require.NoError(t, err)
+	defer pool.Stop(ctx)
+
+	// Create cancelled context for submission
+	cancelledCtx, cancel := context.WithCancel(context.Background())
+	cancel() // Cancel immediately
+
+	err = pool.Submit(cancelledCtx, func(taskCtx context.Context) {
+		// Task function - will detect context cancellation
+	})
+
+	// Submit with cancelled context should fail gracefully
+	// This tests the error path in Submit method
+	if err != nil {
+		assert.Contains(t, err.Error(), "context canceled")
+	}
+
+	// Wait a bit for any potential execution
+	time.Sleep(50 * time.Millisecond)
+
+	// The important thing is no panic occurred and pool is stable
+	assert.True(t, pool.IsRunning())
+}

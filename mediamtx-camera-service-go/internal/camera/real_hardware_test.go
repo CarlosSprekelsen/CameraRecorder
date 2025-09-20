@@ -1096,10 +1096,19 @@ func TestRealHardware_CoverageGaps(t *testing.T) {
 				assert.Equal(t, "Test Camera", event.DeviceInfo.Name, "Device name should match")
 			},
 		}
+
+		// Start monitor first (required for event worker pool to be running)
+		ctx := context.Background()
+		err = monitor.Start(ctx)
+		require.NoError(t, err)
+		defer monitor.Stop(ctx)
+
+		// Wait for startup events to complete to ensure test isolation
+		time.Sleep(QuickTestTimeout)
+
 		monitor.AddEventHandler(eventHandler)
 
 		// This should trigger generateCameraEvent
-		ctx := context.Background()
 		monitor.generateCameraEvent(ctx, CameraEventConnected, "/dev/video0", testDevice)
 
 		// Use require.Eventually to properly wait for event processing without hiding race conditions
