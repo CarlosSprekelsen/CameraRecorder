@@ -791,7 +791,7 @@ func (m *HybridCameraMonitor) buildV4L2SnapshotArgs(outputPath, format string, w
 		"--stream-count", "1", // Capture only 1 frame
 	}
 
-	// Add format if specified
+	// Add format if specified (should not be file format like 'jpg')
 	if format != "" {
 		args = append(args, "--set-fmt-video", fmt.Sprintf("pixelformat=%s", format))
 	}

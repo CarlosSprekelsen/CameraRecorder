@@ -253,7 +253,8 @@ func TestWebSocketServer_MethodExecution(t *testing.T) {
 	// Create a test JWT token for authentication
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", NewTestLogger("test-jwt"))
 	require.NoError(t, err, "Failed to create JWT handler")
-	testToken := security.GenerateTestToken(t, jwtHandler, "test_user", "viewer")
+	testToken, err := jwtHandler.GenerateToken("test_user", "viewer", 24)
+	require.NoError(t, err, "Failed to generate test token")
 
 	// First authenticate the client
 	authMessage := CreateTestMessage("authenticate", map[string]interface{}{
@@ -382,7 +383,8 @@ func TestWebSocketServer_ConcurrentConnections(t *testing.T) {
 	// Create a test JWT token for authentication
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", NewTestLogger("test-jwt"))
 	require.NoError(t, err, "Failed to create JWT handler")
-	testToken := security.GenerateTestToken(t, jwtHandler, "test_user", "viewer")
+	testToken, err := jwtHandler.GenerateToken("test_user", "viewer", 24)
+	require.NoError(t, err, "Failed to generate test token")
 
 	// Send messages from all clients concurrently
 	done := make(chan bool, numClients)

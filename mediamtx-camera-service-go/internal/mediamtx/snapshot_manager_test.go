@@ -113,6 +113,21 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002(t *testing.T) {
 	err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)
 	require.NoError(t, err)
 
+	// PROGRESSIVE READINESS PATTERN: Follow the exact pattern used in working camera tests
+	if !cameraMonitor.IsRunning() {
+		err := cameraMonitor.Start(ctx)
+		require.NoError(t, err, "Failed to start camera monitor")
+	}
+
+	// Wait for readiness using the EXACT pattern from camera tests
+	require.Eventually(t, func() bool {
+		return cameraMonitor.IsReady()
+	}, 3*time.Second, 100*time.Millisecond, "Monitor should become ready after discovery cycle")
+
+	// Get discovered cameras after monitor is ready
+	connectedCameras := cameraMonitor.GetConnectedCameras()
+	t.Logf("Camera monitor discovered %d cameras", len(connectedCameras))
+
 	// Use existing test helper to get camera identifier - following established patterns
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
 	require.NoError(t, err, "Should be able to get available camera identifier")
@@ -129,13 +144,33 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002(t *testing.T) {
 	// Check if hardware is available for proper test validation
 	hasHardware := helper.HasHardwareCamera(ctx)
 
+	// Progressive Readiness pattern already applied above - camera monitor is ready
+
 	// Take snapshot using new API-ready signature (cameraID-first architecture)
 	response, err := snapshotManager.TakeSnapshot(ctx, cameraID, options)
 
 	// Hardware-aware test validation
 	if hasHardware {
-		// Hardware is available - expect success
-		require.NoError(t, err, "Snapshot should succeed with real hardware")
+		// Hardware is available - MUST succeed or it's a real bug
+		if err != nil {
+			// DIAGNOSE THE REAL PROBLEM instead of hiding it
+			t.Logf("Camera hardware exists but snapshot failed - investigating...")
+
+			// Check if camera is accessible
+			if device, exists := cameraMonitor.GetDevice("/dev/video0"); exists && device != nil {
+				t.Logf("Camera device info: %+v", device)
+			}
+			if device, exists := cameraMonitor.GetDevice("/dev/video1"); exists && device != nil {
+				t.Logf("Camera device info: %+v", device)
+			}
+
+			// Check monitor stats
+			stats := cameraMonitor.GetMonitorStats()
+			t.Logf("Monitor stats: %+v", stats)
+
+			// This is a REAL FAILURE - camera exists but snapshot doesn't work
+			require.NoError(t, err, "REAL BUG: Camera hardware exists but snapshot fails - this indicates a system integration problem that must be fixed, not skipped")
+		}
 		require.NotNil(t, response, "TakeSnapshot should return API-ready response")
 
 		// Validate API-ready response format per JSON-RPC documentation
@@ -1004,7 +1039,7 @@ func TestSnapshotManager_MultiTierIntegration_ReqMTX002(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
-	defer cancel()
+			defer cancel()
 
 			// Create output directory
 			err := os.MkdirAll(mediaMTXConfig.SnapshotsPath, 0700)

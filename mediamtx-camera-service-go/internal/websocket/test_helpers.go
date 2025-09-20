@@ -657,7 +657,9 @@ func AuthenticateTestClient(t *testing.T, conn *websocket.Conn, userID string, r
 	// Use the same secret key as the test configuration to ensure compatibility
 	jwtHandler, err := security.NewJWTHandler("test-secret-key-for-websocket-tests-only", NewTestLogger("test-jwt"))
 	require.NoError(t, err, "Failed to create JWT handler with correct secret")
-	testToken := security.GenerateTestToken(t, jwtHandler, userID, role)
+	// Generate test token directly since security.GenerateTestToken requires build tags
+	testToken, err := jwtHandler.GenerateToken(userID, role, 24)
+	require.NoError(t, err, "Failed to generate test token")
 
 	// Authenticate the client
 	authMessage := CreateTestMessage("authenticate", map[string]interface{}{
