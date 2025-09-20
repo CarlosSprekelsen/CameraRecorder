@@ -396,11 +396,10 @@ func marshalCreatePathRequest(path *Path) ([]byte, error) {
 }
 
 // marshalUpdatePathRequest marshals a path update request using proper API type
+// According to MediaMTX swagger.json, PATCH /v3/config/paths/patch/{name} expects PathConf directly
 func marshalUpdatePathRequest(config *PathConf) ([]byte, error) {
-	request := MediaMTXUpdatePathRequest{
-		Config: *config,
-	}
-	return json.Marshal(request)
+	// MediaMTX API expects PathConf directly, not wrapped in { "config": {...} }
+	return json.Marshal(config)
 }
 
 // marshalCreateUSBPathRequest marshals a USB device path creation request (matches Python implementation)

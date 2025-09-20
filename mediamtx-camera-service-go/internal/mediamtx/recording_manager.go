@@ -834,31 +834,9 @@ func (rm *RecordingManager) isPathRecording(ctx context.Context, cameraID string
 // enableRecordingOnPath enables recording on a MediaMTX path
 func (rm *RecordingManager) enableRecordingOnPath(ctx context.Context, cameraID string, options *PathConf) error {
 	// Use PathConf from api_types.go - single source of truth with MediaMTX swagger.json
+	// PATCH requests should only send the fields that need to be changed
 	recordConfig := &PathConf{
-		Record:             true,
-		RecordPath:         rm.config.RecordingsPath,        // CRITICAL: Tell MediaMTX WHERE to save files
-		RecordPartDuration: "10s",                           // MediaMTX expects string duration
-		RecordMaxPartSize:  "100MB",                         // Reasonable default
-		RecordFormat:       rm.recordingConfig.RecordFormat, // Use config default
-	}
-
-	// Override with options if provided
-	if options != nil {
-		if options.RecordFormat != "" {
-			recordConfig.RecordFormat = options.RecordFormat
-		}
-		if options.RecordSegmentDuration != "" {
-			recordConfig.RecordSegmentDuration = options.RecordSegmentDuration
-		}
-		if options.RecordPartDuration != "" {
-			recordConfig.RecordPartDuration = options.RecordPartDuration
-		}
-		if options.RecordMaxPartSize != "" {
-			recordConfig.RecordMaxPartSize = options.RecordMaxPartSize
-		}
-		if options.RecordDeleteAfter != "" {
-			recordConfig.RecordDeleteAfter = options.RecordDeleteAfter
-		}
+		Record: true, // Only send the record flag for PATCH requests
 	}
 
 	endpoint := FormatConfigPathsPatch(cameraID)
@@ -866,6 +844,9 @@ func (rm *RecordingManager) enableRecordingOnPath(ctx context.Context, cameraID 
 	if err != nil {
 		return fmt.Errorf("failed to marshal PathConf record config: %w", err)
 	}
+
+	// PATCH request now sends only the required fields
+
 	return rm.client.Patch(ctx, endpoint, jsonData)
 }
 

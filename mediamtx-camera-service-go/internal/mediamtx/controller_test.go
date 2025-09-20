@@ -540,24 +540,11 @@ func TestController_StartRecording_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Wait for controller readiness using Progressive Readiness Pattern
-	var isReady bool
-	for i := 0; i < 100; i++ { // Allow up to 10 seconds for camera discovery
-		if controller.IsReady() {
-			isReady = true
-			break
-		}
-		select {
-		case <-time.After(100 * time.Millisecond):
-			// Continue with next iteration
-		case <-ctx.Done():
-			// Context cancelled, exit early
-			return
-		}
-	}
-	require.True(t, isReady, "Controller should become ready with camera discovery")
+	// Wait for controller readiness using existing event infrastructure
+	err = helper.WaitForControllerReadiness(ctx, controller)
+	require.NoError(t, err, "Controller should become ready via events")
 
-	// USE EXISTING: Get camera identifier
+	// Get available camera using existing helper (now that controller is ready)
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
 	require.NoError(t, err, "Should be able to get available camera identifier")
 
@@ -658,12 +645,16 @@ func TestController_StopRecording_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
+	// Wait for controller readiness using existing event infrastructure
+	err = helper.WaitForControllerReadiness(ctx, controller)
+	require.NoError(t, err, "Controller should become ready via events")
+
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
 	err = os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
 
-	// Start recording first - get available camera identifier using optimized helper method
+	// Get available camera using existing helper (now that controller is ready)
 	// Use camera identifier (camera0) for Controller API, not device path (/dev/video0)
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
 	require.NoError(t, err, "Should be able to get available camera identifier")

@@ -255,7 +255,8 @@ func TestClient_ParsePathListResponse_ReqMTX001(t *testing.T) {
 	invalidJSON := `{"invalid": json}`
 	_, err = parsePathListResponse([]byte(invalidJSON))
 	assert.Error(t, err, "Should return error for invalid JSON")
-	assert.Contains(t, err.Error(), "failed to parse paths list response", "Error should mention parsing failure")
+	// Updated to match actual error flow: validateMediaMTXResponse -> NewMediaMTXErrorWithOp
+	assert.Contains(t, err.Error(), "parse_path_list", "Error should mention parsing operation context")
 }
 
 // TestClient_ParseHealthResponse_ReqMTX001 tests parseHealthResponse for 0% coverage
