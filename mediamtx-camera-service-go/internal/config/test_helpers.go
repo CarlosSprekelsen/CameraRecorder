@@ -69,8 +69,8 @@ func (h *TestConfigHelper) CreateTestDirectories() {
 			_, err = os.Create(dir)
 			require.NoError(h.t, err, "Failed to create file: %s", dir)
 		} else {
-			// For directories, create them
-			err := os.MkdirAll(dir, 0755)
+			// For directories, create them with 0777 permissions for test access
+			err := os.MkdirAll(dir, 0777)
 			require.NoError(h.t, err, "Failed to create directory: %s", dir)
 		}
 	}

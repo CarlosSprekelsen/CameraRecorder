@@ -23,7 +23,6 @@ func TestPathFallback(t *testing.T) {
 	validator := NewPathValidator(cfg, logger)
 
 	// Test recording path validation - MINIMAL: Helper provides standard context
-	// Context already provided by SetupMediaMTXTest
 	result, err := validator.ValidateRecordingPath(ctx)
 
 	if err != nil {
@@ -61,7 +60,6 @@ func TestPathValidatorCaching(t *testing.T) {
 		validationPeriod: TestValidationPeriodShort, // Very short for testing
 	}
 
-	// Context already provided by SetupMediaMTXTest
 
 	// First validation
 	result1, err1 := validator.ValidateRecordingPath(ctx)
@@ -120,7 +118,6 @@ func TestPathValidatorErrorHandling(t *testing.T) {
 	// Create path validator
 	validator := NewPathValidator(cfg, logger)
 
-	// Context already provided by SetupMediaMTXTest
 
 	// Test recording path validation (should fail)
 	_, err := validator.ValidateRecordingPath(ctx)
@@ -137,7 +134,7 @@ func TestPathValidatorErrorHandling(t *testing.T) {
 
 func TestPathValidatorSinglePathValidation(t *testing.T) {
 	// Use centralized path management instead of hardcoded paths
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Create test directory using configured path
 	testDir := helper.GetConfig().TestDataDir

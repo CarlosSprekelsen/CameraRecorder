@@ -60,7 +60,7 @@ func TestErrorSeverity_ReqMTX007(t *testing.T) {
 // TestRecoveryStrategy_Interface_ReqMTX007 tests recovery strategy interface
 func TestRecoveryStrategy_Interface_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Test that we can create a recovery strategy with a real RecordingManager
 	recordingManager := helper.GetRecordingManager()
@@ -77,7 +77,7 @@ func TestRecoveryStrategy_Interface_ReqMTX007(t *testing.T) {
 // TestStreamRecoveryStrategy_Interface_ReqMTX007 tests stream recovery strategy interface
 func TestStreamRecoveryStrategy_Interface_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Test that we can create a stream recovery strategy with a real StreamManager
 	streamManager := helper.GetStreamManager()
@@ -98,7 +98,7 @@ func TestStreamRecoveryStrategy_Interface_ReqMTX007(t *testing.T) {
 // TestRecordingRecoveryStrategy_CanRecover_ReqMTX007 tests recovery capability detection
 func TestRecordingRecoveryStrategy_CanRecover_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	recordingManager := helper.GetRecordingManager()
 	logger := helper.GetLogger()
@@ -189,7 +189,7 @@ func TestRecordingRecoveryStrategy_CanRecover_ReqMTX007(t *testing.T) {
 // TestStreamRecoveryStrategy_CanRecover_ReqMTX007 tests stream recovery capability detection
 func TestStreamRecoveryStrategy_CanRecover_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	streamManager := helper.GetStreamManager()
 	_ = streamManager // Use variable to avoid unused warning
@@ -203,7 +203,7 @@ func TestStreamRecoveryStrategy_CanRecover_ReqMTX007(t *testing.T) {
 // TestRecordingRecoveryStrategy_Recover_NoCameraID_ReqMTX007 tests recovery without camera ID
 func TestRecordingRecoveryStrategy_Recover_NoCameraID_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	recordingManager := helper.GetRecordingManager()
 	logger := helper.GetLogger()
@@ -225,7 +225,7 @@ func TestRecordingRecoveryStrategy_Recover_NoCameraID_ReqMTX007(t *testing.T) {
 // TestStreamRecoveryStrategy_Recover_NoCameraID_ReqMTX007 tests stream recovery without camera ID
 func TestStreamRecoveryStrategy_Recover_NoCameraID_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	streamManager := helper.GetStreamManager()
 	_ = streamManager // Use variable to avoid unused warning

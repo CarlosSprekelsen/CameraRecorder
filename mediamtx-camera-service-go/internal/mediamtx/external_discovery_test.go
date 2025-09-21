@@ -32,7 +32,6 @@ func TestExternalStreamDiscovery_DiscoverExternalStreams_ReqMTX001(t *testing.T)
 	helper.AssertStandardResponse(t, controller, err, "Controller creation")
 
 	// Start the controller
-	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -68,7 +67,6 @@ func TestExternalStreamDiscovery_AddExternalStream_ReqMTX002(t *testing.T) {
 	helper.AssertStandardResponse(t, controller, err, "Controller creation")
 
 	// Start the controller
-	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -117,7 +115,6 @@ func TestExternalStreamDiscovery_RemoveExternalStream_ReqMTX002(t *testing.T) {
 	helper.AssertStandardResponse(t, controller, err, "Controller creation")
 
 	// Start the controller
-	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -183,7 +180,6 @@ func TestExternalStreamDiscovery_GetExternalStreams_ReqMTX002(t *testing.T) {
 	helper.AssertStandardResponse(t, controller, err, "Controller creation")
 
 	// Start the controller
-	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -239,7 +235,6 @@ func TestExternalStreamDiscovery_ErrorHandling_ReqMTX004(t *testing.T) {
 	helper.AssertStandardResponse(t, controller, err, "Controller creation")
 
 	// Start the controller
-	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -281,7 +276,6 @@ func TestExternalStreamDiscovery_OptionalComponent_ReqMTX004(t *testing.T) {
 	helper.AssertStandardResponse(t, controller, err, "Controller creation")
 
 	// Start the controller
-	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -481,7 +475,6 @@ func TestExternalStreamDiscovery_DiscoverExternalStreamsAPI_ReqMTX002(t *testing
 	discovery := NewExternalStreamDiscovery(configIntegration, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
-	// Context already provided by SetupMediaMTXTest
 
 	// Test DiscoverExternalStreamsAPI method - new API-ready response
 	options := DiscoveryOptions{
@@ -520,7 +513,6 @@ func TestExternalStreamDiscovery_GetExternalStreamsAPI_ReqMTX002(t *testing.T) {
 	discovery := NewExternalStreamDiscovery(configIntegration, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
-	// Context already provided by SetupMediaMTXTest
 
 	// Test GetExternalStreamsAPI method - new API-ready response
 	response, err := discovery.GetExternalStreamsAPI(ctx)
@@ -549,7 +541,6 @@ func TestExternalStreamDiscovery_AddExternalStreamAPI_ReqMTX002(t *testing.T) {
 	discovery := NewExternalStreamDiscovery(configIntegration, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
-	// Context already provided by SetupMediaMTXTest
 
 	// Create test external stream
 	testStream := &ExternalStream{
@@ -593,7 +584,6 @@ func TestExternalStreamDiscovery_RemoveExternalStreamAPI_ReqMTX002(t *testing.T)
 	discovery := NewExternalStreamDiscovery(configIntegration, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
-	// Context already provided by SetupMediaMTXTest
 
 	// First add a test stream
 	testStream := &ExternalStream{

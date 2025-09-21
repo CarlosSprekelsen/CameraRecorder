@@ -23,7 +23,7 @@ import (
 // TestNewStreamManager_ReqMTX001 tests stream manager creation
 func TestNewStreamManager_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager, "Stream manager should not be nil")
@@ -38,7 +38,6 @@ func TestStreamManager_CreateStream_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	// Context already provided by SetupMediaMTXTest
 	testStreamName := "test_stream_" + time.Now().Format("20060102_150405")
 	testSource := "publisher"
 
@@ -63,7 +62,6 @@ func TestStreamManager_DeleteStream_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	// Context already provided by SetupMediaMTXTest
 	testStreamName := "test_delete_stream_" + time.Now().Format("20060102_150405")
 
 	// Create a stream first
@@ -85,7 +83,6 @@ func TestStreamManager_StartStream_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	// Context already provided by SetupMediaMTXTest
 
 	// Use existing test helper to get camera identifier - following established patterns
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
@@ -112,7 +109,6 @@ func TestStreamManager_GetStreamStatus_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	// Context already provided by SetupMediaMTXTest
 
 	// Use existing test helper to get camera identifier - following established patterns
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
@@ -138,7 +134,6 @@ func TestStreamManager_ListStreamsAPI_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	// Context already provided by SetupMediaMTXTest
 
 	// List streams using new API-ready method
 	response, err := streamManager.ListStreams(ctx)
@@ -165,7 +160,6 @@ func TestStreamManager_GetStreamURL_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	// Context already provided by SetupMediaMTXTest
 
 	// Use existing test helper to get camera identifier - following established patterns
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
@@ -192,7 +186,6 @@ func TestStreamManager_GetStream_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	// Context already provided by SetupMediaMTXTest
 	testStreamName := "test_get_stream_" + time.Now().Format("20060102_150405")
 
 	// Create a stream first
@@ -220,7 +213,6 @@ func TestStreamManager_ListStreams_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	// Context already provided by SetupMediaMTXTest
 
 	// List all streams
 	streams, err := streamManager.ListStreams(ctx)
@@ -238,7 +230,6 @@ func TestStreamManager_StartRecordingStream_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	// Context already provided by SetupMediaMTXTest
 	devicePath := "/dev/video0"
 
 	// Start recording stream
@@ -264,7 +255,6 @@ func TestStreamManager_StartStream_Viewing_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	// Context already provided by SetupMediaMTXTest
 	devicePath := "/dev/video0"
 
 	// Start stream using single path approach (no separate viewing stream)
@@ -288,7 +278,6 @@ func TestStreamManager_StartStream_Snapshot_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	// Context already provided by SetupMediaMTXTest
 	// Use test fixture for external RTSP source (Tier 3 scenario)
 	devicePath := helper.GetTestCameraDevice("network_failure")
 
@@ -313,7 +302,6 @@ func TestStreamManager_ErrorHandling_ReqMTX001(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	// Context already provided by SetupMediaMTXTest
 
 	// Test invalid stream name
 	_, err := streamManager.CreateStream(ctx, "", "publisher")

@@ -23,7 +23,7 @@ import (
 // TestNewPathManager_ReqMTX001 tests path manager creation
 func TestNewPathManager_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 
 	// Use shared path manager from test helper
@@ -42,7 +42,6 @@ func TestPathManager_CreatePath_ReqMTX003(t *testing.T) {
 	require.NotNil(t, pathManager)
 
 	// Test path creation
-	// Context already provided by SetupMediaMTXTest
 	testPathName := "test_path_manager_" + time.Now().Format("20060102_150405")
 
 	// Ensure cleanup happens even if test fails
@@ -71,7 +70,6 @@ func TestPathManager_DeletePath_ReqMTX003(t *testing.T) {
 	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
 
-	// Context already provided by SetupMediaMTXTest
 	testPathName := "test_delete_path_" + time.Now().Format("20060102_150405")
 
 	// Create a path first
@@ -101,7 +99,6 @@ func TestPathManager_GetPath_ReqMTX003(t *testing.T) {
 	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
 
-	// Context already provided by SetupMediaMTXTest
 	testPathName := "test_get_path_" + time.Now().Format("20060102_150405")
 
 	// Create a path first
@@ -129,7 +126,6 @@ func TestPathManager_ListPaths_ReqMTX003(t *testing.T) {
 	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
 
-	// Context already provided by SetupMediaMTXTest
 
 	// List all paths
 	paths, err := pathManager.ListPaths(ctx)
@@ -148,7 +144,6 @@ func TestPathManager_ValidatePath_ReqMTX003(t *testing.T) {
 	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
 
-	// Context already provided by SetupMediaMTXTest
 	testPathName := "test_validate_path_" + time.Now().Format("20060102_150405")
 
 	// Create a path first
@@ -174,7 +169,6 @@ func TestPathManager_ErrorHandling_ReqMTX001(t *testing.T) {
 	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
 
-	// Context already provided by SetupMediaMTXTest
 
 	// Test invalid path name
 	err := pathManager.CreatePath(ctx, "", "publisher", nil)

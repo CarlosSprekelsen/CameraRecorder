@@ -33,7 +33,6 @@ func TestRecordingManager_ResourceLifecycle(t *testing.T) {
 	assert.False(t, rm.IsRunning())
 
 	// Test start
-	// Context already provided by SetupMediaMTXTest
 	err := rm.Start(ctx)
 	require.NoError(t, err)
 	assert.True(t, rm.IsRunning())
@@ -58,7 +57,6 @@ func TestRecordingManager_ResourceCleanup(t *testing.T) {
 	helper, ctx := SetupMediaMTXTest(t)
 
 	rm := helper.GetRecordingManager()
-	// Context already provided by SetupMediaMTXTest
 
 	err := rm.Start(ctx)
 	require.NoError(t, err)
@@ -91,7 +89,6 @@ func TestRecordingManager_StatsTracking(t *testing.T) {
 	helper, ctx := SetupMediaMTXTest(t)
 
 	rm := helper.GetRecordingManager()
-	// Context already provided by SetupMediaMTXTest
 
 	err := rm.Start(ctx)
 	require.NoError(t, err)
@@ -115,7 +112,6 @@ func TestRecordingManager_KeepaliveIntegration(t *testing.T) {
 	helper, ctx := SetupMediaMTXTest(t)
 
 	rm := helper.GetRecordingManager()
-	// Context already provided by SetupMediaMTXTest
 
 	err := rm.Start(ctx)
 	require.NoError(t, err)
@@ -136,7 +132,6 @@ func TestRecordingManager_TimerIntegration(t *testing.T) {
 	helper, ctx := SetupMediaMTXTest(t)
 
 	rm := helper.GetRecordingManager()
-	// Context already provided by SetupMediaMTXTest
 
 	err := rm.Start(ctx)
 	require.NoError(t, err)
@@ -164,7 +159,6 @@ func TestRecordingManager_GracefulShutdown(t *testing.T) {
 	helper, ctx := SetupMediaMTXTest(t)
 
 	rm := helper.GetRecordingManager()
-	// Context already provided by SetupMediaMTXTest
 
 	err := rm.Start(ctx)
 	require.NoError(t, err)

@@ -36,7 +36,7 @@ import (
 func TestSnapshotManager_New_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	snapshotManager := helper.GetSnapshotManager()
 	require.NotNil(t, snapshotManager, "Snapshot manager should not be nil")
@@ -283,7 +283,7 @@ func TestSnapshotManager_DeleteSnapshotFile_ReqMTX002_Success(t *testing.T) {
 func TestSnapshotManager_GetSnapshotSettings_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -506,7 +506,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX004_ErrorHandling(t *testing.T) {
 func TestSnapshotManager_TakeSnapshot_ReqMTX001_Concurrent(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -831,7 +831,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier3_RTSPActivation(t *testing.
 func TestSnapshotManager_TakeSnapshot_ReqMTX002_MultiTier_Integration(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - Complete multi-tier testing
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",

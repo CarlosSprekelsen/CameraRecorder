@@ -28,7 +28,6 @@ func TestRecordingManager_PanicRecovery(t *testing.T) {
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	// Context already provided by SetupMediaMTXTest
 
 	// Test panic recovery in StartRecording
 	t.Run("StartRecording_PanicRecovery", func(t *testing.T) {
@@ -93,7 +92,7 @@ func TestRecordingManager_PanicRecovery(t *testing.T) {
 
 // TestRecordingManager_CircuitBreaker tests circuit breaker functionality
 func TestRecordingManager_CircuitBreaker(t *testing.T) {
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
@@ -114,7 +113,7 @@ func TestRecordingManager_CircuitBreaker(t *testing.T) {
 
 // TestRecordingManager_ErrorRecoveryManager tests error recovery manager integration
 func TestRecordingManager_ErrorRecoveryManager(t *testing.T) {
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
@@ -151,7 +150,7 @@ func TestRecordingManager_ErrorRecoveryManager(t *testing.T) {
 
 // TestRecordingManager_ErrorMetricsCollector tests error metrics collector
 func TestRecordingManager_ErrorMetricsCollector(t *testing.T) {
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
@@ -188,7 +187,6 @@ func TestRecordingManager_ErrorHandlingIntegration(t *testing.T) {
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	// Context already provided by SetupMediaMTXTest
 
 	t.Run("ErrorHandling_InvalidCameraID", func(t *testing.T) {
 		// Test error handling with invalid camera ID
@@ -240,7 +238,7 @@ func TestRecordingManager_ErrorHandlingIntegration(t *testing.T) {
 
 // TestRecordingManager_RecoveryStrategies tests recovery strategies
 func TestRecordingManager_RecoveryStrategies(t *testing.T) {
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
@@ -255,7 +253,7 @@ func TestRecordingManager_RecoveryStrategies(t *testing.T) {
 
 // TestRecordingManager_ErrorMetricsIntegration tests error metrics integration
 func TestRecordingManager_ErrorMetricsIntegration(t *testing.T) {
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
@@ -299,7 +297,6 @@ func TestRecordingManager_ErrorHandlingRobustness(t *testing.T) {
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	// Context already provided by SetupMediaMTXTest
 
 	t.Run("ErrorHandling_MultipleOperations", func(t *testing.T) {
 		// Test multiple error scenarios to ensure robustness

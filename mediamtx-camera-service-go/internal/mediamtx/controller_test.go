@@ -237,7 +237,7 @@ func TestController_GetStream_ReqMTX002_Success(t *testing.T) {
 // TestConfigIntegration_GetRecordingConfig_ReqMTX001 tests recording config retrieval
 func TestConfigIntegration_GetRecordingConfig_ReqMTX001_Success(t *testing.T) {
 	// No sequential execution needed - only reads configuration
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
@@ -252,7 +252,7 @@ func TestConfigIntegration_GetRecordingConfig_ReqMTX001_Success(t *testing.T) {
 // TestConfigIntegration_GetSnapshotConfig_ReqMTX001 tests snapshot config retrieval
 func TestConfigIntegration_GetSnapshotConfig_ReqMTX001_Success(t *testing.T) {
 	// No sequential execution needed - only reads configuration
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
@@ -267,7 +267,7 @@ func TestConfigIntegration_GetSnapshotConfig_ReqMTX001_Success(t *testing.T) {
 // TestConfigIntegration_GetFFmpegConfig_ReqMTX001 tests FFmpeg config retrieval
 func TestConfigIntegration_GetFFmpegConfig_ReqMTX001_Success(t *testing.T) {
 	// No sequential execution needed - only reads configuration
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
@@ -282,7 +282,7 @@ func TestConfigIntegration_GetFFmpegConfig_ReqMTX001_Success(t *testing.T) {
 // TestConfigIntegration_GetCameraConfig_ReqMTX001 tests camera config retrieval
 func TestConfigIntegration_GetCameraConfig_ReqMTX001_Success(t *testing.T) {
 	// No sequential execution needed - only reads configuration
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
@@ -297,7 +297,7 @@ func TestConfigIntegration_GetCameraConfig_ReqMTX001_Success(t *testing.T) {
 // TestConfigIntegration_GetPerformanceConfig_ReqMTX001 tests performance config retrieval
 func TestConfigIntegration_GetPerformanceConfig_ReqMTX001_Success(t *testing.T) {
 	// No sequential execution needed - only reads configuration
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
@@ -1421,7 +1421,7 @@ func TestController_Start_ReqARCH001_ParallelEventDriven(t *testing.T) {
 
 // TestEventAggregationSystem tests the event aggregation system
 func TestController_ProcessEvents_ReqARCH001_EventAggregation(t *testing.T) {
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 	eventHelper := helper.CreateEventDrivenTestHelper(t)
 	defer eventHelper.Cleanup()
 	controller, err := helper.GetController(t)
@@ -1498,7 +1498,7 @@ func TestController_Stop_ReqMTX001_GracefulShutdown(t *testing.T) {
 	})
 
 	t.Run("path_integration_graceful_shutdown", func(t *testing.T) {
-		helper, _ := SetupMediaMTXTest(t)
+		helper := SetupMediaMTXTestHelperOnly(t)
 
 		// Create path integration
 		pathManager := helper.GetPathManager()

@@ -45,7 +45,6 @@ func TestPathManager_RealServer_ReqMTX001(t *testing.T) {
 	require.NotNil(t, pathManager, "Path manager should be created")
 
 	// Test basic path manager functionality
-	// Context already provided by SetupMediaMTXTest
 
 	// Test path listing (basic functionality)
 	paths, err := pathManager.ListPaths(ctx)
@@ -72,7 +71,6 @@ func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager, "Path manager should be created")
 
-	// Context already provided by SetupMediaMTXTest
 
 	// Test path creation with real MediaMTX server
 	testPathName := "test_camera_path"
@@ -126,7 +124,6 @@ func TestPathManager_ConfigIntegration_ReqMTX003(t *testing.T) {
 	// Test path manager with real config
 	// Note: PathManager doesn't have GetHealth method - that's for Controller
 	// Test basic functionality instead
-	// Context already provided by SetupMediaMTXTest
 	paths, err := pathManager.ListPaths(ctx)
 	require.NoError(t, err, "ListPaths should succeed")
 	assert.NotNil(t, paths, "Paths list should not be nil")
@@ -150,7 +147,6 @@ func TestPathManager_HealthMonitoring_ReqMTX004(t *testing.T) {
 	require.NotNil(t, pathManager, "Path manager should be created")
 
 	// Test path operations instead of health (PathManager doesn't have GetHealth)
-	// Context already provided by SetupMediaMTXTest
 
 	// Test path listing
 	paths, err := pathManager.ListPaths(ctx)
@@ -195,7 +191,6 @@ func TestPathManager_RealMediaMTXServer(t *testing.T) {
 	require.NotNil(t, pathManager, "Path manager should be created")
 
 	// Test that we can interact with the real MediaMTX server
-	// Context already provided by SetupMediaMTXTest
 	paths, err := pathManager.ListPaths(ctx)
 	require.NoError(t, err, "ListPaths should succeed with real MediaMTX server")
 	assert.NotNil(t, paths, "Paths list should not be nil")

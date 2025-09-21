@@ -38,7 +38,7 @@ import (
 // TestNewRTSPConnectionManager_ReqMTX001 tests RTSP connection manager creation
 func TestNewRTSPConnectionManager_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 
 	// Test server health first
@@ -252,7 +252,6 @@ func TestRTSPConnectionManager_ErrorHandling_ReqMTX004(t *testing.T) {
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), mediaMTXConfig, logger)
 	require.NotNil(t, rtspManager)
 
-	// Context already provided by SetupMediaMTXTest
 
 	// Test getting non-existent connection
 	_, err = rtspManager.GetConnection(ctx, "non-existent-id")
@@ -346,7 +345,7 @@ func TestRTSPConnectionManager_RealMediaMTXServer(t *testing.T) {
 
 // TestRTSPConnectionManager_ConfigurationScenarios tests various configuration scenarios
 func TestRTSPConnectionManager_ConfigurationScenarios(t *testing.T) {
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 
 	// Test different configuration scenarios
@@ -690,7 +689,7 @@ func TestRTSPConnectionManager_IntegrationWithController(t *testing.T) {
 // that can catch dangerous bugs in RTSP connection manager
 func TestRTSPConnectionManager_InputValidation_DangerousBugs(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Create RTSP connection manager
 	rtspManager := helper.GetRTSPConnectionManager()
@@ -706,7 +705,6 @@ func TestRTSPConnectionManager_ErrorScenarios_DangerousBugs(t *testing.T) {
 
 	// Create RTSP connection manager
 	rtspManager := helper.GetRTSPConnectionManager()
-	// Context already provided by SetupMediaMTXTest
 
 	// Test the specific scenarios that were failing in the original tests
 	t.Run("negative_page_number_bug", func(t *testing.T) {

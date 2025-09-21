@@ -30,7 +30,7 @@ import (
 // TestNewRecordingManager_ReqMTX001 tests recording manager creation with real hardware
 func TestNewRecordingManager_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Get recording manager with full integration (now includes camera monitor)
 	recordingManager := helper.GetRecordingManager()

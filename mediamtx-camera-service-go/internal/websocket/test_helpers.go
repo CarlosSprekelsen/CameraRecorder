@@ -323,12 +323,15 @@ func (h *WebSocketTestHelper) createStandardJWTHandler() (*security.JWTHandler, 
 	return security.NewJWTHandler(ENTERPRISE_TEST_JWT_SECRET, h.logger)
 }
 
-// DEPRECATED: createStandardTestConfig - Use mediamtx.CreateConfigManagerWithFixture directly
-// TODO: Migrate all WebSocket tests to use unified MediaMTX config infrastructure
+// DEPRECATED: createStandardTestConfig - Use consolidated config helper approach
+// TODO: Migrate all WebSocket tests to use config.NewTestConfigHelper(t).CreateTestDirectories()
 // This function will be removed once all tests are migrated to the unified approach
 func createStandardTestConfig(t *testing.T) *config.ConfigManager {
-	// MIGRATION: Use proven MediaMTX config pattern (same as MediaMTX tests use)
-	// This eliminates WebSocket-specific directory creation in favor of unified approach
+	// Use consolidated config helper for directory creation (same as MediaMTX tests)
+	configHelper := config.NewTestConfigHelper(t)
+	configHelper.CreateTestDirectories() // Creates /tmp/recordings, /tmp/snapshots with 0777
+
+	// Use canonical config fixture (same as MediaMTX tests)
 	return mediamtx.CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
 }
 

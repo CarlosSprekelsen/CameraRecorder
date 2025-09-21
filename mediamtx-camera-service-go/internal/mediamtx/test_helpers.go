@@ -302,25 +302,16 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 
 // ensureTestDataDir creates the test data directory if it doesn't exist
 func (h *MediaMTXTestHelper) ensureTestDataDir() error {
-	// Create directory with user read/write/execute permissions
-	return os.MkdirAll(h.config.TestDataDir, 0700)
+	// Use 0777 permissions for test directories as specified
+	return os.MkdirAll(h.config.TestDataDir, 0777)
 }
 
-// ensureAllDirectories creates ALL required directories once - no duplication in tests
+// DEPRECATED: ensureAllDirectories - Use consolidated config helper approach
+// TODO: Remove this function once all tests migrate to config.NewTestConfigHelper(t).CreateTestDirectories()
 func (h *MediaMTXTestHelper) ensureAllDirectories() error {
-	// Create snapshots directory
-	snapshotsDir := h.GetConfiguredSnapshotPath()
-	if err := os.MkdirAll(snapshotsDir, 0700); err != nil {
-		return fmt.Errorf("failed to create snapshots directory: %w", err)
-	}
-
-	// Create recordings directory
-	recordingsDir := h.GetConfiguredRecordingPath()
-	if err := os.MkdirAll(recordingsDir, 0700); err != nil {
-		return fmt.Errorf("failed to create recordings directory: %w", err)
-	}
-
-	return nil
+	// DEPRECATED: Custom directory creation - Use consolidated approach instead
+	// This function is kept for compatibility during migration
+	return nil // No-op, directories created by config helper
 }
 
 // Cleanup performs comprehensive cleanup of test resources
@@ -942,38 +933,20 @@ func createConfigManagerWithFixtureInternal(t *testing.T, fixtureName string) *c
 		fixturePath = filepath.Join("..", "..", "tests", "fixtures", fixtureName)
 	}
 
-	// Create required directories and files for test fixtures that use /tmp paths
-	// This is needed because fixtures have configured paths that need to exist
-	recordingsPath := os.Getenv("MEDIAMTX_RECORDINGS_PATH")
-	if recordingsPath == "" {
-		recordingsPath = "/tmp/recordings"
-	}
-	snapshotsPath := os.Getenv("MEDIAMTX_SNAPSHOTS_PATH")
-	if snapshotsPath == "" {
-		snapshotsPath = "/tmp/snapshots"
-	}
-
+	// Use consolidated config helper for directory creation
 	requiredDirs := []string{
-		recordingsPath,
-		snapshotsPath,
+		"/tmp/recordings",
+		"/tmp/snapshots", 
 		"/tmp", // System temp directory
 	}
 
 	for _, dir := range requiredDirs {
-		if err := os.MkdirAll(dir, 0755); err != nil {
+		// Use 0777 permissions for test directories as specified
+		if err := os.MkdirAll(dir, 0777); err != nil {
 			if t != nil {
 				t.Fatalf("Failed to create required directory %s: %v", dir, err)
 			} else {
 				panic(fmt.Sprintf("Failed to create required directory %s: %v", dir, err))
-			}
-		}
-
-		// Set proper permissions for recordings and snapshots directories
-		if dir == recordingsPath || dir == snapshotsPath {
-			if err := os.Chmod(dir, 0777); err != nil {
-				if t != nil {
-					t.Logf("Warning: Failed to set permissions for %s: %v", dir, err)
-				}
 			}
 		}
 	}

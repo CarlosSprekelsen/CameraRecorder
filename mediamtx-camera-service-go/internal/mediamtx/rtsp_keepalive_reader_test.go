@@ -11,7 +11,7 @@ import (
 
 func TestRTSPKeepaliveReader_NewRTSPKeepaliveReader(t *testing.T) {
 	// Use fixture-based test helper following Path Management Solution
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
@@ -45,7 +45,6 @@ func TestRTSPKeepaliveReader_StartKeepalive(t *testing.T) {
 	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
 
 	// Test starting keepalive for a path
-	// Context already provided by SetupMediaMTXTest
 	pathName := "test_camera"
 
 	// This will fail because MediaMTX is not running, but we can test the logic
@@ -79,7 +78,6 @@ func TestRTSPKeepaliveReader_StopKeepalive(t *testing.T) {
 	assert.NoError(t, err, "Stopping non-existent keepalive should not fail")
 
 	// Test stopping an active keepalive
-	// Context already provided by SetupMediaMTXTest
 	pathName := "test_camera"
 
 	// Start keepalive (will fail gracefully if MediaMTX not available)
@@ -109,7 +107,6 @@ func TestRTSPKeepaliveReader_StopAll(t *testing.T) {
 	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
 
 	// Start multiple keepalives
-	// Context already provided by SetupMediaMTXTest
 	reader.StartKeepalive(ctx, "camera1")
 	reader.StartKeepalive(ctx, "camera2")
 	reader.StartKeepalive(ctx, "camera3")
@@ -145,7 +142,6 @@ func TestRTSPKeepaliveReader_IsActive(t *testing.T) {
 	assert.False(t, reader.IsActive("inactive_path"), "Inactive path should return false")
 
 	// Start keepalive
-	// Context already provided by SetupMediaMTXTest
 	pathName := "active_path"
 	reader.StartKeepalive(ctx, pathName)
 
@@ -177,7 +173,6 @@ func TestRTSPKeepaliveReader_GetActiveCount(t *testing.T) {
 	assert.Equal(t, 0, reader.GetActiveCount(), "Initial count should be 0")
 
 	// Start keepalives
-	// Context already provided by SetupMediaMTXTest
 	reader.StartKeepalive(ctx, "camera1")
 	assert.Equal(t, 1, reader.GetActiveCount(), "Count should be 1 after starting one")
 
@@ -208,7 +203,7 @@ func TestRTSPKeepaliveReader_EnvironmentVariables(t *testing.T) {
 	}()
 
 	// Use centralized path management instead of hardcoded paths
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 	testDir := helper.GetConfig().TestDataDir
 	os.Setenv("MEDIAMTX_TEST_DATA_DIR", testDir)
 
@@ -242,7 +237,6 @@ func TestRTSPKeepaliveReader_ConcurrentOperations(t *testing.T) {
 	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
 
 	// Test concurrent start/stop operations
-	// Context already provided by SetupMediaMTXTest
 	pathName := "concurrent_test"
 
 	// Start multiple goroutines

@@ -25,7 +25,7 @@ import (
 // TestController_GetConfig_ReqMTX003 tests getting MediaMTX configuration
 func TestController_GetConfig_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Create controller
 	controller, err := helper.GetController(t)
@@ -62,7 +62,7 @@ func TestController_GetConfig_ReqMTX003(t *testing.T) {
 // TestController_UpdateConfig_ReqMTX003 tests updating MediaMTX configuration
 func TestController_UpdateConfig_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Create controller
 	controller, err := helper.GetController(t)
@@ -117,7 +117,7 @@ func TestController_UpdateConfig_ReqMTX003(t *testing.T) {
 // TestController_UpdateConfig_InvalidConfig_ReqMTX004 tests updating with invalid configuration
 func TestController_UpdateConfig_InvalidConfig_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring and error handling
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Create controller
 	controller, err := helper.GetController(t)
@@ -174,7 +174,7 @@ func TestController_UpdateConfig_InvalidConfig_ReqMTX004(t *testing.T) {
 // TestController_GetConfig_NotRunning_ReqMTX004 tests getting configuration when controller is not running
 func TestController_GetConfig_NotRunning_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring and error handling
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Create controller but don't start it
 	controller, err := helper.GetController(t)
@@ -193,7 +193,7 @@ func TestController_GetConfig_NotRunning_ReqMTX004(t *testing.T) {
 // TestController_UpdateConfig_NotRunning_ReqMTX004 tests updating configuration when controller is not running
 func TestController_UpdateConfig_NotRunning_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring and error handling
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Create controller but don't start it
 	controller, err := helper.GetController(t)
@@ -219,7 +219,7 @@ func TestController_UpdateConfig_NotRunning_ReqMTX004(t *testing.T) {
 // TestConfigIntegration_GetVersionInfo tests centralized version management
 func TestConfigIntegration_GetVersionInfo(t *testing.T) {
 	// Create test helper for logger
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Create test configuration manager
 	configManager := config.CreateConfigManager()
