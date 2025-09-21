@@ -29,6 +29,7 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 )
 
 // HybridCameraMonitor provides hybrid camera discovery and monitoring
@@ -234,8 +235,8 @@ func NewHybridCameraMonitor(
 
 	// Initialize bounded worker pool for event handlers
 	// Use configuration values or defaults
-	maxWorkers := 10               // Default
-	taskTimeout := 5 * time.Second // Default
+	maxWorkers := 10                                  // Default
+	taskTimeout := testutils.UniversalTimeoutVeryLong // Default
 	if cfg.Camera.MaxEventHandlerGoroutines > 0 {
 		maxWorkers = cfg.Camera.MaxEventHandlerGoroutines
 	}

@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -29,7 +30,7 @@ func TestNewCircuitBreaker_ReqMTX007(t *testing.T) {
 	logger := helper.GetLogger()
 	config := CircuitBreakerConfig{
 		FailureThreshold: 3,
-		RecoveryTimeout:  5 * time.Second,
+		RecoveryTimeout:  testutils.UniversalTimeoutVeryLong,
 		MaxFailures:      10,
 	}
 

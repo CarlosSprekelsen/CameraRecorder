@@ -123,19 +123,16 @@ func TestAPIErrorHandling_400Scenarios(t *testing.T) {
 func TestPathStateTransitions_Recording(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// REQ-MTX-003: Path creation and deletion
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	pathManager := helper.GetPathManager()
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, pathManager)
 	require.NotNil(t, recordingManager)
 
-	// Get controller for Progressive Readiness
-	controller, err := helper.GetController(t)
-	require.NoError(t, err)
-	err = controller.Start(ctx)
-	require.NoError(t, err)
-	defer controller.Stop(ctx)
+	// This test uses managers directly - get context from helper instead
+	ctx, cancel := helper.GetStandardContext()
+	defer cancel()
 
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
 	require.NoError(t, err, "Should get camera identifier with real hardware")
@@ -247,14 +244,13 @@ func TestPathStateTransitions_Recording(t *testing.T) {
 func TestConcurrentRecordingOperations(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// REQ-MTX-007: Error handling and recovery
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
-	// USE EXACT SAME PATTERN as working TestController_StartRecording_ReqMTX002
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
-
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
+	// Use Progressive Readiness pattern (like other working tests)
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
 
 	// Ensure controller is stopped after test (exact same pattern)
 	defer func() {
@@ -263,9 +259,8 @@ func TestConcurrentRecordingOperations(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Wait for controller readiness using existing event infrastructure (exact same pattern)
-	err = helper.WaitForControllerReadiness(ctx, controller)
-	require.NoError(t, err, "Controller should become ready via events")
+	// PROGRESSIVE READINESS: No waiting - controller handles requests immediately after Start()
+	// Operations will return appropriate errors if components aren't ready yet
 
 	// Get available camera using existing helper (exact same pattern)
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)

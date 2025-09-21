@@ -31,6 +31,7 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	configpkg "github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gopkg.in/yaml.v3"
@@ -44,11 +45,11 @@ import (
 
 const (
 	// Test Timeout Constants
-	TestTimeoutShort    = 100 * time.Millisecond // Short operations (process start/stop)
-	TestTimeoutMedium   = 200 * time.Millisecond // Medium operations (cleanup, polling)
-	TestTimeoutLong     = 500 * time.Millisecond // Long operations (path readiness, connection)
-	TestTimeoutVeryLong = 1 * time.Second        // Very long operations (FFmpeg startup)
-	TestTimeoutExtreme  = 10 * time.Second       // Extreme operations (recording completion - allow time for on-demand startup)
+	TestTimeoutShort    = 100 * time.Millisecond     // Short operations (process start/stop)
+	TestTimeoutMedium   = 200 * time.Millisecond     // Medium operations (cleanup, polling)
+	TestTimeoutLong     = 500 * time.Millisecond     // Long operations (path readiness, connection)
+	TestTimeoutVeryLong = testutils.ShortTestTimeout // Very long operations - uses universal timeout (5s)
+	TestTimeoutExtreme  = testutils.LongTestTimeout  // Extreme operations - uses universal timeout (60s)
 
 	// Test Performance Thresholds
 	TestThresholdFastShutdown   = 100 * time.Millisecond // Fast shutdown should complete within this
@@ -146,13 +147,10 @@ func SetupMediaMTXTest(t *testing.T) (*MediaMTXTestHelper, context.Context) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	t.Cleanup(func() { helper.Cleanup(t) })
 
-	// Ensure recording and snapshot directories exist with proper permissions
-	// MediaMTX needs write access to create recording files
-	os.MkdirAll("/tmp/recordings", 0777)
-	os.MkdirAll("/tmp/snapshots", 0777)
-	// Explicitly set permissions (os.MkdirAll respects umask)
-	os.Chmod("/tmp/recordings", 0777)
-	os.Chmod("/tmp/snapshots", 0777)
+	// Use testutils for configuration-driven directory management
+	// This reads paths from fixtures - edit fixture affects all tests
+	dirManager := testutils.NewDirectoryManager(t)
+	dirManager.CreateDirectoriesFromFixture("config_test_minimal.yaml")
 
 	ctx, cancel := helper.GetStandardContext()
 	t.Cleanup(cancel)
@@ -174,19 +172,27 @@ func SetupMediaMTXTestHelperOnly(t *testing.T) *MediaMTXTestHelper {
 // These helpers eliminate repetitive assertion patterns across MediaMTX tests.
 
 // AssertHealthResponse validates standard health response patterns
-// Replaces 4 lines of repetitive health assertions with 1 line
+// Enhanced with testutils base patterns + MediaMTX-specific health validation
 func (h *MediaMTXTestHelper) AssertHealthResponse(t *testing.T, health *GetHealthResponse, err error, operation string) {
-	require.NoError(t, err, "%s should succeed", operation)
-	require.NotNil(t, health, "%s response should not be nil", operation)
+	// Use testutils for base assertion patterns (consistent across all modules)
+	assertHelper := testutils.NewAssertionHelper(t)
+	assertHelper.AssertNoErrorWithContext(err, operation)
+	assertHelper.AssertNotNilWithContext(health, operation+" response")
+
+	// MediaMTX-specific health validation
 	assert.NotEmpty(t, health.Status, "Health status should not be empty")
 	assert.NotZero(t, health.Timestamp, "Health timestamp should not be zero")
 }
 
 // AssertSnapshotResponse validates snapshot operation responses
-// Replaces 5 lines of repetitive snapshot assertions with 1 line
+// Enhanced with testutils base patterns + MediaMTX-specific snapshot validation
 func (h *MediaMTXTestHelper) AssertSnapshotResponse(t *testing.T, response *TakeSnapshotResponse, err error) {
-	require.NoError(t, err, "Snapshot should succeed")
-	require.NotNil(t, response, "Snapshot response should not be nil")
+	// Use testutils for base assertion patterns (consistent across all modules)
+	assertHelper := testutils.NewAssertionHelper(t)
+	assertHelper.AssertNoErrorWithContext(err, "Snapshot")
+	assertHelper.AssertNotNilWithContext(response, "Snapshot response")
+
+	// MediaMTX-specific snapshot validation
 	assert.NotEmpty(t, response.Filename, "Filename should not be empty")
 	assert.Equal(t, "completed", response.Status, "Status should be completed")
 	assert.Greater(t, response.FileSize, int64(0), "File size should be positive")
@@ -194,31 +200,39 @@ func (h *MediaMTXTestHelper) AssertSnapshotResponse(t *testing.T, response *Take
 }
 
 // AssertRecordingResponse validates recording operation responses
-// Replaces 4 lines of repetitive recording assertions with 1 line
+// Enhanced with testutils base patterns + MediaMTX-specific recording validation
 func (h *MediaMTXTestHelper) AssertRecordingResponse(t *testing.T, response *StartRecordingResponse, err error) {
-	require.NoError(t, err, "Recording should succeed")
-	require.NotNil(t, response, "Recording response should not be nil")
+	// Use testutils for base assertion patterns (consistent across all modules)
+	assertHelper := testutils.NewAssertionHelper(t)
+	assertHelper.AssertNoErrorWithContext(err, "Recording")
+	assertHelper.AssertNotNilWithContext(response, "Recording response")
+
+	// MediaMTX-specific recording validation
 	assert.NotEmpty(t, response.Filename, "Filename should not be empty")
 	assert.Equal(t, "RECORDING", response.Status, "Status should be RECORDING")
 }
 
 // AssertListResponse validates standard list response patterns
-// Replaces 4 lines of repetitive list assertions with 1 line
+// Enhanced with testutils base patterns + MediaMTX-specific list validation
 func (h *MediaMTXTestHelper) AssertListResponse(t *testing.T, response interface{}, err error, operation string) {
-	require.NoError(t, err, "%s should succeed", operation)
-	require.NotNil(t, response, "%s response should not be nil", operation)
+	// Use testutils for base assertion patterns (consistent across all modules)
+	assertHelper := testutils.NewAssertionHelper(t)
+	assertHelper.AssertNoErrorWithContext(err, operation)
+	assertHelper.AssertNotNilWithContext(response, operation+" response")
 
-	// Use reflection to check common list response fields
+	// MediaMTX-specific list validation
 	if listResp, ok := response.(interface{ GetTotal() int }); ok {
 		assert.GreaterOrEqual(t, listResp.GetTotal(), 0, "Total should be non-negative")
 	}
 }
 
 // AssertStandardResponse validates basic success response patterns
-// Replaces 2 lines of basic assertions with 1 line
+// Enhanced with testutils base patterns for consistency across modules
 func (h *MediaMTXTestHelper) AssertStandardResponse(t *testing.T, response interface{}, err error, operation string) {
-	require.NoError(t, err, "%s should succeed", operation)
-	require.NotNil(t, response, "%s response should not be nil", operation)
+	// Use testutils for base assertion patterns (consistent across all modules)
+	assertHelper := testutils.NewAssertionHelper(t)
+	assertHelper.AssertNoErrorWithContext(err, operation)
+	assertHelper.AssertNotNilWithContext(response, operation+" response")
 }
 
 // NewMediaMTXTestHelper creates a new test helper for MediaMTX server testing
@@ -246,7 +260,7 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 	}
 
 	// Create logger for testing - will use configuration from test fixture
-	logger := logging.GetLogger("test-mediamtx-controller")
+	logger := logging.GetLogger("mediamtx") // Module-specific logger name
 
 	// Create MediaMTX client configuration
 	clientConfig := &configpkg.MediaMTXConfig{
@@ -364,23 +378,6 @@ func (h *MediaMTXTestHelper) Cleanup(t *testing.T) {
 	t.Log("MediaMTX test cleanup completed")
 }
 
-// WaitForServerReady waits for the MediaMTX server to be ready using health check
-func (h *MediaMTXTestHelper) WaitForServerReady(t *testing.T, timeout time.Duration) error {
-	// Performance optimization: Since MediaMTX is already running (systemd service),
-	// we can do a quick health check. Event-driven readiness is handled by EventDrivenTestHelper
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
-	// Single health check - polling removed in favor of event-driven approach
-	err := h.client.HealthCheck(ctx)
-	if err != nil {
-		return fmt.Errorf("MediaMTX server not ready: %w", err)
-	}
-
-	t.Log("MediaMTX server is ready")
-	return nil
-}
-
 // TestMediaMTXHealth tests the MediaMTX health check
 func (h *MediaMTXTestHelper) TestMediaMTXHealth(t *testing.T) error {
 	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
@@ -480,8 +477,17 @@ func (h *MediaMTXTestHelper) GetConfig() *MediaMTXTestConfig {
 }
 
 // GetLogger returns the test logger
+// GetLogger returns module-specific logger (backward compatibility)
 func (h *MediaMTXTestHelper) GetLogger() *logging.Logger {
 	return h.logger
+}
+
+// GetLoggerForComponent returns component-specific logger with proper naming
+// This enables fine-grained logging control per component (snapshot_manager, recording_manager, etc.)
+func (h *MediaMTXTestHelper) GetLoggerForComponent(component string) *logging.Logger {
+	// Create component-specific logger name: "mediamtx.snapshot_manager", "mediamtx.recording_manager"
+	componentLogger := logging.GetLogger("mediamtx." + component)
+	return componentLogger
 }
 
 // GetClient returns the MediaMTX client for testing
@@ -568,7 +574,7 @@ func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
 		// Create real camera monitor with SAME configuration as controller (test fixture)
 		// This ensures configuration consistency between camera monitor and controller
 		configManager := CreateConfigManagerWithFixture(nil, "config_test_minimal.yaml")
-		logger := logging.GetLogger("test-camera-monitor")
+		logger := logging.GetLogger("mediamtx.camera_monitor") // Component-specific logger
 
 		// Use real implementations for camera hardware
 		deviceChecker := &camera.RealDeviceChecker{}
@@ -726,33 +732,6 @@ func (h *MediaMTXTestHelper) GetAvailableCameraIdentifierWithReadiness(ctx conte
 	return "", nil, false // No cameras found yet
 }
 
-// WaitForControllerReadiness waits for controller to become ready using event-driven pattern
-func (h *MediaMTXTestHelper) WaitForControllerReadiness(ctx context.Context, controller MediaMTXController) error {
-	// Use existing event infrastructure with safety timeout
-	readinessChan := controller.SubscribeToReadiness()
-
-	// Check if already ready
-	if controller.IsReady() {
-		return nil
-	}
-
-	// Add safety timeout to prevent infinite hangs if caller context has no timeout
-	safetyTimeout := 30 * time.Second
-	safetyCtx, cancel := context.WithTimeout(ctx, safetyTimeout)
-	defer cancel()
-
-	// Wait for readiness event
-	select {
-	case <-readinessChan:
-		return nil // Controller became ready
-	case <-safetyCtx.Done():
-		if safetyCtx.Err() == context.DeadlineExceeded {
-			return fmt.Errorf("controller readiness timeout after %v - controller never became ready", safetyTimeout)
-		}
-		return safetyCtx.Err() // Context cancelled by caller
-	}
-}
-
 // GetTestCameraDevice returns a test camera device from fixtures
 func (h *MediaMTXTestHelper) GetTestCameraDevice(scenario string) string {
 	// Load test camera devices from fixture file
@@ -834,8 +813,11 @@ func (h *MediaMTXTestHelper) GetController(t *testing.T) (MediaMTXController, er
 }
 
 // GetStandardContext returns a standard context for all tests - no duplication
+// GetStandardContext returns standard test context - DEPRECATED: Use testutils.UniversalTestSetup
+// This function is kept for backward compatibility but new code should use universal testutils
 func (h *MediaMTXTestHelper) GetStandardContext() (context.Context, context.CancelFunc) {
-	return context.WithTimeout(context.Background(), 30*time.Second)
+	// Use universal timeout constant instead of hardcoded value
+	return context.WithTimeout(context.Background(), testutils.DefaultTestTimeout)
 }
 
 // GetReadyController returns a controller that's already started and ready - no duplication
@@ -1183,18 +1165,18 @@ func (h *MediaMTXTestHelper) cleanupMediaMTXPaths(t *testing.T) {
 }
 
 // isTestPath determines if a path was created during testing
+// ARCHITECTURE COMPLIANCE: Only recognize valid cameraN patterns, not arbitrary test_ prefixes
 func (h *MediaMTXTestHelper) isTestPath(pathName string) bool {
-	// Check for common test path patterns
-	testPrefixes := []string{"test_", "camera_", "rec_"}
-	for _, prefix := range testPrefixes {
-		if len(pathName) > len(prefix) && pathName[:len(prefix)] == prefix {
-			return true
+	// ONLY recognize camera identifiers (camera0, camera1, etc.) - these are architecture-compliant
+	// NO MORE test_, rec_, or other arbitrary prefixes that violate MediaMTX path validation
+	if len(pathName) >= 7 && pathName[:6] == "camera" {
+		// Ensure it's camera followed by a digit (camera0, camera1, etc.)
+		if pathName[6] >= '0' && pathName[6] <= '9' {
+			// Additional validation: ensure it's only cameraN format (not camera_something)
+			if len(pathName) == 7 || (len(pathName) > 7 && pathName[7] >= '0' && pathName[7] <= '9') {
+				return true
+			}
 		}
-	}
-
-	// Also check for camera0, camera1, etc. (without underscore)
-	if len(pathName) >= 7 && pathName[:6] == "camera" && pathName[6] >= '0' && pathName[6] <= '9' {
-		return true
 	}
 
 	return false

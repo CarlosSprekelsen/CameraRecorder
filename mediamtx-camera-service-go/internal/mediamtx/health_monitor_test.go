@@ -19,6 +19,7 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -28,13 +29,12 @@ func TestNewHealthMonitor_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper := SetupMediaMTXTestHelperOnly(t)
 
-
 	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
 		Timeout:                30 * time.Second,
 		HealthCheckInterval:    5,
 		HealthFailureThreshold: 3,
-		HealthCheckTimeout:     5 * time.Second,
+		HealthCheckTimeout:     testutils.UniversalTimeoutVeryLong,
 	}
 	logger := logging.CreateTestLogger(t, nil)
 	// Use test fixture logging level instead of hardcoded logrus
@@ -52,13 +52,12 @@ func TestHealthMonitor_StartStop_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper, ctx := SetupMediaMTXTest(t)
 
-
 	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
 		Timeout:                30 * time.Second,
 		HealthCheckInterval:    5,
 		HealthFailureThreshold: 3,
-		HealthCheckTimeout:     5 * time.Second,
+		HealthCheckTimeout:     testutils.UniversalTimeoutVeryLong,
 	}
 	logger := logging.CreateTestLogger(t, nil)
 	// Use test fixture logging level instead of hardcoded logrus
@@ -86,13 +85,12 @@ func TestHealthMonitor_GetStatus_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper, ctx := SetupMediaMTXTest(t)
 
-
 	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
 		Timeout:                30 * time.Second,
 		HealthCheckInterval:    5,
 		HealthFailureThreshold: 3,
-		HealthCheckTimeout:     5 * time.Second,
+		HealthCheckTimeout:     testutils.UniversalTimeoutVeryLong,
 	}
 	logger := logging.CreateTestLogger(t, nil)
 	// Use test fixture logging level instead of hardcoded logrus
@@ -126,13 +124,12 @@ func TestHealthMonitor_GetMetrics_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper, ctx := SetupMediaMTXTest(t)
 
-
 	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
 		Timeout:                30 * time.Second,
 		HealthCheckInterval:    5,
 		HealthFailureThreshold: 3,
-		HealthCheckTimeout:     5 * time.Second,
+		HealthCheckTimeout:     testutils.UniversalTimeoutVeryLong,
 	}
 	logger := logging.CreateTestLogger(t, nil)
 	// Use test fixture logging level instead of hardcoded logrus
@@ -167,13 +164,12 @@ func TestHealthMonitor_RecordSuccess_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper := SetupMediaMTXTestHelperOnly(t)
 
-
 	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
 		Timeout:                30 * time.Second,
 		HealthCheckInterval:    5,
 		HealthFailureThreshold: 3,
-		HealthCheckTimeout:     5 * time.Second,
+		HealthCheckTimeout:     testutils.UniversalTimeoutVeryLong,
 	}
 	logger := logging.CreateTestLogger(t, nil)
 	// Use test fixture logging level instead of hardcoded logrus
@@ -201,13 +197,12 @@ func TestHealthMonitor_RecordFailure_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper := SetupMediaMTXTestHelperOnly(t)
 
-
 	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
 		Timeout:                30 * time.Second,
 		HealthCheckInterval:    5,
 		HealthFailureThreshold: 2, // Lower threshold for testing
-		HealthCheckTimeout:     5 * time.Second,
+		HealthCheckTimeout:     testutils.UniversalTimeoutVeryLong,
 	}
 	logger := logging.CreateTestLogger(t, nil)
 	// Use test fixture logging level instead of hardcoded logrus
@@ -242,7 +237,6 @@ func TestHealthMonitor_Configuration_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper := SetupMediaMTXTestHelperOnly(t)
 
-
 	// Test different configurations
 	configs := []*config.MediaMTXConfig{
 		{
@@ -261,7 +255,7 @@ func TestHealthMonitor_Configuration_ReqMTX004(t *testing.T) {
 			BaseURL:                helper.GetConfig().BaseURL,
 			Timeout:                30 * time.Second,
 			HealthFailureThreshold: 3,
-			HealthCheckTimeout:     5 * time.Second,
+			HealthCheckTimeout:     testutils.UniversalTimeoutVeryLong,
 		},
 	}
 
@@ -292,7 +286,7 @@ func TestHealthMonitor_DebounceMechanism_ReqMTX004(t *testing.T) {
 	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
 		HealthCheckInterval:    5,
-		HealthCheckTimeout:     5 * time.Second,
+		HealthCheckTimeout:     testutils.UniversalTimeoutVeryLong,
 		HealthFailureThreshold: 3,
 	}
 	logger := helper.GetLogger()
@@ -349,7 +343,7 @@ func TestHealthMonitor_AtomicOperations_ReqMTX004(t *testing.T) {
 	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
 		HealthCheckInterval:    5,
-		HealthCheckTimeout:     5 * time.Second,
+		HealthCheckTimeout:     testutils.UniversalTimeoutVeryLong,
 		HealthFailureThreshold: 3,
 	}
 	logger := helper.GetLogger()
@@ -410,7 +404,7 @@ func TestHealthMonitor_StatusTransitions_ReqMTX004(t *testing.T) {
 	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
 		HealthCheckInterval:    5,
-		HealthCheckTimeout:     5 * time.Second,
+		HealthCheckTimeout:     testutils.UniversalTimeoutVeryLong,
 		HealthFailureThreshold: 3,
 	}
 	logger := helper.GetLogger()
@@ -466,7 +460,7 @@ func TestHealthMonitor_GetHealthAPI_ReqMTX004(t *testing.T) {
 		Timeout:                30 * time.Second,
 		HealthCheckInterval:    5,
 		HealthFailureThreshold: 3,
-		HealthCheckTimeout:     5 * time.Second,
+		HealthCheckTimeout:     testutils.UniversalTimeoutVeryLong,
 	}
 	logger := logging.CreateTestLogger(t, nil)
 
@@ -523,7 +517,7 @@ func TestHealthMonitor_GetHealthAPI_APICompliance_ReqAPI001(t *testing.T) {
 		Timeout:                30 * time.Second,
 		HealthCheckInterval:    5,
 		HealthFailureThreshold: 3,
-		HealthCheckTimeout:     5 * time.Second,
+		HealthCheckTimeout:     testutils.UniversalTimeoutVeryLong,
 	}
 	logger := logging.CreateTestLogger(t, nil)
 
@@ -567,7 +561,7 @@ func TestHealthMonitor_GetHealthAPI_ErrorScenarios_ReqMTX004(t *testing.T) {
 		Timeout:                30 * time.Second,
 		HealthCheckInterval:    5,
 		HealthFailureThreshold: 3,
-		HealthCheckTimeout:     5 * time.Second,
+		HealthCheckTimeout:     testutils.UniversalTimeoutVeryLong,
 	}
 	logger := logging.CreateTestLogger(t, nil)
 

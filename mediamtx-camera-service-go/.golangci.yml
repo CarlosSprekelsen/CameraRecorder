@@ -1,6 +1,8 @@
 # MediaMTX Camera Service - Anti-Hardcoding Linter Configuration
 # Prevents hardcoded values that violate architectural principles
 
+version: 2
+
 run:
   timeout: 5m
   tests: true
@@ -14,7 +16,7 @@ linters-settings:
     ignore-tests: false  # Tests must also avoid hardcoding
     
   # CRITICAL: Detect magic numbers  
-  gomnd:
+  mnd:
     ignored-numbers:
       - "0"
       - "1" 
@@ -33,7 +35,7 @@ linters-settings:
 linters:
   enable:
     - goconst  # Hardcoded constants detection
-    - gomnd    # Magic numbers detection
+    - mnd      # Magic numbers detection
     - govet    # Go vet analysis
     
 issues:

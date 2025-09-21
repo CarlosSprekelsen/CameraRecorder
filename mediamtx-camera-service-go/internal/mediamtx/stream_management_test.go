@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -266,7 +267,7 @@ func TestController_StreamManagement_Concurrent_ReqMTX002(t *testing.T) {
 	select {
 	case <-readinessChan:
 		t.Log("Controller ready - proceeding with concurrent operations")
-	case <-time.After(5 * time.Second):
+	case <-time.After(testutils.UniversalTimeoutVeryLong):
 		t.Fatal("Timeout waiting for controller readiness")
 	}
 

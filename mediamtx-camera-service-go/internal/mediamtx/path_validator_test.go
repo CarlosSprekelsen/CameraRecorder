@@ -60,7 +60,6 @@ func TestPathValidatorCaching(t *testing.T) {
 		validationPeriod: TestValidationPeriodShort, // Very short for testing
 	}
 
-
 	// First validation
 	result1, err1 := validator.ValidateRecordingPath(ctx)
 	if err1 != nil {
@@ -113,11 +112,10 @@ func TestPathValidatorErrorHandling(t *testing.T) {
 	}
 
 	// Create logger
-	logger := logging.GetLogger("test")
+	logger := logging.GetLogger("mediamtx.path_validator") // Component-specific logger
 
 	// Create path validator
 	validator := NewPathValidator(cfg, logger)
-
 
 	// Test recording path validation (should fail)
 	_, err := validator.ValidateRecordingPath(ctx)
@@ -142,7 +140,7 @@ func TestPathValidatorSinglePathValidation(t *testing.T) {
 	defer os.RemoveAll(testDir)
 
 	// Create logger
-	logger := logging.GetLogger("test")
+	logger := logging.GetLogger("mediamtx.path_validator") // Component-specific logger
 
 	// Create path validator
 	validator := &PathValidator{

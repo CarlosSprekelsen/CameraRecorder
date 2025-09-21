@@ -67,15 +67,15 @@ func DefaultWebSocketTestConfig() *WebSocketTestConfig {
 		Port:                 0, // Will be assigned dynamically
 		WebSocketPath:        "/ws",
 		MaxConnections:       100,
-		ReadTimeout:          30 * time.Second,
-		WriteTimeout:         30 * time.Second,
-		PingInterval:         30 * time.Second,
-		PongWait:             60 * time.Second,
+		ReadTimeout:          testutils.DefaultTestTimeout,
+		WriteTimeout:         testutils.DefaultTestTimeout,
+		PingInterval:         testutils.DefaultTestTimeout,
+		PongWait:             testutils.LongTestTimeout,
 		MaxMessageSize:       1024 * 1024, // 1MB
 		ReadBufferSize:       4096,
 		WriteBufferSize:      4096,
-		ShutdownTimeout:      30 * time.Second,
-		ClientCleanupTimeout: 5 * time.Second,
+		ShutdownTimeout:      testutils.DefaultTestTimeout,
+		ClientCleanupTimeout: testutils.ShortTestTimeout,
 		TestDataDir:          "/tmp/websocket_test_data",
 		CleanupAfter:         true,
 	}
@@ -156,7 +156,7 @@ func NewWebSocketTestHelper(t *testing.T, config *WebSocketTestConfig) *WebSocke
 // Cleanup cleans up the test helper resources
 func (h *WebSocketTestHelper) Cleanup(t *testing.T) {
 	if h.server != nil && h.server.IsRunning() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), testutils.ShortTestTimeout)
 		defer cancel()
 		err := h.server.Stop(ctx)
 		if err != nil {
@@ -331,15 +331,9 @@ func (h *WebSocketTestHelper) createStandardJWTHandler() (*security.JWTHandler, 
 // TODO: Migrate all WebSocket tests to use testutils.SetupTest(t, fixtureName)
 // This function will be removed once all tests are migrated to the unified approach
 func createStandardTestConfig(t *testing.T) *config.ConfigManager {
-	// MIGRATION DEMO: Use common utilities (fixture-driven, no hardcoded paths)
-	fixtureLoader := testutils.NewFixtureLoader(t)
-	directoryManager := testutils.NewDirectoryManager(t)
-
-	// Create directories from fixture configuration (edit fixture → all tests react)
-	directoryManager.CreateDirectoriesFromFixture("config_test_minimal.yaml")
-
-	// Load config from fixture (no hardcoded paths)
-	return fixtureLoader.LoadConfigFromFixture("config_test_minimal.yaml")
+	// SIMPLIFIED: Use universal testutils setup (reduces WebSocket-specific complexity)
+	universalSetup := testutils.SetupTest(t, "config_test_minimal.yaml")
+	return universalSetup.GetConfigManager()
 }
 
 // REMOVED: NewTestWebSocketServer - use helper.GetServer() for standardized pattern
@@ -543,7 +537,7 @@ func WaitForServerReady(t *testing.T, server *WebSocketServer, timeout time.Dura
 // CleanupTestServer stops and cleans up a test server
 func DELETED_CleanupTestServer_UNUSED(t *testing.T, server *WebSocketServer) {
 	if server != nil && server.IsRunning() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), testutils.ShortTestTimeout)
 		defer cancel()
 		err := server.Stop(ctx)
 		if err != nil {
@@ -706,6 +700,31 @@ func (h *WebSocketTestHelper) TestMethod(t *testing.T, method string, params map
 	return SendTestMessage(t, conn, message)
 }
 
+// TestMethodWithEvents provides event-driven testing for methods that may require system readiness
+// This method adapts to production behavior by waiting for readiness events instead of changing production code
+func (h *WebSocketTestHelper) TestMethodWithEvents(t *testing.T, method string, params map[string]interface{}, userRole string) *JsonRpcResponse {
+	response := h.TestMethod(t, method, params, userRole)
+
+	// If controller not ready, wait for readiness EVENT (production behavior adaptation)
+	if response.Error != nil && response.Error.Code == MEDIAMTX_UNAVAILABLE {
+		t.Logf("MediaMTX controller not ready for %s, waiting for readiness event...", method)
+
+		controller := h.GetMediaMTXController(t)
+		readinessChan := controller.SubscribeToReadiness()
+
+		select {
+		case <-readinessChan:
+			t.Logf("Readiness event received, retrying %s", method)
+			// Immediate retry after event
+			response = h.TestMethod(t, method, params, userRole)
+		case <-time.After(5 * time.Second):
+			t.Fatalf("Readiness event timeout for %s method", method)
+		}
+	}
+
+	return response
+}
+
 // WaitForServerReady waits for server to be fully ready using Progressive Readiness Pattern
 func (h *WebSocketTestHelper) WaitForServerReady(t *testing.T) {
 	// Check if already ready first
@@ -730,7 +749,7 @@ func (h *WebSocketTestHelper) WaitForServerReady(t *testing.T) {
 	}
 	readinessChan := readinessProvider.SubscribeToReadiness()
 
-	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testutils.LongTestTimeout)
 	defer cancel()
 
 	select {

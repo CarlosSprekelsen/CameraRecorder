@@ -18,8 +18,8 @@ mediamtx:
   api_port: 9997
   rtsp_port: 8554
   config_path: "/tmp/mediamtx.yml"  # Required by validation but not used in business logic
-  recordings_path: "/tmp/recordings"
-  snapshots_path: "/tmp/snapshots"
+  recordings_path: "/tmp/mediamtx_test_recordings"
+  snapshots_path: "/tmp/mediamtx_test_snapshots"
   override_mediamtx_paths: true  # Always override for tests
   
   # Health monitoring (actually used)
@@ -129,8 +129,8 @@ security:
 storage:
   warn_percent: 80
   block_percent: 90
-  default_path: "/tmp/recordings"
-  fallback_path: "/tmp/recordings"
+  default_path: "/tmp/mediamtx_test_recordings"
+  fallback_path: "/tmp/mediamtx_test_recordings"
 
 # Retention policy (actually used)
 retention_policy:

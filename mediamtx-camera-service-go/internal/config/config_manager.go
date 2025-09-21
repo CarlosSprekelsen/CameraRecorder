@@ -957,7 +957,7 @@ func getDefaultConfig() *Config {
 			Port:                 8002,
 			WebSocketPath:        "/ws",
 			MaxConnections:       100,
-			ReadTimeout:          5 * time.Second,
+			ReadTimeout:          5 * time.Second, // Standard timeout
 			WriteTimeout:         1 * time.Second,
 			PingInterval:         30 * time.Second,
 			PongWait:             60 * time.Second,

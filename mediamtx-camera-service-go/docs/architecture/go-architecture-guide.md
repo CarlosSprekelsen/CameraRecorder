@@ -766,6 +766,21 @@ stop
 @enduml
 ```
 
+#### Progressive Readiness: Behavioral Invariants
+
+**System Contract:**
+
+1. Connection acceptance: <100ms regardless of component state
+2. Request handling: Always returns response, never blocks
+3. Error semantics: Operation-specific errors, never system status as success
+4. Component independence: No operation waits for component initialization
+
+**Test Validation Rules:**
+
+- Time connection establishment (must be <100ms)
+- Verify error responses match operation context
+- Confirm no "system initializing" responses for API operations
+
 ### 4.4 Recording Flow
 
 ```plantuml

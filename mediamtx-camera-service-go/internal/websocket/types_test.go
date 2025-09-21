@@ -26,6 +26,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -286,7 +287,7 @@ func TestWebSocketTypes_ServerConfig(t *testing.T) {
 		Port:                 8002,
 		WebSocketPath:        "/ws",
 		MaxConnections:       1000,
-		ReadTimeout:          5 * time.Second,
+		ReadTimeout:          testutils.UniversalTimeoutVeryLong,
 		WriteTimeout:         1 * time.Second,
 		PingInterval:         30 * time.Second,
 		PongWait:             60 * time.Second,

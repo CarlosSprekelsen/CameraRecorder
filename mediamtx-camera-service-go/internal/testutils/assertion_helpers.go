@@ -49,6 +49,18 @@ func (ah *AssertionHelper) AssertJSONRPCResponse(response interface{}, expectErr
 	}
 }
 
+// AssertNoErrorWithContext validates no error with contextual operation name
+// This provides consistent error messaging across all modules
+func (ah *AssertionHelper) AssertNoErrorWithContext(err error, operation string) {
+	require.NoError(ah.t, err, "%s should succeed", operation)
+}
+
+// AssertNotNilWithContext validates non-nil with contextual operation name
+// This provides consistent nil checking across all modules
+func (ah *AssertionHelper) AssertNotNilWithContext(value interface{}, description string) {
+	require.NotNil(ah.t, value, "%s should not be nil", description)
+}
+
 // AssertDirectoryExists validates directory existence and permissions
 func (ah *AssertionHelper) AssertDirectoryExists(dirPath string, expectWritable bool) {
 	// Check directory exists

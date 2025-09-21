@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 )
 
 // TestMain sets up logging configuration for all tests
@@ -90,7 +91,7 @@ func TestWebSocketServer_StartStop_ReqAPI001_Success(t *testing.T) {
 	}
 
 	// Test server stop
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testutils.ShortTestTimeout)
 	defer cancel()
 	err := server.Stop(ctx)
 	require.NoError(t, err, "Server should stop successfully")
@@ -489,7 +490,7 @@ func TestWebSocketServer_HandleConnection_ReqAPI001_Concurrent(t *testing.T) {
 	for i := 0; i < numClients; i++ {
 		select {
 		case <-done:
-		case <-time.After(5 * time.Second):
+		case <-time.After(testutils.UniversalTimeoutVeryLong):
 			t.Fatal("Timeout waiting for concurrent message processing")
 		}
 	}
@@ -1163,7 +1164,7 @@ func TestWebSocketServer_Stop_ReqAPI001_ContextAwareShutdown(t *testing.T) {
 		assert.True(t, server.IsRunning(), "Server should be running")
 
 		// Test graceful shutdown with context
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), testutils.ShortTestTimeout)
 		defer cancel()
 
 		start := time.Now()
@@ -1259,7 +1260,7 @@ func TestWebSocketServer_Stop_ReqAPI001_ContextAwareShutdown(t *testing.T) {
 		server := helper.GetServer(t)
 
 		// Stop without starting should not error
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), testutils.ShortTestTimeout)
 		defer cancel()
 		err := server.Stop(ctx)
 		assert.NoError(t, err, "Stop without start should not error")

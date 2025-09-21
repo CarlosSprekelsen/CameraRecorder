@@ -10,16 +10,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 // Test constants for professional camera test suite
 const (
 	// Timeout constants for different test scenarios
-	DefaultTestTimeout    = 5 * time.Second
+	DefaultTestTimeout    = testutils.UniversalTimeoutVeryLong
 	ShortTestTimeout      = 2 * time.Second
 	QuickTestTimeout      = 1 * time.Second
-	MonitorStartupTimeout = 5 * time.Second
+	MonitorStartupTimeout = testutils.UniversalTimeoutVeryLong
 	EventSourceTimeout    = 2 * time.Second
 	DeviceAccessTimeout   = 3 * time.Second
 

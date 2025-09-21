@@ -35,6 +35,7 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -74,7 +75,7 @@ func waitForSystemReadiness(t *testing.T, controller mediamtx.MediaMTXController
 	readinessChan := controller.SubscribeToReadiness()
 
 	// Apply readiness timeout to prevent indefinite blocking (same as main.go)
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), testutils.DefaultTestTimeout)
 	defer cancel()
 
 	// Wait for readiness event with timeout (exact same pattern as main.go)
@@ -240,33 +241,39 @@ func TestWebSocketMethods_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
 	assert.Nil(t, response.Error, "Response should not have error")
 }
 
-// TestWebSocketMethods_StartRecording tests start_recording method
+// TestWebSocketMethods_StartRecording tests start_recording method with event-driven readiness
+// This test adapts to production behavior by waiting for readiness events instead of changing production code
 func TestWebSocketMethods_StartRecording_ReqMTX002_Success(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// CRITICAL: Wait for server to be ready for API contract validation
-	helper.WaitForServerReady(t)
-
-	response := helper.TestMethod(t, "start_recording", map[string]interface{}{
+	// ✅ EVENT-DRIVEN: Use production-compatible event-driven approach
+	response := helper.TestMethodWithEvents(t, "start_recording", map[string]interface{}{
 		"device": "camera0",
 	}, "operator")
 
-	// Validate JSON-RPC 2.0 compliance
-	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
-	assert.NotNil(t, response.ID, "Response should have ID")
+	// ✅ ENFORCE SUCCESS ONLY - Test fails if error returned
+	require.Nil(t, response.Error, "start_recording must succeed for Success test")
+	require.NotNil(t, response.Result, "Success response must have result")
 
-	// Validate API contract per docs/api/json_rpc_methods.md
-	if response.Error != nil {
-		// Validate error is API-compliant
-		validateAPICompliantError(t, response.Error)
+	// ✅ VALIDATE JSON-RPC PROTOCOL
+	assert.Equal(t, "2.0", response.JSONRPC, "Must be JSON-RPC 2.0")
+	assert.NotNil(t, response.ID, "Must have request ID")
 
-		// For recording methods, errors must be recording-specific
-		validateRecordingSpecificError(t, response.Error.Code, "start_recording")
-	} else {
-		// Success case - validate StartRecordingResponse structure
-		validateStartRecordingResponse(t, response.Result)
-	}
+	// ✅ VALIDATE API CONTRACT
+	result, ok := response.Result.(map[string]interface{})
+	require.True(t, ok, "Result must be object for start_recording")
+
+	// ✅ VALIDATE REQUIRED FIELDS
+	assert.Contains(t, result, "device", "Must have device field")
+	assert.Contains(t, result, "session_id", "Must have session_id field")
+	assert.Contains(t, result, "filename", "Must have filename field")
+	assert.Contains(t, result, "status", "Must have status field")
+
+	// ✅ VALIDATE FIELD VALUES
+	assert.Equal(t, "camera0", result["device"], "Device must match request")
+	assert.NotEmpty(t, result["session_id"], "Session ID cannot be empty")
+	assert.Contains(t, []string{"STARTED", "STARTING"}, result["status"], "Status must be valid")
 }
 
 // TestWebSocketMethods_StopRecording tests stop_recording method API contract

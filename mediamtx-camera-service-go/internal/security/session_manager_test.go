@@ -19,6 +19,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 )
 
 // TestSessionManager_SessionLifecycle tests session lifecycle management
@@ -356,7 +358,7 @@ func TestSessionManager_ContextAwareShutdown(t *testing.T) {
 		defer TeardownTestSecurityEnvironment(t, env)
 
 		// Test graceful shutdown with context
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), testutils.ShortTestTimeout)
 		defer cancel()
 
 		start := time.Now()

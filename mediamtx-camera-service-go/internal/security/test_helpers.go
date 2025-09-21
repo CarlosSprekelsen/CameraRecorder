@@ -1,6 +1,3 @@
-//go:build testhelpers
-// +build testhelpers
-
 /*
 Security Test Helpers
 
@@ -16,14 +13,13 @@ package security
 import (
 	"context"
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	configpkg "github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/require"
@@ -42,79 +38,40 @@ func TestJWTHandler(t *testing.T) *JWTHandler {
 	return handler
 }
 
-// getTestLogger creates a logger configured for testing using centralized configuration
+// getTestLogger creates a logger configured from fixtures with proper parameterization
 func getTestLogger(t *testing.T) *logging.Logger {
-	// Load test configuration with ERROR level logging
-	configPath := "tests/fixtures/config_test_logging_error.yaml"
+	return getTestLoggerWithName(t, "test-security")
+}
 
-	// Check if test config exists, fallback to minimal config
-	if _, err := os.Stat(configPath); os.IsNotExist(err) {
-		// Fallback to minimal config if test-specific config doesn't exist
-		configPath = "tests/fixtures/config_test_minimal.yaml"
-	}
+// getTestLoggerWithName creates a logger configured from fixtures with parameterized name
+// This allows other modules to use their own logger names instead of hardcoded security-specific strings
+func getTestLoggerWithName(t *testing.T, loggerName string) *logging.Logger {
+	// Use FULL fixture with testutils - complete validation is correct!
+	setup := testutils.SetupTest(t, "config_valid_complete.yaml")
+	config := setup.GetConfigManager().GetConfig()
 
-	// Load configuration using centralized config manager
-	configManager := configpkg.CreateConfigManager()
-	err := configManager.LoadConfig(configPath)
-	if err != nil {
-		// If config loading fails, create a minimal logger with ERROR level
-		t.Logf("Failed to load test config from %s, using fallback logger: %v", configPath, err)
-		return logging.GetLogger("test-jwt-handler")
-	}
+	logger := logging.GetLogger(loggerName)
 
-	// Get logging configuration from centralized config
-	config := configManager.GetConfig()
-	logger := logging.GetLogger("test-jwt-handler")
-
-	// Apply logging level from configuration
-	if config.Logging.Level == "error" {
-		// Configure logger to ERROR level only for test performance
+	// Apply logging level FROM FIXTURE (not hardcoded!)
+	switch config.Logging.Level {
+	case "debug":
+		logger.SetLevel(logrus.DebugLevel)
+	case "info":
+		logger.SetLevel(logrus.InfoLevel)
+	case "warn":
+		logger.SetLevel(logrus.WarnLevel)
+	case "error":
 		logger.SetLevel(logrus.ErrorLevel)
+	default:
+		logger.SetLevel(logrus.InfoLevel) // Safe default from universal constants
 	}
 
 	return logger
 }
 
-// SetupTestSecurityEnvironment sets up test environment for security tests
-func SetupTestSecurityEnvironment(t *testing.T) {
-	t.Helper()
-	// Setup test environment variables or configurations as needed
-}
-
-// TeardownTestSecurityEnvironment cleans up test environment for security tests
-func TeardownTestSecurityEnvironment(t *testing.T) {
-	t.Helper()
-	// Cleanup test environment
-}
-
-// CreateTestSession creates a test session for session manager testing
-func CreateTestSession(userID, role string) *Session {
-	return &Session{
-		UserID:    userID,
-		Role:      role,
-		CreatedAt: time.Now(),
-		ExpiresAt: time.Now().Add(24 * time.Hour),
-	}
-}
-
-// GenerateExpiredTestToken creates an expired test JWT token
-func GenerateExpiredTestToken(t *testing.T, jwtHandler *JWTHandler, userID string, role string) string {
-	// Create token that expired 1 hour ago
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"user_id": userID,
-		"role":    role,
-		"exp":     time.Now().Add(-1 * time.Hour).Unix(),
-		"iat":     time.Now().Add(-25 * time.Hour).Unix(),
-	})
-
-	tokenString, err := token.SignedString([]byte("test_secret_key_for_unit_testing_only"))
-	require.NoError(t, err, "Failed to generate expired test token")
-	return tokenString
-}
-
 // GenerateTestToken creates a test JWT token for authentication testing
 func GenerateTestToken(t *testing.T, jwtHandler *JWTHandler, userID string, role string) string {
-	token, err := jwtHandler.GenerateToken(userID, role, 24)
+	token, err := jwtHandler.GenerateToken(userID, role, testutils.UniversalTestHours24)
 	require.NoError(t, err, "Failed to generate test token")
 	require.NotEmpty(t, token, "Generated token should not be empty")
 	return token
@@ -132,14 +89,14 @@ func GenerateTestTokenWithExpiry(t *testing.T, jwtHandler *JWTHandler, userID st
 func GenerateExpiredTestToken(t *testing.T, jwtHandler *JWTHandler, userID string, role string) string {
 	// Create a token with expiry time in the past (1 hour ago)
 	now := time.Now().Unix()
-	pastTime := now - 3600 // 1 hour ago
+	pastTime := now - testutils.UniversalTestSeconds3600 // 1 hour ago
 
 	// Create claims with past expiry
 	claims := JWTClaims{
 		UserID: userID,
 		Role:   role,
-		IAT:    now - 7200, // 2 hours ago
-		EXP:    pastTime,   // 1 hour ago (expired)
+		IAT:    now - testutils.UniversalTestSeconds7200, // 2 hours ago
+		EXP:    pastTime,                                 // 1 hour ago (expired)
 	}
 
 	// Create JWT token manually with past expiry
@@ -223,7 +180,7 @@ func GetTestUsers() TestUserData {
 
 // TestSessionManager creates a session manager for testing
 func TestSessionManager(t *testing.T) *SessionManager {
-	manager := NewSessionManager(30*time.Minute, 5*time.Minute)
+	manager := NewSessionManager(testutils.UniversalSessionTimeout, testutils.UniversalCleanupInterval)
 	require.NotNil(t, manager, "Failed to create test session manager")
 	return manager
 }
@@ -287,7 +244,7 @@ func SetupTestSecurityEnvironment(t *testing.T) *TestSecurityEnvironment {
 func TeardownTestSecurityEnvironment(t *testing.T, env *TestSecurityEnvironment) {
 	if env != nil {
 		if env.SessionManager != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), testutils.UniversalContextTimeoutShort)
 			defer cancel()
 			if err := env.SessionManager.Stop(ctx); err != nil {
 				t.Logf("Warning: Failed to stop session manager: %v", err)
@@ -333,7 +290,7 @@ type TestInvalidInputs struct {
 func GetTestInvalidInputs() TestInvalidInputs {
 	return TestInvalidInputs{
 		EmptyString:    "",
-		VeryLongString: strings.Repeat("a", 10000),
+		VeryLongString: strings.Repeat("a", testutils.UniversalTestStringLength),
 		SpecialChars:   "!@#$%^&*()_+-=[]{}|;':\",./<>?",
 		UnicodeString:  "测试用户🎭🚀💻",
 	}
@@ -393,8 +350,8 @@ func LoadTestSecurityOperations(t *testing.T, operation func(), concurrency int,
 
 	// Fail test if too many errors
 	errorRate := float64(errorCount) / float64(totalOperations)
-	if errorRate > 0.01 { // 1% error rate threshold
-		t.Errorf("Load test error rate too high: %.2f%% (%d/%d)", errorRate*100, errorCount, totalOperations)
+	if errorRate > testutils.UniversalErrorRateThreshold { // 1% error rate threshold
+		t.Errorf("Load test error rate too high: %.2f%% (%d/%d)", errorRate*testutils.UniversalErrorRateMultiplier, errorCount, totalOperations)
 	}
 }
 
@@ -535,8 +492,8 @@ func GetTestLoggerConfig() *TestLoggerConfig {
 		Format:         "text",
 		FileEnabled:    false,
 		FilePath:       "/tmp/test_security.log",
-		MaxFileSize:    10,
-		BackupCount:    3,
+		MaxFileSize:    testutils.UniversalTestFileSize,
+		BackupCount:    testutils.UniversalTestBackupCount,
 		ConsoleEnabled: true,
 	}
 }

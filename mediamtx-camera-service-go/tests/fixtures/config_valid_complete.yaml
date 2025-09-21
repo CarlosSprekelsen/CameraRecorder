@@ -17,9 +17,10 @@ mediamtx:
   host: "127.0.0.1"
   api_port: 9997
   rtsp_port: 8554
-  config_path: "/opt/camera-service/config/mediamtx.yml"  # Required by validation but not used in business logic
-  recordings_path: "/opt/camera-service/recordings"
-  snapshots_path: "/opt/camera-service/snapshots"
+  # Use existing MediaMTX config (backed up to .bak)
+  config_path: "/home/carlossprekelsen/CameraRecorder/mediamtx-camera-service-go/internal/security/dependencies/mediamtx/mediamtx.yml"
+  recordings_path: "/tmp/recordings"
+  snapshots_path: "/tmp/snapshots"
   
   # Health monitoring (actually used)
   health_check_interval: 30
@@ -53,14 +54,14 @@ logging:
   level: "INFO"
   format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
   file_enabled: true
-  file_path: "/opt/camera-service/logs/camera-service.log"
+  file_path: "/tmp/camera-service.log"
   max_file_size: 10485760
   backup_count: 5
   console_enabled: true
 
 recording:
   enabled: false
-  format: "fmp4"
+  format: "mp4"
   quality: "high"
   segment_duration: 3600
   max_segment_size: 524288000
@@ -71,6 +72,10 @@ recording:
   default_rotation_size: 104857600
   default_max_duration: 24h
   default_retention_days: 7
+  # Architecture-compliant path management fields
+  file_name_pattern: "%path_%Y-%m-%d_%H-%M-%S"
+  use_device_subdirs: false
+  record_format: "fmp4"
 
 snapshots:
   enabled: true
@@ -120,7 +125,7 @@ security:
 storage:
   warn_percent: 80
   block_percent: 90
-  default_path: "/opt/camera-service/recordings"
+  default_path: "/tmp/recordings"
   fallback_path: "/tmp/recordings"
 
 # Retention policy (actually used)

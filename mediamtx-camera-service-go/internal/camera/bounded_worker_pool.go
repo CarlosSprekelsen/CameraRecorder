@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 )
 
 // DefaultBoundedWorkerPool implements BoundedWorkerPool interface with resource limits
@@ -49,7 +50,7 @@ func NewBoundedWorkerPool(maxWorkers int, taskTimeout time.Duration, logger *log
 		maxWorkers = 10 // Default
 	}
 	if taskTimeout <= 0 {
-		taskTimeout = 5 * time.Second // Default
+		taskTimeout = testutils.UniversalTimeoutVeryLong // Default
 	}
 	if logger == nil {
 		logger = logging.GetLogger("worker-pool")

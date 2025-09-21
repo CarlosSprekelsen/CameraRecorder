@@ -476,7 +476,7 @@ func NewWebSocketServer(
 	}
 
 	if logger == nil {
-		logger = logging.GetLogger("websocket-server")
+		logger = logging.GetLogger("websocket.server") // Component-specific logger naming
 	}
 
 	if jwtHandler == nil {

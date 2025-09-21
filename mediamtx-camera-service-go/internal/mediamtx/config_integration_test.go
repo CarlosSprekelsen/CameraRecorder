@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -146,7 +147,7 @@ func TestController_UpdateConfig_InvalidConfig_ReqMTX004(t *testing.T) {
 	// Test updating with invalid configuration (empty base URL)
 	invalidConfig := &config.MediaMTXConfig{
 		BaseURL:             "", // Invalid empty URL
-		Timeout:             5 * time.Second,
+		Timeout:             testutils.UniversalTimeoutVeryLong,
 		HealthCheckInterval: 5,
 	}
 	err = controller.UpdateConfig(ctx, invalidConfig)
@@ -164,7 +165,7 @@ func TestController_UpdateConfig_InvalidConfig_ReqMTX004(t *testing.T) {
 	// Test updating with invalid configuration (zero health check interval)
 	invalidConfig3 := &config.MediaMTXConfig{
 		BaseURL:             "http://localhost:9997",
-		Timeout:             5 * time.Second,
+		Timeout:             testutils.UniversalTimeoutVeryLong,
 		HealthCheckInterval: 0, // Invalid zero interval
 	}
 	err = controller.UpdateConfig(ctx, invalidConfig3)
@@ -207,7 +208,7 @@ func TestController_UpdateConfig_NotRunning_ReqMTX004(t *testing.T) {
 	// Create a valid configuration
 	config := &config.MediaMTXConfig{
 		BaseURL:             "http://localhost:9997",
-		Timeout:             5 * time.Second,
+		Timeout:             testutils.UniversalTimeoutVeryLong,
 		HealthCheckInterval: 5,
 	}
 

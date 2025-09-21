@@ -156,7 +156,7 @@ func (wp *WorkerPool) worker() {
 ### Context Usage
 ```go
 func (m *CameraMonitor) MonitorCameras(ctx context.Context) error {
-    ticker := time.NewTicker(5 * time.Second)
+    ticker := time.NewTicker(testutils.UniversalTimeoutVeryLong)
     defer ticker.Stop()
     
     for {

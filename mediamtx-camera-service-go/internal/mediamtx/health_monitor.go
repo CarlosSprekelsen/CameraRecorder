@@ -86,7 +86,7 @@ func NewHealthMonitor(client MediaMTXClient, config *config.MediaMTXConfig, conf
 		isHealthy:         1, // Assume healthy initially (1 = true)
 		failureCount:      0,
 		lastCheckTime:     time.Now().UnixNano(),
-		debounceDuration:  15 * time.Second,        // 15s debounce for health notifications
+		debounceDuration:  5 * time.Second,         // 15s debounce for health notifications
 		healthEventChan:   make(chan struct{}, 10), // Buffered channel for health events
 	}
 }

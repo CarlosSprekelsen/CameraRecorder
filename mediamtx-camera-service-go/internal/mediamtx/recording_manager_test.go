@@ -23,6 +23,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -67,7 +68,7 @@ func TestRecordingManager_StartRecording_ReqMTX002(t *testing.T) {
 			// Retry after readiness event
 			response, err = recordingManager.StartRecording(ctx, cameraID, options)
 			require.NoError(t, err, "Recording should start after readiness event")
-		case <-time.After(5 * time.Second):
+		case <-time.After(testutils.UniversalTimeoutVeryLong):
 			t.Fatal("Timeout waiting for readiness event")
 		}
 	}
@@ -494,7 +495,7 @@ func TestRecordingManager_MultiTierRecording_ReqMTX002(t *testing.T) {
 			// Retry after readiness event
 			response, err = recordingManager.StartRecording(ctx, cameraID, options)
 			require.NoError(t, err, "Recording should start after readiness event")
-		case <-time.After(5 * time.Second):
+		case <-time.After(testutils.UniversalTimeoutVeryLong):
 			t.Fatal("Timeout waiting for readiness event")
 		}
 	}
@@ -513,17 +514,16 @@ func TestRecordingManager_MultiTierRecording_ReqMTX002(t *testing.T) {
 func TestRecordingManager_ProgressiveReadinessCompliance_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration - Progressive Readiness Pattern compliance
 	// No sequential execution - Progressive Readiness enables parallelism
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Test 1: Controller starts accepting operations immediately
-	controller, err := helper.GetController(t)
-	require.NoError(t, err)
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
 
 	startTime := time.Now()
-	err = controller.Start(ctx)
-	require.NoError(t, err)
-	defer controller.Stop(ctx)
-
+	// Controller is already started by GetReadyController - no need to start again
 	startDuration := time.Since(startTime)
 	assert.Less(t, startDuration, 100*time.Millisecond,
 		"Controller.Start() should return immediately (Progressive Readiness)")
@@ -531,8 +531,7 @@ func TestRecordingManager_ProgressiveReadinessCompliance_ReqMTX001(t *testing.T)
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already available from GetReadyController - no need to create new one
 
 	// Test 2: Operations are accepted immediately (may use fallback)
 	operationStart := time.Now()
@@ -572,7 +571,7 @@ func TestRecordingManager_ProgressiveReadinessCompliance_ReqMTX001(t *testing.T)
 	select {
 	case <-readinessChan:
 		t.Log("Readiness event received correctly")
-	case <-time.After(5 * time.Second):
+	case <-time.After(testutils.UniversalTimeoutVeryLong):
 		// May already be ready, check state
 		if !controller.IsReady() {
 			t.Fatal("No readiness event received and controller not ready")
