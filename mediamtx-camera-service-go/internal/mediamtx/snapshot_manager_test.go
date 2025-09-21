@@ -169,10 +169,8 @@ func TestSnapshotManager_GetSnapshotsList_ReqMTX002_Success(t *testing.T) {
 // TestSnapshotManager_GetSnapshotInfo_ReqMTX002 tests snapshot info retrieval with real server
 func TestSnapshotManager_GetSnapshotInfo_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// MINIMAL: Helper provides integrated components
 	snapshotManager := helper.GetSnapshotManager()
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()

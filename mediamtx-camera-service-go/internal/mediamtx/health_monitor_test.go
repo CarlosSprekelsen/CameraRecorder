@@ -26,10 +26,8 @@ import (
 // TestNewHealthMonitor_ReqMTX004 tests health monitor creation
 func TestNewHealthMonitor_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := SetupMediaMTXTestHelperOnly(t)
 
-	// Server is ready via shared test helper
 
 	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
@@ -54,7 +52,6 @@ func TestHealthMonitor_StartStop_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Server is ready via shared test helper
 
 	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
@@ -89,7 +86,6 @@ func TestHealthMonitor_GetStatus_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Server is ready via shared test helper
 
 	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
@@ -130,7 +126,6 @@ func TestHealthMonitor_GetMetrics_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Server is ready via shared test helper
 
 	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
@@ -172,7 +167,6 @@ func TestHealthMonitor_RecordSuccess_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper := SetupMediaMTXTestHelperOnly(t)
 
-	// Server is ready via shared test helper
 
 	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
@@ -207,7 +201,6 @@ func TestHealthMonitor_RecordFailure_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper := SetupMediaMTXTestHelperOnly(t)
 
-	// Server is ready via shared test helper
 
 	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
@@ -249,7 +242,6 @@ func TestHealthMonitor_Configuration_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper := SetupMediaMTXTestHelperOnly(t)
 
-	// Server is ready via shared test helper
 
 	// Test different configurations
 	configs := []*config.MediaMTXConfig{
@@ -466,7 +458,6 @@ func TestHealthMonitor_StatusTransitions_ReqMTX004(t *testing.T) {
 // TestHealthMonitor_GetHealthAPI_ReqMTX004 tests new API-ready health method
 func TestHealthMonitor_GetHealthAPI_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring - API-ready health responses
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create health monitor using existing test infrastructure
@@ -524,7 +515,6 @@ func TestHealthMonitor_GetHealthAPI_ReqMTX004(t *testing.T) {
 // TestHealthMonitor_GetHealthAPI_APICompliance_ReqAPI001 tests API compliance for GetHealthAPI
 func TestHealthMonitor_GetHealthAPI_APICompliance_ReqAPI001(t *testing.T) {
 	// REQ-API-001: JSON-RPC API compliance for health endpoints
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create health monitor using existing test infrastructure
@@ -569,7 +559,6 @@ func TestHealthMonitor_GetHealthAPI_APICompliance_ReqAPI001(t *testing.T) {
 // TestHealthMonitor_GetHealthAPI_ErrorScenarios_ReqMTX004 tests error handling for GetHealthAPI
 func TestHealthMonitor_GetHealthAPI_ErrorScenarios_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring - error handling
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Create health monitor using existing test infrastructure

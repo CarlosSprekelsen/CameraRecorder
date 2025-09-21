@@ -27,10 +27,8 @@ import (
 // TestAPIErrorHandling_400Scenarios tests 400 error scenarios with invalid configurations
 func TestAPIErrorHandling_400Scenarios(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Context already provided by SetupMediaMTXTest
 	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
 
@@ -125,10 +123,8 @@ func TestAPIErrorHandling_400Scenarios(t *testing.T) {
 func TestPathStateTransitions_Recording(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// REQ-MTX-003: Path creation and deletion
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Context already provided by SetupMediaMTXTest
 	pathManager := helper.GetPathManager()
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, pathManager)
@@ -251,14 +247,12 @@ func TestPathStateTransitions_Recording(t *testing.T) {
 func TestConcurrentRecordingOperations(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// REQ-MTX-007: Error handling and recovery
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
 
 	// USE EXACT SAME PATTERN as working TestController_StartRecording_ReqMTX002
 	controller, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
 
-	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -441,10 +435,8 @@ func TestConcurrentRecordingOperations(t *testing.T) {
 func TestMediaMTXRecovery_Restart(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
 	// REQ-MTX-004: Health monitoring
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Context already provided by SetupMediaMTXTest
 	pathManager := helper.GetPathManager()
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, pathManager)

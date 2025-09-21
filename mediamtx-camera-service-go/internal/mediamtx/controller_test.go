@@ -454,7 +454,6 @@ func TestController_StartRecording_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// MINIMAL: Helper provides ready controller
 	controllerInterface, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
 	defer controllerInterface.Stop(ctx)
@@ -682,7 +681,6 @@ func TestController_CreateStream_ReqMTX002_StreamManagement(t *testing.T) {
 // TestController_AdvancedRecording_ReqMTX002 tests advanced recording functionality
 func TestController_StartRecording_ReqMTX002_Advanced(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities (advanced recording)
-	// MINIMAL: Helper provides ready controller
 	helper, ctx := SetupMediaMTXTest(t)
 
 	controllerInterface, ctx, cancel := helper.GetReadyController(t)
@@ -781,7 +779,6 @@ func TestController_StartRecording_ReqMTX002_Stream(t *testing.T) {
 // TestController_HealthMonitoring_ReqMTX004 tests health monitoring functionality
 func TestController_GetHealth_ReqMTX004_Monitoring(t *testing.T) {
 	// REQ-MTX-004: Health monitoring capabilities
-	// MINIMAL: Helper provides ready controller
 	helper, ctx := SetupMediaMTXTest(t)
 
 	controllerInterface, ctx, cancel := helper.GetReadyController(t)
@@ -819,7 +816,6 @@ func TestController_GetHealth_ReqMTX004_Monitoring(t *testing.T) {
 // TestController_PathManagement_ReqMTX003 tests path management functionality
 func TestController_GetPaths_ReqMTX003_Management(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
-	// MINIMAL: Helper provides ready controller
 	helper, ctx := SetupMediaMTXTest(t)
 
 	controllerInterface, ctx, cancel := helper.GetReadyController(t)
@@ -869,7 +865,6 @@ func TestController_GetPaths_ReqMTX003_Management(t *testing.T) {
 // TestController_RTSPOperations_ReqMTX004 tests RTSP operations functionality
 func TestController_GetStream_ReqMTX004_RTSPOperations(t *testing.T) {
 	// REQ-MTX-004: RTSP connection management
-	// MINIMAL: Helper provides ready controller
 	helper, ctx := SetupMediaMTXTest(t)
 
 	controllerInterface, ctx, cancel := helper.GetReadyController(t)

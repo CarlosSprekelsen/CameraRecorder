@@ -28,7 +28,6 @@ import (
 // TestJSONParsingErrors_DangerousBugs tests JSON parsing functions with malformed data
 // that can catch dangerous bugs in JSON parsing
 func TestJSONParsingErrors_DangerousBugs(t *testing.T) {
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	_, _ = SetupMediaMTXTest(t)
 
 	// Use the scenario registry directly for comprehensive testing
@@ -82,7 +81,6 @@ func TestJSONParsingErrors_DangerousBugs(t *testing.T) {
 // TestJSONParsingPanicProtection_DangerousBugs tests that JSON parsing functions
 // don't panic with malformed data that could cause crashes
 func TestJSONParsingPanicProtection_DangerousBugs(t *testing.T) {
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	_, _ = SetupMediaMTXTest(t)
 
 	// Test panic protection with edge cases

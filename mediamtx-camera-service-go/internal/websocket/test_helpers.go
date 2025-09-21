@@ -323,31 +323,13 @@ func (h *WebSocketTestHelper) createStandardJWTHandler() (*security.JWTHandler, 
 	return security.NewJWTHandler(ENTERPRISE_TEST_JWT_SECRET, h.logger)
 }
 
-// createStandardTestConfig creates standardized test configuration
-// All WebSocket tests use identical configuration for consistency
+// DEPRECATED: createStandardTestConfig - Use mediamtx.CreateConfigManagerWithFixture directly
+// TODO: Migrate all WebSocket tests to use unified MediaMTX config infrastructure
+// This function will be removed once all tests are migrated to the unified approach
 func createStandardTestConfig(t *testing.T) *config.ConfigManager {
-	// Create test data directory and required files before loading fixture
-	testDataDir := "/tmp/websocket_test_data"
-	err := os.MkdirAll(testDataDir, 0755)
-	require.NoError(t, err, "Failed to create test data directory")
-
-	// Create required directories and files for configuration validation
-	recordingsDir := filepath.Join(testDataDir, "recordings")
-	snapshotsDir := filepath.Join(testDataDir, "snapshots")
-	mediamtxConfigFile := filepath.Join(testDataDir, "mediamtx.yml")
-
-	err = os.MkdirAll(recordingsDir, 0755)
-	require.NoError(t, err, "Failed to create recordings directory")
-
-	err = os.MkdirAll(snapshotsDir, 0755)
-	require.NoError(t, err, "Failed to create snapshots directory")
-
-	// Create minimal MediaMTX config file
-	err = os.WriteFile(mediamtxConfigFile, []byte("# Test MediaMTX configuration\n"), 0644)
-	require.NoError(t, err, "Failed to create MediaMTX config file")
-
-	// Use existing fixture following MediaMTX pattern
-	return mediamtx.CreateConfigManagerWithFixture(t, "config_websocket_test.yaml")
+	// MIGRATION: Use proven MediaMTX config pattern (same as MediaMTX tests use)
+	// This eliminates WebSocket-specific directory creation in favor of unified approach
+	return mediamtx.CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
 }
 
 // REMOVED: NewTestWebSocketServer - use helper.GetServer() for standardized pattern

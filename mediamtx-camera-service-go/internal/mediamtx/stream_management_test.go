@@ -33,7 +33,6 @@ func TestController_GetStreams_Management_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -63,7 +62,6 @@ func TestController_GetStream_Management_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -112,7 +110,6 @@ func TestController_CreateStream_Management_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -156,7 +153,6 @@ func TestController_DeleteStream_Management_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -203,7 +199,6 @@ func TestController_StreamManagement_ErrorHandling_ReqMTX004(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -242,7 +237,6 @@ func TestController_StreamManagement_NotRunning_ReqMTX004(t *testing.T) {
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 
 	// Test getting streams when controller is not running
@@ -273,7 +267,6 @@ func TestController_StreamManagement_Concurrent_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")

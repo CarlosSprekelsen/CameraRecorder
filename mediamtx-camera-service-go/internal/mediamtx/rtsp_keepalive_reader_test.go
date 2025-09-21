@@ -45,7 +45,6 @@ func TestRTSPKeepaliveReader_StartKeepalive(t *testing.T) {
 	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
 
 	// Test starting keepalive for a path
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 	pathName := "test_camera"
 
@@ -80,7 +79,6 @@ func TestRTSPKeepaliveReader_StopKeepalive(t *testing.T) {
 	assert.NoError(t, err, "Stopping non-existent keepalive should not fail")
 
 	// Test stopping an active keepalive
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 	pathName := "test_camera"
 
@@ -111,7 +109,6 @@ func TestRTSPKeepaliveReader_StopAll(t *testing.T) {
 	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
 
 	// Start multiple keepalives
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 	reader.StartKeepalive(ctx, "camera1")
 	reader.StartKeepalive(ctx, "camera2")
@@ -148,7 +145,6 @@ func TestRTSPKeepaliveReader_IsActive(t *testing.T) {
 	assert.False(t, reader.IsActive("inactive_path"), "Inactive path should return false")
 
 	// Start keepalive
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 	pathName := "active_path"
 	reader.StartKeepalive(ctx, pathName)
@@ -181,7 +177,6 @@ func TestRTSPKeepaliveReader_GetActiveCount(t *testing.T) {
 	assert.Equal(t, 0, reader.GetActiveCount(), "Initial count should be 0")
 
 	// Start keepalives
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 	reader.StartKeepalive(ctx, "camera1")
 	assert.Equal(t, 1, reader.GetActiveCount(), "Count should be 1 after starting one")
@@ -247,7 +242,6 @@ func TestRTSPKeepaliveReader_ConcurrentOperations(t *testing.T) {
 	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
 
 	// Test concurrent start/stop operations
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 	pathName := "concurrent_test"
 

@@ -61,7 +61,6 @@ func TestPathValidatorCaching(t *testing.T) {
 		validationPeriod: TestValidationPeriodShort, // Very short for testing
 	}
 
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 
 	// First validation
@@ -103,7 +102,6 @@ func TestPathValidatorCaching(t *testing.T) {
 }
 
 func TestPathValidatorErrorHandling(t *testing.T) {
-	// MINIMAL: Helper provides standard setup
 	_, ctx := SetupMediaMTXTest(t)
 
 	// Create test config with non-existent paths
@@ -122,7 +120,6 @@ func TestPathValidatorErrorHandling(t *testing.T) {
 	// Create path validator
 	validator := NewPathValidator(cfg, logger)
 
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 
 	// Test recording path validation (should fail)

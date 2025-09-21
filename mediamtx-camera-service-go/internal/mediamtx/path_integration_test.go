@@ -32,10 +32,8 @@ import (
 // TestPathManager_RealServer_ReqMTX001 tests path manager with real MediaMTX server
 func TestPathManager_RealServer_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Server is ready via shared test helper
 
 	// Create REAL config manager (not mock!)
 	configManager := config.CreateConfigManager()
@@ -47,7 +45,6 @@ func TestPathManager_RealServer_ReqMTX001(t *testing.T) {
 	require.NotNil(t, pathManager, "Path manager should be created")
 
 	// Test basic path manager functionality
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 
 	// Test path listing (basic functionality)
@@ -63,10 +60,8 @@ func TestPathManager_RealServer_ReqMTX001(t *testing.T) {
 // TestPathManager_StreamManagement_ReqMTX002 tests stream management capabilities
 func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Server is ready via shared test helper
 
 	// Create REAL config manager
 	configManager := config.CreateConfigManager()
@@ -77,7 +72,6 @@ func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager, "Path manager should be created")
 
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 
 	// Test path creation with real MediaMTX server
@@ -109,10 +103,8 @@ func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 // TestPathManager_ConfigIntegration_ReqMTX003 tests real config integration
 func TestPathManager_ConfigIntegration_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Server is ready via shared test helper
 
 	// Create REAL config manager
 	configManager := config.CreateConfigManager()
@@ -134,7 +126,6 @@ func TestPathManager_ConfigIntegration_ReqMTX003(t *testing.T) {
 	// Test path manager with real config
 	// Note: PathManager doesn't have GetHealth method - that's for Controller
 	// Test basic functionality instead
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 	paths, err := pathManager.ListPaths(ctx)
 	require.NoError(t, err, "ListPaths should succeed")
@@ -146,10 +137,8 @@ func TestPathManager_ConfigIntegration_ReqMTX003(t *testing.T) {
 // TestPathManager_HealthMonitoring_ReqMTX004 tests real health monitoring
 func TestPathManager_HealthMonitoring_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Server is ready via shared test helper
 
 	// Create REAL config manager
 	configManager := config.CreateConfigManager()
@@ -161,7 +150,6 @@ func TestPathManager_HealthMonitoring_ReqMTX004(t *testing.T) {
 	require.NotNil(t, pathManager, "Path manager should be created")
 
 	// Test path operations instead of health (PathManager doesn't have GetHealth)
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 
 	// Test path listing
@@ -194,10 +182,8 @@ func TestPathManager_HealthMonitoring_ReqMTX004(t *testing.T) {
 // TestPathManager_RealMediaMTXServer tests integration with real MediaMTX server
 func TestPathManager_RealMediaMTXServer(t *testing.T) {
 	// Test real MediaMTX server integration
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Server is ready via shared test helper
 
 	// Create REAL config manager
 	configManager := config.CreateConfigManager()
@@ -209,7 +195,6 @@ func TestPathManager_RealMediaMTXServer(t *testing.T) {
 	require.NotNil(t, pathManager, "Path manager should be created")
 
 	// Test that we can interact with the real MediaMTX server
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 	paths, err := pathManager.ListPaths(ctx)
 	require.NoError(t, err, "ListPaths should succeed with real MediaMTX server")

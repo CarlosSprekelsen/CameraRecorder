@@ -25,7 +25,6 @@ func TestRecordingManager_ResourceLifecycle(t *testing.T) {
 	// REQ-RESOURCE-001: Resource lifecycle management
 
 	// Use existing test helper pattern
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
 
 	rm := helper.GetRecordingManager()
@@ -34,7 +33,6 @@ func TestRecordingManager_ResourceLifecycle(t *testing.T) {
 	assert.False(t, rm.IsRunning())
 
 	// Test start
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 	err := rm.Start(ctx)
 	require.NoError(t, err)
@@ -57,11 +55,9 @@ func TestRecordingManager_ResourceLifecycle(t *testing.T) {
 func TestRecordingManager_ResourceCleanup(t *testing.T) {
 	// REQ-RESOURCE-001: Resource cleanup with active recordings
 
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
 
 	rm := helper.GetRecordingManager()
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 
 	err := rm.Start(ctx)
@@ -92,11 +88,9 @@ func TestRecordingManager_ResourceCleanup(t *testing.T) {
 func TestRecordingManager_StatsTracking(t *testing.T) {
 	// REQ-RESOURCE-001: Resource statistics tracking
 
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
 
 	rm := helper.GetRecordingManager()
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 
 	err := rm.Start(ctx)
@@ -118,11 +112,9 @@ func TestRecordingManager_StatsTracking(t *testing.T) {
 func TestRecordingManager_KeepaliveIntegration(t *testing.T) {
 	// REQ-MTX-002: RTSP keepalive integration
 
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
 
 	rm := helper.GetRecordingManager()
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 
 	err := rm.Start(ctx)
@@ -141,11 +133,9 @@ func TestRecordingManager_KeepaliveIntegration(t *testing.T) {
 func TestRecordingManager_TimerIntegration(t *testing.T) {
 	// REQ-RESOURCE-001: Timer management integration
 
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
 
 	rm := helper.GetRecordingManager()
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 
 	err := rm.Start(ctx)
@@ -171,11 +161,9 @@ func TestRecordingManager_TimerIntegration(t *testing.T) {
 func TestRecordingManager_GracefulShutdown(t *testing.T) {
 	// REQ-RESOURCE-001: Graceful shutdown with active resources
 
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
 
 	rm := helper.GetRecordingManager()
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 
 	err := rm.Start(ctx)

@@ -27,9 +27,8 @@ import (
 // TestNewFFmpegManager_ReqMTX001 tests FFmpeg manager creation with real server
 func TestNewFFmpegManager_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
-	// Server is ready via shared test helper
 
 	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
@@ -45,7 +44,6 @@ func TestFFmpegManager_SnapshotOnly_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities (snapshots only)
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Server is ready via shared test helper
 
 	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
@@ -55,7 +53,6 @@ func TestFFmpegManager_SnapshotOnly_ReqMTX002(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 
 	// Create temporary output directory
@@ -82,10 +79,8 @@ func TestFFmpegManager_SnapshotOnly_ReqMTX002(t *testing.T) {
 // TestFFmpegManager_StartProcess_ReqMTX002 tests FFmpeg process start with real server
 func TestFFmpegManager_StartProcess_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Server is ready via shared test helper
 
 	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
@@ -95,7 +90,6 @@ func TestFFmpegManager_StartProcess_ReqMTX002(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 
 	// Create temporary output directory
@@ -125,7 +119,6 @@ func TestFFmpegManager_StopProcess_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Server is ready via shared test helper
 
 	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
@@ -135,7 +128,6 @@ func TestFFmpegManager_StopProcess_ReqMTX002(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 
 	// Create temporary output directory
@@ -177,7 +169,6 @@ func TestFFmpegManager_IsProcessRunning_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Server is ready via shared test helper
 
 	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
@@ -187,7 +178,6 @@ func TestFFmpegManager_IsProcessRunning_ReqMTX002(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 
 	// Create temporary output directory
@@ -231,9 +221,8 @@ func TestFFmpegManager_IsProcessRunning_ReqMTX002(t *testing.T) {
 // TestFFmpegManager_BuildCommand_ReqMTX002 tests command building with real server
 func TestFFmpegManager_BuildCommand_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper, _ := SetupMediaMTXTest(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
-	// Server is ready via shared test helper
 
 	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
@@ -261,7 +250,6 @@ func TestFFmpegManager_ErrorHandling_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Server is ready via shared test helper
 
 	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
@@ -271,7 +259,6 @@ func TestFFmpegManager_ErrorHandling_ReqMTX007(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 
 	// Create temporary output directory
@@ -302,7 +289,6 @@ func TestFFmpegManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Server is ready via shared test helper
 
 	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
@@ -312,7 +298,6 @@ func TestFFmpegManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 
 	// Create temporary output directory
@@ -362,7 +347,6 @@ func TestFFmpegManager_PerformanceMetrics_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Server is ready via shared test helper
 
 	config := &config.MediaMTXConfig{
 		BaseURL: "http://localhost:9997",
@@ -372,7 +356,6 @@ func TestFFmpegManager_PerformanceMetrics_ReqMTX002(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	// MINIMAL: Helper provides standard context
 	// Context already provided by SetupMediaMTXTest
 
 	// Create temporary output directory

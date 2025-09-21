@@ -34,7 +34,6 @@ func TestController_GetConfig_ReqMTX003(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
@@ -72,7 +71,6 @@ func TestController_UpdateConfig_ReqMTX003(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
@@ -128,7 +126,6 @@ func TestController_UpdateConfig_InvalidConfig_ReqMTX004(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
@@ -185,7 +182,6 @@ func TestController_GetConfig_NotRunning_ReqMTX004(t *testing.T) {
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -205,7 +201,6 @@ func TestController_UpdateConfig_NotRunning_ReqMTX004(t *testing.T) {
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 

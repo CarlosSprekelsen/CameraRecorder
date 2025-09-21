@@ -336,7 +336,6 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		discovery := NewExternalStreamDiscovery(configIntegration, logger)
 
 		// Start discovery
-		// MINIMAL: Helper provides standard context
 		ctx, cancel := helper.GetStandardContext()
 		defer cancel()
 		err := discovery.Start(ctx)
@@ -365,7 +364,6 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		discovery := NewExternalStreamDiscovery(configIntegration, logger)
 
 		// Start discovery
-		// MINIMAL: Helper provides standard context
 		ctx, cancel := helper.GetStandardContext()
 		defer cancel()
 		err := discovery.Start(ctx)
@@ -395,7 +393,6 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		discovery := NewExternalStreamDiscovery(configIntegration, logger)
 
 		// Start discovery
-		// MINIMAL: Helper provides standard context
 		ctx, cancel := helper.GetStandardContext()
 		defer cancel()
 		err := discovery.Start(ctx)
@@ -434,7 +431,6 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		discovery := NewExternalStreamDiscovery(configIntegration, logger)
 
 		// Start discovery
-		// MINIMAL: Helper provides standard context
 		ctx, cancel := helper.GetStandardContext()
 		defer cancel()
 		err := discovery.Start(ctx)

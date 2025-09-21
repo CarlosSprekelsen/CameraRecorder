@@ -23,7 +23,6 @@ import (
 // TestNewClient_ReqMTX001 tests client creation with real server
 func TestClient_New_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, _ := SetupMediaMTXTest(t)
 
 	// Use MediaMTX config from fixture via ConfigIntegration
@@ -258,7 +257,6 @@ func TestClient_ParseHealthResponse_ReqMTX001_Success(t *testing.T) {
 // TestClient_ConcurrentAccess_ReqMTX001 tests concurrent access with real server
 func TestClient_Get_ReqMTX001_Concurrent(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper, _ := SetupMediaMTXTest(t)
 
 	client := helper.GetClient()
