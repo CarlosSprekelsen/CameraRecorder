@@ -125,19 +125,7 @@ type MediaMTXTestHelper struct {
 	cameraMonitorOnce    sync.Once
 }
 
-// EnsureSequentialExecution ensures tests run sequentially to avoid MediaMTX server conflicts
-// Call this at the beginning of each test that uses MediaMTX server
-// DEPRECATED: EnsureSequentialExecution - VIOLATES PROGRESSIVE READINESS PATTERN
-// DO NOT USE: This forces sequential execution and breaks parallelism
-// PREFERRED: Remove this call entirely - Progressive Readiness enables parallel tests
-// TODO: Remove all calls to this function
-func EnsureSequentialExecution(t *testing.T) {
-	// DEPRECATED: This violates Progressive Readiness principles
-	testMutex.Lock()
-	t.Cleanup(func() {
-		testMutex.Unlock()
-	})
-}
+// REMOVED: EnsureSequentialExecution - violated Progressive Readiness Pattern
 
 // NewMediaMTXTestHelper creates a new test helper for MediaMTX server testing
 //
@@ -153,8 +141,7 @@ func EnsureSequentialExecution(t *testing.T) {
 //     recordingManager := helper.GetRecordingManager()
 //
 //  3. NO SEQUENTIAL EXECUTION (enables parallelism):
-//     // Remove: EnsureSequentialExecution(t)
-//     // Use: Progressive Readiness pattern instead
+//     // Use: Progressive Readiness pattern for parallel tests
 //
 //  4. NO MANUAL CONTEXT CREATION:
 //     // Remove: ctx, cancel := context.WithTimeout(context.Background(), time.X)

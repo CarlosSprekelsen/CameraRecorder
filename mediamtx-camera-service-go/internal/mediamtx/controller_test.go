@@ -27,18 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// DEPRECATED: getFreshController - Use helper.GetReadyController() instead
-// This helper is redundant with the standardized MediaMTXTestHelper pattern
-// TODO: Migrate all uses to helper.GetReadyController() pattern
-func getFreshController(t *testing.T, testName string) *controller {
-	// DEPRECATED: This creates unnecessary duplication
-	helper := NewMediaMTXTestHelper(t, nil)
-	controllerInterface, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
-
-	controller := controllerInterface.(*controller)
-	return controller
-}
+// REMOVED: getFreshController - Use helper.GetReadyController() instead for standardized pattern
 
 // TestControllerWithConfigManager_ReqMTX001 tests controller creation with real server
 // EXAMPLE: PERFECT STANDARDIZED PATTERN - USE THIS AS TEMPLATE FOR NEW TESTS

@@ -23,59 +23,17 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-// createTestMediaMTXConfig creates a test MediaMTX configuration
-func createTestMediaMTXConfig() *config.MediaMTXConfig {
-	return &config.MediaMTXConfig{
-		BaseURL: "http://localhost:9997",
-		Timeout: 10 * time.Second, // Add HTTP client timeout to prevent hanging
-		RTSPMonitoring: config.RTSPMonitoringConfig{
-			Enabled:             true,
-			CheckInterval:       30,
-			ConnectionTimeout:   10,
-			MaxConnections:      50,
-			SessionTimeout:      300,
-			BandwidthThreshold:  1000000,
-			PacketLossThreshold: 0.05,
-			JitterThreshold:     50.0,
-		},
-	}
-}
+// REMOVED: createTestMediaMTXConfig - use helper.GetConfigManager() for standardized pattern
 
-// assertRTSPHealthStatus validates RTSP health status structure
-func assertRTSPHealthStatus(t *testing.T, health *HealthStatus, expectedStatus string) {
-	require.NotNil(t, health, "Health status should not be nil")
-	assert.NotEmpty(t, health.Status, "Health status should not be empty")
-	assert.NotZero(t, health.Timestamp, "Health timestamp should not be zero")
+// REMOVED: assertRTSPHealthStatus - use standard testify assertions directly
 
-	if expectedStatus != "" {
-		assert.Equal(t, expectedStatus, health.Status, "Health status should match expected")
-	}
-}
+// REMOVED: assertRTSPMetrics - use standard testify assertions directly
 
-// assertRTSPMetrics validates RTSP metrics structure
-func assertRTSPMetrics(t *testing.T, metrics map[string]interface{}) {
-	require.NotNil(t, metrics, "Metrics should not be nil")
-	assert.Contains(t, metrics, "is_healthy", "Metrics should contain is_healthy")
-	assert.Contains(t, metrics, "monitoring_enabled", "Metrics should contain monitoring_enabled")
-	assert.Contains(t, metrics, "last_check", "Metrics should contain last_check")
-}
-
-// logTestProgress logs test progress with structured logging
-func logTestProgress(t *testing.T, logger *logging.Logger, message string, fields map[string]interface{}) {
-	if fields == nil {
-		fields = make(map[string]interface{})
-	}
-	fields["test"] = t.Name()
-	fields["timestamp"] = time.Now().Format(time.RFC3339)
-
-	logger.WithFields(fields).Info(message)
-	t.Logf("%s", message)
-}
+// REMOVED: logTestProgress - use t.Log() or helper.GetLogger() directly
 
 // TestNewRTSPConnectionManager_ReqMTX001 tests RTSP connection manager creation
 func TestNewRTSPConnectionManager_ReqMTX001(t *testing.T) {
@@ -152,11 +110,15 @@ func TestRTSPConnectionManager_ListSessions_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Create RTSP connection manager
-	config := createTestMediaMTXConfig()
-	logger := logging.CreateTestLogger(t, nil)
-	// Use test fixture logging level instead of hardcoded logrus
+	// Use standardized config from helper
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	require.NoError(t, err, "Should get MediaMTX config from integration")
+	// Use standardized logger from helper
+	logger := helper.GetLogger()
 
-	rtspManager := NewRTSPConnectionManager(helper.GetClient(), config, logger)
+	rtspManager := NewRTSPConnectionManager(helper.GetClient(), mediaMTXConfig, logger)
 	require.NotNil(t, rtspManager)
 
 	// MINIMAL: Helper provides standard context
@@ -189,7 +151,8 @@ func TestRTSPConnectionManager_GetConnectionHealth_ReqMTX004(t *testing.T) {
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 
 	// Create RTSP connection manager
-	logger := logging.CreateTestLogger(t, nil)
+	// Use standardized logger from helper
+	logger := helper.GetLogger()
 	// Use test fixture logging level instead of hardcoded logrus
 
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), mediaMTXConfig, logger)
@@ -216,11 +179,15 @@ func TestRTSPConnectionManager_GetConnectionMetrics_ReqMTX004(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Create RTSP connection manager
-	config := createTestMediaMTXConfig()
-	logger := logging.CreateTestLogger(t, nil)
-	// Use test fixture logging level instead of hardcoded logrus
+	// Use standardized config from helper
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	require.NoError(t, err, "Should get MediaMTX config from integration")
+	// Use standardized logger from helper
+	logger := helper.GetLogger()
 
-	rtspManager := NewRTSPConnectionManager(helper.GetClient(), config, logger)
+	rtspManager := NewRTSPConnectionManager(helper.GetClient(), mediaMTXConfig, logger)
 	require.NotNil(t, rtspManager)
 
 	// MINIMAL: Helper provides standard context
@@ -267,7 +234,8 @@ func TestRTSPConnectionManager_Configuration_ReqMTX003(t *testing.T) {
 	mediaMTXConfig.RTSPMonitoring.MaxConnections = 25
 	mediaMTXConfig.RTSPMonitoring.BandwidthThreshold = 2000000
 
-	logger := logging.CreateTestLogger(t, nil)
+	// Use standardized logger from helper
+	logger := helper.GetLogger()
 	// Use test fixture logging level instead of hardcoded logrus
 
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), mediaMTXConfig, logger)
@@ -300,11 +268,15 @@ func TestRTSPConnectionManager_ErrorHandling_ReqMTX004(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Create RTSP connection manager
-	config := createTestMediaMTXConfig()
-	logger := logging.CreateTestLogger(t, nil)
-	// Use test fixture logging level instead of hardcoded logrus
+	// Use standardized config from helper
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	require.NoError(t, err, "Should get MediaMTX config from integration")
+	// Use standardized logger from helper
+	logger := helper.GetLogger()
 
-	rtspManager := NewRTSPConnectionManager(helper.GetClient(), config, logger)
+	rtspManager := NewRTSPConnectionManager(helper.GetClient(), mediaMTXConfig, logger)
 	require.NotNil(t, rtspManager)
 
 	// MINIMAL: Helper provides standard context
@@ -336,11 +308,15 @@ func TestRTSPConnectionManager_Performance_ReqMTX002(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// Create RTSP connection manager
-	config := createTestMediaMTXConfig()
-	logger := logging.CreateTestLogger(t, nil)
-	// Use test fixture logging level instead of hardcoded logrus
+	// Use standardized config from helper
+	configManager := helper.GetConfigManager()
+	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	require.NoError(t, err, "Should get MediaMTX config from integration")
+	// Use standardized logger from helper
+	logger := helper.GetLogger()
 
-	rtspManager := NewRTSPConnectionManager(helper.GetClient(), config, logger)
+	rtspManager := NewRTSPConnectionManager(helper.GetClient(), mediaMTXConfig, logger)
 	require.NotNil(t, rtspManager)
 
 	// MINIMAL: Helper provides standard context
@@ -465,8 +441,8 @@ func TestRTSPConnectionManager_ConfigurationScenarios(t *testing.T) {
 		t.Run(scenario.name, func(t *testing.T) {
 			rtspManager := helper.GetRTSPConnectionManager()
 			// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+			ctx, cancel := helper.GetStandardContext()
+			defer cancel()
 
 			// Test health monitoring with custom config
 			health, err := rtspManager.GetConnectionHealth(ctx)
@@ -474,11 +450,18 @@ func TestRTSPConnectionManager_ConfigurationScenarios(t *testing.T) {
 				assert.Error(t, err, "Expected error for scenario %s", scenario.name)
 			} else {
 				require.NoError(t, err, "GetConnectionHealth should succeed for scenario %s", scenario.name)
-				assertRTSPHealthStatus(t, health, "")
+				// Use standard assertions
+				require.NotNil(t, health, "Health status should not be nil")
+				assert.NotEmpty(t, health.Status, "Health status should not be empty")
+				assert.NotZero(t, health.Timestamp, "Health timestamp should not be zero")
 
 				// Test metrics with custom config
 				metrics := rtspManager.GetConnectionMetrics(ctx)
-				assertRTSPMetrics(t, metrics)
+				// Use standard assertions
+				require.NotNil(t, metrics, "Metrics should not be nil")
+				assert.Contains(t, metrics, "is_healthy", "Metrics should contain is_healthy")
+				assert.Contains(t, metrics, "monitoring_enabled", "Metrics should contain monitoring_enabled")
+				assert.Contains(t, metrics, "last_check", "Metrics should contain last_check")
 
 				// Verify configuration is applied
 				assert.Equal(t, scenario.config.Enabled, metrics["monitoring_enabled"],
@@ -755,10 +738,17 @@ func TestRTSPConnectionManager_IntegrationWithController(t *testing.T) {
 
 	health, err := controller.GetRTSPConnectionHealth(ctx)
 	require.NoError(t, err, "Controller GetRTSPConnectionHealth should succeed")
-	assertRTSPHealthStatus(t, health, "")
+	// Use standard assertions
+	require.NotNil(t, health, "Health status should not be nil")
+	assert.NotEmpty(t, health.Status, "Health status should not be empty")
+	assert.NotZero(t, health.Timestamp, "Health timestamp should not be zero")
 
 	metrics := controller.GetRTSPConnectionMetrics(ctx)
-	assertRTSPMetrics(t, metrics)
+	// Use standard assertions
+	require.NotNil(t, metrics, "Metrics should not be nil")
+	assert.Contains(t, metrics, "is_healthy", "Metrics should contain is_healthy")
+	assert.Contains(t, metrics, "monitoring_enabled", "Metrics should contain monitoring_enabled")
+	assert.Contains(t, metrics, "last_check", "Metrics should contain last_check")
 
 	logTestProgress(t, helper.GetLogger(), "Controller integration test completed successfully", map[string]interface{}{
 		"connections_found": len(connections.Items),

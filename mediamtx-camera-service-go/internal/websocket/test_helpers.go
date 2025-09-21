@@ -688,9 +688,34 @@ func TestArchitecturalCompliance_ProgressiveReadiness(t *testing.T, server *WebS
 	}
 }
 
-// AuthenticateTestClient authenticates a test client using standardized enterprise pattern
-// This eliminates duplication of JWT handler creation across tests
-func (h *WebSocketTestHelper) AuthenticateTestClient(t *testing.T, conn *websocket.Conn, userID string, role string) {
+// GetAuthenticatedConnection returns a ready-to-use authenticated WebSocket connection
+// This eliminates the 12-line setup pattern across all tests
+func (h *WebSocketTestHelper) GetAuthenticatedConnection(t *testing.T, userID string, role string) *websocket.Conn {
+	// Standard setup pattern - all in one method
+	controller := createMediaMTXControllerUsingProvenPattern(t)
+	server := h.GetServer(t)
+	server.SetMediaMTXController(controller)
+	server = h.StartServer(t)
+	conn := h.NewTestClient(t, server)
+
+	// Authenticate the connection
+	h.authenticateConnection(t, conn, userID, role)
+
+	return conn
+}
+
+// TestMethod provides the most minimal pattern for simple method testing
+// Reduces test setup to just 2 lines for basic method tests
+func (h *WebSocketTestHelper) TestMethod(t *testing.T, method string, params map[string]interface{}, userRole string) *JsonRpcResponse {
+	conn := h.GetAuthenticatedConnection(t, "test_user", userRole)
+	defer h.CleanupTestClient(t, conn)
+
+	message := CreateTestMessage(method, params)
+	return SendTestMessage(t, conn, message)
+}
+
+// authenticateConnection authenticates a connection (internal helper)
+func (h *WebSocketTestHelper) authenticateConnection(t *testing.T, conn *websocket.Conn, userID string, role string) {
 	// Use standardized enterprise JWT handler creation
 	jwtHandler, err := h.createStandardJWTHandler()
 	require.NoError(t, err, "Failed to create standardized JWT handler")
