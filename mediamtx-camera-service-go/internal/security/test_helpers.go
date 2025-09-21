@@ -75,6 +75,43 @@ func getTestLogger(t *testing.T) *logging.Logger {
 	return logger
 }
 
+// SetupTestSecurityEnvironment sets up test environment for security tests
+func SetupTestSecurityEnvironment(t *testing.T) {
+	t.Helper()
+	// Setup test environment variables or configurations as needed
+}
+
+// TeardownTestSecurityEnvironment cleans up test environment for security tests
+func TeardownTestSecurityEnvironment(t *testing.T) {
+	t.Helper()
+	// Cleanup test environment
+}
+
+// CreateTestSession creates a test session for session manager testing
+func CreateTestSession(userID, role string) *Session {
+	return &Session{
+		UserID:    userID,
+		Role:      role,
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(24 * time.Hour),
+	}
+}
+
+// GenerateExpiredTestToken creates an expired test JWT token
+func GenerateExpiredTestToken(t *testing.T, jwtHandler *JWTHandler, userID string, role string) string {
+	// Create token that expired 1 hour ago
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"user_id": userID,
+		"role":    role,
+		"exp":     time.Now().Add(-1 * time.Hour).Unix(),
+		"iat":     time.Now().Add(-25 * time.Hour).Unix(),
+	})
+
+	tokenString, err := token.SignedString([]byte("test_secret_key_for_unit_testing_only"))
+	require.NoError(t, err, "Failed to generate expired test token")
+	return tokenString
+}
+
 // GenerateTestToken creates a test JWT token for authentication testing
 func GenerateTestToken(t *testing.T, jwtHandler *JWTHandler, userID string, role string) string {
 	token, err := jwtHandler.GenerateToken(userID, role, 24)

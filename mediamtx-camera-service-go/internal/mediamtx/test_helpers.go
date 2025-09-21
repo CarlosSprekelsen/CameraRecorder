@@ -936,7 +936,7 @@ func createConfigManagerWithFixtureInternal(t *testing.T, fixtureName string) *c
 	// Use consolidated config helper for directory creation
 	requiredDirs := []string{
 		"/tmp/recordings",
-		"/tmp/snapshots", 
+		"/tmp/snapshots",
 		"/tmp", // System temp directory
 	}
 

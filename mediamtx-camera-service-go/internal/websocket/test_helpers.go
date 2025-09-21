@@ -323,16 +323,19 @@ func (h *WebSocketTestHelper) createStandardJWTHandler() (*security.JWTHandler, 
 	return security.NewJWTHandler(ENTERPRISE_TEST_JWT_SECRET, h.logger)
 }
 
-// DEPRECATED: createStandardTestConfig - Use consolidated config helper approach
-// TODO: Migrate all WebSocket tests to use config.NewTestConfigHelper(t).CreateTestDirectories()
+// DEPRECATED: createStandardTestConfig - Use common testutils approach
+// TODO: Migrate all WebSocket tests to use testutils.SetupTest(t, fixtureName)
 // This function will be removed once all tests are migrated to the unified approach
 func createStandardTestConfig(t *testing.T) *config.ConfigManager {
-	// Use consolidated config helper for directory creation (same as MediaMTX tests)
-	configHelper := config.NewTestConfigHelper(t)
-	configHelper.CreateTestDirectories() // Creates /tmp/recordings, /tmp/snapshots with 0777
-
-	// Use canonical config fixture (same as MediaMTX tests)
-	return mediamtx.CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
+	// MIGRATION DEMO: Use common utilities (fixture-driven, no hardcoded paths)
+	fixtureLoader := testutils.NewFixtureLoader(t)
+	directoryManager := testutils.NewDirectoryManager(t)
+	
+	// Create directories from fixture configuration (edit fixture → all tests react)
+	directoryManager.CreateDirectoriesFromFixture("config_test_minimal.yaml")
+	
+	// Load config from fixture (no hardcoded paths)
+	return fixtureLoader.LoadConfigFromFixture("config_test_minimal.yaml")
 }
 
 // REMOVED: NewTestWebSocketServer - use helper.GetServer() for standardized pattern

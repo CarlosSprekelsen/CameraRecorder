@@ -152,7 +152,8 @@ func GetSharedTestServer(t *testing.T, cfg *config.Config, tempDir string) *webs
 	}
 
 	// Use the existing test helper to create server
-	server := websocket.NewTestWebSocketServer(t)
+	helper := websocket.NewWebSocketTestHelper(t, nil)
+	server := helper.GetServer(t)
 
 	// Start the server
 	err := server.Start()
