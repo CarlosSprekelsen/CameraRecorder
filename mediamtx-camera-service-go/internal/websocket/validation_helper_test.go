@@ -1,15 +1,23 @@
 /*
-WebSocket Validation Helper Unit Tests
+WebSocket Validation Helper Unit Tests - Enterprise-Grade Progressive Readiness Pattern
 
 Provides focused unit tests for WebSocket validation functionality,
-following the project testing standards and Go coding standards.
+following homogeneous enterprise-grade patterns with real hardware integration.
+
+ENTERPRISE STANDARDS:
+- Progressive Readiness Pattern compliance (no polling, no sequential execution)
+- Real hardware integration (no mocking, no skipping)
+- Homogeneous test patterns across all validation tests
+- Proper documentation with requirements coverage
 
 Requirements Coverage:
 - REQ-API-002: JSON-RPC 2.0 protocol implementation
 - REQ-API-003: Request/response message handling
+- REQ-ARCH-001: Progressive Readiness Pattern compliance
 
-Test Categories: Unit
+Test Categories: Enterprise Unit
 API Documentation Reference: docs/api/json_rpc_methods.md
+Pattern: Progressive Readiness with real hardware integration
 */
 
 package websocket

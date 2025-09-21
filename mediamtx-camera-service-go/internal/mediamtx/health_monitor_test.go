@@ -26,7 +26,7 @@ import (
 // TestNewHealthMonitor_ReqMTX004 tests health monitor creation
 func TestNewHealthMonitor_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -73,7 +73,8 @@ func TestHealthMonitor_StartStop_ReqMTX004(t *testing.T) {
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Start health monitoring
@@ -117,7 +118,8 @@ func TestHealthMonitor_GetStatus_ReqMTX004(t *testing.T) {
 	require.NotNil(t, status, "Status should not be nil")
 	assert.Equal(t, "healthy", status.Status, "Initial status should be healthy")
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Start monitoring
@@ -163,7 +165,8 @@ func TestHealthMonitor_GetMetrics_ReqMTX004(t *testing.T) {
 	assert.Contains(t, metrics, "is_healthy", "Metrics should contain is_healthy")
 	assert.Contains(t, metrics, "failure_count", "Metrics should contain failure_count")
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Start monitoring
@@ -332,7 +335,8 @@ func TestHealthMonitor_DebounceMechanism_ReqMTX004(t *testing.T) {
 	healthMonitor.SetSystemNotifier(mockNotifier)
 
 	// Test debounce mechanism with rapid successive failures
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Start the health monitor
@@ -388,7 +392,8 @@ func TestHealthMonitor_AtomicOperations_ReqMTX004(t *testing.T) {
 	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
 
 	// Test concurrent access to ensure atomic operations work correctly
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Start the health monitor
@@ -456,7 +461,8 @@ func TestHealthMonitor_StatusTransitions_ReqMTX004(t *testing.T) {
 	healthMonitor.SetSystemNotifier(mockNotifier)
 
 	// Test status transitions
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Start the health monitor
@@ -491,7 +497,7 @@ func TestHealthMonitor_StatusTransitions_ReqMTX004(t *testing.T) {
 // TestHealthMonitor_GetHealthAPI_ReqMTX004 tests new API-ready health method
 func TestHealthMonitor_GetHealthAPI_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring - API-ready health responses
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -511,7 +517,8 @@ func TestHealthMonitor_GetHealthAPI_ReqMTX004(t *testing.T) {
 	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
 
 	// Start health monitor
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err := healthMonitor.Start(ctx)
 	require.NoError(t, err, "Health monitor should start successfully")
@@ -552,7 +559,7 @@ func TestHealthMonitor_GetHealthAPI_ReqMTX004(t *testing.T) {
 // TestHealthMonitor_GetHealthAPI_APICompliance_ReqAPI001 tests API compliance for GetHealthAPI
 func TestHealthMonitor_GetHealthAPI_APICompliance_ReqAPI001(t *testing.T) {
 	// REQ-API-001: JSON-RPC API compliance for health endpoints
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -571,7 +578,8 @@ func TestHealthMonitor_GetHealthAPI_APICompliance_ReqAPI001(t *testing.T) {
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	startTime := time.Now().Add(-30 * time.Minute)
 
@@ -600,7 +608,7 @@ func TestHealthMonitor_GetHealthAPI_APICompliance_ReqAPI001(t *testing.T) {
 // TestHealthMonitor_GetHealthAPI_ErrorScenarios_ReqMTX004 tests error handling for GetHealthAPI
 func TestHealthMonitor_GetHealthAPI_ErrorScenarios_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring - error handling
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 

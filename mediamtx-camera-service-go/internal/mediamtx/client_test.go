@@ -14,7 +14,6 @@ API Documentation Reference: docs/api/swagger.json
 package mediamtx
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -22,9 +21,9 @@ import (
 )
 
 // TestNewClient_ReqMTX001 tests client creation with real server
-func TestNewClient_ReqMTX001(t *testing.T) {
+func TestClient_New_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -42,7 +41,7 @@ func TestNewClient_ReqMTX001(t *testing.T) {
 }
 
 // TestClient_Get_ReqMTX001 tests GET request functionality with real server
-func TestClient_Get_ReqMTX001(t *testing.T) {
+func TestClient_Get_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -50,7 +49,8 @@ func TestClient_Get_ReqMTX001(t *testing.T) {
 	// Server is ready via shared test helper
 
 	client := helper.GetClient()
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Test GET request to paths list endpoint (from swagger.json)
@@ -67,7 +67,7 @@ func TestClient_Get_ReqMTX001(t *testing.T) {
 }
 
 // TestClient_Post_ReqMTX001 tests POST request functionality with real server
-func TestClient_Post_ReqMTX001(t *testing.T) {
+func TestClient_Post_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -75,7 +75,8 @@ func TestClient_Post_ReqMTX001(t *testing.T) {
 	// Server is ready via shared test helper
 
 	client := helper.GetClient()
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Test POST request to create path endpoint (from swagger.json)
@@ -90,7 +91,7 @@ func TestClient_Post_ReqMTX001(t *testing.T) {
 }
 
 // TestClient_Put_ReqMTX001 tests PUT request functionality with real server
-func TestClient_Put_ReqMTX001(t *testing.T) {
+func TestClient_Put_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -98,7 +99,8 @@ func TestClient_Put_ReqMTX001(t *testing.T) {
 	// Server is ready via shared test helper
 
 	client := helper.GetClient()
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// First create a path
@@ -118,7 +120,7 @@ func TestClient_Put_ReqMTX001(t *testing.T) {
 }
 
 // TestClient_Delete_ReqMTX001 tests DELETE request functionality with real server
-func TestClient_Delete_ReqMTX001(t *testing.T) {
+func TestClient_Delete_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -126,7 +128,8 @@ func TestClient_Delete_ReqMTX001(t *testing.T) {
 	// Server is ready via shared test helper
 
 	client := helper.GetClient()
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// First create a path
@@ -140,7 +143,7 @@ func TestClient_Delete_ReqMTX001(t *testing.T) {
 }
 
 // TestClient_HealthCheck_ReqMTX004 tests health check functionality with real server
-func TestClient_HealthCheck_ReqMTX004(t *testing.T) {
+func TestClient_GetHealth_ReqMTX004_Success(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -148,7 +151,8 @@ func TestClient_HealthCheck_ReqMTX004(t *testing.T) {
 	// Server is ready via shared test helper
 
 	client := helper.GetClient()
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Test health check
@@ -157,7 +161,7 @@ func TestClient_HealthCheck_ReqMTX004(t *testing.T) {
 }
 
 // TestClient_ErrorHandling_ReqMTX007 tests error scenarios with real server
-func TestClient_ErrorHandling_ReqMTX007(t *testing.T) {
+func TestClient_Get_ReqMTX007_ErrorHandling(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -165,7 +169,8 @@ func TestClient_ErrorHandling_ReqMTX007(t *testing.T) {
 	// Server is ready via shared test helper
 
 	client := helper.GetClient()
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Test invalid endpoint
@@ -182,7 +187,7 @@ func TestClient_ErrorHandling_ReqMTX007(t *testing.T) {
 }
 
 // TestClient_APICompliance_ReqMTX001 tests API compliance against swagger.json
-func TestClient_APICompliance_ReqMTX001(t *testing.T) {
+func TestClient_Get_ReqMTX001_APICompliance(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -190,7 +195,8 @@ func TestClient_APICompliance_ReqMTX001(t *testing.T) {
 	// Server is ready via shared test helper
 
 	client := helper.GetClient()
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Test paths list endpoint compliance with swagger.json
@@ -225,14 +231,15 @@ func TestClient_APICompliance_ReqMTX001(t *testing.T) {
 }
 
 // TestClient_PutMethod_ReqMTX001 tests the Put method for 0% coverage
-func TestClient_PutMethod_ReqMTX001(t *testing.T) {
+func TestClient_Put_ReqMTX001_PathConfiguration(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
 	// Server is ready via shared test helper
 
 	client := helper.GetClient()
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Test PUT request with valid data
@@ -251,7 +258,7 @@ func TestClient_PutMethod_ReqMTX001(t *testing.T) {
 }
 
 // TestClient_ParsePathListResponse_ReqMTX001 tests parsePathListResponse for 0% coverage
-func TestClient_ParsePathListResponse_ReqMTX001(t *testing.T) {
+func TestClient_ParsePathListResponse_ReqMTX001_Success(t *testing.T) {
 	// Test valid JSON response
 	validJSON := `{"items": [{"name": "test_stream", "ready": true}], "pageCount": 1, "itemCount": 1}`
 	paths, err := parsePathListResponse([]byte(validJSON))
@@ -268,7 +275,7 @@ func TestClient_ParsePathListResponse_ReqMTX001(t *testing.T) {
 }
 
 // TestClient_ParseHealthResponse_ReqMTX001 tests parseHealthResponse for 0% coverage
-func TestClient_ParseHealthResponse_ReqMTX001(t *testing.T) {
+func TestClient_ParseHealthResponse_ReqMTX001_Success(t *testing.T) {
 	// Test valid JSON response
 	validJSON := `{"status": "healthy", "timestamp": "2023-01-01T00:00:00Z"}`
 	health, err := parseHealthResponse([]byte(validJSON))
@@ -284,16 +291,17 @@ func TestClient_ParseHealthResponse_ReqMTX001(t *testing.T) {
 }
 
 // TestClient_ConcurrentAccess_ReqMTX001 tests concurrent access with real server
-func TestClient_ConcurrentAccess_ReqMTX001(t *testing.T) {
+func TestClient_Get_ReqMTX001_Concurrent(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
 	// Server is ready via shared test helper
 
 	client := helper.GetClient()
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Test concurrent GET requests
@@ -327,7 +335,7 @@ func TestClient_ConcurrentAccess_ReqMTX001(t *testing.T) {
 }
 
 // TestClient_Close_ReqMTX001 tests client close functionality
-func TestClient_Close_ReqMTX001(t *testing.T) {
+func TestClient_Close_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)

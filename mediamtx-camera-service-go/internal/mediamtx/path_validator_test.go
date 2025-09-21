@@ -1,7 +1,6 @@
 package mediamtx
 
 import (
-	"context"
 	"os"
 	"testing"
 	"time"
@@ -24,8 +23,8 @@ func TestPathFallback(t *testing.T) {
 	logger := helper.GetLogger()
 	validator := NewPathValidator(cfg, logger)
 
-	// Test recording path validation
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// Test recording path validation - MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	result, err := validator.ValidateRecordingPath(ctx)
 
@@ -65,7 +64,8 @@ func TestPathValidatorCaching(t *testing.T) {
 		validationPeriod: TestValidationPeriodShort, // Very short for testing
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// First validation
@@ -107,6 +107,10 @@ func TestPathValidatorCaching(t *testing.T) {
 }
 
 func TestPathValidatorErrorHandling(t *testing.T) {
+	// MINIMAL: Helper provides standard setup
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
 	// Create test config with non-existent paths
 	cfg := &config.Config{
 		MediaMTX: config.MediaMTXConfig{
@@ -123,7 +127,8 @@ func TestPathValidatorErrorHandling(t *testing.T) {
 	// Create path validator
 	validator := NewPathValidator(cfg, logger)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Test recording path validation (should fail)

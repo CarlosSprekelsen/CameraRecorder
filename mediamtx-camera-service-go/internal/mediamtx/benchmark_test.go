@@ -37,7 +37,8 @@ func setupBenchmarkController(b *testing.B) (*MediaMTXTestHelper, *EventDrivenTe
 	}
 
 	// Start controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	if err != nil {

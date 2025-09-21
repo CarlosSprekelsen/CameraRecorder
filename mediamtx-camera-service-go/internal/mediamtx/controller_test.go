@@ -27,10 +27,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// getFreshController returns a fresh controller instance for each test
-// This ensures proper test isolation and prevents initialization issues
+// DEPRECATED: getFreshController - Use helper.GetReadyController() instead
+// This helper is redundant with the standardized MediaMTXTestHelper pattern
+// TODO: Migrate all uses to helper.GetReadyController() pattern
 func getFreshController(t *testing.T, testName string) *controller {
-	// Create controller using test fixture
+	// DEPRECATED: This creates unnecessary duplication
 	helper := NewMediaMTXTestHelper(t, nil)
 	controllerInterface, err := helper.GetController(t)
 	require.NoError(t, err, "Controller creation should succeed")
@@ -40,22 +41,25 @@ func getFreshController(t *testing.T, testName string) *controller {
 }
 
 // TestControllerWithConfigManager_ReqMTX001 tests controller creation with real server
-func TestControllerWithConfigManager_ReqMTX001(t *testing.T) {
+// EXAMPLE: PERFECT STANDARDIZED PATTERN - USE THIS AS TEMPLATE FOR NEW TESTS
+func TestController_New_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Server is ready via shared test helper
+	// MINIMAL: Helper provides ready components - no manual setup
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
-	// Create controller using test helper
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
+	// Test the actual functionality
 	require.NotNil(t, controller, "Controller should not be nil")
 }
 
 // TestController_GetHealth_ReqMTX004 tests controller health with real server
 // ARCHITECTURE COMPLIANCE: Uses Progressive Readiness Pattern - event-driven readiness
-func TestController_GetHealth_ReqMTX004(t *testing.T) {
+func TestController_GetHealth_ReqMTX004_Success(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -68,7 +72,8 @@ func TestController_GetHealth_ReqMTX004(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -116,7 +121,7 @@ func TestController_GetHealth_ReqMTX004(t *testing.T) {
 }
 
 // TestController_GetMetrics_ReqMTX004 tests controller metrics with real server
-func TestController_GetMetrics_ReqMTX004(t *testing.T) {
+func TestController_GetMetrics_ReqMTX004_Success(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -129,7 +134,8 @@ func TestController_GetMetrics_ReqMTX004(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -148,7 +154,7 @@ func TestController_GetMetrics_ReqMTX004(t *testing.T) {
 }
 
 // TestController_GetSystemMetrics_ReqMTX004 tests controller system metrics with real server
-func TestController_GetSystemMetrics_ReqMTX004(t *testing.T) {
+func TestController_GetSystemMetrics_ReqMTX004_Success(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -161,7 +167,8 @@ func TestController_GetSystemMetrics_ReqMTX004(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -180,7 +187,7 @@ func TestController_GetSystemMetrics_ReqMTX004(t *testing.T) {
 }
 
 // TestController_GetPaths_ReqMTX003 tests path listing with real server
-func TestController_GetPaths_ReqMTX003(t *testing.T) {
+func TestController_GetPaths_ReqMTX003_Success(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -193,7 +200,8 @@ func TestController_GetPaths_ReqMTX003(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -213,7 +221,7 @@ func TestController_GetPaths_ReqMTX003(t *testing.T) {
 }
 
 // TestController_GetStreams_ReqMTX002 tests stream listing with real server
-func TestController_GetStreams_ReqMTX002(t *testing.T) {
+func TestController_GetStreams_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -226,7 +234,8 @@ func TestController_GetStreams_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -246,7 +255,7 @@ func TestController_GetStreams_ReqMTX002(t *testing.T) {
 }
 
 // TestController_GetStream_ReqMTX002 tests individual stream retrieval with real server
-func TestController_GetStream_ReqMTX002(t *testing.T) {
+func TestController_GetStream_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// No sequential execution needed - only reads stream information
 	helper := NewMediaMTXTestHelper(t, nil)
@@ -267,7 +276,8 @@ func TestController_GetStream_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Test getting a non-existent stream (should return error)
@@ -285,7 +295,7 @@ func TestController_GetStream_ReqMTX002(t *testing.T) {
 }
 
 // TestConfigIntegration_GetRecordingConfig_ReqMTX001 tests recording config retrieval
-func TestConfigIntegration_GetRecordingConfig_ReqMTX001(t *testing.T) {
+func TestConfigIntegration_GetRecordingConfig_ReqMTX001_Success(t *testing.T) {
 	// No sequential execution needed - only reads configuration
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -301,7 +311,7 @@ func TestConfigIntegration_GetRecordingConfig_ReqMTX001(t *testing.T) {
 }
 
 // TestConfigIntegration_GetSnapshotConfig_ReqMTX001 tests snapshot config retrieval
-func TestConfigIntegration_GetSnapshotConfig_ReqMTX001(t *testing.T) {
+func TestConfigIntegration_GetSnapshotConfig_ReqMTX001_Success(t *testing.T) {
 	// No sequential execution needed - only reads configuration
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -317,7 +327,7 @@ func TestConfigIntegration_GetSnapshotConfig_ReqMTX001(t *testing.T) {
 }
 
 // TestConfigIntegration_GetFFmpegConfig_ReqMTX001 tests FFmpeg config retrieval
-func TestConfigIntegration_GetFFmpegConfig_ReqMTX001(t *testing.T) {
+func TestConfigIntegration_GetFFmpegConfig_ReqMTX001_Success(t *testing.T) {
 	// No sequential execution needed - only reads configuration
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -333,7 +343,7 @@ func TestConfigIntegration_GetFFmpegConfig_ReqMTX001(t *testing.T) {
 }
 
 // TestConfigIntegration_GetCameraConfig_ReqMTX001 tests camera config retrieval
-func TestConfigIntegration_GetCameraConfig_ReqMTX001(t *testing.T) {
+func TestConfigIntegration_GetCameraConfig_ReqMTX001_Success(t *testing.T) {
 	// No sequential execution needed - only reads configuration
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -349,7 +359,7 @@ func TestConfigIntegration_GetCameraConfig_ReqMTX001(t *testing.T) {
 }
 
 // TestConfigIntegration_GetPerformanceConfig_ReqMTX001 tests performance config retrieval
-func TestConfigIntegration_GetPerformanceConfig_ReqMTX001(t *testing.T) {
+func TestConfigIntegration_GetPerformanceConfig_ReqMTX001_Success(t *testing.T) {
 	// No sequential execution needed - only reads configuration
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -365,7 +375,7 @@ func TestConfigIntegration_GetPerformanceConfig_ReqMTX001(t *testing.T) {
 }
 
 // TestController_GetConfig_ReqMTX001 tests configuration retrieval with real server
-func TestController_GetConfig_ReqMTX001(t *testing.T) {
+func TestController_GetConfig_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -378,7 +388,8 @@ func TestController_GetConfig_ReqMTX001(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -398,7 +409,7 @@ func TestController_GetConfig_ReqMTX001(t *testing.T) {
 }
 
 // TestController_ListRecordings_ReqMTX002 tests recording listing with real server
-func TestController_ListRecordings_ReqMTX002(t *testing.T) {
+func TestController_ListRecordings_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -411,7 +422,8 @@ func TestController_ListRecordings_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -430,7 +442,7 @@ func TestController_ListRecordings_ReqMTX002(t *testing.T) {
 }
 
 // TestController_ListSnapshots_ReqMTX002 tests snapshot listing with real server
-func TestController_ListSnapshots_ReqMTX002(t *testing.T) {
+func TestController_ListSnapshots_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -443,7 +455,8 @@ func TestController_ListSnapshots_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -462,9 +475,9 @@ func TestController_ListSnapshots_ReqMTX002(t *testing.T) {
 }
 
 // TestController_ConcurrentAccess_ReqMTX001 tests concurrent operations with real server
-func TestController_ConcurrentAccess_ReqMTX001(t *testing.T) {
+func TestController_GetHealth_ReqMTX001_Concurrent(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -476,7 +489,8 @@ func TestController_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -530,32 +544,19 @@ func TestController_ConcurrentAccess_ReqMTX001(t *testing.T) {
 
 // TestController_StartRecording_ReqMTX002 tests recording functionality through controller
 // Enterprise-grade test that verifies actual file creation by MediaMTX
-func TestController_StartRecording_ReqMTX002(t *testing.T) {
+func TestController_StartRecording_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// USE EXISTING: Get fresh controller using the same pattern as working tests
-	controller := getFreshController(t, "TestController_StartRecording_ReqMTX002")
-
-	// USE EXISTING: Start controller using the same pattern as working tests
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides ready controller
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
-	err := controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
 
-	// Ensure controller is stopped after test
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
-
-	// Wait for controller readiness using existing event infrastructure
-	err = helper.WaitForControllerReadiness(ctx, controller)
-	require.NoError(t, err, "Controller should become ready via events")
-
-	// Get available camera using existing helper (now that controller is ready)
+	// Controller is already ready - no waiting needed with Progressive Readiness
+	// Get available camera using existing helper
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
 	require.NoError(t, err, "Should be able to get available camera identifier")
 
@@ -635,7 +636,7 @@ func TestController_StartRecording_ReqMTX002(t *testing.T) {
 }
 
 // TestController_StopRecording_ReqMTX002 tests recording stop functionality through controller
-func TestController_StopRecording_ReqMTX002(t *testing.T) {
+func TestController_StopRecording_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -648,7 +649,8 @@ func TestController_StopRecording_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -689,7 +691,7 @@ func TestController_StopRecording_ReqMTX002(t *testing.T) {
 }
 
 // TestController_TakeSnapshot_ReqMTX002 tests snapshot functionality through controller
-func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
+func TestController_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -702,7 +704,8 @@ func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -729,11 +732,8 @@ func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
 	}
 	require.True(t, isReady, "Controller should become ready with camera discovery")
 
-	// Wait for controller readiness using existing event infrastructure
-	err = helper.WaitForControllerReadiness(ctx, controller)
-	require.NoError(t, err, "Controller should become ready via events")
-
-	// Get available camera using existing helper (now that controller is ready)
+	// Controller is already ready - no waiting needed with Progressive Readiness
+	// Get available camera using existing helper
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
 	require.NoError(t, err, "Should be able to get available camera identifier")
 
@@ -760,7 +760,7 @@ func TestController_TakeSnapshot_ReqMTX002(t *testing.T) {
 }
 
 // TestController_StreamManagement_ReqMTX002 tests stream management through controller
-func TestController_StreamManagement_ReqMTX002(t *testing.T) {
+func TestController_CreateStream_ReqMTX002_StreamManagement(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -773,7 +773,8 @@ func TestController_StreamManagement_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -795,18 +796,16 @@ func TestController_StreamManagement_ReqMTX002(t *testing.T) {
 }
 
 // TestController_AdvancedRecording_ReqMTX002 tests advanced recording functionality
-func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
+func TestController_StartRecording_ReqMTX002_Advanced(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities (advanced recording)
-	// Use cached controller for performance optimization
+	// MINIMAL: Helper provides ready controller
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
-	controller := getFreshController(t, "TestController_AdvancedRecording_ReqMTX002")
 
-	// Start the controller if not already started
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
-	err := controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -815,11 +814,8 @@ func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Wait for controller readiness using existing event infrastructure
-	err = helper.WaitForControllerReadiness(ctx, controller)
-	require.NoError(t, err, "Controller should become ready via events")
-
-	// Get available camera using existing helper (now that controller is ready)
+	// Controller is already ready - no waiting needed with Progressive Readiness
+	// Get available camera using existing helper
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
 	require.NoError(t, err, "Should be able to get available camera identifier")
 
@@ -844,7 +840,7 @@ func TestController_AdvancedRecording_ReqMTX002(t *testing.T) {
 }
 
 // TestController_StreamRecording_ReqMTX002 tests stream recording functionality
-func TestController_StreamRecording_ReqMTX002(t *testing.T) {
+func TestController_StartRecording_ReqMTX002_Stream(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities (stream recording)
 	// Use proper orchestration following the Progressive Readiness Pattern
 	helper := NewMediaMTXTestHelper(t, nil)
@@ -855,7 +851,8 @@ func TestController_StreamRecording_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Controller orchestration should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err)
@@ -866,11 +863,8 @@ func TestController_StreamRecording_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Wait for controller readiness using existing event infrastructure
-	err = helper.WaitForControllerReadiness(ctx, controller)
-	require.NoError(t, err, "Controller should become ready via events")
-
-	// Get available camera using existing helper (now that controller is ready)
+	// Controller is already ready - no waiting needed with Progressive Readiness
+	// Get available camera using existing helper
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
 	require.NoError(t, err, "Should be able to get available camera identifier")
 
@@ -904,14 +898,17 @@ func TestController_StreamRecording_ReqMTX002(t *testing.T) {
 }
 
 // TestController_HealthMonitoring_ReqMTX004 tests health monitoring functionality
-func TestController_HealthMonitoring_ReqMTX004(t *testing.T) {
+func TestController_GetHealth_ReqMTX004_Monitoring(t *testing.T) {
 	// REQ-MTX-004: Health monitoring capabilities
-	controller := getFreshController(t, "TestController_HealthMonitoring_ReqMTX004")
+	// MINIMAL: Helper provides ready controller
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
-	err := controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
+	// Controller is already started by GetReadyController
 
 	defer func() {
 		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -939,14 +936,17 @@ func TestController_HealthMonitoring_ReqMTX004(t *testing.T) {
 }
 
 // TestController_PathManagement_ReqMTX003 tests path management functionality
-func TestController_PathManagement_ReqMTX003(t *testing.T) {
+func TestController_GetPaths_ReqMTX003_Management(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
-	controller := getFreshController(t, "TestController_PathManagement_ReqMTX003")
+	// MINIMAL: Helper provides ready controller
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
-	err := controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
+	// Controller is already started by GetReadyController
 
 	defer func() {
 		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -961,7 +961,7 @@ func TestController_PathManagement_ReqMTX003(t *testing.T) {
 		Source: nil, // Source will be populated by MediaMTX runtime
 	}
 
-	err = controller.CreatePath(ctx, path)
+	err := controller.CreatePath(ctx, path)
 	require.NoError(t, err, "Should be able to create path")
 
 	// Test GetPath (may fail if path doesn't exist in MediaMTX runtime)
@@ -987,14 +987,17 @@ func TestController_PathManagement_ReqMTX003(t *testing.T) {
 }
 
 // TestController_RTSPOperations_ReqMTX004 tests RTSP operations functionality
-func TestController_RTSPOperations_ReqMTX004(t *testing.T) {
+func TestController_GetStream_ReqMTX004_RTSPOperations(t *testing.T) {
 	// REQ-MTX-004: RTSP connection management
-	controller := getFreshController(t, "TestController_RTSPOperations_ReqMTX004")
+	// MINIMAL: Helper provides ready controller
+	helper := NewMediaMTXTestHelper(t, nil)
+	defer helper.Cleanup(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
-	err := controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
+	// Controller is already started by GetReadyController
 
 	defer func() {
 		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -1025,13 +1028,14 @@ func TestController_RTSPOperations_ReqMTX004(t *testing.T) {
 }
 
 // TestController_AdvancedSnapshot_ReqMTX002 tests advanced snapshot functionality
-func TestController_AdvancedSnapshot_ReqMTX002(t *testing.T) {
+func TestController_TakeSnapshot_ReqMTX002_Advanced(t *testing.T) {
 	// REQ-MTX-002: Advanced snapshot capabilities
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 	controller := getFreshController(t, "TestController_AdvancedSnapshot_ReqMTX002")
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err := controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -1042,11 +1046,8 @@ func TestController_AdvancedSnapshot_ReqMTX002(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Wait for controller readiness using existing event infrastructure
-	err = helper.WaitForControllerReadiness(ctx, controller)
-	require.NoError(t, err, "Controller should become ready via events")
-
-	// Get available camera using existing helper (now that controller is ready)
+	// Controller is already ready - no waiting needed with Progressive Readiness
+	// Get available camera using existing helper
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
 	require.NoError(t, err, "Should be able to get available camera identifier")
 
@@ -1098,7 +1099,7 @@ func TestController_AdvancedSnapshot_ReqMTX002(t *testing.T) {
 }
 
 // TestController_SetSystemEventNotifier_ReqMTX004 tests SetSystemEventNotifier integration
-func TestController_SetSystemEventNotifier_ReqMTX004(t *testing.T) {
+func TestController_SetSystemEventNotifier_ReqMTX004_Success(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -1109,7 +1110,8 @@ func TestController_SetSystemEventNotifier_ReqMTX004(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -1157,7 +1159,7 @@ func TestController_SetSystemEventNotifier_ReqMTX004(t *testing.T) {
 }
 
 // TestController_CreateStream_ReqMTX002 tests stream creation functionality
-func TestController_CreateStream_ReqMTX002(t *testing.T) {
+func TestController_CreateStream_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -1170,7 +1172,8 @@ func TestController_CreateStream_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -1198,7 +1201,7 @@ func TestController_CreateStream_ReqMTX002(t *testing.T) {
 }
 
 // TestController_DeleteStream_ReqMTX002 tests stream deletion functionality
-func TestController_DeleteStream_ReqMTX002(t *testing.T) {
+func TestController_DeleteStream_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -1211,7 +1214,8 @@ func TestController_DeleteStream_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -1234,7 +1238,7 @@ func TestController_DeleteStream_ReqMTX002(t *testing.T) {
 }
 
 // TestControllerWithConfigManagerFunction_ReqMTX001 tests ControllerWithConfigManager for 0% coverage
-func TestControllerWithConfigManagerFunction_ReqMTX001(t *testing.T) {
+func TestController_New_ReqMTX001_WithConfigManagerFunction(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -1246,7 +1250,8 @@ func TestControllerWithConfigManagerFunction_ReqMTX001(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Verify controller can be started and stopped
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller should start successfully")
@@ -1259,7 +1264,7 @@ func TestControllerWithConfigManagerFunction_ReqMTX001(t *testing.T) {
 
 // TestController_InputValidation_DangerousBugs tests input validation
 // that can catch dangerous bugs in controller methods
-func TestController_InputValidation_DangerousBugs(t *testing.T) {
+func TestController_Validate_ReqMTX007_InputValidation_DangerousBugs(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
 	// No sequential execution needed - only validates input parameters
 	helper := NewMediaMTXTestHelper(t, nil)
@@ -1271,7 +1276,8 @@ func TestController_InputValidation_DangerousBugs(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -1289,7 +1295,7 @@ func TestController_InputValidation_DangerousBugs(t *testing.T) {
 
 // TestController_InputValidationBoundaryConditions_DangerousBugs tests boundary conditions
 // that can cause dangerous bugs like integer overflow or panic conditions
-func TestController_InputValidationBoundaryConditions_DangerousBugs(t *testing.T) {
+func TestController_Validate_ReqMTX007_BoundaryConditions_DangerousBugs(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
 	// No sequential execution needed - only validates boundary conditions
 	helper := NewMediaMTXTestHelper(t, nil)
@@ -1301,7 +1307,8 @@ func TestController_InputValidationBoundaryConditions_DangerousBugs(t *testing.T
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -1319,10 +1326,10 @@ func TestController_InputValidationBoundaryConditions_DangerousBugs(t *testing.T
 
 // TestController_StateRaceConditions_DangerousBugs tests race conditions
 // that can cause dangerous bugs in controller state management
-func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
+func TestController_Start_ReqMTX001_StateRaceConditions_DangerousBugs(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
 	// Sequential execution needed - tests concurrent start/stop operations
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -1331,7 +1338,8 @@ func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Test concurrent start/stop operations - should be handled gracefully by controller
@@ -1446,7 +1454,7 @@ func TestController_StateRaceConditions_DangerousBugs(t *testing.T) {
 }
 
 // TestEventDrivenReadiness tests event-driven readiness patterns
-func TestEventDrivenReadiness(t *testing.T) {
+func TestController_Start_ReqARCH001_EventDrivenReadiness(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration with event-driven patterns
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -1461,7 +1469,8 @@ func TestEventDrivenReadiness(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start controller in background
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -1521,7 +1530,7 @@ func TestEventDrivenReadiness(t *testing.T) {
 }
 
 // TestParallelEventDrivenTests tests multiple event-driven operations in parallel
-func TestParallelEventDrivenTests(t *testing.T) {
+func TestController_Start_ReqARCH001_ParallelEventDriven(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration with parallel event-driven patterns
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
@@ -1539,7 +1548,8 @@ func TestParallelEventDrivenTests(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -1589,7 +1599,7 @@ func TestParallelEventDrivenTests(t *testing.T) {
 }
 
 // TestEventAggregationSystem tests the event aggregation system
-func TestEventAggregationSystem(t *testing.T) {
+func TestController_ProcessEvents_ReqARCH001_EventAggregation(t *testing.T) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 	eventHelper := helper.CreateEventDrivenTestHelper(t)
@@ -1628,7 +1638,7 @@ func TestEventAggregationSystem(t *testing.T) {
 }
 
 // TestGracefulShutdown verifies that all components shut down cleanly within timeout
-func TestGracefulShutdown(t *testing.T) {
+func TestController_Stop_ReqMTX001_GracefulShutdown(t *testing.T) {
 	t.Run("health_monitor_graceful_shutdown", func(t *testing.T) {
 		helper := NewMediaMTXTestHelper(t, nil)
 		defer helper.Cleanup(t)
@@ -1652,7 +1662,8 @@ func TestGracefulShutdown(t *testing.T) {
 		monitor := NewHealthMonitor(client, config, configIntegration, logger)
 
 		// Start components
-		ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+		// MINIMAL: Helper provides standard context
+		ctx, cancel := helper.GetStandardContext()
 		defer cancel()
 		err := monitor.Start(ctx)
 		require.NoError(t, err, "Health monitor start should succeed")
@@ -1681,7 +1692,8 @@ func TestGracefulShutdown(t *testing.T) {
 		pathIntegration := NewPathIntegration(pathManager, cameraMonitor, configIntegration, logger)
 
 		// Start components
-		ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+		// MINIMAL: Helper provides standard context
+		ctx, cancel := helper.GetStandardContext()
 		defer cancel()
 		err := pathIntegration.Start(ctx)
 		require.NoError(t, err, "Path integration start should succeed")
@@ -1706,7 +1718,8 @@ func TestGracefulShutdown(t *testing.T) {
 		require.NoError(t, err, "Controller creation should succeed")
 
 		// Start components
-		ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+		// MINIMAL: Helper provides standard context
+		ctx, cancel := helper.GetStandardContext()
 		defer cancel()
 		err = controller.Start(ctx)
 		require.NoError(t, err, "Controller start should succeed")
@@ -1789,7 +1802,8 @@ func TestGracefulShutdown(t *testing.T) {
 		monitor := NewHealthMonitor(client, config, configIntegration, logger)
 
 		// Start components
-		ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+		// MINIMAL: Helper provides standard context
+		ctx, cancel := helper.GetStandardContext()
 		defer cancel()
 		err := monitor.Start(ctx)
 		require.NoError(t, err, "Health monitor start should succeed")

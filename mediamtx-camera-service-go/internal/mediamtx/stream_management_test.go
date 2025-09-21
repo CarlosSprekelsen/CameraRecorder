@@ -34,7 +34,8 @@ func TestController_GetStreams_Management_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -65,7 +66,8 @@ func TestController_GetStream_Management_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -115,7 +117,8 @@ func TestController_CreateStream_Management_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -160,7 +163,8 @@ func TestController_DeleteStream_Management_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -208,7 +212,8 @@ func TestController_StreamManagement_ErrorHandling_ReqMTX004(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -248,7 +253,8 @@ func TestController_StreamManagement_NotRunning_ReqMTX004(t *testing.T) {
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Test getting streams when controller is not running
@@ -280,7 +286,8 @@ func TestController_StreamManagement_Concurrent_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")

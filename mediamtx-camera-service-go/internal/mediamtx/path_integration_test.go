@@ -21,7 +21,6 @@ NO import cycles (avoiding camera package dependency)
 package mediamtx
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -33,7 +32,7 @@ import (
 // TestPathManager_RealServer_ReqMTX001 tests path manager with real MediaMTX server
 func TestPathManager_RealServer_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -49,7 +48,8 @@ func TestPathManager_RealServer_ReqMTX001(t *testing.T) {
 	require.NotNil(t, pathManager, "Path manager should be created")
 
 	// Test basic path manager functionality
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Test path listing (basic functionality)
@@ -65,7 +65,7 @@ func TestPathManager_RealServer_ReqMTX001(t *testing.T) {
 // TestPathManager_StreamManagement_ReqMTX002 tests stream management capabilities
 func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -80,7 +80,8 @@ func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager, "Path manager should be created")
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Test path creation with real MediaMTX server
@@ -112,7 +113,7 @@ func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 // TestPathManager_ConfigIntegration_ReqMTX003 tests real config integration
 func TestPathManager_ConfigIntegration_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -138,7 +139,8 @@ func TestPathManager_ConfigIntegration_ReqMTX003(t *testing.T) {
 	// Test path manager with real config
 	// Note: PathManager doesn't have GetHealth method - that's for Controller
 	// Test basic functionality instead
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	paths, err := pathManager.ListPaths(ctx)
 	require.NoError(t, err, "ListPaths should succeed")
@@ -150,7 +152,7 @@ func TestPathManager_ConfigIntegration_ReqMTX003(t *testing.T) {
 // TestPathManager_HealthMonitoring_ReqMTX004 tests real health monitoring
 func TestPathManager_HealthMonitoring_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -166,7 +168,8 @@ func TestPathManager_HealthMonitoring_ReqMTX004(t *testing.T) {
 	require.NotNil(t, pathManager, "Path manager should be created")
 
 	// Test path operations instead of health (PathManager doesn't have GetHealth)
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Test path listing
@@ -199,7 +202,7 @@ func TestPathManager_HealthMonitoring_ReqMTX004(t *testing.T) {
 // TestPathManager_RealMediaMTXServer tests integration with real MediaMTX server
 func TestPathManager_RealMediaMTXServer(t *testing.T) {
 	// Test real MediaMTX server integration
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -215,7 +218,8 @@ func TestPathManager_RealMediaMTXServer(t *testing.T) {
 	require.NotNil(t, pathManager, "Path manager should be created")
 
 	// Test that we can interact with the real MediaMTX server
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	paths, err := pathManager.ListPaths(ctx)
 	require.NoError(t, err, "ListPaths should succeed with real MediaMTX server")

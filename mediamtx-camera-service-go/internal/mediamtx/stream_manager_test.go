@@ -13,7 +13,6 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package mediamtx
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -24,13 +23,11 @@ import (
 // TestNewStreamManager_ReqMTX001 tests stream manager creation
 func TestNewStreamManager_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Server is ready via shared test helper
-
-	// Use shared stream manager from test helper
+	// MINIMAL: Helper provides ready components
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager, "Stream manager should not be nil")
 }
@@ -38,7 +35,7 @@ func TestNewStreamManager_ReqMTX001(t *testing.T) {
 // TestStreamManager_CreateStream_ReqMTX002 tests stream creation
 func TestStreamManager_CreateStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -48,7 +45,8 @@ func TestStreamManager_CreateStream_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	testStreamName := "test_stream_" + time.Now().Format("20060102_150405")
 	testSource := "publisher"
@@ -67,7 +65,7 @@ func TestStreamManager_CreateStream_ReqMTX002(t *testing.T) {
 // TestStreamManager_DeleteStream_ReqMTX002 tests stream deletion
 func TestStreamManager_DeleteStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -77,7 +75,8 @@ func TestStreamManager_DeleteStream_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	testStreamName := "test_delete_stream_" + time.Now().Format("20060102_150405")
 
@@ -93,7 +92,7 @@ func TestStreamManager_DeleteStream_ReqMTX002(t *testing.T) {
 // TestStreamManager_StartStream_ReqMTX002 tests new cameraID-first stream starting
 func TestStreamManager_StartStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - cameraID-first architecture
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -101,7 +100,8 @@ func TestStreamManager_StartStream_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Use existing test helper to get camera identifier - following established patterns
@@ -123,7 +123,7 @@ func TestStreamManager_StartStream_ReqMTX002(t *testing.T) {
 // TestStreamManager_GetStreamStatus_ReqMTX002 tests new cameraID-first stream status
 func TestStreamManager_GetStreamStatus_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - cameraID-first architecture
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -131,7 +131,8 @@ func TestStreamManager_GetStreamStatus_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Use existing test helper to get camera identifier - following established patterns
@@ -152,7 +153,7 @@ func TestStreamManager_GetStreamStatus_ReqMTX002(t *testing.T) {
 // TestStreamManager_ListStreamsAPI_ReqMTX002 tests new API-ready stream listing
 func TestStreamManager_ListStreamsAPI_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - API-ready responses
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -160,7 +161,8 @@ func TestStreamManager_ListStreamsAPI_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// List streams using new API-ready method
@@ -182,7 +184,7 @@ func TestStreamManager_ListStreamsAPI_ReqMTX002(t *testing.T) {
 // TestStreamManager_GetStreamURL_ReqMTX002 tests new cameraID-first stream URL retrieval
 func TestStreamManager_GetStreamURL_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - cameraID-first architecture
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -190,7 +192,8 @@ func TestStreamManager_GetStreamURL_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Use existing test helper to get camera identifier - following established patterns
@@ -212,7 +215,7 @@ func TestStreamManager_GetStreamURL_ReqMTX002(t *testing.T) {
 // TestStreamManager_GetStream_ReqMTX002 tests stream retrieval
 func TestStreamManager_GetStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -222,7 +225,8 @@ func TestStreamManager_GetStream_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	testStreamName := "test_get_stream_" + time.Now().Format("20060102_150405")
 
@@ -244,7 +248,7 @@ func TestStreamManager_GetStream_ReqMTX002(t *testing.T) {
 // TestStreamManager_ListStreams_ReqMTX002 tests stream listing
 func TestStreamManager_ListStreams_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -254,7 +258,8 @@ func TestStreamManager_ListStreams_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// List all streams
@@ -267,7 +272,7 @@ func TestStreamManager_ListStreams_ReqMTX002(t *testing.T) {
 // TestStreamManager_StartRecordingStream_ReqMTX002 tests recording stream creation
 func TestStreamManager_StartRecordingStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -277,7 +282,8 @@ func TestStreamManager_StartRecordingStream_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	devicePath := "/dev/video0"
 
@@ -297,7 +303,7 @@ func TestStreamManager_StartRecordingStream_ReqMTX002(t *testing.T) {
 // TestStreamManager_StartStream_Viewing_ReqMTX002 tests stream creation for viewing
 func TestStreamManager_StartStream_Viewing_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -307,7 +313,8 @@ func TestStreamManager_StartStream_Viewing_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	devicePath := "/dev/video0"
 
@@ -325,7 +332,7 @@ func TestStreamManager_StartStream_Viewing_ReqMTX002(t *testing.T) {
 // TestStreamManager_StartStream_Snapshot_ReqMTX002 tests stream creation for snapshots
 func TestStreamManager_StartStream_Snapshot_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -335,7 +342,8 @@ func TestStreamManager_StartStream_Snapshot_ReqMTX002(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	// Use test fixture for external RTSP source (Tier 3 scenario)
 	devicePath := helper.GetTestCameraDevice("network_failure")
@@ -354,7 +362,7 @@ func TestStreamManager_StartStream_Snapshot_ReqMTX002(t *testing.T) {
 // TestStreamManager_ErrorHandling_ReqMTX001 tests error handling
 func TestStreamManager_ErrorHandling_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -364,7 +372,8 @@ func TestStreamManager_ErrorHandling_ReqMTX001(t *testing.T) {
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Test invalid stream name

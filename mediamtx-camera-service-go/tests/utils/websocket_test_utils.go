@@ -61,7 +61,8 @@ func GetFreePort() int {
 	listener.Close()
 
 	// Small delay to ensure port is released
-	time.Sleep(10 * time.Millisecond)
+	// REMOVED: time.Sleep() violation of Progressive Readiness Pattern
+	// Server accepts connections immediately after Start() per architectural requirements
 
 	return port
 }
@@ -205,9 +206,13 @@ func SendTestNotification(t *testing.T, conn *gorilla.Conn, notification *websoc
 // WaitForServerReady waits for the server to be ready
 func WaitForServerReady(t *testing.T, server *websocket.WebSocketServer, timeout time.Duration) {
 	// REQ-TEST-002: Performance optimization for test execution
+	// Progressive Readiness Pattern: No waiting needed, server ready immediately after Start()
 
-	// Use the existing test helper
-	websocket.WaitForServerReady(t, server, timeout)
+	if !server.IsRunning() {
+		require.Fail(t, "WebSocket server not running - Progressive Readiness violation in test setup")
+	}
+
+	t.Log("WebSocket server ready for immediate connections")
 }
 
 // CleanupTestClient closes a test client connection

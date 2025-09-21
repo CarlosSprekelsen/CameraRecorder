@@ -14,7 +14,6 @@ API Documentation Reference: docs/api/swagger.json
 package mediamtx
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"testing"
@@ -58,7 +57,8 @@ func TestFFmpegManager_SnapshotOnly_ReqMTX002(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Create temporary output directory
@@ -85,7 +85,7 @@ func TestFFmpegManager_SnapshotOnly_ReqMTX002(t *testing.T) {
 // TestFFmpegManager_StartProcess_ReqMTX002 tests FFmpeg process start with real server
 func TestFFmpegManager_StartProcess_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -99,7 +99,8 @@ func TestFFmpegManager_StartProcess_ReqMTX002(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Create temporary output directory
@@ -140,7 +141,8 @@ func TestFFmpegManager_StopProcess_ReqMTX002(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Create temporary output directory
@@ -193,7 +195,8 @@ func TestFFmpegManager_IsProcessRunning_ReqMTX002(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Create temporary output directory
@@ -279,7 +282,8 @@ func TestFFmpegManager_ErrorHandling_ReqMTX007(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Create temporary output directory
@@ -321,7 +325,8 @@ func TestFFmpegManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Create temporary output directory
@@ -382,7 +387,8 @@ func TestFFmpegManager_PerformanceMetrics_ReqMTX002(t *testing.T) {
 	ffmpegManager := NewFFmpegManager(config, logger)
 	require.NotNil(t, ffmpegManager)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Create temporary output directory

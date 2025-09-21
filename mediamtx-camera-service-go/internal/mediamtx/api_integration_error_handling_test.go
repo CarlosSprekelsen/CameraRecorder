@@ -27,11 +27,12 @@ import (
 // TestAPIErrorHandling_400Scenarios tests 400 error scenarios with invalid configurations
 func TestAPIErrorHandling_400Scenarios(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
@@ -127,22 +128,27 @@ func TestAPIErrorHandling_400Scenarios(t *testing.T) {
 func TestPathStateTransitions_Recording(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// REQ-MTX-003: Path creation and deletion
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	pathManager := helper.GetPathManager()
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, pathManager)
 	require.NotNil(t, recordingManager)
 
+	// Get controller for Progressive Readiness
+	controller, err := helper.GetController(t)
+	require.NoError(t, err)
+	err = controller.Start(ctx)
+	require.NoError(t, err)
+	defer controller.Stop(ctx)
+
 	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
-	if err != nil {
-		t.Skip("No camera available for state transition test")
-		return
-	}
+	require.NoError(t, err, "Should get camera identifier with real hardware")
 
 	t.Run("Path_State_Transitions_During_Recording", func(t *testing.T) {
 		pathName := "test_state_transitions"
@@ -251,14 +257,15 @@ func TestPathStateTransitions_Recording(t *testing.T) {
 func TestConcurrentRecordingOperations(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// REQ-MTX-007: Error handling and recovery
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
 	// USE EXACT SAME PATTERN as working TestController_StartRecording_ReqMTX002
 	controller := getFreshController(t, "TestConcurrentRecordingOperations")
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err := controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -442,11 +449,12 @@ func TestConcurrentRecordingOperations(t *testing.T) {
 func TestMediaMTXRecovery_Restart(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
 	// REQ-MTX-004: Health monitoring
-	EnsureSequentialExecution(t)
+	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
 	helper := NewMediaMTXTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	pathManager := helper.GetPathManager()
 	recordingManager := helper.GetRecordingManager()

@@ -127,7 +127,12 @@ type MediaMTXTestHelper struct {
 
 // EnsureSequentialExecution ensures tests run sequentially to avoid MediaMTX server conflicts
 // Call this at the beginning of each test that uses MediaMTX server
+// DEPRECATED: EnsureSequentialExecution - VIOLATES PROGRESSIVE READINESS PATTERN
+// DO NOT USE: This forces sequential execution and breaks parallelism
+// PREFERRED: Remove this call entirely - Progressive Readiness enables parallel tests
+// TODO: Remove all calls to this function
 func EnsureSequentialExecution(t *testing.T) {
+	// DEPRECATED: This violates Progressive Readiness principles
 	testMutex.Lock()
 	t.Cleanup(func() {
 		testMutex.Unlock()
@@ -135,6 +140,25 @@ func EnsureSequentialExecution(t *testing.T) {
 }
 
 // NewMediaMTXTestHelper creates a new test helper for MediaMTX server testing
+//
+// PREFERRED PATTERNS FOR NEW TESTS:
+//
+//  1. MINIMAL CONTROLLER SETUP (Progressive Readiness):
+//     controller, ctx, cancel := helper.GetReadyController(t)
+//     defer cancel()
+//     defer controller.Stop(ctx)
+//
+//  2. MINIMAL MANAGER SETUP:
+//     snapshotManager := helper.GetSnapshotManager()
+//     recordingManager := helper.GetRecordingManager()
+//
+//  3. NO SEQUENTIAL EXECUTION (enables parallelism):
+//     // Remove: EnsureSequentialExecution(t)
+//     // Use: Progressive Readiness pattern instead
+//
+//  4. NO MANUAL CONTEXT CREATION:
+//     // Remove: ctx, cancel := context.WithTimeout(context.Background(), time.X)
+//     // Use: ctx, cancel := helper.GetStandardContext()
 func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaMTXTestHelper {
 	if testConfig == nil {
 		testConfig = DefaultMediaMTXTestConfig()
@@ -196,6 +220,10 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 	err = helper.ensureTestDataDir()
 	require.NoError(t, err, "Failed to create test data directory")
 
+	// ENTERPRISE SETUP: Create ALL required directories once
+	err = helper.ensureAllDirectories()
+	require.NoError(t, err, "Failed to create required directories")
+
 	return helper
 }
 
@@ -203,6 +231,23 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 func (h *MediaMTXTestHelper) ensureTestDataDir() error {
 	// Create directory with user read/write/execute permissions
 	return os.MkdirAll(h.config.TestDataDir, 0700)
+}
+
+// ensureAllDirectories creates ALL required directories once - no duplication in tests
+func (h *MediaMTXTestHelper) ensureAllDirectories() error {
+	// Create snapshots directory
+	snapshotsDir := h.GetConfiguredSnapshotPath()
+	if err := os.MkdirAll(snapshotsDir, 0700); err != nil {
+		return fmt.Errorf("failed to create snapshots directory: %w", err)
+	}
+
+	// Create recordings directory
+	recordingsDir := h.GetConfiguredRecordingPath()
+	if err := os.MkdirAll(recordingsDir, 0700); err != nil {
+		return fmt.Errorf("failed to create recordings directory: %w", err)
+	}
+
+	return nil
 }
 
 // Cleanup performs comprehensive cleanup of test resources
@@ -375,8 +420,10 @@ func (h *MediaMTXTestHelper) GetClient() MediaMTXClient {
 // GetPathManager returns a shared path manager instance
 func (h *MediaMTXTestHelper) GetPathManager() PathManager {
 	h.pathManagerOnce.Do(func() {
-		// Use centralized MediaMTX config
-		h.pathManager = NewPathManager(h.client, h.mediaMTXConfig, h.logger)
+		// CRITICAL FIX: Use path manager WITH camera monitor integration
+		// This is required for recording operations to work
+		cameraMonitor := h.GetCameraMonitor()
+		h.pathManager = NewPathManagerWithCamera(h.client, h.mediaMTXConfig, cameraMonitor, h.logger)
 	})
 	return h.pathManager
 }
@@ -421,6 +468,25 @@ func (h *MediaMTXTestHelper) GetRecordingManager() *RecordingManager {
 		h.recordingManager = NewRecordingManager(h.client, pathManager, streamManager, ffmpegManager, h.mediaMTXConfig, recordingConfig, h.configIntegration, h.logger)
 	})
 	return h.recordingManager
+}
+
+// GetSnapshotManager returns a shared snapshot manager instance with full integration
+func (h *MediaMTXTestHelper) GetSnapshotManager() *SnapshotManager {
+	// Use the SAME pattern as GetRecordingManager - no duplication
+	pathManager := h.GetPathManager()
+	streamManager := h.GetStreamManager()
+	ffmpegManager := h.GetFFmpegManager()
+	cameraMonitor := h.GetCameraMonitor()
+
+	return NewSnapshotManagerWithConfig(
+		ffmpegManager,
+		streamManager,
+		cameraMonitor,
+		pathManager,
+		h.mediaMTXConfig,
+		h.configManager,
+		h.logger,
+	)
 }
 
 // GetCameraMonitor returns a shared camera monitor instance using REAL hardware
@@ -551,6 +617,7 @@ func (h *MediaMTXTestHelper) GetAvailableCameraIdentifier(ctx context.Context) (
 	devicePath, err := h.GetAvailableCameraDevice(ctx)
 	if err != nil {
 		return "", err
+
 	}
 
 	// Convert device path to camera identifier using PathManager abstraction
@@ -692,6 +759,27 @@ func (h *MediaMTXTestHelper) GetController(t *testing.T) (MediaMTXController, er
 	logger := h.GetLogger()
 
 	return ControllerWithConfigManager(configManager, cameraMonitor, logger)
+}
+
+// GetStandardContext returns a standard context for all tests - no duplication
+func (h *MediaMTXTestHelper) GetStandardContext() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), 30*time.Second)
+}
+
+// GetReadyController returns a controller that's already started and ready - no duplication
+// PREFERRED PATTERN: Use this instead of getFreshController() or manual setup
+// Example: controller, ctx, cancel := helper.GetReadyController(t)
+func (h *MediaMTXTestHelper) GetReadyController(t *testing.T) (MediaMTXController, context.Context, context.CancelFunc) {
+	controller, err := h.GetController(t)
+	require.NoError(t, err, "Controller creation should succeed")
+
+	ctx, cancel := h.GetStandardContext()
+
+	// Start controller with Progressive Readiness - returns immediately
+	err = controller.Start(ctx)
+	require.NoError(t, err, "Controller should start immediately")
+
+	return controller, ctx, cancel
 }
 
 // Bad orchestration methods deleted - violates Progressive Readiness Pattern

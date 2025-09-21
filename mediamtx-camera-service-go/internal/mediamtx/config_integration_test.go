@@ -34,7 +34,8 @@ func TestController_GetConfig_ReqMTX003(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -69,7 +70,8 @@ func TestController_UpdateConfig_ReqMTX003(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -123,7 +125,8 @@ func TestController_UpdateConfig_InvalidConfig_ReqMTX004(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -178,7 +181,8 @@ func TestController_GetConfig_NotRunning_ReqMTX004(t *testing.T) {
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Try to get configuration when controller is not running
@@ -197,7 +201,8 @@ func TestController_UpdateConfig_NotRunning_ReqMTX004(t *testing.T) {
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Create a valid configuration

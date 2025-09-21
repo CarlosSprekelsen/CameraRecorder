@@ -34,7 +34,8 @@ func TestExternalStreamDiscovery_DiscoverExternalStreams_ReqMTX001(t *testing.T)
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -74,7 +75,8 @@ func TestExternalStreamDiscovery_AddExternalStream_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -126,7 +128,8 @@ func TestExternalStreamDiscovery_RemoveExternalStream_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -195,7 +198,8 @@ func TestExternalStreamDiscovery_GetExternalStreams_ReqMTX002(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -254,7 +258,8 @@ func TestExternalStreamDiscovery_ErrorHandling_ReqMTX004(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -299,7 +304,8 @@ func TestExternalStreamDiscovery_OptionalComponent_ReqMTX004(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// Start the controller
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
@@ -356,7 +362,8 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		discovery := NewExternalStreamDiscovery(configIntegration, logger)
 
 		// Start discovery
-		ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+		// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 		defer cancel()
 		err := discovery.Start(ctx)
 		require.NoError(t, err, "Discovery should start successfully")
@@ -385,7 +392,8 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		discovery := NewExternalStreamDiscovery(configIntegration, logger)
 
 		// Start discovery
-		ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+		// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 		defer cancel()
 		err := discovery.Start(ctx)
 		require.NoError(t, err, "Discovery should start successfully")
@@ -415,7 +423,8 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		discovery := NewExternalStreamDiscovery(configIntegration, logger)
 
 		// Start discovery
-		ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+		// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 		defer cancel()
 		err := discovery.Start(ctx)
 		require.NoError(t, err, "Discovery should start successfully")
@@ -454,7 +463,8 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 		discovery := NewExternalStreamDiscovery(configIntegration, logger)
 
 		// Start discovery
-		ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+		// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 		defer cancel()
 		err := discovery.Start(ctx)
 		require.NoError(t, err, "Discovery should start successfully")
@@ -506,7 +516,8 @@ func TestExternalStreamDiscovery_DiscoverExternalStreamsAPI_ReqMTX002(t *testing
 	discovery := NewExternalStreamDiscovery(configIntegration, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Test DiscoverExternalStreamsAPI method - new API-ready response
@@ -547,7 +558,8 @@ func TestExternalStreamDiscovery_GetExternalStreamsAPI_ReqMTX002(t *testing.T) {
 	discovery := NewExternalStreamDiscovery(configIntegration, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Test GetExternalStreamsAPI method - new API-ready response
@@ -578,7 +590,8 @@ func TestExternalStreamDiscovery_AddExternalStreamAPI_ReqMTX002(t *testing.T) {
 	discovery := NewExternalStreamDiscovery(configIntegration, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// Create test external stream
@@ -624,7 +637,8 @@ func TestExternalStreamDiscovery_RemoveExternalStreamAPI_ReqMTX002(t *testing.T)
 	discovery := NewExternalStreamDiscovery(configIntegration, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
-	ctx, cancel := context.WithTimeout(context.Background(), TestTimeoutExtreme)
+	// MINIMAL: Helper provides standard context
+	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
 	// First add a test stream

@@ -42,8 +42,8 @@ func TestMain(m *testing.M) {
 }
 
 // TestWebSocketServer_Creation tests server creation and initialization
-func TestWebSocketServer_Creation(t *testing.T) {
-	EnsureSequentialExecution(t)
+func TestWebSocketServer_New_ReqAPI001_Success(t *testing.T) {
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -60,19 +60,34 @@ func TestWebSocketServer_Creation(t *testing.T) {
 }
 
 // TestWebSocketServer_StartStop tests server start and stop functionality
-func TestWebSocketServer_StartStop(t *testing.T) {
-	EnsureSequentialExecution(t)
+func TestWebSocketServer_StartStop_ReqAPI001_Success(t *testing.T) {
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Start server following Progressive Readiness Pattern
+	// Progressive Readiness Test 1: Server accepts connections immediately after Start()
 	server := helper.StartServer(t)
 
-	// Use Progressive Readiness Pattern - server should be ready quickly
-	// The server starts in a goroutine, so we use Eventually for proper synchronization
-	require.Eventually(t, func() bool {
-		return server.IsRunning()
-	}, 1*time.Second, 10*time.Millisecond, "Server should be running after start (Progressive Readiness Pattern)")
+	// Progressive Readiness Pattern: Test immediate connection acceptance
+	startTime := time.Now()
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+	connectionTime := time.Since(startTime)
+
+	assert.Less(t, connectionTime, 100*time.Millisecond,
+		"Connection should be accepted immediately (Progressive Readiness)")
+
+	// Progressive Readiness Test 2: Basic operations work immediately
+	message := CreateTestMessage("ping", nil)
+	response := SendTestMessage(t, conn, message)
+
+	require.NotNil(t, response, "System should respond to requests immediately")
+
+	// Progressive Readiness Test 3: No "system not ready" errors
+	if response.Error != nil {
+		require.NotEqual(t, -32002, response.Error.Code,
+			"Should not get 'system not ready' error - violates Progressive Readiness")
+	}
 
 	// Test server stop
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -82,39 +97,99 @@ func TestWebSocketServer_StartStop(t *testing.T) {
 	assert.False(t, server.IsRunning(), "Server should not be running after stop")
 }
 
-// TestWebSocketServer_ProgressiveReadinessPattern tests the Progressive Readiness Pattern compliance
-func TestWebSocketServer_ProgressiveReadinessPattern(t *testing.T) {
-	EnsureSequentialExecution(t)
+// TestEnterpriseGrade_ProgressiveReadinessCompliance validates complete enterprise compliance
+func TestWebSocketServer_Start_ReqARCH001_ProgressiveReadiness(t *testing.T) {
+	// No sequential execution - demonstrates parallel capability
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
 	// Start server following Progressive Readiness Pattern
 	server := helper.StartServer(t)
 
-	// Use Progressive Readiness Pattern - server should be ready quickly
-	// The server starts in a goroutine, so we use Eventually for proper synchronization
-	require.Eventually(t, func() bool {
-		return server.IsRunning()
-	}, 1*time.Second, 10*time.Millisecond, "Server should be running after start (Progressive Readiness Pattern)")
+	// Enterprise Test Suite 1: Connection Performance Validation
+	helper.ValidateProgressiveReadinessCompliance(t, server)
 
-	// Validate Progressive Readiness Pattern behavior
-	helper.ValidateProgressiveReadiness(t, server)
-	helper.TestProgressiveReadinessBehavior(t, server)
+	// Enterprise Test Suite 2: Operation Patterns Validation
+	helper.TestEnterpriseGradeOperations(t, server)
+
+	// Enterprise Test Suite 3: Architectural Compliance Validation
+	TestArchitecturalCompliance_ProgressiveReadiness(t, server)
+
+	t.Log("✅ Enterprise-grade Progressive Readiness compliance validated")
+}
+
+// TestWebSocketServer_ProgressiveReadinessPattern tests TRUE Progressive Readiness Pattern compliance
+func TestWebSocketServer_Start_ReqARCH001_ProgressiveReadinessPattern(t *testing.T) {
+	// No sequential execution - Progressive Readiness enables parallelism
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Start server following Progressive Readiness Pattern
+	server := helper.StartServer(t)
+
+	// Enterprise Test 1: Multiple rapid connections should all succeed
+	connections := make([]*websocket.Conn, 5)
+	for i := 0; i < 5; i++ {
+		startTime := time.Now()
+		connections[i] = helper.NewTestClient(t, server)
+		connectionTime := time.Since(startTime)
+
+		assert.Less(t, connectionTime, 50*time.Millisecond,
+			"Connection %d should be immediate", i)
+	}
+
+	// Enterprise Test 2: All connections should be able to send requests immediately
+	for i, conn := range connections {
+		message := CreateTestMessage("ping", nil)
+		response := SendTestMessage(t, conn, message)
+
+		require.NotNil(t, response, "Connection %d should receive response", i)
+
+		// May get pong or "initializing" status, but should not block
+		if response.Error != nil {
+			require.NotEqual(t, -32002, response.Error.Code,
+				"Connection %d should not get 'system not ready' error", i)
+		}
+	}
+
+	// Enterprise Test 3: Operations that require components should gracefully handle initialization
+	conn := connections[0]
+	snapshotMessage := CreateTestMessage("take_snapshot", map[string]interface{}{
+		"device": "camera0",
+	})
+	snapshotResponse := SendTestMessage(t, conn, snapshotMessage)
+
+	require.NotNil(t, snapshotResponse, "Snapshot request should get response")
+
+	if snapshotResponse.Error != nil {
+		// Should get meaningful error, not "system not ready"
+		assert.NotEqual(t, -32002, snapshotResponse.Error.Code,
+			"Should get specific error, not generic 'not ready'")
+	}
+
+	// Cleanup all connections
+	for _, conn := range connections {
+		helper.CleanupTestClient(t, conn)
+	}
 }
 
 // TestWebSocketServer_DoubleStart tests starting server twice
-func TestWebSocketServer_DoubleStart(t *testing.T) {
-	EnsureSequentialExecution(t)
+func TestWebSocketServer_Start_ReqAPI001_ErrorHandling_DoubleStart(t *testing.T) {
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
 	// Start server following Progressive Readiness Pattern
 	server := helper.StartServer(t)
 
-	// Use Progressive Readiness Pattern - server should be ready quickly
-	require.Eventually(t, func() bool {
-		return server.IsRunning()
-	}, 1*time.Second, 10*time.Millisecond, "Server should be running after first start (Progressive Readiness Pattern)")
+	// Progressive Readiness Pattern: Test immediate connection acceptance instead of polling
+	startTime := time.Now()
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+	connectionTime := time.Since(startTime)
+
+	assert.Less(t, connectionTime, 100*time.Millisecond,
+		"Connection should be accepted immediately (Progressive Readiness)")
 
 	// Start server second time should fail
 	err := server.Start()
@@ -123,8 +198,8 @@ func TestWebSocketServer_DoubleStart(t *testing.T) {
 }
 
 // TestWebSocketServer_DoubleStop tests stopping server twice
-func TestWebSocketServer_DoubleStop(t *testing.T) {
-	EnsureSequentialExecution(t)
+func TestWebSocketServer_Stop_ReqAPI001_ErrorHandling_DoubleStop(t *testing.T) {
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -146,8 +221,8 @@ func TestWebSocketServer_DoubleStop(t *testing.T) {
 }
 
 // TestWebSocketServer_ClientConnection tests client connection handling
-func TestWebSocketServer_ClientConnection(t *testing.T) {
-	EnsureSequentialExecution(t)
+func TestWebSocketServer_HandleConnection_ReqAPI001_Success(t *testing.T) {
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -166,17 +241,16 @@ func TestWebSocketServer_ClientConnection(t *testing.T) {
 	err := conn.Close()
 	require.NoError(t, err, "Client should close successfully")
 
-	// Wait for connection cleanup with proper verification
-	// Use Progressive Readiness Pattern - connections should be cleaned up immediately
-	// The server implements proper connection lifecycle management
-	require.Eventually(t, func() bool {
-		return server.GetClientCount() == 0
-	}, 1*time.Second, 10*time.Millisecond, "Connections should be cleaned up (Progressive Readiness Pattern)")
+	// Progressive Readiness Pattern: Connection cleanup should be immediate
+	// No polling - check connection count directly after cleanup
+	clientCount := server.GetClientCount()
+	assert.Equal(t, int64(0), clientCount,
+		"Connections should be cleaned up immediately (Progressive Readiness)")
 }
 
 // TestWebSocketServer_MultipleClients tests multiple client connections
-func TestWebSocketServer_MultipleClients(t *testing.T) {
-	EnsureSequentialExecution(t)
+func TestWebSocketServer_HandleConnection_ReqAPI001_MultipleClients(t *testing.T) {
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -201,17 +275,16 @@ func TestWebSocketServer_MultipleClients(t *testing.T) {
 	err := conn1.Close()
 	require.NoError(t, err, "Client should close successfully")
 
-	// Wait for connection cleanup with proper verification
-	// Use Progressive Readiness Pattern - connections should be established immediately
-	// The server implements proper connection lifecycle management
-	require.Eventually(t, func() bool {
-		return server.GetClientCount() == 2
-	}, 1*time.Second, 10*time.Millisecond, "Two client connections should be established (Progressive Readiness Pattern)")
+	// Progressive Readiness Pattern: Connections should be established immediately
+	// No polling - check connection count directly after establishment
+	clientCount := server.GetClientCount()
+	assert.Equal(t, int64(2), clientCount,
+		"Two client connections should be established immediately (Progressive Readiness)")
 }
 
 // TestWebSocketServer_MethodRegistration tests method registration
-func TestWebSocketServer_MethodRegistration(t *testing.T) {
-	EnsureSequentialExecution(t)
+func TestWebSocketServer_RegisterMethod_ReqAPI002_Success(t *testing.T) {
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -238,8 +311,8 @@ func TestWebSocketServer_MethodRegistration(t *testing.T) {
 }
 
 // TestWebSocketServer_MethodExecution tests method execution
-func TestWebSocketServer_MethodExecution(t *testing.T) {
-	EnsureSequentialExecution(t)
+func TestWebSocketServer_ExecuteMethod_ReqAPI002_Success(t *testing.T) {
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -275,8 +348,8 @@ func TestWebSocketServer_MethodExecution(t *testing.T) {
 }
 
 // TestWebSocketServer_InvalidMethod tests invalid method handling
-func TestWebSocketServer_InvalidMethod(t *testing.T) {
-	EnsureSequentialExecution(t)
+func TestWebSocketServer_ExecuteMethod_ReqAPI002_ErrorHandling_InvalidMethod(t *testing.T) {
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -300,8 +373,8 @@ func TestWebSocketServer_InvalidMethod(t *testing.T) {
 }
 
 // TestWebSocketServer_Notification tests notification handling
-func TestWebSocketServer_Notification(t *testing.T) {
-	EnsureSequentialExecution(t)
+func TestWebSocketServer_SendNotification_ReqAPI003_Success(t *testing.T) {
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -326,8 +399,8 @@ func TestWebSocketServer_Notification(t *testing.T) {
 }
 
 // TestWebSocketServer_ContextCancellation tests server shutdown with context
-func TestWebSocketServer_ContextCancellation(t *testing.T) {
-	EnsureSequentialExecution(t)
+func TestWebSocketServer_HandleConnection_ReqAPI001_ContextCancellation(t *testing.T) {
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -349,16 +422,15 @@ func TestWebSocketServer_ContextCancellation(t *testing.T) {
 	// Cancel context
 	cancel()
 
-	// Use Progressive Readiness Pattern - server should stop immediately
-	// The server implements proper context-aware shutdown
-	require.Eventually(t, func() bool {
-		return !server.IsRunning()
-	}, 1*time.Second, 10*time.Millisecond, "Server should be stopped after context cancellation (Progressive Readiness Pattern)")
+	// Progressive Readiness Pattern: Server should stop immediately with context cancellation
+	// No polling - check server state directly after context cancellation
+	assert.False(t, server.IsRunning(),
+		"Server should be stopped immediately after context cancellation (Progressive Readiness)")
 }
 
 // TestWebSocketServer_ConcurrentConnections tests concurrent client connections
-func TestWebSocketServer_ConcurrentConnections(t *testing.T) {
-	EnsureSequentialExecution(t)
+func TestWebSocketServer_HandleConnection_ReqAPI001_Concurrent(t *testing.T) {
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -420,11 +492,11 @@ func TestWebSocketServer_ConcurrentConnections(t *testing.T) {
 }
 
 // TestWebSocketServer_NotificationFunctions tests notification functions for bugs
-func TestWebSocketServer_NotificationFunctions(t *testing.T) {
+func TestWebSocketServer_SendNotification_ReqAPI003_Functions(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	EnsureSequentialExecution(t)
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -455,11 +527,11 @@ func TestWebSocketServer_NotificationFunctions(t *testing.T) {
 }
 
 // TestWebSocketServer_ErrorHandlingFunctions tests error handling functions for bugs
-func TestWebSocketServer_ErrorHandlingFunctions(t *testing.T) {
+func TestWebSocketServer_HandleError_ReqAPI002_ErrorHandling(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	EnsureSequentialExecution(t)
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -490,11 +562,11 @@ func TestWebSocketServer_ErrorHandlingFunctions(t *testing.T) {
 }
 
 // TestWebSocketServer_PermissionAndRateLimit tests permission and rate limit functions for bugs
-func TestWebSocketServer_PermissionAndRateLimit(t *testing.T) {
+func TestWebSocketServer_ValidatePermission_ReqSEC001_RateLimit(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	EnsureSequentialExecution(t)
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -515,11 +587,11 @@ func TestWebSocketServer_PermissionAndRateLimit(t *testing.T) {
 }
 
 // TestWebSocketServer_JsonRpcProtocolCompliance tests JSON-RPC 2.0 protocol compliance
-func TestWebSocketServer_JsonRpcProtocolCompliance(t *testing.T) {
+func TestWebSocketServer_ProcessMessage_ReqAPI002_JsonRpcCompliance(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-002: JSON-RPC 2.0 protocol implementation
 
-	EnsureSequentialExecution(t)
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -532,7 +604,7 @@ func TestWebSocketServer_JsonRpcProtocolCompliance(t *testing.T) {
 	// Test 1: Valid JSON-RPC 2.0 request
 	t.Run("ValidJsonRpcRequest", func(t *testing.T) {
 		// Authenticate first since ping requires authentication
-		AuthenticateTestClient(t, conn, "test-user", "viewer")
+		helper.AuthenticateTestClient(t, conn, "test-user", "viewer")
 
 		message := CreateTestMessage("ping", nil)
 		response := SendTestMessage(t, conn, message)
@@ -637,11 +709,11 @@ func TestWebSocketServer_JsonRpcProtocolCompliance(t *testing.T) {
 }
 
 // TestWebSocketServer_ErrorCodeCompliance tests JSON-RPC error code compliance
-func TestWebSocketServer_ErrorCodeCompliance(t *testing.T) {
+func TestWebSocketServer_HandleError_ReqAPI002_ErrorCodeCompliance(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-002: JSON-RPC 2.0 protocol implementation
 
-	EnsureSequentialExecution(t)
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -704,11 +776,11 @@ func TestWebSocketServer_ErrorCodeCompliance(t *testing.T) {
 }
 
 // TestWebSocketServer_AuthenticationFlow tests JWT token validation and authentication flow
-func TestWebSocketServer_AuthenticationFlow(t *testing.T) {
+func TestWebSocketServer_Authenticate_ReqSEC001_AuthenticationFlow(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	EnsureSequentialExecution(t)
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -720,7 +792,7 @@ func TestWebSocketServer_AuthenticationFlow(t *testing.T) {
 
 	// Test 1: Valid authentication
 	t.Run("ValidAuthentication", func(t *testing.T) {
-		AuthenticateTestClient(t, conn, "test-user", "viewer")
+		helper.AuthenticateTestClient(t, conn, "test-user", "viewer")
 
 		// After authentication, ping should work
 		message := CreateTestMessage("ping", nil)
@@ -777,11 +849,11 @@ func TestWebSocketServer_AuthenticationFlow(t *testing.T) {
 }
 
 // TestWebSocketServer_RoleBasedAccessControl tests RBAC enforcement
-func TestWebSocketServer_RoleBasedAccessControl(t *testing.T) {
+func TestWebSocketServer_ValidatePermission_ReqSEC001_RoleBasedAccess(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	EnsureSequentialExecution(t)
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -869,11 +941,11 @@ func TestWebSocketServer_RoleBasedAccessControl(t *testing.T) {
 }
 
 // TestWebSocketServer_ResponseMetadata tests response metadata inclusion
-func TestWebSocketServer_ResponseMetadata(t *testing.T) {
+func TestWebSocketServer_SendResponse_ReqAPI003_ResponseMetadata(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	EnsureSequentialExecution(t)
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -883,7 +955,7 @@ func TestWebSocketServer_ResponseMetadata(t *testing.T) {
 	conn := helper.NewTestClient(t, server)
 	defer helper.CleanupTestClient(t, conn)
 
-	AuthenticateTestClient(t, conn, "test-user", "viewer")
+	helper.AuthenticateTestClient(t, conn, "test-user", "viewer")
 
 	// Test 1: Response metadata presence
 	t.Run("ResponseMetadataPresence", func(t *testing.T) {
@@ -969,11 +1041,11 @@ func TestWebSocketServer_ResponseMetadata(t *testing.T) {
 }
 
 // TestWebSocketServer_MessageSizeLimits tests message size limit handling
-func TestWebSocketServer_MessageSizeLimits(t *testing.T) {
+func TestWebSocketServer_ProcessMessage_ReqAPI001_MessageSizeLimits(t *testing.T) {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 	// REQ-API-003: Request/response message handling
 
-	EnsureSequentialExecution(t)
+	// No sequential execution - Progressive Readiness enables parallelism
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
@@ -983,7 +1055,7 @@ func TestWebSocketServer_MessageSizeLimits(t *testing.T) {
 	conn := helper.NewTestClient(t, server)
 	defer helper.CleanupTestClient(t, conn)
 
-	AuthenticateTestClient(t, conn, "test-user", "viewer")
+	helper.AuthenticateTestClient(t, conn, "test-user", "viewer")
 
 	// Test 1: Normal size message
 	t.Run("NormalSizeMessage", func(t *testing.T) {
@@ -1080,9 +1152,9 @@ func TestWebSocketServer_MessageSizeLimits(t *testing.T) {
 }
 
 // TestWebSocketServer_ContextAwareShutdown tests the context-aware shutdown functionality
-func TestWebSocketServer_ContextAwareShutdown(t *testing.T) {
+func TestWebSocketServer_Stop_ReqAPI001_ContextAwareShutdown(t *testing.T) {
 	t.Run("graceful_shutdown_with_context", func(t *testing.T) {
-		EnsureSequentialExecution(t)
+		// No sequential execution - Progressive Readiness enables parallelism
 		helper := NewWebSocketTestHelper(t, nil)
 		defer helper.Cleanup(t)
 
@@ -1107,7 +1179,7 @@ func TestWebSocketServer_ContextAwareShutdown(t *testing.T) {
 	})
 
 	t.Run("shutdown_with_cancelled_context", func(t *testing.T) {
-		EnsureSequentialExecution(t)
+		// No sequential execution - Progressive Readiness enables parallelism
 		helper := NewWebSocketTestHelper(t, nil)
 		defer helper.Cleanup(t)
 
@@ -1131,7 +1203,7 @@ func TestWebSocketServer_ContextAwareShutdown(t *testing.T) {
 	})
 
 	t.Run("shutdown_timeout_handling", func(t *testing.T) {
-		EnsureSequentialExecution(t)
+		// No sequential execution - Progressive Readiness enables parallelism
 		helper := NewWebSocketTestHelper(t, nil)
 		defer helper.Cleanup(t)
 
@@ -1158,7 +1230,7 @@ func TestWebSocketServer_ContextAwareShutdown(t *testing.T) {
 	})
 
 	t.Run("double_stop_handling", func(t *testing.T) {
-		EnsureSequentialExecution(t)
+		// No sequential execution - Progressive Readiness enables parallelism
 		helper := NewWebSocketTestHelper(t, nil)
 		defer helper.Cleanup(t)
 
@@ -1183,7 +1255,7 @@ func TestWebSocketServer_ContextAwareShutdown(t *testing.T) {
 	})
 
 	t.Run("stop_without_start", func(t *testing.T) {
-		EnsureSequentialExecution(t)
+		// No sequential execution - Progressive Readiness enables parallelism
 		helper := NewWebSocketTestHelper(t, nil)
 		defer helper.Cleanup(t)
 
