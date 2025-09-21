@@ -113,12 +113,15 @@ func EnsureSequentialExecution(t *testing.T) {
 func setupTestLogging() {
 	// Configure the global logger factory for tests
 	// This ensures all loggers created through the factory use test configuration
-	logging.ConfigureGlobalLogging(&logging.LoggingConfig{
+	if err := logging.ConfigureGlobalLogging(&logging.LoggingConfig{
 		Level:          "error",
 		Format:         "json",
 		FileEnabled:    false,
 		ConsoleEnabled: false,
-	})
+	}); err != nil {
+		// Use fmt.Printf since logging isn't configured yet
+		fmt.Printf("Warning: Failed to configure test logging: %v\n", err)
+	}
 }
 
 // NewWebSocketTestHelper creates a new test helper for WebSocket server testing
@@ -379,7 +382,7 @@ func (h *WebSocketTestHelper) ValidateProgressiveReadiness(t *testing.T, server 
 		require.Equal(t, "pong", pingResponse.Result, "Should get pong response when system is ready")
 	} else {
 		// If error, should be authentication error, not system not ready error
-		require.NotEqual(t, -32002, pingResponse.Error.Code, "Should not get system not ready error")
+		require.NotEqual(t, RATE_LIMIT_EXCEEDED, pingResponse.Error.Code, "Should not get system not ready error")
 	}
 
 	t.Log("Progressive Readiness Pattern validation passed")
@@ -627,7 +630,7 @@ func (h *WebSocketTestHelper) TestEnterpriseGradeOperations(t *testing.T, server
 
 		if response.Error != nil {
 			// Should get meaningful error, not "system not ready"
-			assert.NotEqual(t, -32002, response.Error.Code,
+			assert.NotEqual(t, RATE_LIMIT_EXCEEDED, response.Error.Code,
 				"%s should not get generic 'not ready' error", test.name)
 		}
 	}
@@ -660,7 +663,7 @@ func TestArchitecturalCompliance_ProgressiveReadiness(t *testing.T, server *WebS
 
 	// Architectural Test 3: No blocking "system not ready" errors
 	if response.Error != nil {
-		assert.NotEqual(t, -32002, response.Error.Code,
+		assert.NotEqual(t, RATE_LIMIT_EXCEEDED, response.Error.Code,
 			"Should not get 'system not ready' blocking error")
 	}
 
@@ -701,6 +704,41 @@ func (h *WebSocketTestHelper) TestMethod(t *testing.T, method string, params map
 
 	message := CreateTestMessage(method, params)
 	return SendTestMessage(t, conn, message)
+}
+
+// WaitForServerReady waits for server to be fully ready using Progressive Readiness Pattern
+func (h *WebSocketTestHelper) WaitForServerReady(t *testing.T) {
+	// Check if already ready first
+	response := h.TestMethod(t, "get_camera_list", nil, "viewer")
+	if response.Error == nil || response.Error.Code != MEDIAMTX_UNAVAILABLE {
+		t.Log("MediaMTX controller is already ready for API contract validation")
+		return
+	}
+
+	t.Log("MediaMTX controller not ready, subscribing to readiness events...")
+
+	// Get MediaMTX controller from server
+	server := h.GetServer(t)
+	if server.mediaMTXController == nil {
+		t.Fatal("MediaMTX controller is nil - cannot subscribe to readiness events")
+	}
+
+	// Subscribe to readiness events (Progressive Readiness Pattern)
+	readinessProvider, ok := server.mediaMTXController.(interface{ SubscribeToReadiness() <-chan struct{} })
+	if !ok {
+		t.Fatal("MediaMTX controller does not support readiness subscriptions")
+	}
+	readinessChan := readinessProvider.SubscribeToReadiness()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+	defer cancel()
+
+	select {
+	case <-readinessChan:
+		t.Log("MediaMTX controller readiness event received - ready for API contract validation")
+	case <-ctx.Done():
+		t.Fatal("MediaMTX controller readiness timeout - cannot validate API contract")
+	}
 }
 
 // AuthenticateTestClient authenticates a WebSocket connection (standalone function for compatibility)

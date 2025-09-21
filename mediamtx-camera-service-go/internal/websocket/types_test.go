@@ -69,7 +69,7 @@ func TestWebSocketTypes_JsonRpcError(t *testing.T) {
 	error := NewJsonRpcError(INVALID_REQUEST, "test_invalid_request", "Invalid JSON-RPC request", "Check request format")
 
 	// Test error structure
-	assert.Equal(t, -32600, error.Code, "Error should have correct code")
+	assert.Equal(t, INVALID_REQUEST, error.Code, "Error should have correct code")
 	assert.Equal(t, "Invalid Request", error.Message, "Error should have correct message")
 
 	// Test error data structure
@@ -109,7 +109,7 @@ func TestWebSocketTypes_ErrorStandardization(t *testing.T) {
 	t.Run("NewJsonRpcErrorHelper", func(t *testing.T) {
 		error := NewJsonRpcError(-32001, "AUTH_FAILED", "Authentication failed", "Please provide valid credentials")
 
-		assert.Equal(t, -32001, error.Code, "Error code should be set correctly")
+		assert.Equal(t, AUTHENTICATION_REQUIRED, error.Code, "Error code should be set correctly")
 		assert.Equal(t, "Authentication failed or token expired", error.Message, "Error message should match API specification")
 		assert.NotNil(t, error.Data, "Error data should be initialized")
 
@@ -123,33 +123,33 @@ func TestWebSocketTypes_ErrorStandardization(t *testing.T) {
 	// Test 2: Standard error codes
 	t.Run("StandardErrorCodes", func(t *testing.T) {
 		// Test standard JSON-RPC error codes
-		invalidRequest := NewJsonRpcError(-32600, "INVALID_REQUEST", "Invalid request format", "Check JSON-RPC 2.0 specification")
-		assert.Equal(t, -32600, invalidRequest.Code, "Invalid request error code should be -32600")
+		invalidRequest := NewJsonRpcError(INVALID_REQUEST, "INVALID_REQUEST", "Invalid request format", "Check JSON-RPC 2.0 specification")
+		assert.Equal(t, INVALID_REQUEST, invalidRequest.Code, "Invalid request error code should match constant")
 
-		methodNotFound := NewJsonRpcError(-32601, "METHOD_NOT_FOUND", "Method not found", "Check method name")
-		assert.Equal(t, -32601, methodNotFound.Code, "Method not found error code should be -32601")
+		methodNotFound := NewJsonRpcError(METHOD_NOT_FOUND, "METHOD_NOT_FOUND", "Method not found", "Check method name")
+		assert.Equal(t, METHOD_NOT_FOUND, methodNotFound.Code, "Method not found error code should match constant")
 
-		invalidParams := NewJsonRpcError(-32602, "INVALID_PARAMS", "Invalid parameters", "Check parameter types and values")
-		assert.Equal(t, -32602, invalidParams.Code, "Invalid params error code should be -32602")
+		invalidParams := NewJsonRpcError(INVALID_PARAMS, "INVALID_PARAMS", "Invalid parameters", "Check parameter types and values")
+		assert.Equal(t, INVALID_PARAMS, invalidParams.Code, "Invalid params error code should match constant")
 
-		internalError := NewJsonRpcError(-32603, "INTERNAL_ERROR", "Internal server error", "Contact system administrator")
-		assert.Equal(t, -32603, internalError.Code, "Internal error code should be -32603")
+		internalError := NewJsonRpcError(INTERNAL_ERROR, "INTERNAL_ERROR", "Internal server error", "Contact system administrator")
+		assert.Equal(t, INTERNAL_ERROR, internalError.Code, "Internal error code should match constant")
 	})
 
 	// Test 3: Service-specific error codes
 	t.Run("ServiceSpecificErrorCodes", func(t *testing.T) {
 		// Test service-specific error codes
 		authFailed := NewJsonRpcError(-32001, "AUTH_FAILED", "Authentication failed", "Provide valid token")
-		assert.Equal(t, -32001, authFailed.Code, "Auth failed error code should be -32001")
+		assert.Equal(t, AUTHENTICATION_REQUIRED, authFailed.Code, "Auth failed error code should be AUTHENTICATION_REQUIRED")
 
-		rateLimit := NewJsonRpcError(-32002, "RATE_LIMIT", "Rate limit exceeded", "Wait before retrying")
-		assert.Equal(t, -32002, rateLimit.Code, "Rate limit error code should be -32002")
+		rateLimit := NewJsonRpcError(RATE_LIMIT_EXCEEDED, "RATE_LIMIT", "Rate limit exceeded", "Wait before retrying")
+		assert.Equal(t, RATE_LIMIT_EXCEEDED, rateLimit.Code, "Rate limit error code should match constant")
 
 		permissionDenied := NewJsonRpcError(-32003, "PERMISSION_DENIED", "Insufficient permissions", "Contact administrator")
-		assert.Equal(t, -32003, permissionDenied.Code, "Permission denied error code should be -32003")
+		assert.Equal(t, INSUFFICIENT_PERMISSIONS, permissionDenied.Code, "Permission denied error code should be INSUFFICIENT_PERMISSIONS")
 
-		cameraNotFound := NewJsonRpcError(-32004, "CAMERA_NOT_FOUND", "Camera not found", "Check camera identifier")
-		assert.Equal(t, -32004, cameraNotFound.Code, "Camera not found error code should be -32004")
+		cameraNotFound := NewJsonRpcError(CAMERA_NOT_FOUND, "CAMERA_NOT_FOUND", "Camera not found", "Check camera identifier")
+		assert.Equal(t, CAMERA_NOT_FOUND, cameraNotFound.Code, "Camera not found error code should match constant")
 	})
 
 	// Test 4: Error data structure
@@ -181,7 +181,7 @@ func TestWebSocketTypes_ErrorStandardization(t *testing.T) {
 		assert.Nil(t, response.Result, "Error response should not have result")
 
 		// Test error structure
-		assert.Equal(t, -32001, response.Error.Code, "Error should have correct code")
+		assert.Equal(t, AUTHENTICATION_REQUIRED, response.Error.Code, "Error should have correct code")
 		assert.Equal(t, "Authentication failed or token expired", response.Error.Message, "Error should match API specification")
 		assert.NotNil(t, response.Error.Data, "Error should have data")
 	})
@@ -189,7 +189,7 @@ func TestWebSocketTypes_ErrorStandardization(t *testing.T) {
 	// Test 6: Error code ranges
 	t.Run("ErrorCodeRanges", func(t *testing.T) {
 		// Standard JSON-RPC errors should be in -32768 to -32000 range
-		standardError := NewJsonRpcError(-32600, "STANDARD", "Standard error", "Standard suggestion")
+		standardError := NewJsonRpcError(INVALID_REQUEST, "STANDARD", "Standard error", "Standard suggestion")
 		assert.True(t, standardError.Code >= -32768 && standardError.Code <= -32000, "Standard error codes should be in -32768 to -32000 range")
 
 		// Service-specific errors should be in -32099 to -32000 range

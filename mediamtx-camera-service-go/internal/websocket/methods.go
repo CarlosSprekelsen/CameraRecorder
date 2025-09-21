@@ -234,7 +234,7 @@ func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, ver
 			if !s.isSystemReady() {
 				return &JsonRpcResponse{
 					JSONRPC: "2.0",
-					Error:   NewJsonRpcError(-32503, "service_initializing", "Service is still initializing, please retry", "Wait for service to complete startup"),
+					Error:   NewJsonRpcError(MEDIAMTX_UNAVAILABLE, "service_initializing", "Service is still initializing, please retry", "Wait for service to complete startup"),
 				}, nil
 			}
 		}
@@ -477,7 +477,7 @@ func (s *WebSocketServer) MethodGetStatus(params map[string]interface{}, client 
 		// Determine overall system status
 		systemStatus := "healthy"
 		websocketServerStatus := "running"
-		mediamtxControllerStatus := "unknown"
+		var mediamtxControllerStatus string
 
 		// Check MediaMTX controller health - thin delegation
 		if s.mediaMTXController != nil {
@@ -503,7 +503,7 @@ func (s *WebSocketServer) MethodGetStatus(params map[string]interface{}, client 
 		}
 
 		// Get version from MediaMTX controller (single source of truth)
-		var version string = "unknown"
+		version := "unknown"
 		if s.mediaMTXController != nil {
 			if serverInfo, err := s.mediaMTXController.GetServerInfo(context.Background()); err == nil {
 				version = serverInfo.Version

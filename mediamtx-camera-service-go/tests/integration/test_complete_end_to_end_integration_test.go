@@ -144,7 +144,7 @@ func testAuthenticationAndAuthorization(t *testing.T, client *testtestutils.WebS
 		require.NoError(t, err, "Should get JSON-RPC response for invalid authentication")
 		require.NotNil(t, response, "Should get response for invalid authentication")
 		require.NotNil(t, response.Error, "Invalid authentication should return error response")
-		assert.Equal(t, -32001, response.Error.Code, "Error code should be AUTHENTICATION_REQUIRED (-32001)")
+		assert.Equal(t, AUTHENTICATION_REQUIRED, response.Error.Code, "Error code should be AUTHENTICATION_REQUIRED")
 		assert.Contains(t, response.Error.Message, "Authentication failed", "Error message should match API documentation")
 	})
 
@@ -164,7 +164,7 @@ func testAuthenticationAndAuthorization(t *testing.T, client *testtestutils.WebS
 		require.NoError(t, err, "Should get JSON-RPC response for unauthenticated access")
 		require.NotNil(t, response, "Should get response for unauthenticated access")
 		require.NotNil(t, response.Error, "Unauthenticated access should return error response")
-		assert.Equal(t, -32001, response.Error.Code, "Error code should be AUTHENTICATION_REQUIRED (-32001)")
+		assert.Equal(t, AUTHENTICATION_REQUIRED, response.Error.Code, "Error code should be AUTHENTICATION_REQUIRED")
 		assert.Contains(t, response.Error.Message, "Authentication failed", "Error message should match API documentation")
 	})
 
@@ -206,7 +206,7 @@ func testAuthenticationAndAuthorization(t *testing.T, client *testtestutils.WebS
 		require.NoError(t, err, "Should get JSON-RPC response for insufficient permissions")
 		require.NotNil(t, recordingResponse, "Should get response for insufficient permissions")
 		require.NotNil(t, recordingResponse.Error, "Insufficient permissions should return error response")
-		assert.Equal(t, -32003, recordingResponse.Error.Code, "Error code should be INSUFFICIENT_PERMISSIONS (-32003)")
+		assert.Equal(t, INSUFFICIENT_PERMISSIONS, recordingResponse.Error.Code, "Error code should be INSUFFICIENT_PERMISSIONS")
 		assert.Contains(t, recordingResponse.Error.Message, "Insufficient permissions", "Error message should match API documentation")
 	})
 }
@@ -928,7 +928,7 @@ func testErrorHandlingAndEdgeCases(t *testing.T, client *testtestutils.WebSocket
 		require.NoError(t, err, "Should get JSON-RPC response for invalid parameters")
 		require.NotNil(t, response, "Should get response for invalid parameters")
 		require.NotNil(t, response.Error, "Invalid parameters should return error response")
-		assert.Equal(t, -32602, response.Error.Code, "Error code should be INVALID_PARAMS (-32602)")
+		assert.Equal(t, INVALID_PARAMS, response.Error.Code, "Error code should be INVALID_PARAMS")
 		assert.Contains(t, response.Error.Message, "Invalid parameters", "Error message should match API documentation")
 	})
 
@@ -947,7 +947,7 @@ func testErrorHandlingAndEdgeCases(t *testing.T, client *testtestutils.WebSocket
 		require.NoError(t, err, "Should get JSON-RPC response for non-existent method")
 		require.NotNil(t, response, "Should get response for non-existent method")
 		require.NotNil(t, response.Error, "Non-existent method should return error response")
-		assert.Equal(t, -32601, response.Error.Code, "Error code should be METHOD_NOT_FOUND (-32601)")
+		assert.Equal(t, METHOD_NOT_FOUND, response.Error.Code, "Error code should be METHOD_NOT_FOUND")
 		// Error message should indicate method not found
 	})
 

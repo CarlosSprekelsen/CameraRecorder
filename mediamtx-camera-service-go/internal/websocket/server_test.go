@@ -163,7 +163,7 @@ func TestWebSocketServer_Start_ReqARCH001_ProgressiveReadinessPattern(t *testing
 
 	if snapshotResponse.Error != nil {
 		// Should get meaningful error, not "system not ready"
-		assert.NotEqual(t, -32002, snapshotResponse.Error.Code,
+		assert.NotEqual(t, RATE_LIMIT_EXCEEDED, snapshotResponse.Error.Code,
 			"Should get specific error, not generic 'not ready'")
 	}
 
@@ -391,7 +391,9 @@ func TestWebSocketServer_SendNotification_ReqAPI003_Success(t *testing.T) {
 
 	// Test that no response is received
 	// Set a short timeout for reading
-	conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+	if err := conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond)); err != nil {
+		t.Fatalf("Failed to set read deadline: %v", err)
+	}
 
 	var response JsonRpcResponse
 	err := conn.ReadJSON(&response)
@@ -416,7 +418,9 @@ func TestWebSocketServer_HandleConnection_ReqAPI001_ContextCancellation(t *testi
 		<-ctx.Done()
 		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
-		server.Stop(stopCtx)
+		if err := server.Stop(stopCtx); err != nil {
+			t.Errorf("Failed to stop server: %v", err)
+		}
 	}()
 
 	// Cancel context
@@ -635,7 +639,7 @@ func TestWebSocketServer_ProcessMessage_ReqAPI002_JsonRpcCompliance(t *testing.T
 		require.NoError(t, err, "Failed to read response")
 
 		assert.NotNil(t, response.Error, "Invalid version should return error")
-		assert.Equal(t, -32600, response.Error.Code, "Should return invalid request error")
+		assert.Equal(t, INVALID_REQUEST, response.Error.Code, "Should return invalid request error")
 	})
 
 	// Test 3: Missing JSON-RPC version
@@ -653,7 +657,7 @@ func TestWebSocketServer_ProcessMessage_ReqAPI002_JsonRpcCompliance(t *testing.T
 		require.NoError(t, err, "Failed to read response")
 
 		assert.NotNil(t, response.Error, "Missing version should return error")
-		assert.Equal(t, -32600, response.Error.Code, "Should return invalid request error")
+		assert.Equal(t, INVALID_REQUEST, response.Error.Code, "Should return invalid request error")
 	})
 
 	// Test 4: Request ID handling (string vs number)
@@ -704,7 +708,9 @@ func TestWebSocketServer_ProcessMessage_ReqAPI002_JsonRpcCompliance(t *testing.T
 
 		// Notifications should not receive responses
 		// Set a short timeout to verify no response
-		conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+		if err := conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond)); err != nil {
+			t.Fatalf("Failed to set read deadline: %v", err)
+		}
 		var response JsonRpcResponse
 		err = conn.ReadJSON(&response)
 		assert.Error(t, err, "Notifications should not receive responses")
@@ -732,7 +738,7 @@ func TestWebSocketServer_HandleError_ReqAPI002_ErrorCodeCompliance(t *testing.T)
 		response := SendTestMessage(t, conn, message)
 
 		assert.NotNil(t, response.Error, "Non-existent method should return error")
-		assert.Equal(t, -32601, response.Error.Code, "Should return method not found error")
+		assert.Equal(t, METHOD_NOT_FOUND, response.Error.Code, "Should return method not found error")
 		assert.Contains(t, response.Error.Message, "not found", "Error message should indicate method not found")
 	})
 
@@ -816,7 +822,7 @@ func TestWebSocketServer_Authenticate_ReqSEC001_AuthenticationFlow(t *testing.T)
 		authResponse := SendTestMessage(t, conn2, authMessage)
 
 		assert.NotNil(t, authResponse.Error, "Invalid token should return error")
-		assert.Equal(t, -32001, authResponse.Error.Code, "Should return authentication failed error")
+		assert.Equal(t, AUTHENTICATION_REQUIRED, authResponse.Error.Code, "Should return authentication failed error")
 	})
 
 	// Test 3: Missing token
@@ -830,7 +836,7 @@ func TestWebSocketServer_Authenticate_ReqSEC001_AuthenticationFlow(t *testing.T)
 		response := SendTestMessage(t, conn3, message)
 
 		assert.NotNil(t, response.Error, "Unauthenticated request should return error")
-		assert.Equal(t, -32001, response.Error.Code, "Should return authentication required error")
+		assert.Equal(t, AUTHENTICATION_REQUIRED, response.Error.Code, "Should return authentication required error")
 	})
 
 	// Test 4: Expired token (simulated)
@@ -879,7 +885,7 @@ func TestWebSocketServer_ValidatePermission_ReqSEC001_RoleBasedAccess(t *testing
 		})
 		controlResponse := SendTestMessage(t, conn, controlMessage)
 		assert.NotNil(t, controlResponse.Error, "Viewer should not be able to take snapshots")
-		assert.Equal(t, -32003, controlResponse.Error.Code, "Should return insufficient permissions error")
+		assert.Equal(t, INSUFFICIENT_PERMISSIONS, controlResponse.Error.Code, "Should return insufficient permissions error")
 	})
 
 	// Test 2: Operator role permissions
@@ -895,14 +901,14 @@ func TestWebSocketServer_ValidatePermission_ReqSEC001_RoleBasedAccess(t *testing
 		controlResponse := SendTestMessage(t, conn, controlMessage)
 		// Note: This might fail due to camera not existing, but should not fail due to permissions
 		if controlResponse.Error != nil {
-			assert.NotEqual(t, -32003, controlResponse.Error.Code, "Should not fail due to insufficient permissions")
+			assert.NotEqual(t, INSUFFICIENT_PERMISSIONS, controlResponse.Error.Code, "Should not fail due to insufficient permissions")
 		}
 
 		// Operator should NOT be able to call admin methods
 		adminMessage := CreateTestMessage("get_metrics", nil)
 		adminResponse := SendTestMessage(t, conn, adminMessage)
 		assert.NotNil(t, adminResponse.Error, "Operator should not be able to get metrics")
-		assert.Equal(t, -32003, adminResponse.Error.Code, "Should return insufficient permissions error")
+		assert.Equal(t, INSUFFICIENT_PERMISSIONS, adminResponse.Error.Code, "Should return insufficient permissions error")
 	})
 
 	// Test 3: Admin role permissions
@@ -920,7 +926,7 @@ func TestWebSocketServer_ValidatePermission_ReqSEC001_RoleBasedAccess(t *testing
 		adminResponse := SendTestMessage(t, conn, adminMessage)
 		// Note: This might fail due to implementation, but should not fail due to permissions
 		if adminResponse.Error != nil {
-			assert.NotEqual(t, -32003, adminResponse.Error.Code, "Should not fail due to insufficient permissions")
+			assert.NotEqual(t, INSUFFICIENT_PERMISSIONS, adminResponse.Error.Code, "Should not fail due to insufficient permissions")
 		}
 	})
 

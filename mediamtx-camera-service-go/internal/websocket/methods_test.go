@@ -30,7 +30,6 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
-	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -243,72 +242,59 @@ func TestWebSocketMethods_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
 
 // TestWebSocketMethods_StartRecording tests start_recording method
 func TestWebSocketMethods_StartRecording_ReqMTX002_Success(t *testing.T) {
-	// === ENTERPRISE ULTRA-MINIMAL PATTERN ===
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// === TEST AND VALIDATION ===
+	// CRITICAL: Wait for server to be ready for API contract validation
+	helper.WaitForServerReady(t)
+
 	response := helper.TestMethod(t, "start_recording", map[string]interface{}{
 		"device": "camera0",
 	}, "operator")
 
-	// === VALIDATION ===
+	// Validate JSON-RPC 2.0 compliance
 	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
 	assert.NotNil(t, response.ID, "Response should have ID")
 
-	// Handle the case where camera0 might already be recording (from previous tests)
+	// Validate API contract per docs/api/json_rpc_methods.md
 	if response.Error != nil {
-		// If there's an error, it should be about recording state
-		// The error might be "already recording" or "Internal server error" with details
-		errorMsg := response.Error.Message
-		hasRecordingConflict := strings.Contains(errorMsg, "already recording") ||
-			strings.Contains(errorMsg, "Internal server error")
-		assert.True(t, hasRecordingConflict, "Error should indicate recording conflict or internal error: %s", errorMsg)
+		// Validate error is API-compliant
+		validateAPICompliantError(t, response.Error)
 
-		// Log the actual error for debugging
-		t.Logf("StartRecording error: %s", errorMsg)
-		if response.Error.Data != nil {
-			t.Logf("Error data: %v", response.Error.Data)
-		}
+		// For recording methods, errors must be recording-specific
+		validateRecordingSpecificError(t, response.Error.Code, "start_recording")
 	} else {
-		// If no error, verify the response structure
-		assert.NotNil(t, response.Result, "Response should have result when successful")
+		// Success case - validate StartRecordingResponse structure
+		validateStartRecordingResponse(t, response.Result)
 	}
 }
 
-// TestWebSocketMethods_StopRecording tests stop_recording method
+// TestWebSocketMethods_StopRecording tests stop_recording method API contract
 func TestWebSocketMethods_StopRecording_ReqMTX002_Success(t *testing.T) {
-	// === ENTERPRISE ULTRA-MINIMAL PATTERN ===
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// === TEST AND VALIDATION ===
+	// CRITICAL: Wait for server to be ready for API contract validation
+	helper.WaitForServerReady(t)
+
 	response := helper.TestMethod(t, "stop_recording", map[string]interface{}{
 		"device": "camera0",
 	}, "operator")
 
-	// === VALIDATION ===
+	// Validate JSON-RPC 2.0 compliance
 	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
 	assert.NotNil(t, response.ID, "Response should have ID")
 
-	// DEBUG: Log actual response for API contract validation
-	t.Logf("ACTUAL RESPONSE: Error=%+v, Result=%+v", response.Error, response.Result)
-
-	// MediaMTX controller's StopRecording can succeed even if no recording was active
-	// (it's idempotent), so we test both success and error cases
+	// Validate API contract per docs/api/json_rpc_methods.md
 	if response.Error != nil {
-		// If there's an error, it should be about recording state
-		t.Logf("ERROR MESSAGE: '%s'", response.Error.Message)
-		assert.Contains(t, response.Error.Message, "recording", "Error should be recording-related")
-	} else {
-		// If no error, verify the response structure (StopRecordingResponse)
-		assert.NotNil(t, response.Result, "Response should have result when successful")
+		// Validate error is API-compliant
+		validateAPICompliantError(t, response.Error)
 
-		// Verify response has the expected fields from StopRecordingResponse
-		result, ok := response.Result.(map[string]interface{})
-		require.True(t, ok, "Result should be a map")
-		assert.Contains(t, result, "device", "Result should contain device field")
-		assert.Contains(t, result, "status", "Result should contain status field")
+		// For recording methods, errors must be recording-specific
+		validateRecordingSpecificError(t, response.Error.Code, "stop_recording")
+	} else {
+		// Success case - validate StopRecordingResponse structure
+		validateStopRecordingResponse(t, response.Result)
 	}
 }
 
@@ -338,7 +324,7 @@ func TestWebSocketMethods_ProcessMessage_ReqAPI002_ErrorHandling_InvalidJSON(t *
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
-	server = helper.StartServer(t)
+	_ = helper.StartServer(t) // Server is started, we use the original server instance
 
 	// Connect client
 	conn := helper.NewTestClient(t, server)
@@ -370,7 +356,7 @@ func TestWebSocketMethods_ProcessMessage_ReqAPI002_ErrorHandling_MissingMethod(t
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
-	server = helper.StartServer(t)
+	_ = helper.StartServer(t) // Server is started, we use the original server instance
 
 	// Connect client
 	conn := helper.NewTestClient(t, server)
@@ -403,7 +389,7 @@ func TestWebSocketMethods_Authenticate_ReqSEC001_ErrorHandling_UnauthenticatedAc
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
-	server = helper.StartServer(t)
+	_ = helper.StartServer(t) // Server is started, we use the original server instance
 
 	// Connect client WITHOUT authentication
 	conn := helper.NewTestClient(t, server)
@@ -444,7 +430,7 @@ func TestWebSocketMethods_ProcessMessage_ReqAPI002_SequentialRequests(t *testing
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
-	server = helper.StartServer(t)
+	_ = helper.StartServer(t) // Server is started, we use the original server instance
 
 	// Create authenticated connection using standardized pattern
 	conn := helper.GetAuthenticatedConnection(t, "test_user", "viewer")
@@ -480,7 +466,7 @@ func TestWebSocketMethods_ProcessMessage_ReqAPI001_MultipleConnections(t *testin
 
 	server := helper.GetServer(t)
 	server.SetMediaMTXController(controller)
-	server = helper.StartServer(t)
+	_ = helper.StartServer(t) // Server is started, we use the original server instance
 
 	// Test multiple connections with proper synchronization
 	const numConnections = 5
@@ -1087,7 +1073,7 @@ func TestWebSocketMethods_ProcessMessage_ReqARCH001_EnterpriseGradePatternCompli
 	server.SetMediaMTXController(controller)
 
 	// Start server following Progressive Readiness Pattern
-	server = helper.StartServer(t)
+	_ = helper.StartServer(t) // Server is started, we use the original server instance
 
 	// Enterprise Test 1: All methods must accept connections immediately
 	methods := []string{
@@ -1115,7 +1101,7 @@ func TestWebSocketMethods_ProcessMessage_ReqARCH001_EnterpriseGradePatternCompli
 
 			// Should not get "system not ready" blocking errors
 			if response.Error != nil {
-				assert.NotEqual(t, -32002, response.Error.Code,
+				assert.NotEqual(t, RATE_LIMIT_EXCEEDED, response.Error.Code,
 					"Method %s should not block with 'system not ready' error", method)
 			}
 		})

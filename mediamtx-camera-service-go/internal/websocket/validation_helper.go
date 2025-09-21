@@ -448,14 +448,15 @@ func (vh *ValidationHelper) ValidateRetentionPolicyParameters(params map[string]
 	}
 
 	// Validate policy-specific parameters
-	if policyType == "age" {
+	switch policyType {
+	case "age":
 		if maxAgeDays, exists := params["max_age_days"]; exists {
 			if maxAgeResult := vh.inputValidator.ValidatePositiveInteger(maxAgeDays, "max_age_days"); maxAgeResult.HasErrors() {
 				result.AddError(maxAgeResult.GetErrorMessages()[0])
 				return result
 			}
 		}
-	} else if policyType == "size" {
+	case "size":
 		if maxSizeGB, exists := params["max_size_gb"]; exists {
 			if maxSizeResult := vh.inputValidator.ValidatePositiveInteger(maxSizeGB, "max_size_gb"); maxSizeResult.HasErrors() {
 				result.AddError(maxSizeResult.GetErrorMessages()[0])

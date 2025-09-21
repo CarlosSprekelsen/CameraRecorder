@@ -375,7 +375,12 @@ func (s *WebSocketServer) broadcastEvent(eventType string, data interface{}) {
 			}
 
 			// Send message to client
-			client.Conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout))
+			if err := client.Conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout)); err != nil {
+				s.logger.WithError(err).WithFields(logging.Fields{
+					"client_id":  clientID,
+					"event_type": eventType,
+				}).Warn("Failed to set write deadline for notification")
+			}
 			if err := client.Conn.WriteJSON(notification); err != nil {
 				s.logger.WithError(err).WithFields(logging.Fields{
 					"client_id":  clientID,
@@ -420,7 +425,12 @@ func (s *WebSocketServer) sendEventToSubscribers(topic EventTopic, data map[stri
 	for _, clientID := range subscribers {
 		if client, exists := s.clients[clientID]; exists && client.Authenticated && client.Conn != nil {
 			// Send message to client
-			client.Conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout))
+			if err := client.Conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout)); err != nil {
+				s.logger.WithError(err).WithFields(logging.Fields{
+					"client_id": clientID,
+					"topic":     topic,
+				}).Warn("Failed to set write deadline for event")
+			}
 			if err := client.Conn.WriteJSON(notification); err != nil {
 				s.logger.WithError(err).WithFields(logging.Fields{
 					"client_id": clientID,
@@ -734,7 +744,9 @@ func (s *WebSocketServer) closeAllClientConnections() {
 			defer wg.Done()
 
 			// Set close deadline
-			client.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+			if err := client.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second)); err != nil {
+				s.logger.WithError(err).WithField("client_id", client.ClientID).Warn("Failed to set write deadline for close message")
+			}
 
 			// Send close message
 			closeMsg := websocket.FormatCloseMessage(websocket.CloseGoingAway, "server shutdown")
@@ -778,7 +790,9 @@ func (s *WebSocketServer) closeAllClientConnections() {
 		s.logger.Warn("Client cleanup timeout reached, forcing connection closure")
 		// Force close remaining connections
 		for _, client := range clientsToClose {
-			client.Conn.Close()
+			if err := client.Conn.Close(); err != nil {
+				s.logger.WithError(err).WithField("client_id", client.ClientID).Warn("Failed to force close connection")
+			}
 		}
 	case <-cleanupDone:
 		s.logger.Debug("All client connections cleaned up successfully")
@@ -893,7 +907,9 @@ func (s *WebSocketServer) handleClientConnection(conn *websocket.Conn, client *C
 		atomic.AddInt64(&s.metrics.ActiveConnections, -1)
 
 		// Close connection
-		conn.Close()
+		if err := conn.Close(); err != nil {
+			s.logger.WithError(err).WithField("client_id", client.ClientID).Warn("Failed to close connection")
+		}
 
 		s.logger.WithFields(logging.Fields{
 			"client_id": client.ClientID,
@@ -905,9 +921,13 @@ func (s *WebSocketServer) handleClientConnection(conn *websocket.Conn, client *C
 
 	// Set connection parameters
 	conn.SetReadLimit(s.config.MaxMessageSize)
-	conn.SetReadDeadline(time.Now().Add(s.config.PongWait))
+	if err := conn.SetReadDeadline(time.Now().Add(s.config.PongWait)); err != nil {
+		s.logger.WithError(err).WithField("client_id", client.ClientID).Warn("Failed to set initial read deadline")
+	}
 	conn.SetPongHandler(func(string) error {
-		conn.SetReadDeadline(time.Now().Add(s.config.PongWait))
+		if err := conn.SetReadDeadline(time.Now().Add(s.config.PongWait)); err != nil {
+			s.logger.WithError(err).WithField("client_id", client.ClientID).Warn("Failed to set pong read deadline")
+		}
 		return nil
 	})
 
@@ -930,14 +950,18 @@ func (s *WebSocketServer) handleClientConnection(conn *websocket.Conn, client *C
 			return
 		case <-ticker.C:
 			// Set write deadline for ping
-			conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout))
+			if err := conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout)); err != nil {
+				s.logger.WithError(err).WithField("client_id", client.ClientID).Warn("Failed to set write deadline for ping")
+			}
 			if err := conn.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(s.config.WriteTimeout)); err != nil {
 				s.logger.WithError(err).WithField("client_id", client.ClientID).Error("Failed to send ping")
 				return
 			}
 		default:
 			// Set read deadline for message
-			conn.SetReadDeadline(time.Now().Add(s.config.ReadTimeout))
+			if err := conn.SetReadDeadline(time.Now().Add(s.config.ReadTimeout)); err != nil {
+				s.logger.WithError(err).WithField("client_id", client.ClientID).Warn("Failed to set read deadline for message")
+			}
 
 			// Read message with timeout
 			_, message, err := conn.ReadMessage()
@@ -969,13 +993,17 @@ func (s *WebSocketServer) handleMessage(conn *websocket.Conn, client *ClientConn
 	var request JsonRpcRequest
 	if err := json.Unmarshal(message, &request); err != nil {
 		// Standardized error
-		s.sendResponse(conn, &JsonRpcResponse{JSONRPC: "2.0", ID: nil, Error: NewJsonRpcError(INVALID_REQUEST, "invalid_request", "Invalid JSON-RPC request", "Ensure valid JSON-RPC 2.0 structure")})
+		if sendErr := s.sendResponse(conn, &JsonRpcResponse{JSONRPC: "2.0", ID: nil, Error: NewJsonRpcError(INVALID_REQUEST, "invalid_request", "Invalid JSON-RPC request", "Ensure valid JSON-RPC 2.0 structure")}); sendErr != nil {
+			s.logger.WithError(sendErr).Error("Failed to send invalid request error response")
+		}
 		return
 	}
 
 	// Validate JSON-RPC version
 	if request.JSONRPC != "2.0" {
-		s.sendResponse(conn, &JsonRpcResponse{JSONRPC: "2.0", ID: request.ID, Error: NewJsonRpcError(INVALID_REQUEST, "invalid_version", "Invalid JSON-RPC version", "Set jsonrpc to '2.0'")})
+		if sendErr := s.sendResponse(conn, &JsonRpcResponse{JSONRPC: "2.0", ID: request.ID, Error: NewJsonRpcError(INVALID_REQUEST, "invalid_version", "Invalid JSON-RPC version", "Set jsonrpc to '2.0'")}); sendErr != nil {
+			s.logger.WithError(sendErr).Error("Failed to send invalid version error response")
+		}
 		return
 	}
 
@@ -991,7 +1019,9 @@ func (s *WebSocketServer) handleMessage(conn *websocket.Conn, client *ClientConn
 		}).Error("Request handling error")
 		// Only send error response for requests, not notifications
 		if !isNotification {
-			s.sendResponse(conn, &JsonRpcResponse{JSONRPC: "2.0", ID: request.ID, Error: NewJsonRpcError(INTERNAL_ERROR, "internal_error", err.Error(), "Retry or contact support")})
+			if sendErr := s.sendResponse(conn, &JsonRpcResponse{JSONRPC: "2.0", ID: request.ID, Error: NewJsonRpcError(INTERNAL_ERROR, "internal_error", err.Error(), "Retry or contact support")}); sendErr != nil {
+				s.logger.WithError(sendErr).Error("Failed to send internal error response")
+			}
 		}
 		return
 	}
@@ -1148,7 +1178,10 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 
 // sendResponse sends a JSON-RPC response to the client
 func (s *WebSocketServer) sendResponse(conn *websocket.Conn, response *JsonRpcResponse) error {
-	conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout))
+	if err := conn.SetWriteDeadline(time.Now().Add(s.config.WriteTimeout)); err != nil {
+		s.logger.WithError(err).Warn("Failed to set write deadline for response")
+		// Continue with WriteJSON - the operation might still succeed
+	}
 	return conn.WriteJSON(response)
 }
 
@@ -1196,14 +1229,12 @@ func (s *WebSocketServer) GetMetrics() *PerformanceMetrics {
 	s.metricsMutex.RLock()
 	defer s.metricsMutex.RUnlock()
 
-	// Calculate average response time
-	allResponseTimes := make([]float64, 0)
-	for _, times := range s.metrics.ResponseTimes {
-		allResponseTimes = append(allResponseTimes, times...)
-	}
-
-	// Note: averageResponseTime and errorRate calculations are available for future use
+	// Note: Average response time calculation is available for future use
 	// when extending the metrics functionality
+	// Example: allResponseTimes := make([]float64, 0)
+	// for _, times := range s.metrics.ResponseTimes {
+	//     allResponseTimes = append(allResponseTimes, times...)
+	// }
 
 	// Create a deep copy to prevent race conditions
 	responseTimesCopy := make(map[string][]float64)
