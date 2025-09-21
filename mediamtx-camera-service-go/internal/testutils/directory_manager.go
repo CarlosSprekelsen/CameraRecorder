@@ -20,8 +20,8 @@ import (
 
 // DirectoryManager handles configuration-driven directory creation
 type DirectoryManager struct {
-	t            *testing.T
-	createdDirs  []string
+	t           *testing.T
+	createdDirs []string
 }
 
 // NewDirectoryManager creates a new directory manager
@@ -37,10 +37,10 @@ func NewDirectoryManager(t *testing.T) *DirectoryManager {
 func (dm *DirectoryManager) CreateDirectoriesFromFixture(fixtureName string) {
 	// Load fixture to get configured paths
 	fixtureConfig := dm.loadFixtureConfig(fixtureName)
-	
+
 	// Extract directory paths from configuration
 	directories := dm.extractDirectoryPaths(fixtureConfig)
-	
+
 	// Create directories with proper permissions
 	for _, dir := range directories {
 		err := os.MkdirAll(dir, 0777)
@@ -58,21 +58,21 @@ func (dm *DirectoryManager) GetCreatedDirectories() []string {
 func (dm *DirectoryManager) loadFixtureConfig(fixtureName string) map[string]interface{} {
 	// Use same fixture resolution as FixtureLoader
 	fixturePath := dm.resolveFixturePath(fixtureName)
-	
+
 	data, err := os.ReadFile(fixturePath)
 	require.NoError(dm.t, err, "Failed to read fixture %s", fixtureName)
-	
+
 	var config map[string]interface{}
 	err = yaml.Unmarshal(data, &config)
 	require.NoError(dm.t, err, "Failed to parse fixture %s", fixtureName)
-	
+
 	return config
 }
 
 // extractDirectoryPaths extracts all directory paths from configuration
 func (dm *DirectoryManager) extractDirectoryPaths(config map[string]interface{}) []string {
 	var directories []string
-	
+
 	// Extract MediaMTX paths
 	if mediamtx, ok := config["mediamtx"].(map[string]interface{}); ok {
 		if recordingsPath, ok := mediamtx["recordings_path"].(string); ok {
@@ -86,7 +86,7 @@ func (dm *DirectoryManager) extractDirectoryPaths(config map[string]interface{})
 			directories = append(directories, filepath.Dir(configPath))
 		}
 	}
-	
+
 	// Extract storage paths
 	if storage, ok := config["storage"].(map[string]interface{}); ok {
 		if defaultPath, ok := storage["default_path"].(string); ok {
@@ -96,7 +96,7 @@ func (dm *DirectoryManager) extractDirectoryPaths(config map[string]interface{})
 			directories = append(directories, fallbackPath)
 		}
 	}
-	
+
 	// Extract logging paths
 	if logging, ok := config["logging"].(map[string]interface{}); ok {
 		if filePath, ok := logging["file_path"].(string); ok {
@@ -104,7 +104,7 @@ func (dm *DirectoryManager) extractDirectoryPaths(config map[string]interface{})
 			directories = append(directories, filepath.Dir(filePath))
 		}
 	}
-	
+
 	return directories
 }
 
@@ -116,12 +116,12 @@ func (dm *DirectoryManager) resolveFixturePath(fixtureName string) string {
 		filepath.Join("..", "..", "tests", "fixtures", fixtureName),
 		filepath.Join("..", "..", "..", "tests", "fixtures", fixtureName),
 	}
-	
+
 	for _, path := range paths {
 		if _, err := os.Stat(path); err == nil {
 			return path
 		}
 	}
-	
+
 	return paths[0]
 }

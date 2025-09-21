@@ -33,10 +33,10 @@ func (fl *FixtureLoader) LoadConfigFromFixture(fixtureName string) *config.Confi
 
 	// Use standardized fixture path resolution
 	fixturePath := fl.resolveFixturePath(fixtureName)
-	
+
 	err := configManager.LoadConfig(fixturePath)
 	require.NoError(fl.t, err, "Failed to load config from fixture %s", fixtureName)
-	
+
 	return configManager
 }
 
@@ -48,13 +48,13 @@ func (fl *FixtureLoader) resolveFixturePath(fixtureName string) string {
 		filepath.Join("..", "..", "tests", "fixtures", fixtureName),
 		filepath.Join("..", "..", "..", "tests", "fixtures", fixtureName),
 	}
-	
+
 	for _, path := range paths {
 		if _, err := os.Stat(path); err == nil {
 			return path
 		}
 	}
-	
+
 	// Fallback to first path and let it fail with clear error
 	return paths[0]
 }

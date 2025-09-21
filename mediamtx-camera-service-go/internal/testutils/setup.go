@@ -40,27 +40,27 @@ type UniversalTestSetup struct {
 func SetupTest(t *testing.T, fixtureName string) *UniversalTestSetup {
 	// Create logger using standardized pattern
 	logger := logging.GetLogger("test-universal")
-	
+
 	// Create directories from fixture configuration
 	directoryManager := NewDirectoryManager(t)
 	directoryManager.CreateDirectoriesFromFixture(fixtureName)
-	
+
 	// Load configuration using fixture
 	fixtureLoader := NewFixtureLoader(t)
 	configManager := fixtureLoader.LoadConfigFromFixture(fixtureName)
-	
+
 	setup := &UniversalTestSetup{
 		t:             t,
 		configManager: configManager,
 		logger:        logger,
 		tempDirs:      directoryManager.GetCreatedDirectories(),
 	}
-	
+
 	// Register cleanup
 	t.Cleanup(func() {
 		setup.Cleanup()
 	})
-	
+
 	return setup
 }
 

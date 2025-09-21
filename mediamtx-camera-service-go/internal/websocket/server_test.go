@@ -598,13 +598,12 @@ func TestWebSocketServer_ProcessMessage_ReqAPI002_JsonRpcCompliance(t *testing.T
 	// Start server following Progressive Readiness Pattern
 	server := helper.StartServer(t)
 
-	conn := helper.NewTestClient(t, server)
+	// Create authenticated connection for all subtests
+	conn := helper.GetAuthenticatedConnection(t, "test-user", "viewer")
 	defer helper.CleanupTestClient(t, conn)
 
 	// Test 1: Valid JSON-RPC 2.0 request
 	t.Run("ValidJsonRpcRequest", func(t *testing.T) {
-		// Authenticate first since ping requires authentication
-		AuthenticateTestClient(t, conn, "test-user", "viewer")
 
 		message := CreateTestMessage("ping", nil)
 		response := SendTestMessage(t, conn, message)
@@ -618,6 +617,10 @@ func TestWebSocketServer_ProcessMessage_ReqAPI002_JsonRpcCompliance(t *testing.T
 
 	// Test 2: Invalid JSON-RPC version
 	t.Run("InvalidJsonRpcVersion", func(t *testing.T) {
+		// Create unauthenticated connection for protocol testing
+		conn := helper.NewTestClient(t, server)
+		defer helper.CleanupTestClient(t, conn)
+
 		invalidMessage := &JsonRpcRequest{
 			JSONRPC: "1.0", // Invalid version
 			Method:  "ping",
@@ -787,12 +790,11 @@ func TestWebSocketServer_Authenticate_ReqSEC001_AuthenticationFlow(t *testing.T)
 	// Start server following Progressive Readiness Pattern
 	server := helper.StartServer(t)
 
-	conn := helper.NewTestClient(t, server)
-	defer helper.CleanupTestClient(t, conn)
-
 	// Test 1: Valid authentication
 	t.Run("ValidAuthentication", func(t *testing.T) {
-		AuthenticateTestClient(t, conn, "test-user", "viewer")
+		// Create authenticated connection using standardized pattern
+		conn := helper.GetAuthenticatedConnection(t, "test-user", "viewer")
+		defer helper.CleanupTestClient(t, conn)
 
 		// After authentication, ping should work
 		message := CreateTestMessage("ping", nil)
@@ -862,10 +864,9 @@ func TestWebSocketServer_ValidatePermission_ReqSEC001_RoleBasedAccess(t *testing
 
 	// Test 1: Viewer role permissions
 	t.Run("ViewerRolePermissions", func(t *testing.T) {
-		conn := helper.NewTestClient(t, server)
+		// Create authenticated connection using standardized pattern
+		conn := helper.GetAuthenticatedConnection(t, "viewer-user", "viewer")
 		defer helper.CleanupTestClient(t, conn)
-
-		AuthenticateTestClient(t, conn, "viewer-user", "viewer")
 
 		// Viewer should be able to call read-only methods
 		message := CreateTestMessage("ping", nil)
@@ -883,10 +884,9 @@ func TestWebSocketServer_ValidatePermission_ReqSEC001_RoleBasedAccess(t *testing
 
 	// Test 2: Operator role permissions
 	t.Run("OperatorRolePermissions", func(t *testing.T) {
-		conn := helper.NewTestClient(t, server)
+		// Create authenticated connection using standardized pattern
+		conn := helper.GetAuthenticatedConnection(t, "operator-user", "operator")
 		defer helper.CleanupTestClient(t, conn)
-
-		AuthenticateTestClient(t, conn, "operator-user", "operator")
 
 		// Operator should be able to call control methods
 		controlMessage := CreateTestMessage("take_snapshot", map[string]interface{}{
@@ -907,10 +907,9 @@ func TestWebSocketServer_ValidatePermission_ReqSEC001_RoleBasedAccess(t *testing
 
 	// Test 3: Admin role permissions
 	t.Run("AdminRolePermissions", func(t *testing.T) {
-		conn := helper.NewTestClient(t, server)
+		// Create authenticated connection using standardized pattern
+		conn := helper.GetAuthenticatedConnection(t, "admin-user", "admin")
 		defer helper.CleanupTestClient(t, conn)
-
-		AuthenticateTestClient(t, conn, "admin-user", "admin")
 
 		// Admin should be able to call all methods
 		message := CreateTestMessage("ping", nil)
@@ -949,13 +948,9 @@ func TestWebSocketServer_SendResponse_ReqAPI003_ResponseMetadata(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
-
-	conn := helper.NewTestClient(t, server)
+	// Create authenticated connection using standardized pattern
+	conn := helper.GetAuthenticatedConnection(t, "test-user", "viewer")
 	defer helper.CleanupTestClient(t, conn)
-
-	AuthenticateTestClient(t, conn, "test-user", "viewer")
 
 	// Test 1: Response metadata presence
 	t.Run("ResponseMetadataPresence", func(t *testing.T) {
@@ -1049,13 +1044,9 @@ func TestWebSocketServer_ProcessMessage_ReqAPI001_MessageSizeLimits(t *testing.T
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// Start server following Progressive Readiness Pattern
-	server := helper.StartServer(t)
-
-	conn := helper.NewTestClient(t, server)
+	// Create authenticated connection using standardized pattern
+	conn := helper.GetAuthenticatedConnection(t, "test-user", "viewer")
 	defer helper.CleanupTestClient(t, conn)
-
-	AuthenticateTestClient(t, conn, "test-user", "viewer")
 
 	// Test 1: Normal size message
 	t.Run("NormalSizeMessage", func(t *testing.T) {

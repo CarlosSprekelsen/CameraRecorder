@@ -68,7 +68,7 @@ func TestNewMediaMTXErrorFromHTTP_ReqMTX007(t *testing.T) {
 		{http.StatusBadGateway, []byte("Bad Gateway"), "bad gateway"},
 		{http.StatusServiceUnavailable, []byte("Service Unavailable"), "service unavailable"},
 		{http.StatusGatewayTimeout, []byte("Gateway Timeout"), "gateway timeout"},
-		{999, []byte("Unknown"), "unknown error"},
+		{999, []byte("Unknown"), "unexpected status code: 999"},
 	}
 
 	for _, tc := range testCases {

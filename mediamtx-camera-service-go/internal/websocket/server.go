@@ -37,6 +37,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"runtime"
 	"strconv"
@@ -607,6 +608,54 @@ func (s *WebSocketServer) Start() error {
 	return nil
 }
 
+// StartWithListener starts the server using an existing listener (for race-free testing)
+func (s *WebSocketServer) StartWithListener(listener net.Listener) error {
+	// Check current running state without modifying it
+	if atomic.LoadInt32(&s.running) == 1 {
+		s.logger.Warn("WebSocket server is already running")
+		return fmt.Errorf("WebSocket server is already running")
+	}
+
+	s.logger.WithFields(logging.Fields{
+		"addr":   listener.Addr().String(),
+		"path":   s.config.WebSocketPath,
+		"action": "start_server_with_listener",
+	}).Info("Starting WebSocket JSON-RPC server with existing listener")
+
+	// Create HTTP server
+	mux := http.NewServeMux()
+	mux.HandleFunc(s.config.WebSocketPath, s.handleWebSocket)
+
+	s.server = &http.Server{
+		Handler:      mux,
+		ReadTimeout:  s.config.ReadTimeout,
+		WriteTimeout: s.config.WriteTimeout,
+	}
+
+	// Start server in goroutine using existing listener
+	s.wg.Add(1)
+	go func() {
+		defer s.wg.Done()
+		// Set running flag AFTER server successfully starts listening
+		atomic.StoreInt32(&s.running, 1)
+
+		if err := s.server.Serve(listener); err != nil && err != http.ErrServerClosed {
+			s.logger.WithError(err).Error("WebSocket server failed")
+			// Reset running flag on failure
+			atomic.StoreInt32(&s.running, 0)
+		}
+	}()
+
+	s.logger.WithFields(logging.Fields{
+		"addr":   listener.Addr().String(),
+		"path":   s.config.WebSocketPath,
+		"action": "start_server_with_listener",
+		"status": "success",
+	}).Info("WebSocket server started successfully with existing listener")
+
+	return nil
+}
+
 // Stop stops the WebSocket server gracefully with context-aware cancellation
 func (s *WebSocketServer) Stop(ctx context.Context) error {
 	if atomic.LoadInt32(&s.running) == 0 {
@@ -1037,22 +1086,14 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 		}
 	}
 
-	// System readiness check - skip for authenticate, system status, and ping methods
-	// Only check readiness for authenticated users
-	if request.Method != "authenticate" && request.Method != "get_system_status" && request.Method != "ping" {
-		if !s.isSystemReady() {
-			s.logger.WithFields(logging.Fields{
-				"client_id": client.ClientID,
-				"method":    request.Method,
-				"action":    "system_not_ready",
-			}).Debug("System not ready, returning status to authenticated user")
-			return &JsonRpcResponse{
-				JSONRPC: "2.0",
-				ID:      request.ID,
-				Result:  s.getSystemReadinessResponse(),
-			}, nil
-		}
-	}
+	// PROGRESSIVE READINESS ARCHITECTURE: Remove blocking system readiness check
+	// Each operation implements its own Progressive Readiness pattern with fallback behavior
+	// This follows the architectural requirement: "System accepts connections immediately"
+	s.logger.WithFields(logging.Fields{
+		"client_id": client.ClientID,
+		"method":    request.Method,
+		"action":    "progressive_readiness_enabled",
+	}).Debug("Progressive Readiness: Attempting operation with potential fallback")
 
 	// Security extensions: Permission check (Phase 1 enhancement)
 	// Skip permission check for authenticate method

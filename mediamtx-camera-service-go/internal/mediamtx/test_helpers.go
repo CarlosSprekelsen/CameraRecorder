@@ -146,6 +146,14 @@ func SetupMediaMTXTest(t *testing.T) (*MediaMTXTestHelper, context.Context) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	t.Cleanup(func() { helper.Cleanup(t) })
 
+	// Ensure recording and snapshot directories exist with proper permissions
+	// MediaMTX needs write access to create recording files
+	os.MkdirAll("/tmp/recordings", 0777)
+	os.MkdirAll("/tmp/snapshots", 0777)
+	// Explicitly set permissions (os.MkdirAll respects umask)
+	os.Chmod("/tmp/recordings", 0777)
+	os.Chmod("/tmp/snapshots", 0777)
+
 	ctx, cancel := helper.GetStandardContext()
 	t.Cleanup(cancel)
 

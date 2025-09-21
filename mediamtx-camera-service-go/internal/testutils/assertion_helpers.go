@@ -32,13 +32,13 @@ func (ah *AssertionHelper) AssertJSONRPCResponse(response interface{}, expectErr
 	// This can be used by both WebSocket and any future JSON-RPC modules
 	responseMap, ok := response.(map[string]interface{})
 	require.True(ah.t, ok, "Response should be a map")
-	
+
 	// Validate JSON-RPC version
 	assert.Equal(ah.t, "2.0", responseMap["jsonrpc"], "Response should have correct JSON-RPC version")
-	
+
 	// Validate ID presence
 	assert.NotNil(ah.t, responseMap["id"], "Response should have ID")
-	
+
 	// Validate error/result structure
 	if expectError {
 		assert.NotNil(ah.t, responseMap["error"], "Response should have error")
@@ -55,7 +55,7 @@ func (ah *AssertionHelper) AssertDirectoryExists(dirPath string, expectWritable 
 	info, err := os.Stat(dirPath)
 	require.NoError(ah.t, err, "Directory should exist: %s", dirPath)
 	require.True(ah.t, info.IsDir(), "Path should be a directory: %s", dirPath)
-	
+
 	// Check writability if required
 	if expectWritable {
 		testFile := filepath.Join(dirPath, ".write_test")
@@ -72,13 +72,13 @@ func (ah *AssertionHelper) AssertConfigValue(config map[string]interface{}, path
 	// Navigate nested config structure
 	current := config
 	keys := splitConfigPath(path)
-	
+
 	for i, key := range keys[:len(keys)-1] {
 		next, ok := current[key].(map[string]interface{})
 		require.True(ah.t, ok, "Config path should exist: %s (at %s)", path, keys[i])
 		current = next
 	}
-	
+
 	// Check final value
 	finalKey := keys[len(keys)-1]
 	actual, exists := current[finalKey]
@@ -92,7 +92,7 @@ func (ah *AssertionHelper) AssertTimeout(operation func() error, timeout time.Du
 	go func() {
 		done <- operation()
 	}()
-	
+
 	select {
 	case err := <-done:
 		assert.NoError(ah.t, err, "%s should succeed", description)

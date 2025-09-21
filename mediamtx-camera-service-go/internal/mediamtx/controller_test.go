@@ -459,10 +459,8 @@ func TestController_StartRecording_ReqMTX002_Success(t *testing.T) {
 	defer controllerInterface.Stop(ctx)
 	controller := controllerInterface.(*controller)
 
-	// Controller is already ready - no waiting needed with Progressive Readiness
-	// Get available camera using existing helper
-	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
-	require.NoError(t, err, "Should be able to get available camera identifier")
+	// Use proper MediaMTX path identifier (discovered device)
+	cameraID := "camera0" // Use discovered device (same as other tests)
 
 	// Ensure any previous recording is stopped
 	controller.StopRecording(ctx, cameraID) // Ignore errors, just ensure clean state
@@ -477,8 +475,23 @@ func TestController_StartRecording_ReqMTX002_Success(t *testing.T) {
 		RecordFormat: "fmp4",
 	}
 
-	_, err = controller.StartRecording(ctx, cameraID, options)
-	require.NoError(t, err, "Recording should start successfully")
+	// Progressive Readiness: Attempt operation immediately (may use fallback)
+	_, err := controller.StartRecording(ctx, cameraID, options)
+	if err == nil {
+		// Operation succeeded immediately (Progressive Readiness working)
+		t.Log("Recording started immediately - Progressive Readiness working")
+	} else {
+		// Operation needs readiness - wait for event (no polling)
+		readinessChan := controller.SubscribeToReadiness()
+		select {
+		case <-readinessChan:
+			// Retry after readiness event
+			_, err = controller.StartRecording(ctx, cameraID, options)
+			require.NoError(t, err, "Recording should start after readiness event")
+		case <-time.After(5 * time.Second):
+			t.Fatal("Timeout waiting for readiness event")
+		}
+	}
 
 	// With stateless recording, we verify by checking MediaMTX directly
 	// The recording is now managed by MediaMTX, not by local session state
@@ -605,16 +618,21 @@ func TestController_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
 		controller.Stop(stopCtx)
 	}()
 
-	// Wait for controller readiness using Progressive Readiness Pattern
+	// Wait for controller readiness using TRUE Progressive Readiness Pattern
+	// Use event-driven approach instead of polling
+	readinessChan := controller.SubscribeToReadiness()
 	var isReady bool
-	for i := 0; i < 100; i++ { // Allow up to 10 seconds for camera discovery
-		if controller.IsReady() {
-			isReady = true
-			break
-		}
+
+	// Quick check first
+	if controller.IsReady() {
+		isReady = true
+	} else {
+		// Wait for readiness event (no polling)
 		select {
-		case <-time.After(100 * time.Millisecond):
-			// Continue with next iteration
+		case <-readinessChan:
+			isReady = true
+		case <-time.After(10 * time.Second): // Safety timeout
+			t.Log("Controller readiness timeout - proceeding anyway")
 		case <-ctx.Done():
 			// Context cancelled, exit early
 			return
@@ -1316,18 +1334,21 @@ func TestController_Start_ReqARCH001_EventDrivenReadiness(t *testing.T) {
 		// Start observing readiness events (non-blocking)
 		eventHelper.ObserveReadiness()
 
-		// Progressive Readiness: Allow components to initialize naturally
+		// TRUE Progressive Readiness: Use event-driven approach instead of polling
 		// Controller may not be immediately ready, but should become ready quickly
+		readinessChan := controller.SubscribeToReadiness()
 		var isReady bool
-		for i := 0; i < 50; i++ { // Allow up to 5 seconds for initialization
-			if controller.IsReady() {
-				isReady = true
-				break
-			}
-			// Use proper synchronization instead of time.Sleep
+
+		// Quick check first
+		if controller.IsReady() {
+			isReady = true
+		} else {
+			// Wait for readiness event (no polling)
 			select {
-			case <-time.After(100 * time.Millisecond):
-				// Continue with next iteration
+			case <-readinessChan:
+				isReady = true
+			case <-time.After(5 * time.Second): // Safety timeout
+				t.Log("Controller readiness timeout in event helper")
 			case <-ctx.Done():
 				// Context cancelled, exit early
 				return

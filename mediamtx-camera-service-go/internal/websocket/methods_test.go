@@ -291,10 +291,14 @@ func TestWebSocketMethods_StopRecording_ReqMTX002_Success(t *testing.T) {
 	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
 	assert.NotNil(t, response.ID, "Response should have ID")
 
+	// DEBUG: Log actual response for API contract validation
+	t.Logf("ACTUAL RESPONSE: Error=%+v, Result=%+v", response.Error, response.Result)
+
 	// MediaMTX controller's StopRecording can succeed even if no recording was active
 	// (it's idempotent), so we test both success and error cases
 	if response.Error != nil {
 		// If there's an error, it should be about recording state
+		t.Logf("ERROR MESSAGE: '%s'", response.Error.Message)
 		assert.Contains(t, response.Error.Message, "recording", "Error should be recording-related")
 	} else {
 		// If no error, verify the response structure (StopRecordingResponse)
@@ -442,12 +446,9 @@ func TestWebSocketMethods_ProcessMessage_ReqAPI002_SequentialRequests(t *testing
 	server.SetMediaMTXController(controller)
 	server = helper.StartServer(t)
 
-	// Create a single connection for all requests
-	conn := helper.NewTestClient(t, server)
+	// Create authenticated connection using standardized pattern
+	conn := helper.GetAuthenticatedConnection(t, "test_user", "viewer")
 	defer helper.CleanupTestClient(t, conn)
-
-	// Authenticate the client once
-	AuthenticateTestClient(t, conn, "test_user", "viewer")
 
 	// Test multiple sequential requests
 	const numRequests = 10
@@ -499,12 +500,9 @@ func TestWebSocketMethods_ProcessMessage_ReqAPI001_MultipleConnections(t *testin
 			semaphore <- struct{}{}
 			defer func() { <-semaphore }()
 
-			// Create connection for this goroutine
-			conn := helper.NewTestClient(t, server)
+			// Create authenticated connection using standardized pattern
+			conn := helper.GetAuthenticatedConnection(t, "test_user", "viewer")
 			defer helper.CleanupTestClient(t, conn)
-
-			// Authenticate the client
-			AuthenticateTestClient(t, conn, "test_user", "viewer")
 
 			// Send ping message
 			message := CreateTestMessage("ping", map[string]interface{}{"connection_id": connectionID})

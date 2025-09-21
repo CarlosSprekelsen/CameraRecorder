@@ -31,6 +31,7 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -82,12 +83,12 @@ func DefaultWebSocketTestConfig() *WebSocketTestConfig {
 
 // WebSocketTestHelper provides utilities for WebSocket server testing
 type WebSocketTestHelper struct {
-	t             *testing.T // Test instance for consistent error handling
-	config        *WebSocketTestConfig
-	configManager *config.ConfigManager
-	logger        *logging.Logger
-	server        *WebSocketServer
-	// listener removed - using improved port allocation instead
+	t                  *testing.T // Test instance for consistent error handling
+	config             *WebSocketTestConfig
+	configManager      *config.ConfigManager
+	logger             *logging.Logger
+	server             *WebSocketServer
+	listener           net.Listener // Race-free port allocation
 	mediaMTXController mediamtx.MediaMTXController
 	mediaMTXHelper     *mediamtx.MediaMTXTestHelper // Store helper for cleanup
 	jwtHandler         *security.JWTHandler
@@ -252,9 +253,12 @@ func (h *WebSocketTestHelper) GetMediaMTXController(t *testing.T) mediamtx.Media
 func (h *WebSocketTestHelper) StartServer(t *testing.T) *WebSocketServer {
 	server := h.GetServer(t)
 
-	// Start WebSocket server immediately - Progressive Readiness Pattern
+	// Ensure port is allocated with race-free listener
+	_ = h.GetFreePortReliably()
+
+	// Start WebSocket server using existing listener to prevent race conditions
 	// System accepts connections immediately, features become available as components initialize
-	err := server.Start()
+	err := server.StartWithListener(h.listener)
 	require.NoError(t, err, "Failed to start WebSocket server")
 
 	return server
@@ -299,18 +303,15 @@ func NewTestLogger(name string) *logging.Logger {
 // GetFreePort returns a free port for testing using port 0 for automatic OS assignment
 // Old GetFreePort function completely removed - use helper.GetFreePortReliably() instead
 
-// GetFreePortReliably returns a free port using a more reliable method
+// GetFreePortReliably returns a free port using a race-free method
 func (h *WebSocketTestHelper) GetFreePortReliably() int {
 	h.listenerOnce.Do(func() {
-		// Bind temporarily to get port, then close immediately before server starts
+		// Keep listener open to prevent race conditions
 		tempListener, err := net.Listen("tcp", ":0")
 		require.NoError(h.t, err, "Failed to bind temporary listener")
 
 		h.config.Port = tempListener.Addr().(*net.TCPAddr).Port
-		tempListener.Close() // Close immediately to release for server
-
-		// Small delay to ensure port is fully released
-		time.Sleep(1 * time.Millisecond)
+		h.listener = tempListener // Store listener, don't close yet
 	})
 	return h.config.Port
 }
@@ -330,10 +331,10 @@ func createStandardTestConfig(t *testing.T) *config.ConfigManager {
 	// MIGRATION DEMO: Use common utilities (fixture-driven, no hardcoded paths)
 	fixtureLoader := testutils.NewFixtureLoader(t)
 	directoryManager := testutils.NewDirectoryManager(t)
-	
+
 	// Create directories from fixture configuration (edit fixture → all tests react)
 	directoryManager.CreateDirectoriesFromFixture("config_test_minimal.yaml")
-	
+
 	// Load config from fixture (no hardcoded paths)
 	return fixtureLoader.LoadConfigFromFixture("config_test_minimal.yaml")
 }
