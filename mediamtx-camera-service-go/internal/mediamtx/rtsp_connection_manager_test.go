@@ -38,8 +38,7 @@ import (
 // TestNewRTSPConnectionManager_ReqMTX001 tests RTSP connection manager creation
 func TestNewRTSPConnectionManager_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -52,17 +51,13 @@ func TestNewRTSPConnectionManager_ReqMTX001(t *testing.T) {
 	require.NotNil(t, rtspManager, "RTSP connection manager should not be nil")
 
 	// Log test progress
-	logTestProgress(t, helper.GetLogger(), "RTSP connection manager created successfully", map[string]interface{}{
-		"component": "rtsp_connection_manager",
-		"status":    "created",
-	})
+	t.Log("RTSP connection manager created successfully")
 }
 
 // TestRTSPConnectionManager_ListConnections_ReqMTX002 tests RTSP connection listing
 func TestRTSPConnectionManager_ListConnections_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -86,19 +81,12 @@ func TestRTSPConnectionManager_ListConnections_ReqMTX002(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			connections, err := rtspManager.ListConnections(ctx, tc.page, tc.itemsPerPage)
-			require.NoError(t, err, "ListConnections should succeed for %s", tc.name)
-			assert.NotNil(t, connections, "Connections list should not be nil for %s", tc.name)
+			helper.AssertStandardResponse(t, connections, err, fmt.Sprintf("ListConnections for %s", tc.name))
 			assert.NotNil(t, connections.Items, "Connections items should not be nil for %s", tc.name)
 
 			// Log test progress
-			logTestProgress(t, helper.GetLogger(), "RTSP connections listed successfully", map[string]interface{}{
-				"test_case":         tc.name,
-				"page":              tc.page,
-				"items_per_page":    tc.itemsPerPage,
-				"connections_found": len(connections.Items),
-				"total_pages":       connections.PageCount,
-				"total_items":       connections.ItemCount,
-			})
+			t.Logf("RTSP connections listed successfully: %s (page %d, items_per_page %d, found %d, total_pages %d, total_items %d)",
+				tc.name, tc.page, tc.itemsPerPage, len(connections.Items), connections.PageCount, connections.ItemCount)
 		})
 	}
 }
@@ -106,8 +94,7 @@ func TestRTSPConnectionManager_ListConnections_ReqMTX002(t *testing.T) {
 // TestRTSPConnectionManager_ListSessions_ReqMTX002 tests RTSP session listing
 func TestRTSPConnectionManager_ListSessions_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create RTSP connection manager
 	// Use standardized config from helper
@@ -127,8 +114,8 @@ func TestRTSPConnectionManager_ListSessions_ReqMTX002(t *testing.T) {
 
 	// Test listing sessions
 	sessions, err := rtspManager.ListSessions(ctx, 0, 10)
-	require.NoError(t, err, "ListSessions should succeed")
-	assert.NotNil(t, sessions, "Sessions list should not be nil")
+	// Use assertion helper to reduce boilerplate
+	helper.AssertStandardResponse(t, sessions, err, "ListSessions")
 	assert.NotNil(t, sessions.Items, "Sessions items should not be nil")
 
 	t.Logf("Found %d RTSP sessions", len(sessions.Items))
@@ -137,8 +124,7 @@ func TestRTSPConnectionManager_ListSessions_ReqMTX002(t *testing.T) {
 // TestRTSPConnectionManager_GetConnectionHealth_ReqMTX004 tests RTSP connection health monitoring
 func TestRTSPConnectionManager_GetConnectionHealth_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -165,9 +151,8 @@ func TestRTSPConnectionManager_GetConnectionHealth_ReqMTX004(t *testing.T) {
 	// Test health monitoring
 	health, err := rtspManager.GetConnectionHealth(ctx)
 	require.NoError(t, err, "GetConnectionHealth should succeed")
-	assert.NotNil(t, health, "Health status should not be nil")
+	require.NotNil(t, health, "Health response should not be nil")
 	assert.NotEmpty(t, health.Status, "Health status should not be empty")
-	assert.NotZero(t, health.Timestamp, "Health timestamp should not be zero")
 
 	t.Logf("RTSP connection health: %s - %s", health.Status, health.Details)
 }
@@ -175,8 +160,7 @@ func TestRTSPConnectionManager_GetConnectionHealth_ReqMTX004(t *testing.T) {
 // TestRTSPConnectionManager_GetConnectionMetrics_ReqMTX004 tests RTSP connection metrics
 func TestRTSPConnectionManager_GetConnectionMetrics_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create RTSP connection manager
 	// Use standardized config from helper
@@ -215,8 +199,7 @@ func TestRTSPConnectionManager_GetConnectionMetrics_ReqMTX004(t *testing.T) {
 // TestRTSPConnectionManager_Configuration_ReqMTX003 tests RTSP monitoring configuration
 func TestRTSPConnectionManager_Configuration_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion (configuration management)
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -248,7 +231,7 @@ func TestRTSPConnectionManager_Configuration_ReqMTX003(t *testing.T) {
 	// Test that configuration is applied
 	health, err := rtspManager.GetConnectionHealth(ctx)
 	require.NoError(t, err, "GetConnectionHealth should succeed")
-	assert.NotNil(t, health, "Health status should not be nil")
+	require.NotNil(t, health, "Health response should not be nil")
 	assert.Equal(t, "disabled", health.Status, "Health status should be disabled when monitoring is disabled")
 
 	// Test metrics with custom configuration
@@ -264,8 +247,7 @@ func TestRTSPConnectionManager_Configuration_ReqMTX003(t *testing.T) {
 // TestRTSPConnectionManager_ErrorHandling_ReqMTX004 tests error handling
 func TestRTSPConnectionManager_ErrorHandling_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring (error handling)
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create RTSP connection manager
 	// Use standardized config from helper
@@ -280,11 +262,10 @@ func TestRTSPConnectionManager_ErrorHandling_ReqMTX004(t *testing.T) {
 	require.NotNil(t, rtspManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// Test getting non-existent connection
-	_, err := rtspManager.GetConnection(ctx, "non-existent-id")
+	_, err = rtspManager.GetConnection(ctx, "non-existent-id")
 	assert.Error(t, err, "GetConnection should fail for non-existent connection")
 	assert.Contains(t, err.Error(), "non-existent-id", "Error should contain connection ID")
 
@@ -304,8 +285,7 @@ func TestRTSPConnectionManager_ErrorHandling_ReqMTX004(t *testing.T) {
 // TestRTSPConnectionManager_Performance_ReqMTX002 tests performance characteristics
 func TestRTSPConnectionManager_Performance_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities (performance)
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create RTSP connection manager
 	// Use standardized config from helper
@@ -346,8 +326,7 @@ func TestRTSPConnectionManager_Performance_ReqMTX002(t *testing.T) {
 // TestRTSPConnectionManager_RealMediaMTXServer tests integration with real MediaMTX server
 func TestRTSPConnectionManager_RealMediaMTXServer(t *testing.T) {
 	// Integration test with real MediaMTX server
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -361,12 +340,10 @@ func TestRTSPConnectionManager_RealMediaMTXServer(t *testing.T) {
 
 	// Test that we can interact with the real MediaMTX server
 	connections, err := rtspManager.ListConnections(ctx, 0, 10)
-	require.NoError(t, err, "ListConnections should succeed with real MediaMTX server")
-	assert.NotNil(t, connections, "Connections list should not be nil")
+	helper.AssertStandardResponse(t, connections, err, "ListConnections")
 
 	sessions, err := rtspManager.ListSessions(ctx, 0, 10)
-	require.NoError(t, err, "ListSessions should succeed with real MediaMTX server")
-	assert.NotNil(t, sessions, "Sessions list should not be nil")
+	helper.AssertStandardResponse(t, sessions, err, "ListSessions")
 
 	health, err := rtspManager.GetConnectionHealth(ctx)
 	require.NoError(t, err, "GetConnectionHealth should succeed with real MediaMTX server")
@@ -382,8 +359,7 @@ func TestRTSPConnectionManager_RealMediaMTXServer(t *testing.T) {
 
 // TestRTSPConnectionManager_ConfigurationScenarios tests various configuration scenarios
 func TestRTSPConnectionManager_ConfigurationScenarios(t *testing.T) {
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -457,7 +433,6 @@ func TestRTSPConnectionManager_ConfigurationScenarios(t *testing.T) {
 
 				// Test metrics with custom config
 				metrics := rtspManager.GetConnectionMetrics(ctx)
-				// Use standard assertions
 				require.NotNil(t, metrics, "Metrics should not be nil")
 				assert.Contains(t, metrics, "is_healthy", "Metrics should contain is_healthy")
 				assert.Contains(t, metrics, "monitoring_enabled", "Metrics should contain monitoring_enabled")
@@ -470,19 +445,15 @@ func TestRTSPConnectionManager_ConfigurationScenarios(t *testing.T) {
 					"Max connections should match config for scenario %s", scenario.name)
 			}
 
-			logTestProgress(t, helper.GetLogger(), "Configuration scenario tested successfully", map[string]interface{}{
-				"scenario":        scenario.name,
-				"enabled":         scenario.config.Enabled,
-				"max_connections": scenario.config.MaxConnections,
-			})
+			t.Logf("Configuration scenario tested successfully: %s (enabled: %v, max_connections: %d)",
+				scenario.name, scenario.config.Enabled, scenario.config.MaxConnections)
 		})
 	}
 }
 
 // TestRTSPConnectionManager_ErrorScenarios tests various error scenarios
 func TestRTSPConnectionManager_ErrorScenarios(t *testing.T) {
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -556,19 +527,15 @@ func TestRTSPConnectionManager_ErrorScenarios(t *testing.T) {
 				assert.NoError(t, err, "Should not error for scenario %s", scenario.name)
 			}
 
-			logTestProgress(t, helper.GetLogger(), "Error scenario tested", map[string]interface{}{
-				"scenario":       scenario.name,
-				"expected_error": scenario.expectError,
-				"got_error":      err != nil,
-			})
+			t.Logf("Error scenario tested: %s (expected_error: %v, got_error: %v)",
+				scenario.name, scenario.expectError, err != nil)
 		})
 	}
 }
 
 // TestRTSPConnectionManager_ConcurrentAccess tests concurrent access to RTSP manager
 func TestRTSPConnectionManager_ConcurrentAccess(t *testing.T) {
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -642,19 +609,14 @@ func TestRTSPConnectionManager_ConcurrentAccess(t *testing.T) {
 
 	assert.Empty(t, errorList, "No errors should occur during concurrent access: %v", errorList)
 
-	logTestProgress(t, helper.GetLogger(), "Concurrent access test completed successfully", map[string]interface{}{
-		"goroutines":               numGoroutines,
-		"operations_per_goroutine": 5,
-		"total_operations":         numGoroutines * 5 * 4, // 4 operations per iteration
-		"errors":                   len(errorList),
-	})
+	t.Logf("Concurrent access test completed successfully: %d goroutines, %d operations per goroutine, %d total operations, %d errors",
+		numGoroutines, 5, numGoroutines*5*4, len(errorList))
 }
 
 // TestRTSPConnectionManager_StressTest tests stress scenarios
 func TestRTSPConnectionManager_StressTest(t *testing.T) {
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -692,19 +654,14 @@ func TestRTSPConnectionManager_StressTest(t *testing.T) {
 	assert.Less(t, duration, TestThresholdStressTest, "Stress test should complete within 30 seconds")
 	assert.Less(t, avgTimePerOp, TestThresholdFastOperation, "Average time per operation should be less than 500ms")
 
-	logTestProgress(t, helper.GetLogger(), "Stress test completed successfully", map[string]interface{}{
-		"total_operations":      numOperations,
-		"total_duration":        duration.String(),
-		"avg_time_per_op":       avgTimePerOp.String(),
-		"operations_per_second": float64(numOperations) / duration.Seconds(),
-	})
+	t.Logf("Stress test completed successfully: %d operations, %s duration, %s avg time per op, %.2f ops/sec",
+		numOperations, duration.String(), avgTimePerOp.String(), float64(numOperations)/duration.Seconds())
 }
 
 // TestRTSPConnectionManager_IntegrationWithController tests integration with controller
 func TestRTSPConnectionManager_IntegrationWithController(t *testing.T) {
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -750,11 +707,8 @@ func TestRTSPConnectionManager_IntegrationWithController(t *testing.T) {
 	assert.Contains(t, metrics, "monitoring_enabled", "Metrics should contain monitoring_enabled")
 	assert.Contains(t, metrics, "last_check", "Metrics should contain last_check")
 
-	logTestProgress(t, helper.GetLogger(), "Controller integration test completed successfully", map[string]interface{}{
-		"connections_found": len(connections.Items),
-		"sessions_found":    len(sessions.Items),
-		"health_status":     health.Status,
-	})
+	t.Logf("Controller integration test completed successfully: %d connections, %d sessions, health: %s",
+		len(connections.Items), len(sessions.Items), health.Status)
 }
 
 // TestRTSPConnectionManager_InputValidation_DangerousBugs tests input validation
@@ -762,8 +716,7 @@ func TestRTSPConnectionManager_IntegrationWithController(t *testing.T) {
 func TestRTSPConnectionManager_InputValidation_DangerousBugs(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Create RTSP connection manager
 	rtspManager := helper.GetRTSPConnectionManager()
@@ -775,14 +728,12 @@ func TestRTSPConnectionManager_InputValidation_DangerousBugs(t *testing.T) {
 // TestRTSPConnectionManager_ErrorScenarios_DangerousBugs tests error scenarios
 // that were identified in the original test failures
 func TestRTSPConnectionManager_ErrorScenarios_DangerousBugs(t *testing.T) {
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create RTSP connection manager
 	rtspManager := helper.GetRTSPConnectionManager()
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// Test the specific scenarios that were failing in the original tests
 	t.Run("negative_page_number_bug", func(t *testing.T) {

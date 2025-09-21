@@ -24,8 +24,7 @@ import (
 func TestNewPathManager_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -38,8 +37,7 @@ func TestNewPathManager_ReqMTX001(t *testing.T) {
 func TestPathManager_CreatePath_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -49,8 +47,7 @@ func TestPathManager_CreatePath_ReqMTX003(t *testing.T) {
 
 	// Test path creation
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	testPathName := "test_path_manager_" + time.Now().Format("20060102_150405")
 
 	// Ensure cleanup happens even if test fails
@@ -73,8 +70,7 @@ func TestPathManager_CreatePath_ReqMTX003(t *testing.T) {
 func TestPathManager_DeletePath_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -83,8 +79,7 @@ func TestPathManager_DeletePath_ReqMTX003(t *testing.T) {
 	require.NotNil(t, pathManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	testPathName := "test_delete_path_" + time.Now().Format("20060102_150405")
 
 	// Create a path first
@@ -108,8 +103,7 @@ func TestPathManager_DeletePath_ReqMTX003(t *testing.T) {
 func TestPathManager_GetPath_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -118,8 +112,7 @@ func TestPathManager_GetPath_ReqMTX003(t *testing.T) {
 	require.NotNil(t, pathManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	testPathName := "test_get_path_" + time.Now().Format("20060102_150405")
 
 	// Create a path first
@@ -141,8 +134,7 @@ func TestPathManager_GetPath_ReqMTX003(t *testing.T) {
 func TestPathManager_ListPaths_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -151,8 +143,7 @@ func TestPathManager_ListPaths_ReqMTX003(t *testing.T) {
 	require.NotNil(t, pathManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// List all paths
 	paths, err := pathManager.ListPaths(ctx)
@@ -165,8 +156,7 @@ func TestPathManager_ListPaths_ReqMTX003(t *testing.T) {
 func TestPathManager_ValidatePath_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -175,8 +165,7 @@ func TestPathManager_ValidatePath_ReqMTX003(t *testing.T) {
 	require.NotNil(t, pathManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	testPathName := "test_validate_path_" + time.Now().Format("20060102_150405")
 
 	// Create a path first
@@ -196,8 +185,7 @@ func TestPathManager_ValidatePath_ReqMTX003(t *testing.T) {
 func TestPathManager_ErrorHandling_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -206,8 +194,7 @@ func TestPathManager_ErrorHandling_ReqMTX001(t *testing.T) {
 	require.NotNil(t, pathManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// Test invalid path name
 	err := pathManager.CreatePath(ctx, "", "publisher", nil)

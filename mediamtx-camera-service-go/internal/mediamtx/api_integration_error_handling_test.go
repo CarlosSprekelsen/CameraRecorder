@@ -28,12 +28,9 @@ import (
 func TestAPIErrorHandling_400Scenarios(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
 
@@ -129,12 +126,9 @@ func TestPathStateTransitions_Recording(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// REQ-MTX-003: Path creation and deletion
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	pathManager := helper.GetPathManager()
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, pathManager)
@@ -258,16 +252,14 @@ func TestConcurrentRecordingOperations(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// REQ-MTX-007: Error handling and recovery
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// USE EXACT SAME PATTERN as working TestController_StartRecording_ReqMTX002
-	controller := getFreshController(t, "TestConcurrentRecordingOperations")
+	controller, err := helper.GetController(t)
+	require.NoError(t, err, "Controller creation should succeed")
 
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
-	err := controller.Start(ctx)
+	// Context already provided by SetupMediaMTXTest
+	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
 	// Ensure controller is stopped after test (exact same pattern)
@@ -450,12 +442,9 @@ func TestMediaMTXRecovery_Restart(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
 	// REQ-MTX-004: Health monitoring
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	pathManager := helper.GetPathManager()
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, pathManager)

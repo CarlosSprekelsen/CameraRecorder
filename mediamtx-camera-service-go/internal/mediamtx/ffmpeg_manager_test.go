@@ -27,8 +27,7 @@ import (
 // TestNewFFmpegManager_ReqMTX001 tests FFmpeg manager creation with real server
 func TestNewFFmpegManager_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -44,8 +43,7 @@ func TestNewFFmpegManager_ReqMTX001(t *testing.T) {
 // TestFFmpegManager_SnapshotOnly_ReqMTX002 tests FFmpeg snapshot functionality only
 func TestFFmpegManager_SnapshotOnly_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities (snapshots only)
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -58,8 +56,7 @@ func TestFFmpegManager_SnapshotOnly_ReqMTX002(t *testing.T) {
 	require.NotNil(t, ffmpegManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_snapshots")
@@ -86,8 +83,7 @@ func TestFFmpegManager_SnapshotOnly_ReqMTX002(t *testing.T) {
 func TestFFmpegManager_StartProcess_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -100,8 +96,7 @@ func TestFFmpegManager_StartProcess_ReqMTX002(t *testing.T) {
 	require.NotNil(t, ffmpegManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_processes")
@@ -128,8 +123,7 @@ func TestFFmpegManager_StartProcess_ReqMTX002(t *testing.T) {
 // TestFFmpegManager_StopProcess_ReqMTX002 tests FFmpeg process stop with real server
 func TestFFmpegManager_StopProcess_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -142,8 +136,7 @@ func TestFFmpegManager_StopProcess_ReqMTX002(t *testing.T) {
 	require.NotNil(t, ffmpegManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_stop")
@@ -182,8 +175,7 @@ func TestFFmpegManager_StopProcess_ReqMTX002(t *testing.T) {
 // TestFFmpegManager_IsProcessRunning_ReqMTX002 tests process running check with real server
 func TestFFmpegManager_IsProcessRunning_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -196,8 +188,7 @@ func TestFFmpegManager_IsProcessRunning_ReqMTX002(t *testing.T) {
 	require.NotNil(t, ffmpegManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_running")
@@ -240,8 +231,7 @@ func TestFFmpegManager_IsProcessRunning_ReqMTX002(t *testing.T) {
 // TestFFmpegManager_BuildCommand_ReqMTX002 tests command building with real server
 func TestFFmpegManager_BuildCommand_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -269,8 +259,7 @@ func TestFFmpegManager_BuildCommand_ReqMTX002(t *testing.T) {
 // TestFFmpegManager_ErrorHandling_ReqMTX007 tests error scenarios with real server
 func TestFFmpegManager_ErrorHandling_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -283,8 +272,7 @@ func TestFFmpegManager_ErrorHandling_ReqMTX007(t *testing.T) {
 	require.NotNil(t, ffmpegManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_errors")
@@ -312,8 +300,7 @@ func TestFFmpegManager_ErrorHandling_ReqMTX007(t *testing.T) {
 // TestFFmpegManager_ConcurrentAccess_ReqMTX001 tests concurrent operations with real server
 func TestFFmpegManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -326,8 +313,7 @@ func TestFFmpegManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	require.NotNil(t, ffmpegManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_concurrent")
@@ -374,8 +360,7 @@ func TestFFmpegManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 // TestFFmpegManager_PerformanceMetrics_ReqMTX002 tests performance metrics with real server
 func TestFFmpegManager_PerformanceMetrics_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -388,8 +373,7 @@ func TestFFmpegManager_PerformanceMetrics_ReqMTX002(t *testing.T) {
 	require.NotNil(t, ffmpegManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_metrics")

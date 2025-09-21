@@ -604,7 +604,7 @@ func TestWebSocketServer_ProcessMessage_ReqAPI002_JsonRpcCompliance(t *testing.T
 	// Test 1: Valid JSON-RPC 2.0 request
 	t.Run("ValidJsonRpcRequest", func(t *testing.T) {
 		// Authenticate first since ping requires authentication
-		helper.AuthenticateTestClient(t, conn, "test-user", "viewer")
+		AuthenticateTestClient(t, conn, "test-user", "viewer")
 
 		message := CreateTestMessage("ping", nil)
 		response := SendTestMessage(t, conn, message)
@@ -792,7 +792,7 @@ func TestWebSocketServer_Authenticate_ReqSEC001_AuthenticationFlow(t *testing.T)
 
 	// Test 1: Valid authentication
 	t.Run("ValidAuthentication", func(t *testing.T) {
-		helper.AuthenticateTestClient(t, conn, "test-user", "viewer")
+		AuthenticateTestClient(t, conn, "test-user", "viewer")
 
 		// After authentication, ping should work
 		message := CreateTestMessage("ping", nil)
@@ -955,7 +955,7 @@ func TestWebSocketServer_SendResponse_ReqAPI003_ResponseMetadata(t *testing.T) {
 	conn := helper.NewTestClient(t, server)
 	defer helper.CleanupTestClient(t, conn)
 
-	helper.AuthenticateTestClient(t, conn, "test-user", "viewer")
+	AuthenticateTestClient(t, conn, "test-user", "viewer")
 
 	// Test 1: Response metadata presence
 	t.Run("ResponseMetadataPresence", func(t *testing.T) {
@@ -1055,7 +1055,7 @@ func TestWebSocketServer_ProcessMessage_ReqAPI001_MessageSizeLimits(t *testing.T
 	conn := helper.NewTestClient(t, server)
 	defer helper.CleanupTestClient(t, conn)
 
-	helper.AuthenticateTestClient(t, conn, "test-user", "viewer")
+	AuthenticateTestClient(t, conn, "test-user", "viewer")
 
 	// Test 1: Normal size message
 	t.Run("NormalSizeMessage", func(t *testing.T) {

@@ -27,8 +27,7 @@ import (
 func TestNewHealthMonitor_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Server is ready via shared test helper
 
@@ -53,8 +52,7 @@ func TestNewHealthMonitor_ReqMTX004(t *testing.T) {
 // TestHealthMonitor_StartStop_ReqMTX004 tests health monitor start/stop
 func TestHealthMonitor_StartStop_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -73,10 +71,6 @@ func TestHealthMonitor_StartStop_ReqMTX004(t *testing.T) {
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor)
 
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
-
 	// Start health monitoring
 	err := healthMonitor.Start(ctx)
 	require.NoError(t, err, "Health monitor should start successfully")
@@ -93,8 +87,7 @@ func TestHealthMonitor_StartStop_ReqMTX004(t *testing.T) {
 // TestHealthMonitor_GetStatus_ReqMTX004 tests health status retrieval
 func TestHealthMonitor_GetStatus_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -118,10 +111,6 @@ func TestHealthMonitor_GetStatus_ReqMTX004(t *testing.T) {
 	require.NotNil(t, status, "Status should not be nil")
 	assert.Equal(t, "healthy", status.Status, "Initial status should be healthy")
 
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
-
 	// Start monitoring
 	err := healthMonitor.Start(ctx)
 	require.NoError(t, err, "Health monitor should start successfully")
@@ -139,8 +128,7 @@ func TestHealthMonitor_GetStatus_ReqMTX004(t *testing.T) {
 // TestHealthMonitor_GetMetrics_ReqMTX004 tests health metrics retrieval
 func TestHealthMonitor_GetMetrics_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -165,10 +153,6 @@ func TestHealthMonitor_GetMetrics_ReqMTX004(t *testing.T) {
 	assert.Contains(t, metrics, "is_healthy", "Metrics should contain is_healthy")
 	assert.Contains(t, metrics, "failure_count", "Metrics should contain failure_count")
 
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
-
 	// Start monitoring
 	err := healthMonitor.Start(ctx)
 	require.NoError(t, err, "Health monitor should start successfully")
@@ -186,8 +170,7 @@ func TestHealthMonitor_GetMetrics_ReqMTX004(t *testing.T) {
 // TestHealthMonitor_RecordSuccess_ReqMTX004 tests success recording
 func TestHealthMonitor_RecordSuccess_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Server is ready via shared test helper
 
@@ -222,8 +205,7 @@ func TestHealthMonitor_RecordSuccess_ReqMTX004(t *testing.T) {
 // TestHealthMonitor_RecordFailure_ReqMTX004 tests failure recording
 func TestHealthMonitor_RecordFailure_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Server is ready via shared test helper
 
@@ -265,8 +247,7 @@ func TestHealthMonitor_RecordFailure_ReqMTX004(t *testing.T) {
 // TestHealthMonitor_Configuration_ReqMTX004 tests different configurations
 func TestHealthMonitor_Configuration_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Server is ready via shared test helper
 
@@ -312,8 +293,7 @@ func TestHealthMonitor_Configuration_ReqMTX004(t *testing.T) {
 // TestHealthMonitor_DebounceMechanism_ReqMTX004 tests debounce mechanism in health monitoring
 func TestHealthMonitor_DebounceMechanism_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create health monitor
 	client := helper.GetClient()
@@ -335,9 +315,6 @@ func TestHealthMonitor_DebounceMechanism_ReqMTX004(t *testing.T) {
 	healthMonitor.SetSystemNotifier(mockNotifier)
 
 	// Test debounce mechanism with rapid successive failures
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
 
 	// Start the health monitor
 	err := healthMonitor.Start(ctx)
@@ -373,8 +350,7 @@ func TestHealthMonitor_DebounceMechanism_ReqMTX004(t *testing.T) {
 // TestHealthMonitor_AtomicOperations_ReqMTX004 tests atomic operations for thread safety
 func TestHealthMonitor_AtomicOperations_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create health monitor
 	client := helper.GetClient()
@@ -392,9 +368,6 @@ func TestHealthMonitor_AtomicOperations_ReqMTX004(t *testing.T) {
 	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
 
 	// Test concurrent access to ensure atomic operations work correctly
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
 
 	// Start the health monitor
 	err := healthMonitor.Start(ctx)
@@ -438,8 +411,7 @@ func TestHealthMonitor_AtomicOperations_ReqMTX004(t *testing.T) {
 // TestHealthMonitor_StatusTransitions_ReqMTX004 tests status transitions with debounce
 func TestHealthMonitor_StatusTransitions_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create health monitor
 	client := helper.GetClient()
@@ -461,9 +433,6 @@ func TestHealthMonitor_StatusTransitions_ReqMTX004(t *testing.T) {
 	healthMonitor.SetSystemNotifier(mockNotifier)
 
 	// Test status transitions
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
 
 	// Start the health monitor
 	err := healthMonitor.Start(ctx)
@@ -498,8 +467,7 @@ func TestHealthMonitor_StatusTransitions_ReqMTX004(t *testing.T) {
 func TestHealthMonitor_GetHealthAPI_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring - API-ready health responses
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create health monitor using existing test infrastructure
 	config := &config.MediaMTXConfig{
@@ -517,9 +485,6 @@ func TestHealthMonitor_GetHealthAPI_ReqMTX004(t *testing.T) {
 	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
 
 	// Start health monitor
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
 	err := healthMonitor.Start(ctx)
 	require.NoError(t, err, "Health monitor should start successfully")
 
@@ -560,8 +525,7 @@ func TestHealthMonitor_GetHealthAPI_ReqMTX004(t *testing.T) {
 func TestHealthMonitor_GetHealthAPI_APICompliance_ReqAPI001(t *testing.T) {
 	// REQ-API-001: JSON-RPC API compliance for health endpoints
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create health monitor using existing test infrastructure
 	config := &config.MediaMTXConfig{
@@ -578,9 +542,6 @@ func TestHealthMonitor_GetHealthAPI_APICompliance_ReqAPI001(t *testing.T) {
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
 
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
 	startTime := time.Now().Add(-30 * time.Minute)
 
 	// Test API compliance for GetHealthAPI method
@@ -609,8 +570,7 @@ func TestHealthMonitor_GetHealthAPI_APICompliance_ReqAPI001(t *testing.T) {
 func TestHealthMonitor_GetHealthAPI_ErrorScenarios_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring - error handling
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper := SetupMediaMTXTestHelperOnly(t)
 
 	// Create health monitor using existing test infrastructure
 	config := &config.MediaMTXConfig{

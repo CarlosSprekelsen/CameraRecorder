@@ -369,7 +369,7 @@ func (h *WebSocketTestHelper) ValidateProgressiveReadiness(t *testing.T, server 
 
 	// Test 2: System should return readiness status instead of blocking
 	// FIXED: Use get_status (API-compliant) with admin role (API requirement)
-	AuthenticateTestClient(t, conn, "test_user", "admin")
+	h.authenticateConnection(t, conn, "test_user", "admin")
 
 	message := CreateTestMessage("get_status", nil)
 	response := SendTestMessage(t, conn, message)
@@ -692,7 +692,7 @@ func TestArchitecturalCompliance_ProgressiveReadiness(t *testing.T, server *WebS
 // This eliminates the 12-line setup pattern across all tests
 func (h *WebSocketTestHelper) GetAuthenticatedConnection(t *testing.T, userID string, role string) *websocket.Conn {
 	// Standard setup pattern - all in one method
-	controller := createMediaMTXControllerUsingProvenPattern(t)
+	controller := h.GetMediaMTXController(t)
 	server := h.GetServer(t)
 	server.SetMediaMTXController(controller)
 	server = h.StartServer(t)
@@ -712,6 +712,24 @@ func (h *WebSocketTestHelper) TestMethod(t *testing.T, method string, params map
 
 	message := CreateTestMessage(method, params)
 	return SendTestMessage(t, conn, message)
+}
+
+// AuthenticateTestClient authenticates a WebSocket connection (standalone function for compatibility)
+func AuthenticateTestClient(t *testing.T, conn *websocket.Conn, userID string, role string) {
+	// Use standardized enterprise JWT handler creation
+	jwtHandler, err := security.NewJWTHandler(ENTERPRISE_TEST_JWT_SECRET, NewTestLogger("test-jwt"))
+	require.NoError(t, err, "Failed to create standardized JWT handler")
+	// Generate test token directly since security.GenerateTestToken requires build tags
+	testToken, err := jwtHandler.GenerateToken(userID, role, 24)
+	require.NoError(t, err, "Failed to generate test token")
+
+	// Send authentication message
+	authMessage := CreateTestMessage("authenticate", map[string]interface{}{
+		"token": testToken,
+	})
+	authResponse := SendTestMessage(t, conn, authMessage)
+	require.Nil(t, authResponse.Error, "Authentication should succeed")
+	require.Equal(t, "authenticated", authResponse.Result, "Authentication should return success")
 }
 
 // authenticateConnection authenticates a connection (internal helper)

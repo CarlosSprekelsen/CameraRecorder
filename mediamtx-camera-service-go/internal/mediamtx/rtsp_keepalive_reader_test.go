@@ -11,8 +11,7 @@ import (
 
 func TestRTSPKeepaliveReader_NewRTSPKeepaliveReader(t *testing.T) {
 	// Use fixture-based test helper following Path Management Solution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
@@ -33,8 +32,7 @@ func TestRTSPKeepaliveReader_NewRTSPKeepaliveReader(t *testing.T) {
 
 func TestRTSPKeepaliveReader_StartKeepalive(t *testing.T) {
 	// Use fixture-based test helper following Path Management Solution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
@@ -48,8 +46,7 @@ func TestRTSPKeepaliveReader_StartKeepalive(t *testing.T) {
 
 	// Test starting keepalive for a path
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	pathName := "test_camera"
 
 	// This will fail because MediaMTX is not running, but we can test the logic
@@ -66,8 +63,7 @@ func TestRTSPKeepaliveReader_StartKeepalive(t *testing.T) {
 
 func TestRTSPKeepaliveReader_StopKeepalive(t *testing.T) {
 	// Use fixture-based test helper following Path Management Solution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
@@ -85,8 +81,7 @@ func TestRTSPKeepaliveReader_StopKeepalive(t *testing.T) {
 
 	// Test stopping an active keepalive
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	pathName := "test_camera"
 
 	// Start keepalive (will fail gracefully if MediaMTX not available)
@@ -103,8 +98,7 @@ func TestRTSPKeepaliveReader_StopKeepalive(t *testing.T) {
 
 func TestRTSPKeepaliveReader_StopAll(t *testing.T) {
 	// Use fixture-based test helper following Path Management Solution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
@@ -118,8 +112,7 @@ func TestRTSPKeepaliveReader_StopAll(t *testing.T) {
 
 	// Start multiple keepalives
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	reader.StartKeepalive(ctx, "camera1")
 	reader.StartKeepalive(ctx, "camera2")
 	reader.StartKeepalive(ctx, "camera3")
@@ -139,8 +132,7 @@ func TestRTSPKeepaliveReader_StopAll(t *testing.T) {
 
 func TestRTSPKeepaliveReader_IsActive(t *testing.T) {
 	// Use fixture-based test helper following Path Management Solution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
@@ -157,8 +149,7 @@ func TestRTSPKeepaliveReader_IsActive(t *testing.T) {
 
 	// Start keepalive
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	pathName := "active_path"
 	reader.StartKeepalive(ctx, pathName)
 
@@ -174,8 +165,7 @@ func TestRTSPKeepaliveReader_IsActive(t *testing.T) {
 
 func TestRTSPKeepaliveReader_GetActiveCount(t *testing.T) {
 	// Use fixture-based test helper following Path Management Solution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
@@ -192,8 +182,7 @@ func TestRTSPKeepaliveReader_GetActiveCount(t *testing.T) {
 
 	// Start keepalives
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	reader.StartKeepalive(ctx, "camera1")
 	assert.Equal(t, 1, reader.GetActiveCount(), "Count should be 1 after starting one")
 
@@ -224,10 +213,9 @@ func TestRTSPKeepaliveReader_EnvironmentVariables(t *testing.T) {
 	}()
 
 	// Use centralized path management instead of hardcoded paths
-	helper := NewMediaMTXTestHelper(t, nil)
+	helper, _ := SetupMediaMTXTest(t)
 	testDir := helper.GetConfig().TestDataDir
 	os.Setenv("MEDIAMTX_TEST_DATA_DIR", testDir)
-	defer helper.Cleanup(t)
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
@@ -246,8 +234,7 @@ func TestRTSPKeepaliveReader_EnvironmentVariables(t *testing.T) {
 
 func TestRTSPKeepaliveReader_ConcurrentOperations(t *testing.T) {
 	// Use fixture-based test helper following Path Management Solution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
@@ -261,8 +248,7 @@ func TestRTSPKeepaliveReader_ConcurrentOperations(t *testing.T) {
 
 	// Test concurrent start/stop operations
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	pathName := "concurrent_test"
 
 	// Start multiple goroutines

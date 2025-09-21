@@ -127,6 +127,92 @@ type MediaMTXTestHelper struct {
 
 // REMOVED: EnsureSequentialExecution - violated Progressive Readiness Pattern
 
+// SetupMediaMTXTest - UNIVERSAL TEST SETUP FUNCTION
+// This function eliminates boilerplate setup code across all MediaMTX tests.
+//
+// REPLACES these 5 lines of repetitive code:
+//
+//	helper := NewMediaMTXTestHelper(t, nil)
+//	defer helper.Cleanup(t)
+//	ctx, cancel := helper.GetStandardContext()
+//	defer cancel()
+//
+// WITH this single line:
+//
+//	helper, ctx := SetupMediaMTXTest(t)
+//
+// The function automatically handles cleanup using t.Cleanup() for proper test lifecycle management.
+func SetupMediaMTXTest(t *testing.T) (*MediaMTXTestHelper, context.Context) {
+	helper := NewMediaMTXTestHelper(t, nil)
+	t.Cleanup(func() { helper.Cleanup(t) })
+
+	ctx, cancel := helper.GetStandardContext()
+	t.Cleanup(cancel)
+
+	return helper, ctx
+}
+
+// SetupMediaMTXTestHelperOnly - For tests that don't need context
+// Returns only the helper for tests that don't use context operations
+func SetupMediaMTXTestHelperOnly(t *testing.T) *MediaMTXTestHelper {
+	helper := NewMediaMTXTestHelper(t, nil)
+	t.Cleanup(func() { helper.Cleanup(t) })
+	return helper
+}
+
+// ============================================================================
+// DOMAIN-SPECIFIC ASSERTION HELPERS
+// ============================================================================
+// These helpers eliminate repetitive assertion patterns across MediaMTX tests.
+
+// AssertHealthResponse validates standard health response patterns
+// Replaces 4 lines of repetitive health assertions with 1 line
+func (h *MediaMTXTestHelper) AssertHealthResponse(t *testing.T, health *GetHealthResponse, err error, operation string) {
+	require.NoError(t, err, "%s should succeed", operation)
+	require.NotNil(t, health, "%s response should not be nil", operation)
+	assert.NotEmpty(t, health.Status, "Health status should not be empty")
+	assert.NotZero(t, health.Timestamp, "Health timestamp should not be zero")
+}
+
+// AssertSnapshotResponse validates snapshot operation responses
+// Replaces 5 lines of repetitive snapshot assertions with 1 line
+func (h *MediaMTXTestHelper) AssertSnapshotResponse(t *testing.T, response *TakeSnapshotResponse, err error) {
+	require.NoError(t, err, "Snapshot should succeed")
+	require.NotNil(t, response, "Snapshot response should not be nil")
+	assert.NotEmpty(t, response.Filename, "Filename should not be empty")
+	assert.Equal(t, "completed", response.Status, "Status should be completed")
+	assert.Greater(t, response.FileSize, int64(0), "File size should be positive")
+	assert.NotEmpty(t, response.FilePath, "File path should not be empty")
+}
+
+// AssertRecordingResponse validates recording operation responses
+// Replaces 4 lines of repetitive recording assertions with 1 line
+func (h *MediaMTXTestHelper) AssertRecordingResponse(t *testing.T, response *StartRecordingResponse, err error) {
+	require.NoError(t, err, "Recording should succeed")
+	require.NotNil(t, response, "Recording response should not be nil")
+	assert.NotEmpty(t, response.Filename, "Filename should not be empty")
+	assert.Equal(t, "RECORDING", response.Status, "Status should be RECORDING")
+}
+
+// AssertListResponse validates standard list response patterns
+// Replaces 4 lines of repetitive list assertions with 1 line
+func (h *MediaMTXTestHelper) AssertListResponse(t *testing.T, response interface{}, err error, operation string) {
+	require.NoError(t, err, "%s should succeed", operation)
+	require.NotNil(t, response, "%s response should not be nil", operation)
+
+	// Use reflection to check common list response fields
+	if listResp, ok := response.(interface{ GetTotal() int }); ok {
+		assert.GreaterOrEqual(t, listResp.GetTotal(), 0, "Total should be non-negative")
+	}
+}
+
+// AssertStandardResponse validates basic success response patterns
+// Replaces 2 lines of basic assertions with 1 line
+func (h *MediaMTXTestHelper) AssertStandardResponse(t *testing.T, response interface{}, err error, operation string) {
+	require.NoError(t, err, "%s should succeed", operation)
+	require.NotNil(t, response, "%s response should not be nil", operation)
+}
+
 // NewMediaMTXTestHelper creates a new test helper for MediaMTX server testing
 //
 // PREFERRED PATTERNS FOR NEW TESTS:
@@ -879,6 +965,15 @@ func createConfigManagerWithFixtureInternal(t *testing.T, fixtureName string) *c
 				t.Fatalf("Failed to create required directory %s: %v", dir, err)
 			} else {
 				panic(fmt.Sprintf("Failed to create required directory %s: %v", dir, err))
+			}
+		}
+
+		// Set proper permissions for recordings and snapshots directories
+		if dir == recordingsPath || dir == snapshotsPath {
+			if err := os.Chmod(dir, 0777); err != nil {
+				if t != nil {
+					t.Logf("Warning: Failed to set permissions for %s: %v", dir, err)
+				}
 			}
 		}
 	}

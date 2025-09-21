@@ -33,8 +33,7 @@ import (
 func TestPathManager_RealServer_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -49,8 +48,7 @@ func TestPathManager_RealServer_ReqMTX001(t *testing.T) {
 
 	// Test basic path manager functionality
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// Test path listing (basic functionality)
 	paths, err := pathManager.ListPaths(ctx)
@@ -66,8 +64,7 @@ func TestPathManager_RealServer_ReqMTX001(t *testing.T) {
 func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -81,8 +78,7 @@ func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 	require.NotNil(t, pathManager, "Path manager should be created")
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// Test path creation with real MediaMTX server
 	testPathName := "test_camera_path"
@@ -114,8 +110,7 @@ func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 func TestPathManager_ConfigIntegration_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -140,8 +135,7 @@ func TestPathManager_ConfigIntegration_ReqMTX003(t *testing.T) {
 	// Note: PathManager doesn't have GetHealth method - that's for Controller
 	// Test basic functionality instead
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	paths, err := pathManager.ListPaths(ctx)
 	require.NoError(t, err, "ListPaths should succeed")
 	assert.NotNil(t, paths, "Paths list should not be nil")
@@ -153,8 +147,7 @@ func TestPathManager_ConfigIntegration_ReqMTX003(t *testing.T) {
 func TestPathManager_HealthMonitoring_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -169,8 +162,7 @@ func TestPathManager_HealthMonitoring_ReqMTX004(t *testing.T) {
 
 	// Test path operations instead of health (PathManager doesn't have GetHealth)
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// Test path listing
 	paths, err := pathManager.ListPaths(ctx)
@@ -203,8 +195,7 @@ func TestPathManager_HealthMonitoring_ReqMTX004(t *testing.T) {
 func TestPathManager_RealMediaMTXServer(t *testing.T) {
 	// Test real MediaMTX server integration
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Server is ready via shared test helper
 
@@ -219,8 +210,7 @@ func TestPathManager_RealMediaMTXServer(t *testing.T) {
 
 	// Test that we can interact with the real MediaMTX server
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	paths, err := pathManager.ListPaths(ctx)
 	require.NoError(t, err, "ListPaths should succeed with real MediaMTX server")
 	assert.NotNil(t, paths, "Paths list should not be nil")

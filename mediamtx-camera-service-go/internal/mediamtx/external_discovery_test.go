@@ -25,18 +25,14 @@ import (
 // TestExternalStreamDiscovery_DiscoverExternalStreams_ReqMTX001 tests external stream discovery
 func TestExternalStreamDiscovery_DiscoverExternalStreams_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create controller
 	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
-	require.NotNil(t, controller, "Controller should not be nil")
+	helper.AssertStandardResponse(t, controller, err, "Controller creation")
 
 	// Start the controller
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -54,8 +50,7 @@ func TestExternalStreamDiscovery_DiscoverExternalStreams_ReqMTX001(t *testing.T)
 	}
 
 	result, err := controller.DiscoverExternalStreams(ctx, options)
-	require.NoError(t, err, "External stream discovery should succeed")
-	require.NotNil(t, result, "Discovery result should not be nil")
+	helper.AssertStandardResponse(t, result, err, "External stream discovery")
 
 	// Verify result structure
 	assert.NotNil(t, result.DiscoveredStreams, "Discovered streams should not be nil")
@@ -66,18 +61,14 @@ func TestExternalStreamDiscovery_DiscoverExternalStreams_ReqMTX001(t *testing.T)
 // TestExternalStreamDiscovery_AddExternalStream_ReqMTX002 tests adding external streams
 func TestExternalStreamDiscovery_AddExternalStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create controller
 	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
-	require.NotNil(t, controller, "Controller should not be nil")
+	helper.AssertStandardResponse(t, controller, err, "Controller creation")
 
 	// Start the controller
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -119,18 +110,14 @@ func TestExternalStreamDiscovery_AddExternalStream_ReqMTX002(t *testing.T) {
 // TestExternalStreamDiscovery_RemoveExternalStream_ReqMTX002 tests removing external streams
 func TestExternalStreamDiscovery_RemoveExternalStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create controller
 	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
-	require.NotNil(t, controller, "Controller should not be nil")
+	helper.AssertStandardResponse(t, controller, err, "Controller creation")
 
 	// Start the controller
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -189,18 +176,14 @@ func TestExternalStreamDiscovery_RemoveExternalStream_ReqMTX002(t *testing.T) {
 // TestExternalStreamDiscovery_GetExternalStreams_ReqMTX002 tests getting external streams
 func TestExternalStreamDiscovery_GetExternalStreams_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create controller
 	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
-	require.NotNil(t, controller, "Controller should not be nil")
+	helper.AssertStandardResponse(t, controller, err, "Controller creation")
 
 	// Start the controller
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -249,18 +232,14 @@ func TestExternalStreamDiscovery_GetExternalStreams_ReqMTX002(t *testing.T) {
 // TestExternalStreamDiscovery_ErrorHandling_ReqMTX004 tests error handling scenarios
 func TestExternalStreamDiscovery_ErrorHandling_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring and error handling
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create controller
 	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
-	require.NotNil(t, controller, "Controller should not be nil")
+	helper.AssertStandardResponse(t, controller, err, "Controller creation")
 
 	// Start the controller
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -295,18 +274,14 @@ func TestExternalStreamDiscovery_ErrorHandling_ReqMTX004(t *testing.T) {
 // TestExternalStreamDiscovery_OptionalComponent_ReqMTX004 tests optional component behavior
 func TestExternalStreamDiscovery_OptionalComponent_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring and error handling
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create controller (external discovery will be nil by default)
 	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
-	require.NotNil(t, controller, "Controller should not be nil")
+	helper.AssertStandardResponse(t, controller, err, "Controller creation")
 
 	// Start the controller
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -351,8 +326,7 @@ func TestExternalStreamDiscovery_OptionalComponent_ReqMTX004(t *testing.T) {
 // TestExternalStreamDiscovery_ContextAwareShutdown tests the context-aware shutdown functionality
 func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 	t.Run("graceful_shutdown_with_context", func(t *testing.T) {
-		helper := NewMediaMTXTestHelper(t, nil)
-		defer helper.Cleanup(t)
+		helper, ctx := SetupMediaMTXTest(t)
 
 		// Create external discovery directly
 		logger := helper.GetLogger()
@@ -363,7 +337,7 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 
 		// Start discovery
 		// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
+		ctx, cancel := helper.GetStandardContext()
 		defer cancel()
 		err := discovery.Start(ctx)
 		require.NoError(t, err, "Discovery should start successfully")
@@ -381,8 +355,7 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 	})
 
 	t.Run("shutdown_with_cancelled_context", func(t *testing.T) {
-		helper := NewMediaMTXTestHelper(t, nil)
-		defer helper.Cleanup(t)
+		helper, ctx := SetupMediaMTXTest(t)
 
 		// Create external discovery directly
 		logger := helper.GetLogger()
@@ -393,7 +366,7 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 
 		// Start discovery
 		// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
+		ctx, cancel := helper.GetStandardContext()
 		defer cancel()
 		err := discovery.Start(ctx)
 		require.NoError(t, err, "Discovery should start successfully")
@@ -412,8 +385,7 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 	})
 
 	t.Run("shutdown_timeout_handling", func(t *testing.T) {
-		helper := NewMediaMTXTestHelper(t, nil)
-		defer helper.Cleanup(t)
+		helper, ctx := SetupMediaMTXTest(t)
 
 		// Create external discovery directly
 		logger := helper.GetLogger()
@@ -424,7 +396,7 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 
 		// Start discovery
 		// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
+		ctx, cancel := helper.GetStandardContext()
 		defer cancel()
 		err := discovery.Start(ctx)
 		require.NoError(t, err, "Discovery should start successfully")
@@ -452,8 +424,7 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 	})
 
 	t.Run("double_stop_handling", func(t *testing.T) {
-		helper := NewMediaMTXTestHelper(t, nil)
-		defer helper.Cleanup(t)
+		helper, ctx := SetupMediaMTXTest(t)
 
 		// Create external discovery directly
 		logger := helper.GetLogger()
@@ -464,7 +435,7 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 
 		// Start discovery
 		// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
+		ctx, cancel := helper.GetStandardContext()
 		defer cancel()
 		err := discovery.Start(ctx)
 		require.NoError(t, err, "Discovery should start successfully")
@@ -483,8 +454,7 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 	})
 
 	t.Run("stop_without_start", func(t *testing.T) {
-		helper := NewMediaMTXTestHelper(t, nil)
-		defer helper.Cleanup(t)
+		helper, ctx := SetupMediaMTXTest(t)
 
 		// Create external discovery directly
 		logger := helper.GetLogger()
@@ -504,8 +474,7 @@ func TestExternalStreamDiscovery_ContextAwareShutdown(t *testing.T) {
 // TestExternalStreamDiscovery_DiscoverExternalStreamsAPI_ReqMTX002 tests new API-ready discovery method
 func TestExternalStreamDiscovery_DiscoverExternalStreamsAPI_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - API-ready external stream discovery
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create external stream discovery using centralized configuration architecture
 	logger := helper.GetLogger()
@@ -516,9 +485,7 @@ func TestExternalStreamDiscovery_DiscoverExternalStreamsAPI_ReqMTX002(t *testing
 	discovery := NewExternalStreamDiscovery(configIntegration, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// Test DiscoverExternalStreamsAPI method - new API-ready response
 	options := DiscoveryOptions{
@@ -546,8 +513,7 @@ func TestExternalStreamDiscovery_DiscoverExternalStreamsAPI_ReqMTX002(t *testing
 // TestExternalStreamDiscovery_GetExternalStreamsAPI_ReqMTX002 tests new API-ready streams listing
 func TestExternalStreamDiscovery_GetExternalStreamsAPI_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - API-ready external streams listing
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create external stream discovery using existing test infrastructure
 	logger := helper.GetLogger()
@@ -558,9 +524,7 @@ func TestExternalStreamDiscovery_GetExternalStreamsAPI_ReqMTX002(t *testing.T) {
 	discovery := NewExternalStreamDiscovery(configIntegration, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// Test GetExternalStreamsAPI method - new API-ready response
 	response, err := discovery.GetExternalStreamsAPI(ctx)
@@ -578,8 +542,7 @@ func TestExternalStreamDiscovery_GetExternalStreamsAPI_ReqMTX002(t *testing.T) {
 // TestExternalStreamDiscovery_AddExternalStreamAPI_ReqMTX002 tests new API-ready stream addition
 func TestExternalStreamDiscovery_AddExternalStreamAPI_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - API-ready external stream addition
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create external stream discovery using existing test infrastructure
 	logger := helper.GetLogger()
@@ -590,9 +553,7 @@ func TestExternalStreamDiscovery_AddExternalStreamAPI_ReqMTX002(t *testing.T) {
 	discovery := NewExternalStreamDiscovery(configIntegration, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// Create test external stream
 	testStream := &ExternalStream{
@@ -625,8 +586,7 @@ func TestExternalStreamDiscovery_AddExternalStreamAPI_ReqMTX002(t *testing.T) {
 // TestExternalStreamDiscovery_RemoveExternalStreamAPI_ReqMTX002 tests new API-ready stream removal
 func TestExternalStreamDiscovery_RemoveExternalStreamAPI_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - API-ready external stream removal
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create external stream discovery using existing test infrastructure
 	logger := helper.GetLogger()
@@ -637,9 +597,7 @@ func TestExternalStreamDiscovery_RemoveExternalStreamAPI_ReqMTX002(t *testing.T)
 	discovery := NewExternalStreamDiscovery(configIntegration, logger)
 	require.NotNil(t, discovery, "ExternalStreamDiscovery should be created")
 
-	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// First add a test stream
 	testStream := &ExternalStream{

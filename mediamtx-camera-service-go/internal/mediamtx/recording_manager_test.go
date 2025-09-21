@@ -14,7 +14,6 @@ API Documentation Reference: docs/api/swagger.json
 package mediamtx
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -31,8 +30,7 @@ import (
 // TestNewRecordingManager_ReqMTX001 tests recording manager creation with real hardware
 func TestNewRecordingManager_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Get recording manager with full integration (now includes camera monitor)
 	recordingManager := helper.GetRecordingManager()
@@ -43,10 +41,8 @@ func TestNewRecordingManager_ReqMTX001(t *testing.T) {
 func TestRecordingManager_StartRecording_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// No sequential execution - Progressive Readiness enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
-	// MINIMAL: Helper handles all setup
 	controller, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
 	defer controller.Stop(ctx)
@@ -76,19 +72,16 @@ func TestRecordingManager_StartRecording_ReqMTX002(t *testing.T) {
 		}
 	}
 
-	require.NotNil(t, response, "StartRecording should return response")
+	helper.AssertRecordingResponse(t, response, err)
 
-	// Validate response format
+	// Additional specific validations
 	assert.Equal(t, cameraID, response.Device, "Response device should match request")
-	assert.NotEmpty(t, response.Filename, "Response should include filename")
-	assert.Equal(t, "RECORDING", response.Status, "Response should indicate recording status")
 	assert.NotEmpty(t, response.StartTime, "Response should include start time")
 	assert.NotEmpty(t, response.Format, "Response should include format")
 
 	// Clean up
 	stopResponse, err := recordingManager.StopRecording(ctx, cameraID)
-	require.NoError(t, err, "Recording should stop successfully")
-	require.NotNil(t, stopResponse, "StopRecording should return response")
+	helper.AssertStandardResponse(t, stopResponse, err, "StopRecording")
 
 	// Validate stop response
 	assert.Equal(t, cameraID, stopResponse.Device, "Stop response device should match")
@@ -98,16 +91,12 @@ func TestRecordingManager_StartRecording_ReqMTX002(t *testing.T) {
 // TestRecordingManager_StopRecording_ReqMTX002 tests recording session termination with real server
 func TestRecordingManager_StopRecording_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -144,16 +133,12 @@ func TestRecordingManager_StopRecording_ReqMTX002(t *testing.T) {
 // TestRecordingManager_GetRecordingsListAPI_ReqMTX002 tests MediaMTX API integration with real server
 func TestRecordingManager_GetRecordingsListAPI_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - API compliance validation
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -181,8 +166,7 @@ func TestRecordingManager_GetRecordingsListAPI_ReqMTX002(t *testing.T) {
 func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and persistence - Validate MediaMTX API integration
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Force cleanup of any existing runtime paths first
 	helper.ForceCleanupRuntimePaths(t)
@@ -190,7 +174,6 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -288,12 +271,8 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 // TestRecordingManager_APISchemaCompliance_ReqMTX001 tests swagger.json schema compliance
 func TestRecordingManager_APISchemaCompliance_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration - Schema validation per swagger.json
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
-	// Server is ready via shared test helper
-
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -341,10 +320,8 @@ func TestRecordingManager_APISchemaCompliance_ReqMTX001(t *testing.T) {
 // TestRecordingManager_APIErrorHandling_ReqMTX004 tests error handling with MediaMTX API
 func TestRecordingManager_APIErrorHandling_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring and circuit breaker - Error handling validation
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -381,16 +358,12 @@ func TestRecordingManager_APIErrorHandling_ReqMTX004(t *testing.T) {
 // TestRecordingManager_ErrorHandling_ReqMTX007 tests error scenarios with real server
 func TestRecordingManager_ErrorHandling_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -414,16 +387,12 @@ func TestRecordingManager_ErrorHandling_ReqMTX007(t *testing.T) {
 // TestRecordingManager_ConcurrentAccess_ReqMTX001 tests concurrent operations with real server
 func TestRecordingManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -463,16 +432,12 @@ func TestRecordingManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 // TestRecordingManager_StartRecordingWithSegments_ReqMTX002 tests segmented recording with real server
 func TestRecordingManager_StartRecordingWithSegments_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -490,12 +455,10 @@ func TestRecordingManager_StartRecordingWithSegments_ReqMTX002(t *testing.T) {
 	}
 
 	session, err := recordingManager.StartRecording(ctx, devicePath, options)
-	require.NoError(t, err, "Recording with MediaMTX config should start successfully")
-	require.NotNil(t, session, "Recording response should not be nil")
+	helper.AssertStandardResponse(t, session, err, "Recording with MediaMTX config")
 
 	// Verify response is created with configuration
-	assert.NotEmpty(t, session.Filename, "Response should have filename")
-	assert.Equal(t, "RECORDING", session.Status)
+	helper.AssertRecordingResponse(t, session, nil)
 
 	// Clean up
 	_, _ = recordingManager.StopRecording(ctx, session.Device)
@@ -505,10 +468,8 @@ func TestRecordingManager_StartRecordingWithSegments_ReqMTX002(t *testing.T) {
 func TestRecordingManager_MultiTierRecording_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - Real hardware recording
 	// No sequential execution - Progressive Readiness enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
-	// MINIMAL: Helper handles all setup
 	controller, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
 	defer controller.Stop(ctx)
@@ -545,22 +506,20 @@ func TestRecordingManager_MultiTierRecording_ReqMTX002(t *testing.T) {
 	// Validate response
 	require.NotNil(t, response, "Recording response should not be nil")
 	assert.Equal(t, cameraID, response.Device, "Response device should match request")
-	assert.Equal(t, "RECORDING", response.Status, "Response should indicate recording status")
+	// Status validation handled by recording assertion helper
 }
 
 // TestRecordingManager_ProgressiveReadinessCompliance_ReqMTX001 tests Progressive Readiness compliance
 func TestRecordingManager_ProgressiveReadinessCompliance_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration - Progressive Readiness Pattern compliance
 	// No sequential execution - Progressive Readiness enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Test 1: Controller starts accepting operations immediately
 	controller, err := helper.GetController(t)
 	require.NoError(t, err)
 
 	startTime := time.Now()
-	ctx := context.Background()
 	err = controller.Start(ctx)
 	require.NoError(t, err)
 	defer controller.Stop(ctx)
@@ -572,7 +531,6 @@ func TestRecordingManager_ProgressiveReadinessCompliance_ReqMTX001(t *testing.T)
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 

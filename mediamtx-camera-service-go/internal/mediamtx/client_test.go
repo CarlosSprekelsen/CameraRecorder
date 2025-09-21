@@ -24,10 +24,7 @@ import (
 func TestClient_New_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
@@ -43,13 +40,9 @@ func TestClient_New_ReqMTX001_Success(t *testing.T) {
 // TestClient_Get_ReqMTX001 tests GET request functionality with real server
 func TestClient_Get_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, _ := SetupMediaMTXTest(t)
 
 	client := helper.GetClient()
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -69,13 +62,9 @@ func TestClient_Get_ReqMTX001_Success(t *testing.T) {
 // TestClient_Post_ReqMTX001 tests POST request functionality with real server
 func TestClient_Post_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, _ := SetupMediaMTXTest(t)
 
 	client := helper.GetClient()
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -93,13 +82,9 @@ func TestClient_Post_ReqMTX001_Success(t *testing.T) {
 // TestClient_Put_ReqMTX001 tests PUT request functionality with real server
 func TestClient_Put_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, _ := SetupMediaMTXTest(t)
 
 	client := helper.GetClient()
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -122,13 +107,9 @@ func TestClient_Put_ReqMTX001_Success(t *testing.T) {
 // TestClient_Delete_ReqMTX001 tests DELETE request functionality with real server
 func TestClient_Delete_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, _ := SetupMediaMTXTest(t)
 
 	client := helper.GetClient()
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -145,13 +126,9 @@ func TestClient_Delete_ReqMTX001_Success(t *testing.T) {
 // TestClient_HealthCheck_ReqMTX004 tests health check functionality with real server
 func TestClient_GetHealth_ReqMTX004_Success(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, _ := SetupMediaMTXTest(t)
 
 	client := helper.GetClient()
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -163,13 +140,9 @@ func TestClient_GetHealth_ReqMTX004_Success(t *testing.T) {
 // TestClient_ErrorHandling_ReqMTX007 tests error scenarios with real server
 func TestClient_Get_ReqMTX007_ErrorHandling(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, _ := SetupMediaMTXTest(t)
 
 	client := helper.GetClient()
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -189,13 +162,9 @@ func TestClient_Get_ReqMTX007_ErrorHandling(t *testing.T) {
 // TestClient_APICompliance_ReqMTX001 tests API compliance against swagger.json
 func TestClient_Get_ReqMTX001_APICompliance(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, _ := SetupMediaMTXTest(t)
 
 	client := helper.GetClient()
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -232,13 +201,9 @@ func TestClient_Get_ReqMTX001_APICompliance(t *testing.T) {
 
 // TestClient_PutMethod_ReqMTX001 tests the Put method for 0% coverage
 func TestClient_Put_ReqMTX001_PathConfiguration(t *testing.T) {
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, _ := SetupMediaMTXTest(t)
 
 	client := helper.GetClient()
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -294,13 +259,9 @@ func TestClient_ParseHealthResponse_ReqMTX001_Success(t *testing.T) {
 func TestClient_Get_ReqMTX001_Concurrent(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, _ := SetupMediaMTXTest(t)
 
 	client := helper.GetClient()
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -337,10 +298,7 @@ func TestClient_Get_ReqMTX001_Concurrent(t *testing.T) {
 // TestClient_Close_ReqMTX001 tests client close functionality
 func TestClient_Close_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()

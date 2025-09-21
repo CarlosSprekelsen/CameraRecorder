@@ -25,7 +25,7 @@ import (
 func setupBenchmarkController(b *testing.B) (*MediaMTXTestHelper, *EventDrivenTestHelper, MediaMTXController) {
 	// Create a temporary testing.T for setup
 	t := &testing.T{}
-	helper := NewMediaMTXTestHelper(t, nil)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create event-driven test helper
 	eventHelper := helper.CreateEventDrivenTestHelper(t)

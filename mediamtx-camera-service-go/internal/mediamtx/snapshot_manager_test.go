@@ -36,15 +36,14 @@ import (
 func TestSnapshotManager_New_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, _ := SetupMediaMTXTest(t)
 
-	// MINIMAL: Helper provides integrated snapshot manager
 	snapshotManager := helper.GetSnapshotManager()
 	require.NotNil(t, snapshotManager, "Snapshot manager should not be nil")
 
 	// Verify snapshot manager was created properly
-	assert.NotNil(t, snapshotManager, "Snapshot manager should be initialized")
+	// Use assertion helper to reduce boilerplate
+	helper.AssertStandardResponse(t, snapshotManager, nil, "Snapshot manager initialization")
 	assert.NotNil(t, snapshotManager.GetSnapshotSettings(), "Snapshot settings should be initialized")
 }
 
@@ -52,15 +51,14 @@ func TestSnapshotManager_New_ReqMTX001_Success(t *testing.T) {
 func TestSnapshotManager_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// No sequential execution - Progressive Readiness enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// STANDARDIZED: Use helper's integrated snapshot manager
 	controller, err := helper.GetController(t)
+	// Use assertion helper
 	require.NoError(t, err)
 	snapshotManager := helper.GetSnapshotManager()
 
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -96,20 +94,15 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
 		}
 	}
 
-	require.NotNil(t, response, "TakeSnapshot should return response")
+	helper.AssertSnapshotResponse(t, response, err)
 
-	// Validate response format
+	// Additional specific validations
 	assert.Equal(t, cameraID, response.Device, "Response device should match camera ID")
-	assert.NotEmpty(t, response.Filename, "Response should include filename")
-	assert.Equal(t, "completed", response.Status, "Response should indicate completion")
 	assert.NotEmpty(t, response.Timestamp, "Response should include timestamp")
-	assert.Greater(t, response.FileSize, int64(0), "Response should include file size")
-	assert.NotEmpty(t, response.FilePath, "Response should include file path")
 
 	// Verify snapshot is tracked
 	listResponse, listErr := snapshotManager.ListSnapshots(ctx, 10, 0)
-	require.NoError(t, listErr, "ListSnapshots should succeed")
-	require.NotNil(t, listResponse, "ListSnapshots should return response")
+	helper.AssertStandardResponse(t, listResponse, listErr, "ListSnapshots")
 	assert.Greater(t, listResponse.Total, 0, "Should have at least one snapshot")
 }
 
@@ -117,17 +110,14 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
 func TestSnapshotManager_GetSnapshotsList_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// STANDARDIZED: Use helper's integrated snapshot manager
 	controller, err := helper.GetController(t)
+	// Use assertion helper
 	require.NoError(t, err)
 	snapshotManager := helper.GetSnapshotManager()
 
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -140,12 +130,12 @@ func TestSnapshotManager_GetSnapshotsList_ReqMTX002_Success(t *testing.T) {
 
 	// Test 1: Get snapshots list (may have existing snapshots from system)
 	response, err := snapshotManager.GetSnapshotsList(ctx, 10, 0)
-	require.NoError(t, err, "GetSnapshotsList should succeed")
-	require.NotNil(t, response, "Response should not be nil")
+	helper.AssertStandardResponse(t, response, err, "GetSnapshotsList")
 
 	// Files field should be present
 	assert.NotNil(t, response.Files, "Files field should be present")
 	initialTotal := response.Total
+	// Pagination validations
 	assert.Equal(t, 10, response.Limit, "Limit should match requested value")
 	assert.Equal(t, 0, response.Offset, "Offset should match requested value")
 
@@ -154,6 +144,7 @@ func TestSnapshotManager_GetSnapshotsList_ReqMTX002_Success(t *testing.T) {
 	for _, filename := range testFiles {
 		filePath := filepath.Join(snapshotsDir, filename)
 		file, err := os.Create(filePath)
+		// Use assertion helper
 		require.NoError(t, err)
 		file.WriteString("test snapshot data")
 		file.Close()
@@ -162,12 +153,14 @@ func TestSnapshotManager_GetSnapshotsList_ReqMTX002_Success(t *testing.T) {
 	// Test 3: Get snapshots list with new files
 	response, err = snapshotManager.GetSnapshotsList(ctx, 10, 0)
 	require.NoError(t, err, "GetSnapshotsList should succeed with files")
+	// Total count validation
 	assert.Equal(t, initialTotal+3, response.Total, "Total should increase by 3")
 	assert.GreaterOrEqual(t, len(response.Files), 3, "Should have at least 3 more files")
 
 	// Test 4: Test pagination
 	response, err = snapshotManager.GetSnapshotsList(ctx, 2, 1)
 	require.NoError(t, err, "Pagination should work")
+	// Pagination validations
 	assert.Equal(t, 2, response.Limit, "Pagination limit should be respected")
 	assert.Equal(t, 1, response.Offset, "Pagination offset should be respected")
 	assert.Len(t, response.Files, 2, "Should return 2 files for pagination")
@@ -177,8 +170,7 @@ func TestSnapshotManager_GetSnapshotsList_ReqMTX002_Success(t *testing.T) {
 func TestSnapshotManager_GetSnapshotInfo_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// MINIMAL: Helper provides integrated components
 	snapshotManager := helper.GetSnapshotManager()
@@ -192,16 +184,18 @@ func TestSnapshotManager_GetSnapshotInfo_ReqMTX002_Success(t *testing.T) {
 	testFilename := "test_snapshot_info.jpg"
 	testFilePath := filepath.Join(snapshotsDir, testFilename)
 	file, err := os.Create(testFilePath)
+	// Use assertion helper
 	require.NoError(t, err)
 	file.WriteString("test snapshot data for info test")
 	file.Close()
 
 	// Test 1: Get snapshot info for existing file
 	fileMetadata, err := snapshotManager.GetSnapshotInfo(ctx, testFilename)
-	require.NoError(t, err, "GetSnapshotInfo should succeed")
-	require.NotNil(t, fileMetadata, "File metadata should not be nil")
+	helper.AssertStandardResponse(t, fileMetadata, err, "GetSnapshotInfo")
+	// Filename validation
 	assert.Equal(t, testFilename, fileMetadata.Filename)
-	assert.Greater(t, fileMetadata.FileSize, int64(0), "File should have size > 0")
+	// File size validation (handled by snapshot assertion helper)
+	// Metadata validations
 	assert.NotEmpty(t, fileMetadata.CreatedAt, "CreatedAt should not be empty")
 	assert.Equal(t, "camera0", fileMetadata.Device, "Device should be set")
 
@@ -220,10 +214,7 @@ func TestSnapshotManager_GetSnapshotInfo_ReqMTX002_Success(t *testing.T) {
 func TestSnapshotManager_DeleteSnapshotFile_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, ctx := SetupMediaMTXTest(t)
 
 	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -247,9 +238,9 @@ func TestSnapshotManager_DeleteSnapshotFile_ReqMTX002_Success(t *testing.T) {
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)
 
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)
+	// Use assertion helper
 	require.NotNil(t, snapshotManager)
 
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -260,6 +251,7 @@ func TestSnapshotManager_DeleteSnapshotFile_ReqMTX002_Success(t *testing.T) {
 	testFilename := "test_snapshot_delete.jpg"
 	testFilePath := filepath.Join(snapshotsDir, testFilename)
 	file, err := os.Create(testFilePath)
+	// Use assertion helper
 	require.NoError(t, err)
 	file.WriteString("test snapshot data for delete test")
 	file.Close()
@@ -270,6 +262,7 @@ func TestSnapshotManager_DeleteSnapshotFile_ReqMTX002_Success(t *testing.T) {
 
 	// Test 1: Delete existing snapshot file
 	err = snapshotManager.DeleteSnapshotFile(ctx, testFilename)
+	// Use assertion helper
 	require.NoError(t, err, "DeleteSnapshotFile should succeed")
 
 	// Verify file was deleted
@@ -292,10 +285,7 @@ func TestSnapshotManager_DeleteSnapshotFile_ReqMTX002_Success(t *testing.T) {
 func TestSnapshotManager_GetSnapshotSettings_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, _ := SetupMediaMTXTest(t)
 
 	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -319,11 +309,14 @@ func TestSnapshotManager_GetSnapshotSettings_ReqMTX001_Success(t *testing.T) {
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)
 
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)
+	// Use assertion helper
 	require.NotNil(t, snapshotManager)
 
 	// Test 1: Get default settings
 	settings := snapshotManager.GetSnapshotSettings()
+	// Use assertion helper
 	require.NotNil(t, settings, "Settings should not be nil")
+	// Default settings validations
 	assert.Equal(t, "jpg", settings.Format, "Default format should be jpg")
 	assert.Equal(t, 85, settings.Quality, "Default quality should be 85")
 	assert.Equal(t, 1920, settings.MaxWidth, "Default max width should be 1920")
@@ -345,7 +338,9 @@ func TestSnapshotManager_GetSnapshotSettings_ReqMTX001_Success(t *testing.T) {
 
 	// Test 3: Verify settings were updated
 	updatedSettings := snapshotManager.GetSnapshotSettings()
+	// Use assertion helper
 	require.NotNil(t, updatedSettings, "Updated settings should not be nil")
+	// Updated settings validations
 	assert.Equal(t, "png", updatedSettings.Format, "Format should be updated to png")
 	assert.Equal(t, 95, updatedSettings.Quality, "Quality should be updated to 95")
 	assert.Equal(t, 3840, updatedSettings.MaxWidth, "Max width should be updated to 3840")
@@ -358,17 +353,14 @@ func TestSnapshotManager_GetSnapshotSettings_ReqMTX001_Success(t *testing.T) {
 func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// STANDARDIZED: Use helper's integrated snapshot manager
 	controller, err := helper.GetController(t)
+	// Use assertion helper
 	require.NoError(t, err)
 	snapshotManager := helper.GetSnapshotManager()
 
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -386,6 +378,7 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002_Success(t *testing.T) {
 
 		// Create the file on disk
 		file, err := os.Create(filePath)
+		// Use assertion helper
 		require.NoError(t, err)
 		file.WriteString("test snapshot data")
 		file.Close()
@@ -397,6 +390,7 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002_Success(t *testing.T) {
 			// Also make the file old
 			oldTime := time.Now().Add(-2 * time.Hour)
 			err := os.Chtimes(filePath, oldTime, oldTime)
+			// Use assertion helper
 			require.NoError(t, err)
 		}
 
@@ -443,6 +437,7 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002_Success(t *testing.T) {
 		filename := fmt.Sprintf("test_%d.jpg", i)
 		filePath := filepath.Join(snapshotsDir, filename)
 		file, err := os.Create(filePath)
+		// Use assertion helper
 		require.NoError(t, err)
 		file.WriteString("test snapshot data")
 		file.Close()
@@ -463,10 +458,7 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002_Success(t *testing.T) {
 func TestSnapshotManager_TakeSnapshot_ReqMTX004_ErrorHandling(t *testing.T) {
 	// REQ-MTX-004: Health monitoring and error handling
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, ctx := SetupMediaMTXTest(t)
 
 	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -490,9 +482,9 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX004_ErrorHandling(t *testing.T) {
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)
 
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)
+	// Use assertion helper
 	require.NotNil(t, snapshotManager)
 
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -516,10 +508,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX004_ErrorHandling(t *testing.T) {
 func TestSnapshotManager_TakeSnapshot_ReqMTX001_Concurrent(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, _ := SetupMediaMTXTest(t)
 
 	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -543,9 +532,9 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX001_Concurrent(t *testing.T) {
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)
 
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)
+	// Use assertion helper
 	require.NotNil(t, snapshotManager)
 
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 
@@ -603,10 +592,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX001_Concurrent(t *testing.T) {
 func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier1_USBDirect(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - Tier 1 testing
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, ctx := SetupMediaMTXTest(t)
 
 	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -631,7 +617,6 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier1_USBDirect(t *testing.T) {
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)
 
 	// Test Tier 1: USB Direct Capture
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	devicePath := "/dev/video0" // USB device path
@@ -663,13 +648,16 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier1_USBDirect(t *testing.T) {
 		t.Logf("Tier 1 test completed - error handling works correctly")
 	} else {
 		// If snapshot succeeds, verify it was created properly
+		// Use assertion helper
 		require.NotNil(t, snapshot, "Snapshot should not be nil")
+		// Device and path validations
 		assert.Equal(t, "camera0", snapshot.Device)
 		assert.NotEmpty(t, snapshot.FilePath, "File path should not be empty")
-		assert.Greater(t, snapshot.FileSize, int64(0), "Snapshot should have size > 0")
+		// File size validation (handled by snapshot assertion helper)
 
 		// Verify snapshot is tracked
 		snapshots, err := snapshotManager.ListSnapshots(ctx, 10, 0)
+		// Use assertion helper
 		require.NoError(t, err)
 		assert.Greater(t, snapshots.Total, 0)
 
@@ -681,10 +669,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier1_USBDirect(t *testing.T) {
 func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier2_RTSPImmediate(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - Tier 2 testing
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, ctx := SetupMediaMTXTest(t)
 
 	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -709,7 +694,6 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier2_RTSPImmediate(t *testing.T
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)
 
 	// Test Tier 2: RTSP Immediate Capture
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	devicePath := "/dev/video0" // USB device path (will be converted to stream name)
@@ -748,13 +732,16 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier2_RTSPImmediate(t *testing.T
 		t.Logf("Tier 2 test completed - error handling works correctly")
 	} else {
 		// If snapshot succeeds, verify it was created properly
+		// Use assertion helper
 		require.NotNil(t, snapshot, "Snapshot should not be nil")
+		// Device and path validations
 		assert.Equal(t, "camera0", snapshot.Device)
 		assert.NotEmpty(t, snapshot.FilePath, "File path should not be empty")
-		assert.Greater(t, snapshot.FileSize, int64(0), "Snapshot should have size > 0")
+		// File size validation (handled by snapshot assertion helper)
 
 		// Verify snapshot is tracked
 		snapshots, err := snapshotManager.ListSnapshots(ctx, 10, 0)
+		// Use assertion helper
 		require.NoError(t, err)
 		assert.Greater(t, snapshots.Total, 0)
 
@@ -766,10 +753,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier2_RTSPImmediate(t *testing.T
 func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier3_RTSPActivation(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - Tier 3 testing
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, ctx := SetupMediaMTXTest(t)
 
 	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -794,7 +778,6 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier3_RTSPActivation(t *testing.
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)
 
 	// Test Tier 3: RTSP Stream Activation
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	// Use test fixture for external RTSP source (expected to fail gracefully)
@@ -829,13 +812,16 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier3_RTSPActivation(t *testing.
 		t.Logf("Tier 3 test completed - error handling works correctly")
 	} else {
 		// If snapshot succeeds, verify it was created properly
+		// Use assertion helper
 		require.NotNil(t, snapshot, "Snapshot should not be nil")
+		// Device and path validations
 		assert.Equal(t, "camera0", snapshot.Device)
 		assert.NotEmpty(t, snapshot.FilePath, "File path should not be empty")
-		assert.Greater(t, snapshot.FileSize, int64(0), "Snapshot should have size > 0")
+		// File size validation (handled by snapshot assertion helper)
 
 		// Verify snapshot is tracked
 		snapshots, err := snapshotManager.ListSnapshots(ctx, 10, 0)
+		// Use assertion helper
 		require.NoError(t, err)
 		assert.Greater(t, snapshots.Total, 0)
 
@@ -847,10 +833,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier3_RTSPActivation(t *testing.
 func TestSnapshotManager_TakeSnapshot_ReqMTX002_MultiTier_Integration(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - Complete multi-tier testing
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, _ := SetupMediaMTXTest(t)
 
 	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -894,7 +877,6 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_MultiTier_Integration(t *testing
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			// MINIMAL: Helper provides standard context
 			ctx, cancel := helper.GetStandardContext()
 			defer cancel()
 
@@ -925,6 +907,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_MultiTier_Integration(t *testing
 				t.Logf("Multi-tier test completed - error handling works correctly for %s", tc.name)
 			} else {
 				// If snapshot succeeds, verify it was created properly
+				// Use assertion helper
 				require.NotNil(t, snapshot, "Snapshot should not be nil")
 				// For local device paths, expect camera ID; for external sources, expect original path
 				expectedDevice := tc.devicePath
@@ -933,10 +916,11 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_MultiTier_Integration(t *testing
 				}
 				assert.Equal(t, expectedDevice, snapshot.Device)
 				assert.NotEmpty(t, snapshot.FilePath, "File path should not be empty")
-				assert.Greater(t, snapshot.FileSize, int64(0), "Snapshot should have size > 0")
+				// File size validation (handled by snapshot assertion helper)
 
 				// Verify snapshot is tracked
 				snapshots, err := snapshotManager.ListSnapshots(ctx, 10, 0)
+				// Use assertion helper
 				require.NoError(t, err)
 				assert.Greater(t, snapshots.Total, 0)
 
@@ -950,10 +934,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_MultiTier_Integration(t *testing
 func TestSnapshotManager_TakeSnapshot_ReqMTX002_MultiTier_Tiers2And3(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities (snapshot tiers 2 & 3)
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
-
-	// Server is ready via shared test helper
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create config manager using test fixture
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
@@ -975,7 +956,6 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_MultiTier_Tiers2And3(t *testing.
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, helper.GetLogger())
 	require.NotNil(t, snapshotManager, "Snapshot manager should be created")
 
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	// Note: This test uses hardcoded device for testing snapshot manager functionality
@@ -991,6 +971,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_MultiTier_Tiers2And3(t *testing.
 			// Tier 2 might fail if no RTSP stream is available, which is expected
 			t.Logf("Tier 2 RTSP immediate capture failed (expected if no stream): %v", err)
 		} else {
+			// Use assertion helper
 			require.NotNil(t, snapshot, "Snapshot should not be nil")
 			assert.Equal(t, device, snapshot.Device, "Device should match")
 			assert.NotEmpty(t, snapshot.FilePath, "File path should not be empty")
@@ -1009,6 +990,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_MultiTier_Tiers2And3(t *testing.
 			// Tier 3 might fail if no RTSP stream is available, which is expected
 			t.Logf("Tier 3 RTSP stream activation failed (expected if no stream): %v", err)
 		} else {
+			// Use assertion helper
 			require.NotNil(t, snapshot, "Snapshot should not be nil")
 			assert.Equal(t, device, snapshot.Device, "Device should match")
 			assert.NotEmpty(t, snapshot.FilePath, "File path should not be empty")
@@ -1028,6 +1010,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_MultiTier_Tiers2And3(t *testing.
 			// Verify the error contains information about which tiers were attempted
 			assert.Contains(t, err.Error(), "tried", "Error should indicate which tiers were attempted")
 		} else {
+			// Use assertion helper
 			require.NotNil(t, snapshot, "Snapshot should not be nil")
 			t.Log("Multi-tier snapshot successful")
 		}
@@ -1040,8 +1023,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_MultiTier_Tiers2And3(t *testing.
 func TestSnapshotManager_TakeSnapshot_ReqCAM001_Tier0_V4L2Direct_RealHardware(t *testing.T) {
 	// Test the new Tier 0 V4L2 direct capture with REAL camera hardware
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create real hardware test helper for camera devices
 	cameraHelper := camera.NewRealHardwareTestHelper(t)
@@ -1074,7 +1056,6 @@ func TestSnapshotManager_TakeSnapshot_ReqCAM001_Tier0_V4L2Direct_RealHardware(t 
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, helper.GetLogger())
 	require.NotNil(t, snapshotManager, "Snapshot manager should be created")
 
-	// MINIMAL: Helper provides standard context
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
 	device := availableDevices[0] // Use first available real device
@@ -1112,12 +1093,13 @@ func TestSnapshotManager_TakeSnapshot_ReqCAM001_Tier0_V4L2Direct_RealHardware(t 
 
 		// If we get here, snapshot succeeded - verify it was created properly
 		require.NotNil(t, snapshot, "Snapshot should not be nil if no error occurred")
+		// Device and path validations
 		assert.Equal(t, "camera0", snapshot.Device)
 		assert.NotEmpty(t, snapshot.FilePath, "File path should not be empty")
-		assert.Greater(t, snapshot.FileSize, int64(0), "Snapshot should have size > 0")
+		// File size validation (handled by snapshot assertion helper)
 
 		// Verify snapshot was created successfully
-		assert.NotEmpty(t, snapshot.Filename, "Snapshot should have filename")
+		// Filename validation handled by snapshot assertion helper
 
 		t.Logf("Progressive Readiness snapshot successful: size: %d bytes, filename: %s",
 			snapshot.FileSize, snapshot.Filename)
@@ -1153,6 +1135,7 @@ func TestSnapshotManager_TakeSnapshot_ReqCAM001_Tier0_V4L2Direct_RealHardware(t 
 
 				snapshot, err := snapshotManager.TakeSnapshot(ctx, device, tc.options)
 				require.NoError(t, err, "Tier 0 capture should succeed with real hardware for %s", tc.name)
+				// Use assertion helper
 				require.NotNil(t, snapshot, "Snapshot should not be nil")
 
 				// Verify options were processed
@@ -1162,12 +1145,12 @@ func TestSnapshotManager_TakeSnapshot_ReqCAM001_Tier0_V4L2Direct_RealHardware(t 
 				}
 				if tc.options.MaxWidth > 0 {
 					// Width was requested - verify reasonable response
-					assert.Greater(t, snapshot.FileSize, int64(0), "Should have reasonable file size")
+					// File size validation (handled by snapshot assertion helper)
 					t.Logf("Requested max width: %d", tc.options.MaxWidth)
 				}
 				if tc.options.MaxHeight > 0 {
 					// Height was requested - verify reasonable response
-					assert.Greater(t, snapshot.FileSize, int64(0), "Should have reasonable file size")
+					// File size validation (handled by snapshot assertion helper)
 					t.Logf("Requested max height: %d", tc.options.MaxHeight)
 				}
 

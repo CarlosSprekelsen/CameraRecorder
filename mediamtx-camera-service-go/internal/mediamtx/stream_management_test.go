@@ -25,8 +25,7 @@ import (
 // TestController_GetStreams_Management_ReqMTX002 tests getting all streams
 func TestController_GetStreams_Management_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create controller
 	controller, err := helper.GetController(t)
@@ -35,8 +34,7 @@ func TestController_GetStreams_Management_ReqMTX002(t *testing.T) {
 
 	// Start the controller
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -57,8 +55,7 @@ func TestController_GetStreams_Management_ReqMTX002(t *testing.T) {
 // TestController_GetStream_Management_ReqMTX002 tests getting a specific stream
 func TestController_GetStream_Management_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create controller
 	controller, err := helper.GetController(t)
@@ -67,8 +64,7 @@ func TestController_GetStream_Management_ReqMTX002(t *testing.T) {
 
 	// Start the controller
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -108,8 +104,7 @@ func TestController_GetStream_Management_ReqMTX002(t *testing.T) {
 // TestController_CreateStream_Management_ReqMTX002 tests creating a new stream
 func TestController_CreateStream_Management_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create controller
 	controller, err := helper.GetController(t)
@@ -118,8 +113,7 @@ func TestController_CreateStream_Management_ReqMTX002(t *testing.T) {
 
 	// Start the controller
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -154,8 +148,7 @@ func TestController_CreateStream_Management_ReqMTX002(t *testing.T) {
 // TestController_DeleteStream_Management_ReqMTX002 tests deleting a stream
 func TestController_DeleteStream_Management_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create controller
 	controller, err := helper.GetController(t)
@@ -164,8 +157,7 @@ func TestController_DeleteStream_Management_ReqMTX002(t *testing.T) {
 
 	// Start the controller
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -203,8 +195,7 @@ func TestController_DeleteStream_Management_ReqMTX002(t *testing.T) {
 // TestController_StreamManagement_ErrorHandling_ReqMTX004 tests error handling for stream management
 func TestController_StreamManagement_ErrorHandling_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring and error handling
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create controller
 	controller, err := helper.GetController(t)
@@ -213,8 +204,7 @@ func TestController_StreamManagement_ErrorHandling_ReqMTX004(t *testing.T) {
 
 	// Start the controller
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 
@@ -245,8 +235,7 @@ func TestController_StreamManagement_ErrorHandling_ReqMTX004(t *testing.T) {
 // TestController_StreamManagement_NotRunning_ReqMTX004 tests stream management when controller is not running
 func TestController_StreamManagement_NotRunning_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring and error handling
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create controller but don't start it
 	controller, err := helper.GetController(t)
@@ -254,8 +243,7 @@ func TestController_StreamManagement_NotRunning_ReqMTX004(t *testing.T) {
 	require.NotNil(t, controller, "Controller should not be nil")
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// Test getting streams when controller is not running
 	_, err = controller.GetStreams(ctx)
@@ -277,8 +265,7 @@ func TestController_StreamManagement_NotRunning_ReqMTX004(t *testing.T) {
 // TestController_StreamManagement_Concurrent_ReqMTX002 tests concurrent stream operations
 func TestController_StreamManagement_Concurrent_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	// Create controller
 	controller, err := helper.GetController(t)
@@ -287,8 +274,7 @@ func TestController_StreamManagement_Concurrent_ReqMTX002(t *testing.T) {
 
 	// Start the controller
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
 

@@ -22,15 +22,13 @@ import (
 // TestStreamManager_PanicRecovery tests panic recovery in stream operations
 func TestStreamManager_PanicRecovery(t *testing.T) {
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// Test panic recovery in StartStream
 	t.Run("StartStream_PanicRecovery", func(t *testing.T) {
@@ -94,15 +92,13 @@ func TestStreamManager_PanicRecovery(t *testing.T) {
 // TestStreamManager_ErrorHandling tests error handling in stream operations
 func TestStreamManager_ErrorHandling(t *testing.T) {
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	t.Run("ErrorHandling_InvalidCameraID", func(t *testing.T) {
 		// Test error handling with invalid camera ID
@@ -132,15 +128,13 @@ func TestStreamManager_ErrorHandling(t *testing.T) {
 // TestStreamManager_StreamLifecycle_ErrorHandling tests stream lifecycle with error handling
 func TestStreamManager_StreamLifecycle_ErrorHandling(t *testing.T) {
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	t.Run("StreamLifecycle_StartStop_ErrorHandling", func(t *testing.T) {
 		cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
@@ -188,15 +182,13 @@ func TestStreamManager_StreamLifecycle_ErrorHandling(t *testing.T) {
 // TestStreamManager_ErrorHandlingRobustness tests error handling robustness
 func TestStreamManager_ErrorHandlingRobustness(t *testing.T) {
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	t.Run("ErrorHandling_MultipleOperations", func(t *testing.T) {
 		// Test multiple error scenarios to ensure robustness
@@ -286,15 +278,13 @@ func TestStreamManager_ErrorHandlingRobustness(t *testing.T) {
 // TestStreamManager_ErrorHandling_RealCamera tests error handling with real camera
 func TestStreamManager_ErrorHandling_RealCamera(t *testing.T) {
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	t.Run("RealCamera_ErrorHandling", func(t *testing.T) {
 		cameraID, err := helper.GetAvailableCameraIdentifier(ctx)

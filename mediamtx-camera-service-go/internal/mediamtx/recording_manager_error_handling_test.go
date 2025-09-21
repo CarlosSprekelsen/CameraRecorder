@@ -24,15 +24,13 @@ import (
 // TestRecordingManager_PanicRecovery tests panic recovery in recording operations
 func TestRecordingManager_PanicRecovery(t *testing.T) {
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	// Test panic recovery in StartRecording
 	t.Run("StartRecording_PanicRecovery", func(t *testing.T) {
@@ -98,8 +96,7 @@ func TestRecordingManager_PanicRecovery(t *testing.T) {
 // TestRecordingManager_CircuitBreaker tests circuit breaker functionality
 func TestRecordingManager_CircuitBreaker(t *testing.T) {
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
@@ -121,8 +118,7 @@ func TestRecordingManager_CircuitBreaker(t *testing.T) {
 // TestRecordingManager_ErrorRecoveryManager tests error recovery manager integration
 func TestRecordingManager_ErrorRecoveryManager(t *testing.T) {
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
@@ -160,8 +156,7 @@ func TestRecordingManager_ErrorRecoveryManager(t *testing.T) {
 // TestRecordingManager_ErrorMetricsCollector tests error metrics collector
 func TestRecordingManager_ErrorMetricsCollector(t *testing.T) {
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
@@ -194,15 +189,13 @@ func TestRecordingManager_ErrorMetricsCollector(t *testing.T) {
 // TestRecordingManager_ErrorHandlingIntegration tests integrated error handling
 func TestRecordingManager_ErrorHandlingIntegration(t *testing.T) {
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	t.Run("ErrorHandling_InvalidCameraID", func(t *testing.T) {
 		// Test error handling with invalid camera ID
@@ -255,8 +248,7 @@ func TestRecordingManager_ErrorHandlingIntegration(t *testing.T) {
 // TestRecordingManager_RecoveryStrategies tests recovery strategies
 func TestRecordingManager_RecoveryStrategies(t *testing.T) {
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
@@ -272,8 +264,7 @@ func TestRecordingManager_RecoveryStrategies(t *testing.T) {
 // TestRecordingManager_ErrorMetricsIntegration tests error metrics integration
 func TestRecordingManager_ErrorMetricsIntegration(t *testing.T) {
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
@@ -313,15 +304,13 @@ func TestRecordingManager_ErrorMetricsIntegration(t *testing.T) {
 // TestRecordingManager_ErrorHandlingRobustness tests error handling robustness
 func TestRecordingManager_ErrorHandlingRobustness(t *testing.T) {
 	// PROGRESSIVE READINESS: No sequential execution - enables parallelism
-	helper := NewMediaMTXTestHelper(t, nil)
-	defer helper.Cleanup(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
 	// MINIMAL: Helper provides standard context
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Context already provided by SetupMediaMTXTest
 
 	t.Run("ErrorHandling_MultipleOperations", func(t *testing.T) {
 		// Test multiple error scenarios to ensure robustness
