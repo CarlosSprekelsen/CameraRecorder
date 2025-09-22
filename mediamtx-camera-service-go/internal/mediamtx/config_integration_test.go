@@ -13,7 +13,6 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package mediamtx
 
 import (
-	"context"
 	"testing"
 	"time"
 
@@ -28,25 +27,13 @@ func TestController_GetConfig_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
 	helper := SetupMediaMTXTestHelperOnly(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	// Use assertion helper
-	require.NoError(t, err, "Controller creation should succeed")
-	require.NotNil(t, controller, "Controller should not be nil")
-
-	// Start the controller
-	ctx, cancel := helper.GetStandardContext()
+	// Use Progressive Readiness pattern
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
-	err = controller.Start(ctx)
-	// Use assertion helper
-	require.NoError(t, err, "Controller start should succeed")
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
 
-	// Ensure controller is stopped after test
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+
 
 	// Get configuration
 	config, err := controller.GetConfig(ctx)
@@ -65,25 +52,13 @@ func TestController_UpdateConfig_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
 	helper := SetupMediaMTXTestHelperOnly(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	// Use assertion helper
-	require.NoError(t, err, "Controller creation should succeed")
-	require.NotNil(t, controller, "Controller should not be nil")
-
-	// Start the controller
-	ctx, cancel := helper.GetStandardContext()
+	// Use Progressive Readiness pattern
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
-	err = controller.Start(ctx)
-	// Use assertion helper
-	require.NoError(t, err, "Controller start should succeed")
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
 
-	// Ensure controller is stopped after test
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+
 
 	// Get current configuration
 	originalConfig, err := controller.GetConfig(ctx)
@@ -120,28 +95,16 @@ func TestController_UpdateConfig_InvalidConfig_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring and error handling
 	helper := SetupMediaMTXTestHelperOnly(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	// Use assertion helper
-	require.NoError(t, err, "Controller creation should succeed")
-	require.NotNil(t, controller, "Controller should not be nil")
-
-	// Start the controller
-	ctx, cancel := helper.GetStandardContext()
+	// Use Progressive Readiness pattern
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
-	err = controller.Start(ctx)
-	// Use assertion helper
-	require.NoError(t, err, "Controller start should succeed")
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
 
-	// Ensure controller is stopped after test
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+
 
 	// Test updating with nil configuration
-	err = controller.UpdateConfig(ctx, nil)
+	err := controller.UpdateConfig(ctx, nil)
 	assert.Error(t, err, "Updating with nil configuration should fail")
 
 	// Test updating with invalid configuration (empty base URL)
@@ -177,9 +140,8 @@ func TestController_GetConfig_NotRunning_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring and error handling
 	helper := SetupMediaMTXTestHelperOnly(t)
 
-	// Create controller but don't start it
+	// Create controller but don't start it (for testing not running scenarios)
 	controller, err := helper.GetController(t)
-	// Use assertion helper
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 
@@ -196,9 +158,8 @@ func TestController_UpdateConfig_NotRunning_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring and error handling
 	helper := SetupMediaMTXTestHelperOnly(t)
 
-	// Create controller but don't start it
+	// Create controller but don't start it (for testing not running scenarios)
 	controller, err := helper.GetController(t)
-	// Use assertion helper
 	require.NoError(t, err, "Controller creation should succeed")
 	require.NotNil(t, controller, "Controller should not be nil")
 

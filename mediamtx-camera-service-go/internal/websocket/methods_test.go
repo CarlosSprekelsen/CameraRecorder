@@ -513,27 +513,27 @@ func TestWebSocketMethods_StartRecording_ReqMTX002_Success(t *testing.T) {
 	validStatuses := []string{constants.RECORDING_STATUS_RECORDING, "STARTED", "STARTING"}
 	assert.Contains(t, validStatuses, status, "Status must be valid per API documentation")
 
-		// ✅ VALIDATE OPTIONAL FIELDS per API documentation
-		if startTime, exists := result["start_time"]; exists {
-			_, ok := startTime.(string)
-			assert.True(t, ok, "start_time must be string if present")
-		}
+	// ✅ VALIDATE OPTIONAL FIELDS per API documentation
+	if startTime, exists := result["start_time"]; exists {
+		_, ok := startTime.(string)
+		assert.True(t, ok, "start_time must be string if present")
+	}
 
-		if autoCloseAfter, exists := result["auto_close_after"]; exists {
-			_, ok := autoCloseAfter.(string)
-			assert.True(t, ok, "auto_close_after must be string if present")
-		}
+	if autoCloseAfter, exists := result["auto_close_after"]; exists {
+		_, ok := autoCloseAfter.(string)
+		assert.True(t, ok, "auto_close_after must be string if present")
+	}
 
-		if ffmpegCommand, exists := result["ffmpeg_command"]; exists {
-			_, ok := ffmpegCommand.(string)
-			assert.True(t, ok, "ffmpeg_command must be string if present")
-		}
+	if ffmpegCommand, exists := result["ffmpeg_command"]; exists {
+		_, ok := ffmpegCommand.(string)
+		assert.True(t, ok, "ffmpeg_command must be string if present")
+	}
 
-		if format, exists := result["format"]; exists {
-			formatStr, ok := format.(string)
-			require.True(t, ok, "format must be string if present")
-			assert.Contains(t, []string{"fmp4", "mp4", "mkv"}, formatStr, "format must be valid if present")
-		}
+	if format, exists := result["format"]; exists {
+		formatStr, ok := format.(string)
+		require.True(t, ok, "format must be string if present")
+		assert.Contains(t, []string{"fmp4", "mp4", "mkv"}, formatStr, "format must be valid if present")
+	}
 }
 
 // TestWebSocketMethods_StopRecording tests stop_recording method with event-driven readiness and proper API validation
@@ -1030,7 +1030,7 @@ func TestWebSocketMethods_GetStreamURL_ReqMTX002_Success(t *testing.T) {
 		require.True(t, ok, "available must be boolean")
 		_ = available // Use the variable to avoid "declared and not used" error
 
-		// ✅ VALIDATE OPTIONAL FIELDS
+		// ✅ VALIDATE OPTIONAL FIELDS per API documentation
 		if activeConsumers, exists := result["active_consumers"]; exists {
 			_, ok := activeConsumers.(float64)
 			assert.True(t, ok, "active_consumers must be number if present")
@@ -1066,6 +1066,32 @@ func TestWebSocketMethods_GetStreamStatus_ReqMTX002_Success(t *testing.T) {
 	assert.NotNil(t, response.ID, "Response should have ID")
 	assert.Nil(t, response.Error, "Response should not have error")
 	assert.NotNil(t, response.Result, "Response should have result")
+
+	// ✅ VALIDATE API CONTRACT per docs/api/json_rpc_methods.md
+	result, ok := response.Result.(map[string]interface{})
+	require.True(t, ok, "Result must be object for get_stream_status")
+
+	// ✅ VALIDATE REQUIRED FIELDS per API documentation
+	assert.Contains(t, result, "device", "Must have device field")
+	assert.Contains(t, result, "stream_name", "Must have stream_name field")
+	assert.Contains(t, result, "status", "Must have status field")
+	assert.Contains(t, result, "ready", "Must have ready field")
+
+	// ✅ VALIDATE OPTIONAL FIELDS per API documentation
+	if ffmpegProcess, exists := result["ffmpeg_process"]; exists {
+		_, ok := ffmpegProcess.(map[string]interface{})
+		assert.True(t, ok, "ffmpeg_process must be object if present")
+	}
+
+	if mediamtxPath, exists := result["mediamtx_path"]; exists {
+		_, ok := mediamtxPath.(map[string]interface{})
+		assert.True(t, ok, "mediamtx_path must be object if present")
+	}
+
+	if metrics, exists := result["metrics"]; exists {
+		_, ok := metrics.(map[string]interface{})
+		assert.True(t, ok, "metrics must be object if present")
+	}
 }
 
 // ============================================================================
@@ -1095,7 +1121,7 @@ func TestWebSocketMethods_ListRecordings_ReqMTX002_Success(t *testing.T) {
 	result, ok := response.Result.(map[string]interface{})
 	require.True(t, ok, "Result must be object for list_recordings")
 
-	// ✅ VALIDATE REQUIRED FIELDS
+	// ✅ VALIDATE REQUIRED FIELDS per API documentation
 	assert.Contains(t, result, "files", "Must have files field")
 	assert.Contains(t, result, "total", "Must have total field")
 	assert.Contains(t, result, "limit", "Must have limit field")
