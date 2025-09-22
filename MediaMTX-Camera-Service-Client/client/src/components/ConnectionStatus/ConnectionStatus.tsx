@@ -1,3 +1,12 @@
+/**
+ * ConnectionStatus Component
+ * 
+ * Architecture: Service Layer Pattern
+ * - Uses ConnectionService instead of direct store access
+ * - Follows proper abstraction layer principles
+ * - Maintains separation of concerns
+ */
+
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -22,6 +31,8 @@ import {
 } from '@mui/icons-material';
 import { useConnectionStore } from '../../stores/connectionStore';
 import { useHealthStore } from '../../stores/healthStore';
+import { connectionService } from '../../services/connectionService';
+import { logger, loggers } from '../../services/loggerService';
 
 const ConnectionStatus: React.FC = () => {
   const [localLoading, setLocalLoading] = useState(false);
@@ -48,15 +59,19 @@ const ConnectionStatus: React.FC = () => {
     refreshHealth,
   } = useHealthStore();
 
-  // Local handlers
+  // Local handlers using service layer
   const handleConnect = async () => {
     setLocalLoading(true);
     setLocalError(null);
+    loggers.service.start('ConnectionService', 'connect');
+    
     try {
-      await connect();
+      await connectionService.connect();
+      loggers.service.success('ConnectionService', 'connect');
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to connect';
       setLocalError(errorMessage);
+      loggers.service.error('ConnectionService', 'connect', error as Error);
     } finally {
       setLocalLoading(false);
     }
@@ -65,11 +80,15 @@ const ConnectionStatus: React.FC = () => {
   const handleDisconnect = async () => {
     setLocalLoading(true);
     setLocalError(null);
+    loggers.service.start('ConnectionService', 'disconnect');
+    
     try {
-      await disconnect();
+      await connectionService.disconnect();
+      loggers.service.success('ConnectionService', 'disconnect');
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to disconnect';
       setLocalError(errorMessage);
+      loggers.service.error('ConnectionService', 'disconnect', error as Error);
     } finally {
       setLocalLoading(false);
     }
@@ -78,11 +97,15 @@ const ConnectionStatus: React.FC = () => {
   const handleReconnect = async () => {
     setLocalLoading(true);
     setLocalError(null);
+    loggers.service.start('ConnectionService', 'reconnect');
+    
     try {
-      await reconnect();
+      await connectionService.forceReconnect();
+      loggers.service.success('ConnectionService', 'reconnect');
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to reconnect';
       setLocalError(errorMessage);
+      loggers.service.error('ConnectionService', 'reconnect', error as Error);
     } finally {
       setLocalLoading(false);
     }

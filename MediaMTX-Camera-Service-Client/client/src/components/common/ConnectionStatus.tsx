@@ -1,3 +1,16 @@
+/**
+ * @deprecated This component is deprecated and will be removed in v2.0
+ * Use /components/ConnectionStatus/ConnectionStatus.tsx instead
+ * 
+ * Migration Guide:
+ * - Replace import: import ConnectionStatus from '../common/ConnectionStatus'
+ * - With: import ConnectionStatus from '../ConnectionStatus/ConnectionStatus'
+ * - Props interface remains the same
+ * 
+ * This component will be removed in the next major version.
+ * Please migrate to the new implementation to avoid breaking changes.
+ */
+
 import React from 'react';
 import { 
   Chip, 
