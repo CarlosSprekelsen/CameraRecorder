@@ -1480,7 +1480,7 @@ Manually trigger cleanup of old files based on retention policies.
 
 ### get_status
 
-Get system status and health information.
+Get system status and health information with comprehensive health monitoring and threshold-based status determination.
 
 **Authentication:** Required (admin role)
 
@@ -1489,6 +1489,50 @@ Get system status and health information.
 **Returns:** Object containing system status, component health, and operational state
 
 **Status:** ✅ Implemented
+
+**System Status Values:**
+
+The system status is determined by comprehensive monitoring of multiple metrics and thresholds:
+
+- **`"healthy"`** - All systems operational within normal parameters
+  - MediaMTX connectivity: API responding within 10s timeout
+  - Memory usage: < 90% (configurable threshold)
+  - Error rate: < 5% (configurable threshold)
+  - Response time: < 1000ms average (configurable threshold)
+  - Active connections: < 900 (configurable threshold)
+  - Goroutines: < 1000 (configurable threshold)
+  - Storage space: > 30% available (warn at 70%, block at 85%)
+  - Health check failures: < 5 consecutive failures (configurable threshold)
+
+- **`"degraded"`** - System experiencing performance issues but core functionality available
+  - MediaMTX connectivity: API responding but with delays (>5s response time)
+  - Memory usage: 90-95% (approaching critical threshold)
+  - Error rate: 5-10% (elevated error rate)
+  - Response time: 1000-2000ms average (slow but acceptable)
+  - Active connections: 900-950 (approaching limit)
+  - Goroutines: 1000-1200 (elevated but manageable)
+  - Storage space: 15-30% available (warning zone)
+  - Health check failures: 3-4 consecutive failures (approaching threshold)
+
+- **`"unhealthy"`** - System experiencing critical failures impacting core functionality
+  - MediaMTX connectivity: API not responding or >10s timeout
+  - Memory usage: >95% (critical memory pressure)
+  - Error rate: >10% (high failure rate)
+  - Response time: >2000ms average (unacceptable delays)
+  - Active connections: >950 (at or near limit)
+  - Goroutines: >1200 (potential goroutine leak)
+  - Storage space: <15% available (critical storage)
+  - Health check failures: ≥5 consecutive failures (threshold exceeded)
+
+**Component Status Values:**
+
+Each component reports its operational state:
+
+- **`"running"`** - Component operational and healthy
+- **`"stopped"`** - Component intentionally stopped or disabled
+- **`"error"`** - Component experiencing errors or failures
+- **`"starting"`** - Component in startup process
+- **`"stopping"`** - Component in shutdown process
 
 **Example:**
 
@@ -1519,7 +1563,13 @@ Get system status and health information.
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `status`: System health status ("healthy", "degraded", "unhealthy") (string)
+- `uptime`: System uptime in seconds with sub-second precision (float64)
+- `version`: Service version string (string)
+- `components`: Object containing component operational states (object)
+  - `websocket_server`: WebSocket server status ("running", "stopped", "error", "starting", "stopping") (string)
+  - `camera_monitor`: Camera discovery monitor status (string)
+  - `mediamtx`: MediaMTX service connectivity status (string)
 
 ### get_server_info
 

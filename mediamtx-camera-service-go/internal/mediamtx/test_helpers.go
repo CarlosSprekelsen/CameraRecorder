@@ -273,13 +273,13 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 
 	// CRITICAL: Create directories BEFORE config validation (fixes permission issues)
 	dirManager := testutils.NewDirectoryManager(t)
-	dirManager.CreateDirectoriesFromFixture("config_websocket_test.yaml")
+	dirManager.CreateDirectoriesFromFixture("config_test_minimal.yaml")
 
-	// Create config manager for centralized configuration
-	configManager := CreateConfigManagerWithFixture(t, "config_websocket_test.yaml")
+	// Create config manager for centralized configuration using working validated fixture
+	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
 
 	// Load configuration
-	configPath := "../../tests/fixtures/config_websocket_test.yaml"
+	configPath := "../../tests/fixtures/config_test_minimal.yaml"
 	logger.Info("Loading test configuration", "config_path", configPath)
 	err := configManager.LoadConfig(configPath)
 	if err != nil {
@@ -574,7 +574,7 @@ func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
 	h.cameraMonitorOnce.Do(func() {
 		// Create real camera monitor with SAME configuration as controller (test fixture)
 		// This ensures configuration consistency between camera monitor and controller
-		configManager := CreateConfigManagerWithFixture(nil, "config_websocket_test.yaml")
+		configManager := CreateConfigManagerWithFixture(nil, "config_test_minimal.yaml")
 		logger := logging.GetLogger("mediamtx.camera_monitor") // Component-specific logger
 
 		// Use real implementations for camera hardware
@@ -1645,7 +1645,7 @@ func NewJSONScenarioRegistry() *JSONScenarioRegistry {
 			Name:        "empty_json",
 			JSONData:    []byte(""),
 			ExpectError: true,
-			ErrorMsg:    "empty response body",
+			ErrorMsg:    "response validation failed",
 			Description: "Empty JSON should be rejected",
 		},
 		{

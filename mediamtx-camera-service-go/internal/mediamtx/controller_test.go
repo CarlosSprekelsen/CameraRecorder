@@ -50,54 +50,54 @@ func TestController_GetHealth_ReqMTX004_Success(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller using test helper
+	// CORRECT Progressive Readiness pattern: Attempt operation immediately, fallback to readiness events
 	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
+	require.NoError(t, err, "Controller creation should succeed")
 
-	// Start the controller
+	// Start controller (returns immediately - no waiting)
 	err = controller.Start(ctx)
 	require.NoError(t, err, "Controller start should succeed")
+	defer controller.Stop(ctx)
 
-	// Ensure controller is stopped after test
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+	// Progressive Readiness: Try operation immediately
+	health, err := controller.GetHealth(ctx)
+	if err != nil && strings.Contains(err.Error(), "not ready") {
+		// Component not ready - subscribe to readiness events
+		t.Log("Health check needs readiness - waiting for event")
+		readinessChan := controller.SubscribeToReadiness()
 
-	// PROGRESSIVE READINESS PATTERN: Wait for controller readiness using event-driven approach
-	// System accepts connections immediately, features become available as components initialize
-	readinessChan := controller.SubscribeToReadiness()
+		select {
+		case <-readinessChan:
+			// Retry after readiness event
+			t.Log("Readiness event received - retrying health check")
+			health, err = controller.GetHealth(ctx)
+			require.NoError(t, err, "Health should work after readiness event")
+		case <-time.After(5 * time.Second):
+			t.Fatal("Timeout waiting for controller readiness")
+		}
+	} else {
+		// Operation succeeded immediately (Progressive Readiness working)
+		t.Log("Health check succeeded immediately - Progressive Readiness working")
+		require.NoError(t, err, "Health should work immediately or use fallback")
+	}
 
-	// Wait for readiness event with timeout
-	select {
-	case <-readinessChan:
-		// Controller is ready, components have initialized
-		t.Log("Controller became ready - proceeding with health check")
+	// Use health assertion helper to reduce boilerplate
+	helper.AssertHealthResponse(t, health, err, "GetHealth")
+	assert.Equal(t, "healthy", health.Status, "Health should be healthy")
 
-		// Now check health - should be healthy since all components are ready
-		health, err := controller.GetHealth(ctx)
-		// Use health assertion helper to reduce boilerplate
-		helper.AssertHealthResponse(t, health, err, "GetHealth")
-		assert.Equal(t, "healthy", health.Status, "Health should be healthy after readiness")
-
-		// Verify component statuses are healthy (using Components field from GetHealthResponse)
-		if len(health.Components) > 0 {
-			if cameraStatus, exists := health.Components["camera_monitor"]; exists {
-				// Components is map[string]interface{}, so we need to cast or check differently
-				if statusMap, ok := cameraStatus.(map[string]interface{}); ok {
-					if status, ok := statusMap["status"].(string); ok {
-						assert.Equal(t, "healthy", status, "Camera monitor should be healthy when controller is ready")
-					}
+	// Verify component statuses are healthy (using Components field from GetHealthResponse)
+	if len(health.Components) > 0 {
+		if cameraStatus, exists := health.Components["camera_monitor"]; exists {
+			// Components is map[string]interface{}, so we need to cast or check differently
+			if statusMap, ok := cameraStatus.(map[string]interface{}); ok {
+				if status, ok := statusMap["status"].(string); ok {
+					assert.Equal(t, "healthy", status, "Camera monitor should be healthy when controller is ready")
 				}
 			}
 		}
-
-		t.Log("Health check completed successfully with Progressive Readiness Pattern")
-
-	case <-time.After(10 * time.Second):
-		t.Fatal("Controller did not become ready within timeout - Progressive Readiness Pattern failed")
 	}
+
+	t.Log("Health check completed successfully with Progressive Readiness Pattern")
 }
 
 // TestController_GetMetrics_ReqMTX004 tests controller metrics with real server
@@ -105,20 +105,10 @@ func TestController_GetMetrics_ReqMTX004_Success(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller using test helper
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
-
-	// Ensure controller is stopped after test
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+	// Use Progressive Readiness pattern (like other working tests)
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// Get metrics
 	metrics, err := controller.GetMetrics(ctx)
@@ -130,20 +120,10 @@ func TestController_GetSystemMetrics_ReqMTX004_Success(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller using test helper
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
-
-	// Ensure controller is stopped after test
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+	// Use Progressive Readiness pattern (like other working tests)
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// Get system metrics
 	systemMetrics, err := controller.GetSystemMetrics(ctx)
@@ -155,20 +135,10 @@ func TestController_GetPaths_ReqMTX003_Success(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller using test helper
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
-
-	// Ensure controller is stopped after test
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+	// Use Progressive Readiness pattern (like other working tests)
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// Get paths
 	paths, err := controller.GetPaths(ctx)
@@ -181,20 +151,10 @@ func TestController_GetStreams_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller using test helper
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
-
-	// Ensure controller is stopped after test
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+	// Use Progressive Readiness pattern (like other working tests)
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// Get streams
 	streams, err := controller.GetStreams(ctx)
@@ -208,21 +168,13 @@ func TestController_GetStream_ReqMTX002_Success(t *testing.T) {
 	// No sequential execution needed - only reads stream information
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller using test helper
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller should be created successfully")
-
-	// Start controller
-	err = controller.Start(context.Background())
-	require.NoError(t, err, "Controller should start successfully")
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+	// Use Progressive Readiness pattern (like other working tests)
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// Test getting a non-existent stream (should return error)
-	_, err = controller.GetStream(ctx, "non_existent_stream")
+	_, err := controller.GetStream(ctx, "non_existent_stream")
 	require.Error(t, err, "GetStream should return error for non-existent stream")
 	assert.Contains(t, err.Error(), "stream", "Error should mention stream")
 
@@ -315,20 +267,10 @@ func TestController_GetConfig_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller using test helper
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
-
-	// Ensure controller is stopped after test
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+	// Use Progressive Readiness pattern (like other working tests)
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// Get config
 	config, err := controller.GetConfig(ctx)
@@ -342,20 +284,10 @@ func TestController_ListRecordings_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller using test helper
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
-
-	// Ensure controller is stopped after test
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+	// Use Progressive Readiness pattern (like other working tests)
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// List recordings
 	recordings, err := controller.ListRecordings(ctx, 10, 0)
@@ -368,20 +300,10 @@ func TestController_ListSnapshots_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller using test helper
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
-
-	// Ensure controller is stopped after test
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+	// Use Progressive Readiness pattern (like other working tests)
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// List snapshots
 	snapshots, err := controller.ListSnapshots(ctx, 10, 0)
@@ -394,20 +316,10 @@ func TestController_GetHealth_ReqMTX001_Concurrent(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller using test helper
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
-
-	// Ensure controller is stopped after test
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+	// Use Progressive Readiness pattern (like other working tests)
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// Test concurrent access to different methods
 	done := make(chan bool, 4)
@@ -616,40 +528,11 @@ func TestController_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller using test helper
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
-
-	// Wait for controller readiness using TRUE Progressive Readiness Pattern
-	// Use event-driven approach instead of polling
-	readinessChan := controller.SubscribeToReadiness()
-	var isReady bool
-
-	// Quick check first
-	if controller.IsReady() {
-		isReady = true
-	} else {
-		// Wait for readiness event (no polling)
-		select {
-		case <-readinessChan:
-			isReady = true
-		case <-time.After(10 * time.Second): // Safety timeout
-			t.Log("Controller readiness timeout - proceeding anyway")
-		case <-ctx.Done():
-			// Context cancelled, exit early
-			return
-		}
-	}
-	require.True(t, isReady, "Controller should become ready with camera discovery")
+	// Use Progressive Readiness pattern (like other working tests)
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
 
 	// Controller is already ready - no waiting needed with Progressive Readiness
 	// Get available camera using existing helper
@@ -661,8 +544,25 @@ func TestController_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
 		Quality: 85,
 	}
 
+	// Progressive Readiness: Attempt operation immediately (may use fallback)
 	snapshot, err := controller.TakeAdvancedSnapshot(ctx, cameraID, options)
-	require.NoError(t, err, "Snapshot should work after proper readiness")
+	if err == nil {
+		// Operation succeeded immediately (Progressive Readiness working)
+		t.Log("Snapshot taken immediately - Progressive Readiness working")
+	} else {
+		// Operation needs readiness - wait for event (no polling)
+		t.Logf("Snapshot failed initially: %v - waiting for readiness event", err)
+		readinessChan := controller.SubscribeToReadiness()
+		select {
+		case <-readinessChan:
+			// Retry after readiness event
+			snapshot, err = controller.TakeAdvancedSnapshot(ctx, cameraID, options)
+			require.NoError(t, err, "Snapshot should work after readiness event")
+			t.Log("Snapshot taken after readiness event - Progressive Readiness working")
+		case <-time.After(5 * time.Second):
+			t.Fatal("Timeout waiting for readiness event")
+		}
+	}
 	require.NotNil(t, snapshot, "Snapshot should not be nil")
 
 	// Verify snapshot properties
@@ -683,18 +583,10 @@ func TestController_CreateStream_ReqMTX002_StreamManagement(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller using test helper
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+	// Use Progressive Readiness pattern (like other working tests)
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// Test stream management through controller
 	streams, err := controller.GetStreams(ctx)
@@ -1033,18 +925,10 @@ func TestController_SetSystemEventNotifier_ReqMTX004_Success(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller using test helper
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+	// Use Progressive Readiness pattern (like other working tests)
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// Create mock system event notifier
 	mockNotifier := NewMockSystemEventNotifier()
@@ -1088,18 +972,10 @@ func TestController_CreateStream_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller using test helper
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+	// Use Progressive Readiness pattern (like other working tests)
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// Test CreateStream with valid parameters
 	stream, err := controller.CreateStream(ctx, "test_stream", "rtsp://localhost:8554/test")
@@ -1123,18 +999,10 @@ func TestController_DeleteStream_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller using test helper
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+	// Use Progressive Readiness pattern (like other working tests)
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// First create a stream to delete
 	stream, err := controller.CreateStream(ctx, "test_delete_stream", "rtsp://localhost:8554/test")

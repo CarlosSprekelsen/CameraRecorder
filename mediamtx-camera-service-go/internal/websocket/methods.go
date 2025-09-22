@@ -454,57 +454,31 @@ func (s *WebSocketServer) MethodGetStatus(params map[string]interface{}, client 
 	// Uses wrapper helpers for consistent method execution
 	return s.authenticatedMethodWrapper("get_status", func() (interface{}, error) {
 
-		// Calculate uptime
-		startTime := s.metrics.StartTime
-		uptime := int(time.Since(startTime).Seconds())
-		if uptime < 0 {
-			uptime = 0
-		}
-
-		// Determine overall system status
-		systemStatus := "healthy"
-		websocketServerStatus := "running"
-		var mediamtxControllerStatus string
-
-		// Check MediaMTX controller health - thin delegation
+		// Pure delegation to MediaMTX controller - returns API-ready response with comprehensive health status
 		if s.mediaMTXController != nil {
 			health, err := s.mediaMTXController.GetHealth(context.Background())
 			if err != nil {
-				mediamtxControllerStatus = "error"
-				systemStatus = "degraded"
-			} else {
-				mediamtxControllerStatus = health.Status
-				if health.Status != "healthy" {
-					systemStatus = "degraded"
-				}
+				return nil, fmt.Errorf("failed to get health status: %w", err)
 			}
-		} else {
-			mediamtxControllerStatus = "error"
-			systemStatus = "degraded"
+
+			// Return the health response directly from the controller
+			return map[string]interface{}{
+				"status":     health.Status,
+				"uptime":     health.Uptime,
+				"version":    health.Version,
+				"components": health.Components,
+			}, nil
 		}
 
-		// Check if server is running
-		if !s.IsRunning() {
-			websocketServerStatus = "error"
-			systemStatus = "degraded"
-		}
-
-		// Get version from MediaMTX controller (single source of truth)
-		version := "unknown"
-		if s.mediaMTXController != nil {
-			if serverInfo, err := s.mediaMTXController.GetServerInfo(context.Background()); err == nil {
-				version = serverInfo.Version
-			}
-		}
-
-		// Return status
+		// Fallback if controller is not available
 		return map[string]interface{}{
-			"status":  systemStatus,
-			"uptime":  uptime,
-			"version": version,
+			"status":  "unhealthy",
+			"uptime":  float64(0),
+			"version": "unknown",
 			"components": map[string]interface{}{
-				"websocket_server":    websocketServerStatus,
-				"mediamtx_controller": mediamtxControllerStatus,
+				"websocket_server": "error",
+				"camera_monitor":   "error",
+				"mediamtx":         "error",
 			},
 		}, nil
 	})(params, client)

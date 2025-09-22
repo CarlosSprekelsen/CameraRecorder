@@ -261,7 +261,7 @@ type StreamInfo struct {
 // GetHealthResponse represents the response from get_health method
 type GetHealthResponse struct {
 	Status       string                 `json:"status"`        // Overall health status ("healthy", "degraded", "unhealthy")
-	Uptime       string                 `json:"uptime"`        // System uptime duration
+	Uptime       float64                `json:"uptime"`        // System uptime in seconds with sub-second precision
 	Version      string                 `json:"version"`       // Service version
 	Components   map[string]interface{} `json:"components"`    // Component health details
 	Checks       []interface{}          `json:"checks"`        // Health check results

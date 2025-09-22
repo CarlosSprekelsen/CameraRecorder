@@ -17,7 +17,6 @@ Leverages existing test utilities and logging module for comprehensive coverage
 package mediamtx
 
 import (
-	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -40,7 +39,6 @@ func TestNewRTSPConnectionManager_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	helper := SetupMediaMTXTestHelperOnly(t)
 
-
 	// Test server health first
 	err := helper.TestMediaMTXHealth(t)
 	require.NoError(t, err, "MediaMTX server should be healthy")
@@ -57,7 +55,6 @@ func TestNewRTSPConnectionManager_ReqMTX001(t *testing.T) {
 func TestRTSPConnectionManager_ListConnections_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
-
 
 	// Use shared RTSP connection manager from test helper
 	rtspManager := helper.GetRTSPConnectionManager()
@@ -121,7 +118,6 @@ func TestRTSPConnectionManager_ListSessions_ReqMTX002(t *testing.T) {
 func TestRTSPConnectionManager_GetConnectionHealth_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper, ctx := SetupMediaMTXTest(t)
-
 
 	// Create config manager using test fixture (centralized in test helpers)
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
@@ -194,7 +190,6 @@ func TestRTSPConnectionManager_Configuration_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion (configuration management)
 	helper, ctx := SetupMediaMTXTest(t)
 
-
 	// Create config manager using test fixture (centralized in test helpers)
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
 
@@ -251,7 +246,6 @@ func TestRTSPConnectionManager_ErrorHandling_ReqMTX004(t *testing.T) {
 
 	rtspManager := NewRTSPConnectionManager(helper.GetClient(), mediaMTXConfig, logger)
 	require.NotNil(t, rtspManager)
-
 
 	// Test getting non-existent connection
 	_, err = rtspManager.GetConnection(ctx, "non-existent-id")
@@ -316,7 +310,6 @@ func TestRTSPConnectionManager_RealMediaMTXServer(t *testing.T) {
 	// Integration test with real MediaMTX server
 	helper, ctx := SetupMediaMTXTest(t)
 
-
 	// Use shared RTSP connection manager for performance
 	rtspManager := helper.GetRTSPConnectionManager()
 	require.NotNil(t, rtspManager)
@@ -346,7 +339,6 @@ func TestRTSPConnectionManager_RealMediaMTXServer(t *testing.T) {
 // TestRTSPConnectionManager_ConfigurationScenarios tests various configuration scenarios
 func TestRTSPConnectionManager_ConfigurationScenarios(t *testing.T) {
 	helper := SetupMediaMTXTestHelperOnly(t)
-
 
 	// Test different configuration scenarios
 	configScenarios := []struct {
@@ -439,7 +431,6 @@ func TestRTSPConnectionManager_ConfigurationScenarios(t *testing.T) {
 func TestRTSPConnectionManager_ErrorScenarios(t *testing.T) {
 	helper, ctx := SetupMediaMTXTest(t)
 
-
 	rtspManager := helper.GetRTSPConnectionManager()
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
@@ -519,7 +510,6 @@ func TestRTSPConnectionManager_ErrorScenarios(t *testing.T) {
 func TestRTSPConnectionManager_ConcurrentAccess(t *testing.T) {
 	helper, ctx := SetupMediaMTXTest(t)
 
-
 	rtspManager := helper.GetRTSPConnectionManager()
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
@@ -597,7 +587,6 @@ func TestRTSPConnectionManager_ConcurrentAccess(t *testing.T) {
 func TestRTSPConnectionManager_StressTest(t *testing.T) {
 	helper, ctx := SetupMediaMTXTest(t)
 
-
 	rtspManager := helper.GetRTSPConnectionManager()
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
@@ -639,24 +628,12 @@ func TestRTSPConnectionManager_StressTest(t *testing.T) {
 func TestRTSPConnectionManager_IntegrationWithController(t *testing.T) {
 	helper, ctx := SetupMediaMTXTest(t)
 
-
 	// Use test fixture logging level instead of hardcoded logrus
 
-	// Create controller using test helper
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller should be created successfully")
-
-	// Start controller
-	err = controller.Start(context.Background())
-	require.NoError(t, err, "Controller should start successfully")
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
-
-	ctx, cancel := helper.GetStandardContext()
+	// Use Progressive Readiness pattern (like other working tests)
+	controller, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
+	defer controller.Stop(ctx)
 
 	// Test controller RTSP methods
 	connections, err := controller.ListRTSPConnections(ctx, 1, 10)

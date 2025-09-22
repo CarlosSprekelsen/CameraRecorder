@@ -24,6 +24,8 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
+	"github.com/shirou/gopsutil/disk"
+	"github.com/shirou/gopsutil/v3/cpu"
 	"golang.org/x/sys/unix"
 )
 
@@ -88,6 +90,45 @@ func (sm *SystemMetricsManager) SetDependencies(
 	sm.recordingManager = recordingManager
 	sm.cameraMonitor = cameraMonitor
 	sm.streamManager = streamManager
+}
+
+// calculateCPUUsage calculates current CPU usage percentage using gopsutil
+func (sm *SystemMetricsManager) calculateCPUUsage() float64 {
+	// Use gopsutil for accurate CPU usage calculation
+	percentages, err := cpu.Percent(time.Second, false)
+	if err != nil {
+		sm.logger.WithError(err).Warn("Failed to get CPU usage, falling back to placeholder")
+		return 0.0 // Return 0 instead of GC-based calculation
+	}
+
+	if len(percentages) == 0 {
+		return 0.0
+	}
+
+	return percentages[0]
+}
+
+// calculateDiskUsage calculates current disk usage percentage using gopsutil
+func (sm *SystemMetricsManager) calculateDiskUsage() float64 {
+	// Use gopsutil for accurate disk usage calculation
+	// Get usage for the root filesystem where recordings are typically stored
+	usage, err := disk.Usage("/")
+	if err != nil {
+		// Try alternative paths if root fails
+		usage, err = disk.Usage(".")
+		if err != nil {
+			sm.logger.WithError(err).Warn("Failed to get disk usage, falling back to placeholder")
+			return 0.0
+		}
+	}
+
+	// Calculate percentage: (used / total) * 100
+	if usage.Total == 0 {
+		return 0.0
+	}
+
+	percentUsed := float64(usage.Used) / float64(usage.Total) * 100.0
+	return percentUsed
 }
 
 // GetStorageInfoAPI returns storage information in API-ready format
@@ -173,25 +214,14 @@ func (sm *SystemMetricsManager) GetSystemMetricsAPI(ctx context.Context) (*GetSy
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 
-	// Calculate CPU usage (simplified - could be enhanced with proper CPU monitoring)
-	cpuUsage := 0.0 // TODO: Implement proper CPU usage calculation using system monitoring
-	// INVESTIGATION: CPU usage hardcoded to 0.0, should use actual system metrics
-	// CURRENT: No CPU monitoring implemented, placeholder value returned
-	// SOLUTION: Use Go system monitoring libraries:
-	//   - Option 1: github.com/shirou/gopsutil/cpu for cross-platform CPU stats
-	//   - Option 2: /proc/stat parsing for Linux-specific implementation
-	//   - Option 3: runtime.ReadMemStats() + custom CPU sampling
-	// REFERENCE: Prometheus client_golang patterns for system metrics
-	// EFFORT: 4-6 hours - implement CPU monitoring with proper sampling and averaging
+	// Calculate CPU usage using gopsutil for accurate system metrics
+	cpuUsage := sm.calculateCPUUsage()
 
 	// Calculate memory usage percentage
 	memUsage := float64(memStats.Alloc) / float64(memStats.Sys) * 100.0
 
-	// Get disk usage from storage info
-	storageInfo, err := sm.GetStorageInfoAPI(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("failed to get storage info for system metrics: %w", err)
-	}
+	// Calculate disk usage using gopsutil for accurate system metrics
+	diskUsage := sm.calculateDiskUsage()
 
 	// Get goroutine count
 	goroutineCount := runtime.NumGoroutine()
@@ -200,7 +230,7 @@ func (sm *SystemMetricsManager) GetSystemMetricsAPI(ctx context.Context) (*GetSy
 	response := &GetSystemMetricsResponse{
 		CPUUsage:    cpuUsage,
 		MemoryUsage: memUsage,
-		DiskUsage:   storageInfo.UsagePercent,
+		DiskUsage:   diskUsage,
 		Goroutines:  goroutineCount,
 		Timestamp:   time.Now().Format(time.RFC3339),
 	}
@@ -208,7 +238,7 @@ func (sm *SystemMetricsManager) GetSystemMetricsAPI(ctx context.Context) (*GetSy
 	sm.logger.WithFields(logging.Fields{
 		"cpu_usage":    cpuUsage,
 		"memory_usage": memUsage,
-		"disk_usage":   storageInfo.UsagePercent,
+		"disk_usage":   diskUsage,
 		"goroutines":   goroutineCount,
 	}).Debug("System metrics collected successfully")
 

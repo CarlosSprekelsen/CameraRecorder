@@ -945,14 +945,23 @@ func (pm *pathManager) GetCameraCapabilities(ctx context.Context, device string)
 		fpsOptions = append(fpsOptions, fps)
 	}
 
+	// Determine validation status based on camera state and capability detection
+	validationStatus := "none"
+	if cameraDevice.Status == "CONNECTED" {
+		validationStatus = "confirmed"
+	} else if cameraDevice.Status == "DISCONNECTED" {
+		validationStatus = "disconnected"
+	}
+
 	// Build API-ready response using correct GetCameraCapabilitiesResponse fields
 	response := &GetCameraCapabilitiesResponse{
-		Device:       device,
-		Formats:      supportedFormats,
-		Resolutions:  supportedResolutions,
-		FpsOptions:   fpsOptions,
-		FrameRates:   fpsOptions, // Keep both for backward compatibility
-		Capabilities: cameraDevice.Capabilities.Capabilities,
+		Device:           device,
+		Formats:          supportedFormats,
+		Resolutions:      supportedResolutions,
+		FpsOptions:       fpsOptions,
+		FrameRates:       fpsOptions, // Keep both for backward compatibility
+		Capabilities:     cameraDevice.Capabilities.Capabilities,
+		ValidationStatus: validationStatus, // Set validation status per API documentation
 	}
 
 	pm.logger.WithFields(logging.Fields{

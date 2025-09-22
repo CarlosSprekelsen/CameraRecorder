@@ -44,8 +44,6 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/shirou/gopsutil/v3/cpu"
-	"github.com/shirou/gopsutil/v3/disk"
 )
 
 // controller implements the MediaMTX controller as the central orchestration component.
@@ -1368,47 +1366,6 @@ func (c *controller) SetDiscoveryInterval(interval int) (*SetDiscoveryIntervalRe
 	}).Info("Discovery scan interval updated successfully")
 
 	return response, nil
-}
-
-// calculateCPUUsage calculates current CPU usage percentage
-// NOTE: No running state check - internal helper function
-func (c *controller) calculateCPUUsage() float64 {
-	// Use gopsutil for accurate CPU usage calculation
-	percentages, err := cpu.Percent(time.Second, false)
-	if err != nil {
-		c.logger.WithError(err).Warn("Failed to get CPU usage, falling back to placeholder")
-		return 0.0 // Return 0 instead of GC-based calculation
-	}
-
-	if len(percentages) == 0 {
-		return 0.0
-	}
-
-	return percentages[0]
-}
-
-// calculateDiskUsage calculates current disk usage percentage
-// NOTE: No running state check - internal helper function
-func (c *controller) calculateDiskUsage() float64 {
-	// Use gopsutil for accurate disk usage calculation
-	// Get usage for the root filesystem where recordings are typically stored
-	usage, err := disk.Usage("/")
-	if err != nil {
-		// Try alternative paths if root fails
-		usage, err = disk.Usage(".")
-		if err != nil {
-			c.logger.WithError(err).Warn("Failed to get disk usage, falling back to placeholder")
-			return 0.0 // TODO: Implement proper CPU usage calculation when stats unavailable
-		}
-	}
-
-	// Calculate percentage: (used / total) * 100
-	if usage.Total == 0 {
-		return 0.0
-	}
-
-	percentUsed := float64(usage.Used) / float64(usage.Total) * 100.0
-	return percentUsed
 }
 
 // OnCameraDisconnected handles camera disconnection events

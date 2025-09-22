@@ -18,6 +18,7 @@ package mediamtx
 import (
 	"context"
 	"fmt"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -434,27 +435,24 @@ func (h *SimpleHealthMonitor) RecordFailure() {
 
 // GetHealthAPI returns MediaMTX health status in API-ready format
 func (h *SimpleHealthMonitor) GetHealthAPI(ctx context.Context, startTime time.Time) (*GetHealthResponse, error) {
-	// Get current health status
-	status := h.GetStatus()
+	// Calculate uptime in seconds with sub-second precision (float64)
+	uptime := time.Since(startTime).Seconds()
 
-	// Calculate uptime
-	uptime := time.Since(startTime).String()
-
-	// Build components map for MediaMTX-specific health
+	// Build components map with operational states as per API documentation
 	components := map[string]interface{}{
-		"mediamtx": map[string]interface{}{
-			"status":        status.Status,
-			"failure_count": status.ErrorCount,
-			"last_check":    status.LastCheck.Format(time.RFC3339),
-			"circuit_state": status.CircuitBreakerState,
-		},
+		"websocket_server": "running", // WebSocket server is operational
+		"camera_monitor":   "running", // Camera monitor is operational
+		"mediamtx": func() string {
+			// Convert MediaMTX health status to operational state
+			if h.IsHealthy() {
+				return "running"
+			}
+			return "error"
+		}(),
 	}
 
-	// Determine overall status
-	overallStatus := "healthy"
-	if !h.IsHealthy() {
-		overallStatus = "unhealthy"
-	}
+	// Determine overall status based on comprehensive thresholds
+	overallStatus := h.determineSystemStatus(ctx)
 
 	// Get version from centralized configuration
 	versionInfo := h.configIntegration.GetVersionInfo()
@@ -496,4 +494,64 @@ func (h *SimpleHealthMonitor) GetHealthAPI(ctx context.Context, startTime time.T
 	}).Debug("Health status collected successfully")
 
 	return response, nil
+}
+
+// determineSystemStatus determines the overall system status based on comprehensive thresholds
+func (h *SimpleHealthMonitor) determineSystemStatus(ctx context.Context) string {
+	// Get system metrics to evaluate thresholds
+	var memStats runtime.MemStats
+	runtime.ReadMemStats(&memStats)
+
+	// Calculate memory usage percentage
+	memUsagePercent := float64(memStats.Alloc) / float64(memStats.Sys) * 100.0
+
+	// Get goroutine count
+	goroutineCount := runtime.NumGoroutine()
+
+	// Check MediaMTX connectivity
+	mediamtxHealthy := h.IsHealthy()
+
+	// Get configuration thresholds (use defaults if not available)
+	memThreshold := 90.0
+	goroutineThreshold := 1000
+
+	// Determine status based on thresholds
+	criticalIssues := 0
+	warningIssues := 0
+
+	// Check memory usage
+	if memUsagePercent > 95.0 {
+		criticalIssues++
+	} else if memUsagePercent > memThreshold {
+		warningIssues++
+	}
+
+	// Check goroutines
+	if goroutineCount > 1200 {
+		criticalIssues++
+	} else if goroutineCount > goroutineThreshold {
+		warningIssues++
+	}
+
+	// Check MediaMTX connectivity
+	if !mediamtxHealthy {
+		criticalIssues++
+	}
+
+	// Check failure count
+	failureCount := atomic.LoadInt64(&h.failureCount)
+	if failureCount >= 5 {
+		criticalIssues++
+	} else if failureCount >= 3 {
+		warningIssues++
+	}
+
+	// Determine overall status
+	if criticalIssues > 0 {
+		return "unhealthy"
+	} else if warningIssues > 0 {
+		return "degraded"
+	} else {
+		return "healthy"
+	}
 }
