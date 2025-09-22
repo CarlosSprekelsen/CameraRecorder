@@ -10,8 +10,8 @@ import {
 } from '@mui/material';
 import { Menu as MenuIcon } from '@mui/icons-material';
 import { useCameraStore } from '../../stores/cameraStore';
-import { useConnectionStore } from '../../stores/connectionStore';
-import ConnectionStatus from './ConnectionStatus';
+import { useConnectionStore } from '../../stores/connection';
+import ConnectionStatus from '../ConnectionStatus/ConnectionStatus';
 
 interface HeaderProps {
   onMenuClick: () => void;

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
+import { logger, loggers } from '../../services/loggerService';
 import { 
   Box, 
   Typography, 
@@ -75,7 +76,7 @@ const CameraDetail: React.FC = () => {
     try {
       const result = await storeTakeSnapshot(deviceId, snapshotFormat, snapshotQuality);
       if (result) {
-        console.log('Snapshot taken:', result);
+        logger.info('Snapshot taken', { result }, 'cameraDetail');
         const notification = notificationUtils.camera.snapshotTaken(camera?.name || deviceId);
         showSuccess(notification.title, notification.message);
       }
@@ -99,7 +100,7 @@ const CameraDetail: React.FC = () => {
       const duration = isUnlimitedRecording ? undefined : recordingDuration;
       const result = await storeStartRecording(deviceId, duration, recordingFormat);
       if (result) {
-        console.log('Recording started:', result);
+        logger.info('Recording started', { result }, 'cameraDetail');
         const notification = notificationUtils.camera.recordingStarted(camera?.name || deviceId);
         showSuccess(notification.title, notification.message);
       }
@@ -122,8 +123,9 @@ const CameraDetail: React.FC = () => {
     try {
       const result = await storeStopRecording(deviceId);
       if (result) {
-        console.log('Recording stopped:', result);
-        // TODO: Show success notification
+        logger.info('Recording stopped', { result }, 'cameraDetail');
+        const notification = notificationUtils.camera.recordingStopped(camera?.name || deviceId);
+        showSuccess(notification.title, notification.message);
       }
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : 'Failed to stop recording');
@@ -141,8 +143,8 @@ const CameraDetail: React.FC = () => {
     try {
       const updatedCamera = await storeGetCameraStatus(deviceId);
       if (updatedCamera) {
-        console.log('Camera status refreshed:', updatedCamera);
-        // TODO: Show success notification
+        logger.info('Camera status refreshed', { updatedCamera }, 'cameraDetail');
+        showSuccess('Camera Status Updated', 'Camera information has been refreshed successfully');
       }
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : 'Failed to refresh camera status');

@@ -83,7 +83,7 @@ describe('Authentication Setup Integration Tests', () => {
 });
 
 /**
- * Legacy test function for backward compatibility
+ * Backward compatibility test function
  * Now uses the stable test fixture instead of custom implementation
  */
 async function testInstallationFix() {

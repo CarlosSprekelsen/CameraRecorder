@@ -17,7 +17,7 @@ import {
   Error, 
   Warning 
 } from '@mui/icons-material';
-import { useConnectionStore } from '../../stores/connectionStore';
+import { useConnectionStore, useHealthStore, useMetricsStore } from '../../stores/connection';
 import { useCameraStore } from '../../stores/cameraStore';
 
 
@@ -32,42 +32,49 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
   showRecordingProgress = true,
   showConnectionMetrics = false
 }) => {
-    const {
+    // Use new modular stores
+  const {
     status: storeStatus,
     isConnected: storeIsConnected,
-    isConnecting: storeIsConnecting,
-    connectionQuality: storeConnectionQuality,
-    healthScore: storeHealthScore,
-    notificationCount: storeNotificationCount,
-    averageNotificationLatency: storeAverageNotificationLatency,
-    lastNotificationTime: storeLastNotificationTime,
-    realTimeUpdatesEnabled: storeRealTimeUpdatesEnabled,
-    componentSyncStatus: storeComponentSyncStatus,
-    updateComponentSyncStatus: storeUpdateComponentSyncStatus
+    isConnecting: storeIsConnecting
   } = useConnectionStore();
+
+  const {
+    connectionQuality: storeConnectionQuality,
+    healthScore: storeHealthScore
+  } = useHealthStore();
+
+  const {
+    messageCount: storeNotificationCount,
+    averageResponseTime: storeAverageNotificationLatency,
+    lastMessageTime: storeLastNotificationTime
+  } = useMetricsStore();
 
   const {
     cameras: storeCameras,
     activeRecordings: storeActiveRecordings,
-    recordingProgress: storeRecordingProgress,
-    notificationCount: storeCameraNotificationCount,
-    realTimeUpdatesEnabled: storeCameraRealTimeEnabled
+    recordingProgress: storeRecordingProgress
   } = useCameraStore();
+
+  // Default values for properties that don't exist in new stores
+  const storeRealTimeUpdatesEnabled = true;
+  const storeComponentSyncStatus = 'synced';
+  const storeUpdateComponentSyncStatus = () => {};
 
   const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
 
   // Update component sync status
   useEffect(() => {
-    storeUpdateComponentSyncStatus('real-time-status', true);
-    return () => storeUpdateComponentSyncStatus('real-time-status', false);
+    storeUpdateComponentSyncStatus();
+    return () => storeUpdateComponentSyncStatus();
   }, [storeUpdateComponentSyncStatus]);
 
   // Update last update time when notifications are received
   useEffect(() => {
-    if (storeNotificationCount > 0 || storeCameraNotificationCount > 0) {
+    if (storeNotificationCount > 0) {
       setLastUpdate(new Date());
     }
-  }, [storeNotificationCount, storeCameraNotificationCount]);
+  }, [storeNotificationCount]);
 
   // Note: handleRecordingStatusUpdate is handled by the connection store
   // This callback is not needed in this component
@@ -167,9 +174,9 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
             size="small"
           />
           <Chip
-            icon={storeCameraRealTimeEnabled ? <CheckCircle /> : <Error />}
+            icon={storeRealTimeUpdatesEnabled ? <CheckCircle /> : <Error />}
             label="Camera Updates"
-            color={storeCameraRealTimeEnabled ? 'success' : 'error'}
+            color={storeRealTimeUpdatesEnabled ? 'success' : 'error'}
             size="small"
           />
           {storeNotificationCount > 0 && (

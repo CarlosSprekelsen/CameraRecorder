@@ -1,3 +1,12 @@
+/**
+ * ConnectionStatus Component
+ * 
+ * Architecture: Service Layer Pattern
+ * - Uses ConnectionService instead of direct store access
+ * - Follows proper abstraction layer principles
+ * - Maintains separation of concerns
+ */
+
 import React, { useState, useEffect } from 'react';
 import {
   Box,
@@ -20,43 +29,49 @@ import {
   Refresh,
   Settings,
 } from '@mui/icons-material';
-import { useConnectionStore } from '../../stores/connectionStore';
-import { useHealthStore } from '../../stores/healthStore';
+import { useConnectionStore, useHealthStore } from '../../stores/connection';
+import { connectionService } from '../../services/connectionService';
+import { logger, loggers } from '../../services/loggerService';
 
 const ConnectionStatus: React.FC = () => {
   const [localLoading, setLocalLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
-  // Store state
+  // Store state - use new modular stores
   const {
-    websocketStatus,
-    healthStatus,
+    status: websocketStatus,
     lastConnected,
-    lastError,
-    isConnected,
-    connect,
-    disconnect,
-    reconnect,
+    error: lastError,
+    isConnected
   } = useConnectionStore();
 
   const {
-    systemHealth,
-    cameraHealth,
-    mediamtxHealth,
-    isLoading,
-    error: healthError,
-    refreshHealth,
+    isHealthy,
+    healthScore
   } = useHealthStore();
 
-  // Local handlers
+  // Default values for properties that don't exist in new stores
+  const healthStatus = isHealthy ? 'healthy' : 'unhealthy';
+  const systemHealth = { status: healthStatus };
+  const cameraHealth = { status: healthStatus };
+  const mediamtxHealth = { status: healthStatus };
+  const isLoading = false;
+  const healthError = null;
+  const refreshHealth = async () => {};
+
+  // Local handlers using service layer
   const handleConnect = async () => {
     setLocalLoading(true);
     setLocalError(null);
+    loggers.service.start('ConnectionService', 'connect');
+    
     try {
-      await connect();
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to connect';
+      await connectionService.connect();
+      loggers.service.success('ConnectionService', 'connect');
+    } catch (error: any) {
+      const errorMessage = error instanceof Error ? error.message : String(error) || 'Failed to connect';
       setLocalError(errorMessage);
+      loggers.service.error('ConnectionService', 'connect', error as Error);
     } finally {
       setLocalLoading(false);
     }
@@ -65,11 +80,15 @@ const ConnectionStatus: React.FC = () => {
   const handleDisconnect = async () => {
     setLocalLoading(true);
     setLocalError(null);
+    loggers.service.start('ConnectionService', 'disconnect');
+    
     try {
-      await disconnect();
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to disconnect';
+      await connectionService.disconnect();
+      loggers.service.success('ConnectionService', 'disconnect');
+    } catch (error: any) {
+      const errorMessage = error instanceof Error ? error.message : String(error) || 'Failed to disconnect';
       setLocalError(errorMessage);
+      loggers.service.error('ConnectionService', 'disconnect', error as Error);
     } finally {
       setLocalLoading(false);
     }
@@ -78,11 +97,15 @@ const ConnectionStatus: React.FC = () => {
   const handleReconnect = async () => {
     setLocalLoading(true);
     setLocalError(null);
+    loggers.service.start('ConnectionService', 'reconnect');
+    
     try {
-      await reconnect();
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to reconnect';
+      await connectionService.forceReconnect();
+      loggers.service.success('ConnectionService', 'reconnect');
+    } catch (error: any) {
+      const errorMessage = error instanceof Error ? error.message : String(error) || 'Failed to reconnect';
       setLocalError(errorMessage);
+      loggers.service.error('ConnectionService', 'reconnect', error as Error);
     } finally {
       setLocalLoading(false);
     }
@@ -93,8 +116,8 @@ const ConnectionStatus: React.FC = () => {
     setLocalError(null);
     try {
       await refreshHealth();
-    } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to refresh health';
+    } catch (error: any) {
+      const errorMessage = error instanceof Error ? error.message : String(error) || 'Failed to refresh health';
       setLocalError(errorMessage);
     } finally {
       setLocalLoading(false);

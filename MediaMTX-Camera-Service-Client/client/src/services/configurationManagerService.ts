@@ -215,7 +215,7 @@ class ConfigurationManagerService {
       },
       connection: {
         websocketUrl: 'ws://localhost:8002/ws',
-        healthUrl: 'http://localhost:8003',
+        // HTTP health endpoints removed - Go server is WebSocket-only
         timeout: 30000
       },
       system: {

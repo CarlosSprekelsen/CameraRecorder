@@ -16,24 +16,20 @@
  * - Health check endpoint accessible
  */
 
-import { WebSocketTestFixture, HealthTestFixture } from '../fixtures/stable-test-fixture';
+import { WebSocketTestFixture } from '../fixtures/stable-test-fixture';
 
 describe('CI/CD Integration Tests', () => {
   let wsFixture: WebSocketTestFixture;
-  let healthFixture: HealthTestFixture;
 
   beforeAll(async () => {
     // Initialize stable fixtures for authentication and server availability
     wsFixture = new WebSocketTestFixture();
-    healthFixture = new HealthTestFixture();
     
     await wsFixture.initialize();
-    await healthFixture.initialize();
   });
 
   afterAll(async () => {
     wsFixture.cleanup();
-    healthFixture.cleanup();
   });
 
   describe('Service Startup and Readiness', () => {
@@ -43,9 +39,10 @@ describe('CI/CD Integration Tests', () => {
       expect(isServiceActive).toBe(true);
     });
 
-    it('should verify health check endpoint is accessible', async () => {
-      const isHealthy = await healthFixture.testHealthEndpoint();
-      expect(isHealthy).toBe(true);
+    it('should verify WebSocket health monitoring is accessible', async () => {
+      // Health monitoring is done via WebSocket, not separate HTTP endpoints
+      const isWebSocketHealthy = await wsFixture.testConnection();
+      expect(isWebSocketHealthy).toBe(true);
     });
 
     it('should verify WebSocket endpoint is accessible', async () => {
@@ -77,7 +74,7 @@ describe('CI/CD Integration Tests', () => {
   describe('Test Execution Sequencing', () => {
     it('should execute server-first, then client tests', async () => {
       // Step 1: Verify server is ready
-      const serverReady = await verifyServerReadiness(wsFixture, healthFixture);
+      const serverReady = await verifyServerReadiness(wsFixture);
       expect(serverReady).toBe(true);
       
       // Step 2: Execute client integration tests
@@ -224,7 +221,7 @@ async function performConnectivityChecks(): Promise<{
     };
 
     const [apiEndpoint, websocketEndpoint, rtspEndpoint] = await Promise.all([
-      checkPort(8003), // Health server
+      checkPort(8002), // WebSocket server (health monitoring via WebSocket)
       checkPort(8002), // WebSocket server
       checkPort(8554)  // RTSP server
     ]);
@@ -235,11 +232,11 @@ async function performConnectivityChecks(): Promise<{
   }
 }
 
-async function verifyServerReadiness(wsFixture: WebSocketTestFixture, healthFixture: HealthTestFixture): Promise<boolean> {
+async function verifyServerReadiness(wsFixture: WebSocketTestFixture): Promise<boolean> {
   try {
-    const healthResult = await healthFixture.testHealthEndpoint();
+    // Health monitoring is done via WebSocket connection, not separate HTTP endpoints
     const wsResult = await wsFixture.testConnection();
-    return healthResult && wsResult;
+    return wsResult;
   } catch {
     return false;
   }

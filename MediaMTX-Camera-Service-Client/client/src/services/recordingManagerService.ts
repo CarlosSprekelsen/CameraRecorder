@@ -1,6 +1,7 @@
 import { WebSocketService } from './websocket';
-import { HTTPPollingService } from './httpPollingService';
+// HTTP polling service removed - Go server is WebSocket-only
 import { errorRecoveryService } from './errorRecoveryService';
+import { logger, loggers } from './loggerService';
 import type {
   RecordingSession,
   RecordingProgress,
@@ -277,7 +278,7 @@ class RecordingManagerService {
 
       // Handle file rotation seamlessly (F1.4.4)
       if (status.file_rotation_occurred) {
-        console.log(`🔄 File rotation occurred for camera ${cameraId}: ${status.new_file_name}`);
+        logger.info(`File rotation occurred for camera ${cameraId}: ${status.new_file_name}`, { cameraId, newFileName: status.new_file_name }, 'recordingManager');
         this.handleFileRotation(cameraId, status.new_file_name, status.rotation_timestamp);
       }
 
@@ -340,7 +341,7 @@ class RecordingManagerService {
       });
     }
 
-    console.log(`✅ File rotation handled seamlessly for camera ${cameraId}`);
+    logger.info(`File rotation handled seamlessly for camera ${cameraId}`, { cameraId }, 'recordingManager');
   }
 
   /**

@@ -210,7 +210,6 @@ export interface RecordingSession {
  */
 export interface StartRecordingParams {
   device: string;
-  duration?: number; // Legacy seconds parameter
   duration_seconds?: number; // 1-3600 seconds
   duration_minutes?: number; // 1-1440 minutes  
   duration_hours?: number; // 1-24 hours
@@ -265,7 +264,6 @@ export interface FileInfo {
  */
 export interface RecordingConfig {
   rotation_minutes: number;
-  rotationMinutes: number; // Alias for component compatibility
   default_format: RecordingFormat;
   auto_rotation: boolean;
   maxFilesPerCamera: number;
@@ -274,9 +272,7 @@ export interface RecordingConfig {
 
 export interface StorageConfig {
   warn_percent: number;
-  warnPercent: number; // Alias for component compatibility
   block_percent: number;
-  blockPercent: number; // Alias for component compatibility
   critical_percent: number;
   monitoring_enabled: boolean;
   maxUsagePercent: number;
@@ -399,59 +395,4 @@ export interface RecordingStatusUpdateParams {
   status: RecordingStatus;
   filename: string;
   duration: number;
-}
-
-// Legacy types for backward compatibility
-// These will be deprecated in favor of the aligned types above
-
-/**
- * @deprecated Use RecordingSession instead
- */
-export interface RecordingRequest {
-  device: string;
-  duration?: number;
-  format?: RecordingFormat;
-}
-
-/**
- * @deprecated Use RecordingSession instead
- */
-export interface RecordingResponse {
-  success: boolean;
-  session_id: string;
-  file_path: string;
-  duration?: number;
-  format: RecordingFormat;
-}
-
-/**
- * @deprecated Use SnapshotResult instead
- */
-export interface SnapshotRequest {
-  device: string;
-  format?: SnapshotFormat;
-  quality?: number;
-  filename?: string;
-}
-
-/**
- * @deprecated Use SnapshotResult instead
- */
-export interface SnapshotResponse {
-  success: boolean;
-  file_path: string;
-  format: SnapshotFormat;
-  quality: number;
-  size: number;
-}
-
-/**
- * @deprecated Server info not implemented in current API
- */
-export interface ServerInfo {
-  version: string;
-  uptime: number;
-  cameras_connected: number;
-  total_recordings: number;
-  total_snapshots: number;
 }

@@ -6,7 +6,7 @@
  * 
  * Ground Truth References:
  * - Server API: ../mediamtx-camera-service/docs/api/json-rpc-methods.md
- * - Health API: ../mediamtx-camera-service/docs/api/health-endpoints.md
+ * - Health monitoring via WebSocket (no separate HTTP health API)
  * - Client Architecture: ../docs/architecture/client-architecture.md
  * - Client Requirements: ../docs/requirements/client-requirements.md
  * 
@@ -169,7 +169,7 @@ describe('Camera List Integration Tests', () => {
 });
 
 /**
- * Legacy test function for backward compatibility
+ * Backward compatibility test function
  * Now uses the stable test fixture instead of custom implementation
  */
 async function testIntegration() {

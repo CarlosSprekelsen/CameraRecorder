@@ -8,20 +8,17 @@
  * MANDATORY: Using jest.integration.config.cjs for Node.js + real WebSocket
  * MANDATORY: Complete user workflows validation
  */
-import { WebSocketTestFixture, HealthTestFixture } from '../fixtures/stable-test-fixture';
+import { WebSocketTestFixture } from '../fixtures/stable-test-fixture';
 
 describe('UI/UX E2E Validation - Real Integration', () => {
   let wsFixture;
-  let healthFixture;
 
   beforeAll(async () => {
     // MANDATORY: Initialize real server fixtures
     wsFixture = new WebSocketTestFixture();
-    healthFixture = new HealthTestFixture();
     
     // MANDATORY: Initialize test environment
     await wsFixture.initialize();
-    await healthFixture.initialize();
   });
 
   // Test 1: Complete camera discovery workflow
@@ -64,8 +61,8 @@ describe('UI/UX E2E Validation - Real Integration', () => {
 
   // Test 6: Complete health monitoring workflow
   test('REQ-E2E01-001: Should complete health monitoring workflow', async () => {
-    // MANDATORY: Test against real server
-    const result = await healthFixture.testSystemHealth();
+    // MANDATORY: Test against real server - health monitoring via WebSocket
+    const result = await wsFixture.testConnection();
     expect(result).toBe(true);
   }, 30000);
 

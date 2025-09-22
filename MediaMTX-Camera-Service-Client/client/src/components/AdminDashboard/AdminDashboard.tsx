@@ -7,6 +7,7 @@
  */
 
 import React, { useEffect, useCallback } from 'react';
+import { logger, loggers } from '../../services/loggerService';
 import {
   Box,
   Card,
@@ -234,7 +235,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       storeClearError();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to refresh system info';
-      console.error('Failed to refresh system info:', errorMessage);
+      logger.error('Failed to refresh system info', { errorMessage }, 'adminDashboard');
       storeSetError('Failed to load system information');
     } finally {
       setIsRefreshing(false);
@@ -254,7 +255,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       storeSetCleanupResults(results);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Cleanup failed';
-      console.error('Cleanup failed:', errorMessage);
+      logger.error('Cleanup failed', { errorMessage }, 'adminDashboard');
       storeSetError('Cleanup operation failed');
     } finally {
       storeSetPerformingCleanup(false);
@@ -275,7 +276,7 @@ const AdminDashboard: React.FC<AdminDashboardProps> = ({
       storeSetRetentionPolicy(updatedPolicy);
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to save retention policy';
-      console.error('Failed to save retention policy:', errorMessage);
+      logger.error('Failed to save retention policy', { errorMessage }, 'adminDashboard');
       storeSetError('Failed to save retention policy');
     }
   }, [storeSetRetentionPolicy, storeSetError]);

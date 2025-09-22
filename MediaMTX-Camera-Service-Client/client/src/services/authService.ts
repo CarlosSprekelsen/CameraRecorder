@@ -1,390 +1,241 @@
 /**
- * Authentication Service for MediaMTX Camera Service Client
- * Implements JWT authentication flow based on server implementation
- * 
- * Authentication Flow:
- * 1. Client obtains JWT token externally (admin/configuration)
- * 2. Client authenticates WebSocket connection using authenticate method
- * 3. Client includes JWT in all protected JSON-RPC calls
- * 4. Client handles token refresh/expiry
+ * Authentication Service
+ * Handles JWT token and API key authentication with Go server
  */
 
-import type { AuthenticateParams, AuthenticateResponse } from '../types/camera';
-import type { JSONRPCRequest, JSONRPCResponse } from '../types/rpc';
-import { RPC_METHODS } from '../types/rpc';
+import { websocketService } from './websocket';
+import { RPC_METHODS, ERROR_CODES } from '../types/rpc';
+import type { AuthenticationParams, AuthenticationResponse } from '../types/rpc';
+import { logger, loggers } from './loggerService';
 
-/**
- * Login credentials interface
- */
-export interface LoginCredentials {
-  token: string;
-  auth_type?: 'jwt' | 'api_key' | 'auto';
+export interface AuthConfig {
+  jwtToken?: string;
+  apiKey?: string;
+  autoReauth?: boolean;
+  reauthThreshold?: number; // seconds before expiry to reauth
 }
 
-/**
- * Authentication state interface
- */
 export interface AuthState {
-  authenticated: boolean;
-  user_id?: string;
-  role?: string;
-  auth_method?: string;
-  token?: string;
-  expires_at?: number;
+  isAuthenticated: boolean;
+  role: 'admin' | 'operator' | 'viewer' | null;
+  permissions: string[];
+  expiresAt: Date | null;
+  sessionId: string | null;
+  token: string | null;
 }
 
-/**
- * Authentication service class
- * Handles JWT authentication flow for MediaMTX Camera Service
- */
-export class AuthService {
-  private authState: AuthState = {
-    authenticated: false
-  };
-  
-  private tokenRefreshTimer?: NodeJS.Timeout;
-  private readonly tokenRefreshThreshold = 5 * 60 * 1000; // 5 minutes before expiry
+export class AuthenticationService {
+  private static instance: AuthenticationService;
+  private config: AuthConfig;
+  private authState: AuthState;
+  private reauthTimer: NodeJS.Timeout | null = null;
 
+  private constructor() {
+    this.config = {
+      autoReauth: true,
+      reauthThreshold: 300, // 5 minutes before expiry
+    };
+    this.authState = {
+      isAuthenticated: false,
+      role: null,
+      permissions: [],
+      expiresAt: null,
+      sessionId: null,
+      token: null,
+    };
+  }
+
+  static getInstance(): AuthenticationService {
+    if (!AuthenticationService.instance) {
+      AuthenticationService.instance = new AuthenticationService();
+    }
+    return AuthenticationService.instance;
+  }
 
   /**
-   * Login with JWT token
-   * @param credentials Login credentials containing JWT token
-   * @returns Promise<string> JWT token if authentication successful
+   * Initialize authentication with token or API key
    */
-  async login(credentials: LoginCredentials): Promise<string> {
+  public async initialize(config: AuthConfig): Promise<void> {
+    this.config = { ...this.config, ...config };
+    
+    if (!this.config.jwtToken && !this.config.apiKey) {
+      throw new Error('Either JWT token or API key must be provided');
+    }
+
+    const token = this.config.jwtToken || this.config.apiKey!;
+    await this.authenticate(token);
+  }
+
+  /**
+   * Authenticate with the server
+   */
+  public async authenticate(token: string): Promise<AuthenticationResponse> {
+    loggers.service.start('AuthenticationService', 'authenticate');
+
     try {
-      // Store token for authentication
-      this.authState.token = credentials.token;
-      
-      // Validate token format (basic JWT structure check)
-      if (!this.isValidJWTFormat(credentials.token)) {
-        throw new Error('Invalid JWT token format');
+      const params: AuthenticationParams = { auth_token: token };
+      const response = await websocketService.call(
+        RPC_METHODS.AUTHENTICATE,
+        params
+      ) as AuthenticationResponse;
+
+      // Update auth state
+      this.authState = {
+        isAuthenticated: response.authenticated,
+        role: response.role,
+        permissions: response.permissions,
+        expiresAt: new Date(response.expires_at),
+        sessionId: response.session_id,
+        token: token,
+      };
+
+      // Set up auto re-authentication if enabled
+      if (this.config.autoReauth && response.authenticated) {
+        this.scheduleReauth();
       }
 
-      // Check if token is expired
-      if (this.isTokenExpired(credentials.token)) {
-        throw new Error('JWT token is expired');
-      }
+      loggers.service.success('AuthenticationService', 'authenticate', {
+        role: response.role,
+        expiresAt: response.expires_at,
+      });
 
-      // Set authenticated state
-      this.authState.authenticated = true;
-      this.authState.auth_method = 'jwt';
-
-      // Set up token refresh timer
-      this.setupTokenRefresh(credentials.token);
-      
-      return credentials.token;
+      return response;
     } catch (error) {
-      this.clearAuthState();
+      loggers.service.error('AuthenticationService', 'authenticate', error as Error);
       throw error;
     }
   }
 
   /**
-   * Get current authentication token
-   * @returns string | undefined Current JWT token or undefined if not authenticated
+   * Get current authentication state
    */
-  getToken(): string | undefined {
-    return this.authState.token;
+  public getAuthState(): AuthState {
+    return { ...this.authState };
   }
 
   /**
-   * Set authentication token (for external token sources)
-   * @param token JWT token to set
+   * Check if user has required permission
    */
-  setToken(token: string): void {
-    if (!this.isValidJWTFormat(token)) {
-      throw new Error('Invalid JWT token format');
-    }
-    if (this.isTokenExpired(token)) {
-      throw new Error('JWT token is expired');
-    }
-    
-    this.authState.token = token;
-    this.authState.authenticated = true;
-    this.authState.auth_method = 'jwt';
-    this.setupTokenRefresh(token);
+  public hasPermission(permission: string): boolean {
+    return this.authState.isAuthenticated && 
+           this.authState.permissions.includes(permission);
   }
 
   /**
-   * Authenticate with existing token
-   * @param token Optional JWT token (uses stored token if not provided)
-   * @returns Promise<AuthenticateResponse> Authentication result
+   * Check if user has required role or higher
    */
-  async authenticate(token?: string): Promise<AuthenticateResponse> {
-    const authToken = token || this.authState.token;
-    
-    if (!authToken) {
-      throw new Error('No token available for authentication');
-    }
-    
-    if (!this.isValidJWTFormat(authToken)) {
-      throw new Error('Invalid JWT token format');
-    }
-    
-    if (this.isTokenExpired(authToken)) {
-      throw new Error('JWT token is expired');
-    }
-
-    // Set token if provided
-    if (token) {
-      this.authState.token = token;
-      this.authState.authenticated = true;
-      this.authState.auth_method = 'jwt';
-      this.setupTokenRefresh(token);
-    }
-
-    return {
-      authenticated: true,
-      auth_method: 'jwt'
-    };
-  }
-
-
-
-  /**
-   * Include authentication token in JSON-RPC parameters
-   * @param params Original JSON-RPC parameters
-   * @returns Parameters with authentication token included
-   */
-  includeAuth(params: Record<string, unknown> = {}): Record<string, unknown> {
-    if (!this.authState.authenticated || !this.authState.token) {
-      throw new Error('Not authenticated. Call login() first.');
-    }
-
-    // Add auth_token to parameters for protected methods
-    return {
-      ...params,
-      auth_token: this.authState.token
-    };
-  }
-
-  /**
-   * Handle token expiry by attempting to refresh or re-authenticate
-   * @returns Promise<void>
-   */
-  async handleTokenExpiry(): Promise<void> {
-    if (!this.authState.token) {
-      throw new Error('No token available for refresh');
-    }
-
-    // Check if token is expired or about to expire
-    if (this.isTokenExpired(this.authState.token) || this.isTokenExpiringSoon(this.authState.token)) {
-      // For now, we require manual token refresh since server doesn't provide refresh endpoint
-      // In production, this would typically call a refresh endpoint
-      throw new Error('Token expired. Please obtain a new token and call login() again.');
-    }
-  }
-
-  /**
-   * Authenticate WebSocket connection using server's authenticate method
-   * @param sendRequest Function to send JSON-RPC request
-   * @returns Promise<AuthenticateResponse> Authentication result
-   */
-  async authenticateConnection(
-    sendRequest: (request: JSONRPCRequest) => Promise<JSONRPCResponse>
-  ): Promise<AuthenticateResponse> {
-    if (!this.authState.token) {
-      throw new Error('No token available for authentication');
-    }
-
-    const authParams: AuthenticateParams = {
-      token: this.authState.token
-    };
-
-    // Server doesn't have an authenticate method - authentication is handled by including auth_token in parameters
-    // Just validate the token locally and set authenticated state
-    if (this.isValidJWTFormat(this.authState.token) && !this.isTokenExpired(this.authState.token)) {
-      this.authState.authenticated = true;
-      this.authState.auth_method = 'jwt';
-      
-      // Set up token refresh timer
-      this.setupTokenRefresh(this.authState.token!);
-      
-      return {
-        authenticated: true,
-        auth_method: 'jwt'
-      };
-    } else {
-      this.clearAuthState();
-      throw new Error('Invalid or expired JWT token');
-    }
-
-
-  }
-
-  /**
-   * Check if user has required role permission
-   * @param requiredRole Minimum required role
-   * @returns boolean True if user has permission
-   */
-  hasPermission(requiredRole: string): boolean {
-    if (!this.authState.authenticated || !this.authState.role) {
+  public hasRole(requiredRole: 'viewer' | 'operator' | 'admin'): boolean {
+    if (!this.authState.isAuthenticated || !this.authState.role) {
       return false;
     }
 
-    const roleHierarchy = {
-      'viewer': 1,
-      'operator': 2,
-      'admin': 3
-    };
-
-    const userLevel = roleHierarchy[this.authState.role as keyof typeof roleHierarchy] || 0;
-    const requiredLevel = roleHierarchy[requiredRole as keyof typeof roleHierarchy] || 0;
+    const roleHierarchy = { viewer: 1, operator: 2, admin: 3 };
+    const userLevel = roleHierarchy[this.authState.role];
+    const requiredLevel = roleHierarchy[requiredRole];
 
     return userLevel >= requiredLevel;
   }
 
   /**
-   * Get current authentication state
-   * @returns AuthState Current authentication state
+   * Check if authentication is still valid
    */
-  getAuthState(): AuthState {
-    return { ...this.authState };
+  public isAuthenticated(): boolean {
+    if (!this.authState.isAuthenticated || !this.authState.expiresAt) {
+      return false;
+    }
+
+    // Check if token is expired
+    const now = new Date();
+    const timeUntilExpiry = this.authState.expiresAt.getTime() - now.getTime();
+    
+    return timeUntilExpiry > 0;
+  }
+
+  /**
+   * Get auth token for API calls
+   */
+  public getAuthToken(): string | null {
+    return this.authState.token;
+  }
+
+  /**
+   * Add auth token to request parameters
+   */
+  public addAuthToParams(params: Record<string, unknown> = {}): Record<string, unknown> {
+    const token = this.getAuthToken();
+    if (token) {
+      return { ...params, auth_token: token };
+    }
+    return params;
   }
 
   /**
    * Logout and clear authentication state
    */
-  logout(): void {
-    this.clearAuthState();
-  }
-
-  /**
-   * Check if JWT token format is valid
-   * @param token JWT token string
-   * @returns boolean True if format is valid
-   */
-  private isValidJWTFormat(token: string): boolean {
-    // Basic JWT format validation (3 parts separated by dots)
-    const parts = token.split('.');
-    return parts.length === 3 && parts.every(part => part.length > 0);
-  }
-
-  /**
-   * Check if JWT token is expired
-   * @param token JWT token string
-   * @returns boolean True if token is expired
-   */
-  private isTokenExpired(token: string): boolean {
-    try {
-      const payload = this.decodeJWTPayload(token);
-      const exp = payload.exp;
-      
-      if (!exp) {
-        return true; // No expiry claim means expired
-      }
-
-      const currentTime = Math.floor(Date.now() / 1000);
-      return currentTime > exp;
-    } catch (error) {
-      return true; // Invalid token considered expired
-    }
-  }
-
-  /**
-   * Check if JWT token is expiring soon
-   * @param token JWT token string
-   * @returns boolean True if token expires within threshold
-   */
-  private isTokenExpiringSoon(token: string): boolean {
-    try {
-      const payload = this.decodeJWTPayload(token);
-      const exp = payload.exp;
-      
-      if (!exp) {
-        return true;
-      }
-
-      const currentTime = Math.floor(Date.now() / 1000);
-      const threshold = Math.floor(this.tokenRefreshThreshold / 1000);
-      
-      return (exp - currentTime) < threshold;
-    } catch (error) {
-      return true;
-    }
-  }
-
-  /**
-   * Decode JWT payload without verification (for expiry checking)
-   * @param token JWT token string
-   * @returns Decoded payload
-   */
-  private decodeJWTPayload(token: string): { exp?: number; iat?: number; user_id?: string; role?: string } {
-    try {
-      const parts = token.split('.');
-      if (parts.length !== 3) {
-        throw new Error('Invalid JWT format');
-      }
-
-      const payload = parts[1];
-      const decoded = atob(payload.replace(/-/g, '+').replace(/_/g, '/'));
-      return JSON.parse(decoded);
-    } catch (error) {
-      throw new Error('Failed to decode JWT payload');
-    }
-  }
-
-  /**
-   * Set up token refresh timer
-   * @param token JWT token string
-   */
-  private setupTokenRefresh(token: string): void {
-    // Clear existing timer
-    if (this.tokenRefreshTimer) {
-      clearTimeout(this.tokenRefreshTimer);
-    }
-
-    try {
-      const payload = this.decodeJWTPayload(token);
-      const exp = payload.exp;
-      
-      if (exp) {
-        const currentTime = Math.floor(Date.now() / 1000);
-        const timeUntilExpiry = (exp - currentTime) * 1000; // Convert to milliseconds
-        const timeUntilRefresh = Math.max(timeUntilExpiry - this.tokenRefreshThreshold, 0);
-
-        // Set timer to refresh token before expiry
-        this.tokenRefreshTimer = setTimeout(() => {
-          this.handleTokenExpiry().catch(error => {
-            console.warn('Token refresh failed:', error.message);
-          });
-        }, timeUntilRefresh);
-      }
-    } catch (error) {
-      console.warn('Failed to setup token refresh:', error);
-    }
-  }
-
-  /**
-   * Clear authentication state and timers
-   */
-  private clearAuthState(): void {
-    if (this.tokenRefreshTimer) {
-      clearTimeout(this.tokenRefreshTimer);
-      this.tokenRefreshTimer = undefined;
-    }
-
+  public logout(): void {
+    loggers.service.info('AuthenticationService', 'logout');
+    
     this.authState = {
-      authenticated: false
+      isAuthenticated: false,
+      role: null,
+      permissions: [],
+      expiresAt: null,
+      sessionId: null,
+      token: null,
     };
+
+    if (this.reauthTimer) {
+      clearTimeout(this.reauthTimer);
+      this.reauthTimer = null;
+    }
   }
 
   /**
-   * Clear authentication token and state
-   * Public method for external use
+   * Schedule automatic re-authentication
    */
-  clearToken(): void {
-    this.clearAuthState();
+  private scheduleReauth(): void {
+    if (!this.authState.expiresAt || !this.config.autoReauth) {
+      return;
+    }
+
+    const now = new Date();
+    const timeUntilExpiry = this.authState.expiresAt.getTime() - now.getTime();
+    const reauthTime = timeUntilExpiry - (this.config.reauthThreshold! * 1000);
+
+    if (reauthTime > 0) {
+      this.reauthTimer = setTimeout(async () => {
+        try {
+          if (this.authState.token) {
+            await this.authenticate(this.authState.token);
+          }
+        } catch (error) {
+          loggers.service.error('AuthenticationService', 'autoReauth', error as Error);
+          this.logout();
+        }
+      }, reauthTime);
+
+      loggers.service.info('AuthenticationService', 'scheduleReauth', {
+        reauthIn: Math.round(reauthTime / 1000),
+        expiresAt: this.authState.expiresAt.toISOString(),
+      });
+    }
+  }
+
+  /**
+   * Handle authentication errors
+   */
+  public handleAuthError(error: any): boolean {
+    if (error?.code === ERROR_CODES.AUTHENTICATION_FAILED) {
+      loggers.service.warn('AuthenticationService', 'handleAuthError', 'Authentication failed, logging out');
+      this.logout();
+      return true; // Error was handled
+    }
+    return false; // Error was not handled
   }
 }
 
-/**
- * Singleton instance of authentication service
- */
-export const authService = new AuthService();
+// Export singleton instance
+export const authService = AuthenticationService.getInstance();
 
-/**
- * Export types for external use
- */
-// Types already exported above
+// Export types
+export type { AuthConfig, AuthState, AuthenticationResponse };

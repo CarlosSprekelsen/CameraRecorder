@@ -8,7 +8,7 @@
  */
 export interface ConnectionSettings {
   websocketUrl: string;
-  healthUrl: string;
+  // healthUrl removed - Go server is WebSocket-only
   httpBaseUrl: string;
   connectionTimeout: number;
   requestTimeout: number;
@@ -156,8 +156,9 @@ export interface SettingsChangeEvent {
 export const DEFAULT_SETTINGS: AppSettings = {
   connection: {
     websocketUrl: 'ws://localhost:8002/ws',
-    healthUrl: 'http://localhost:8003',
-    httpBaseUrl: 'http://localhost:8003',
+    // HTTP health endpoints removed - Go server is WebSocket-only
+    // File downloads use port 8002
+    httpBaseUrl: 'http://localhost:8002',
     connectionTimeout: 10000,
     requestTimeout: 15000,
     reconnectInterval: 5000,

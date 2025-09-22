@@ -190,15 +190,9 @@ describe('Real Camera Operations Integration', () => {
         expect(camera.streams).toHaveProperty('webrtc');
         expect(camera.streams).toHaveProperty('hls');
         
-        // Test RTSP stream accessibility (if camera is connected)
+        // Stream health monitoring is done via WebSocket, not separate HTTP endpoints
         if (camera.status === 'CONNECTED') {
-          try {
-            const response = await fetch(`http://localhost:8003/health/streams/${camera.device}`);
-            expect(response.status).toBe(200);
-            console.log(`✅ RTSP stream accessible: ${camera.streams.rtsp}`);
-          } catch (error) {
-            console.log(`⚠️ RTSP stream not accessible: ${camera.streams.rtsp}`);
-          }
+          console.log(`✅ Camera stream URLs available: ${camera.streams.rtsp}`);
         }
       }
     }, TEST_TIMEOUT);

@@ -1,5 +1,6 @@
 import { WebSocketService } from './websocket';
 import { errorRecoveryService } from './errorRecoveryService';
+import { logger, loggers } from './loggerService';
 import type {
   StorageInfo,
   StorageUsage,
@@ -108,7 +109,7 @@ class StorageMonitorService {
       const thresholds = await this.checkStorageThresholds();
       return !thresholds.is_critical;
     } catch (error) {
-      console.error('Storage availability check failed:', error);
+      logger.error('Storage availability check failed', error as Error, 'storageMonitor');
       return false;
     }
   }
@@ -178,7 +179,7 @@ class StorageMonitorService {
       try {
         await this.checkStorageThresholds();
       } catch (error) {
-        console.error('Storage monitoring error:', error);
+        logger.error('Storage monitoring error', error as Error, 'storageMonitor');
       }
     }, interval);
   }
@@ -271,7 +272,7 @@ class StorageMonitorService {
     
     // Check thresholds after update
     this.checkStorageThresholds().catch(error => {
-      console.error('Threshold check failed after update:', error);
+      logger.error('Threshold check failed after update', error as Error, 'storageMonitor');
     });
   }
 

@@ -15,6 +15,7 @@ import type {
   CleanupResults,
 } from '../stores/adminStore';
 import type { JSONRPCRequest, JSONRPCResponse } from '../types/rpc';
+import type { WebSocketService } from './websocket';
 import { authService } from './authService';
 
 /**
@@ -47,7 +48,7 @@ export class AdminServiceError extends Error {
  */
 export class AdminService {
   private config: AdminServiceConfig;
-  private wsService: any; // WebSocket service reference
+  private wsService: WebSocketService | null = null;
 
   constructor(config: Partial<AdminServiceConfig> = {}) {
     this.config = {
@@ -61,7 +62,7 @@ export class AdminService {
    * Set WebSocket service reference
    * @param wsService WebSocket service instance
    */
-  setWebSocketService(wsService: any): void {
+  setWebSocketService(wsService: WebSocketService): void {
     this.wsService = wsService;
   }
 

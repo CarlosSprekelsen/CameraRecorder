@@ -50,7 +50,14 @@ const CameraGrid: React.FC = () => {
     try {
       await refreshCameras();
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to refresh cameras';
+      let errorMessage = 'Failed to refresh cameras';
+      if (error instanceof Error) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      } else if (error) {
+        errorMessage = String(error);
+      }
       setLocalError(errorMessage);
     } finally {
       setLocalLoading(false);

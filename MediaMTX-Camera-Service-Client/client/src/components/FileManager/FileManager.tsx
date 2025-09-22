@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { logger, loggers } from '../../services/loggerService';
 import {
   Box,
   Typography,
@@ -111,7 +112,7 @@ const FileManager: React.FC = () => {
     try {
       await storeDownloadFile(fileType, filename);
     } catch (err) {
-      console.error('Download failed:', err);
+      logger.error('Download failed', err as Error, 'fileManager');
     }
   };
 
@@ -132,7 +133,7 @@ const FileManager: React.FC = () => {
       setDeleteDialogOpen(false);
       setStoreSelectedFile(null);
     } catch (err) {
-      console.error('Delete failed:', err);
+      logger.error('Delete failed', err as Error, 'fileManager');
     }
   };
 
@@ -146,7 +147,7 @@ const FileManager: React.FC = () => {
       }
       setFileInfoDialogOpen(true);
     } catch (err) {
-      console.error('Failed to get file info:', err);
+      logger.error('Failed to get file info', err as Error, 'fileManager');
     }
   };
 

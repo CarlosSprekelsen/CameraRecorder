@@ -11,12 +11,6 @@ export const TEST_CONFIG = {
     timeout: 10000,
   },
   
-  // Health Server (REST operations)
-  health: {
-    url: process.env.TEST_HEALTH_URL || 'http://localhost:8003',
-    port: 8003,
-    timeout: 5000,
-  },
   
   // Test Configuration
   test: {
@@ -45,13 +39,6 @@ export const TEST_CONFIG = {
       list_snapshots: '/ws',
     },
     
-    // Health operations (system status, monitoring)
-    health: {
-      system: '/health/system',
-      cameras: '/health/cameras',
-      mediamtx: '/health/mediamtx',
-      ready: '/health/ready',
-    },
     
     // File download operations
     files: {
@@ -87,18 +74,14 @@ export function getWebSocketUrl(): string {
   return TEST_CONFIG.websocket.url;
 }
 
-/**
- * Get Health URL for specific endpoint
- */
-export function getHealthUrl(endpoint: string): string {
-  return `${TEST_CONFIG.health.url}${endpoint}`;
-}
 
 /**
  * Get File URL for specific operation
+ * Note: File downloads are handled via WebSocket server, not separate HTTP endpoints
  */
 export function getFileUrl(operation: string): string {
-  return `${TEST_CONFIG.health.url}${TEST_CONFIG.endpoints.files[operation as keyof typeof TEST_CONFIG.endpoints.files]}`;
+  // Files are served through the WebSocket server, not separate HTTP endpoints
+  return `${TEST_CONFIG.websocket.url.replace('ws://', 'http://').replace('/ws', '')}${TEST_CONFIG.endpoints.files[operation as keyof typeof TEST_CONFIG.endpoints.files]}`;
 }
 
 export default TEST_CONFIG;

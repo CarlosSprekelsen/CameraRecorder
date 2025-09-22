@@ -1,4 +1,5 @@
 import { errorRecoveryService } from './errorRecoveryService';
+import { logger, loggers } from './loggerService';
 import type { JSONRPCError } from '../types/rpc';
 import { ERROR_CODES } from '../types/rpc';
 
@@ -299,7 +300,7 @@ class ErrorHandlerService {
     this.notifyLogCallbacks(log);
     
     // Also log to console for debugging
-    console.error(`[${errorInfo.severity.toUpperCase()}] ${errorInfo.context}:`, errorInfo.message);
+    logger.error(`[${errorInfo.severity.toUpperCase()}] ${errorInfo.context}: ${errorInfo.message}`, undefined, 'errorHandler');
   }
 
   private notifyErrorCallbacks(error: ErrorInfo): void {

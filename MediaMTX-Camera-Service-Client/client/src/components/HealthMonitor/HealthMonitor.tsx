@@ -7,6 +7,7 @@
  */
 
 import React, { useEffect, useCallback } from 'react';
+import { logger, loggers } from '../../services/loggerService';
 import {
   Box,
   Card,
@@ -28,8 +29,7 @@ import {
   ExpandMore as ExpandMoreIcon,
   ExpandLess as ExpandLessIcon,
 } from '@mui/icons-material';
-import { useHealthStore } from '../../stores/healthStore';
-import { healthService } from '../../services/healthService';
+import { useHealthStore } from '../../stores/connection/healthStore';
 
 /**
  * Health status color mapping
@@ -81,77 +81,56 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
   showDetails = true,
 }) => {
   const {
-    systemHealth: storeSystemHealth,
-    cameraHealth: storeCameraHealth,
-    mediamtxHealth: storeMediaMTXHealth,
-    readinessStatus: storeReadinessStatus,
-    isMonitoring: storeIsMonitoring,
-    lastUpdate: storeLastUpdate,
-    getOverallHealth: storeGetOverallHealth,
-    getHealthScore: storeGetHealthScore,
-    isSystemReady: storeIsSystemReady,
-    setSystemHealth: storeSetSystemHealth,
-    setCameraHealth: storeSetCameraHealth,
-    setMediaMTXHealth: storeSetMediaMTXHealth,
-    setReadinessStatus: storeSetReadinessStatus,
-    startMonitoring: storeStartMonitoring,
-    stopMonitoring: storeStopMonitoring,
+    isHealthy: storeIsHealthy,
+    healthScore: storeHealthScore,
+    connectionQuality: storeConnectionQuality,
+    latency: storeLatency,
+    refreshHealth: storeRefreshHealth,
   } = useHealthStore();
 
   const [expanded, setExpanded] = React.useState(false);
   const [isRefreshing, setIsRefreshing] = React.useState(false);
 
   /**
-   * Refresh health data
+   * Refresh health data using WebSocket
    */
   const refreshHealth = useCallback(async () => {
     if (isRefreshing) return;
 
     setIsRefreshing(true);
     try {
-      const health = await healthService.getAllHealth();
-      
-      storeSetSystemHealth(health.system);
-      storeSetCameraHealth(health.cameras);
-      storeSetMediaMTXHealth(health.mediamtx);
-      storeSetReadinessStatus(health.readiness);
+      await storeRefreshHealth();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to refresh health data';
-      console.error('Failed to refresh health data:', errorMessage);
+      logger.error('Failed to refresh health data', error instanceof Error ? error : new Error(errorMessage), 'healthMonitor');
     } finally {
       setIsRefreshing(false);
     }
-  }, [isRefreshing, storeSetSystemHealth, storeSetCameraHealth, storeSetMediaMTXHealth, storeSetReadinessStatus]);
+  }, [isRefreshing, storeRefreshHealth]);
 
   /**
    * Start health monitoring
    */
   useEffect(() => {
     if (autoRefresh) {
-      storeStartMonitoring();
-              healthService.startPolling(refreshInterval, (health) => {
-          storeSetSystemHealth(health.system);
-          storeSetCameraHealth(health.cameras);
-          storeSetMediaMTXHealth(health.mediamtx);
-          storeSetReadinessStatus(health.readiness);
-        });
-
       // Initial load
       refreshHealth();
 
+      // Set up periodic refresh
+      const interval = setInterval(refreshHealth, refreshInterval);
+
       return () => {
-        storeStopMonitoring();
-        healthService.stopPolling();
+        clearInterval(interval);
       };
     }
-  }, [autoRefresh, refreshInterval, storeStartMonitoring, storeStopMonitoring, storeSetSystemHealth, storeSetCameraHealth, storeSetMediaMTXHealth, storeSetReadinessStatus, refreshHealth]);
+  }, [autoRefresh, refreshInterval, refreshHealth]);
 
   /**
-   * Get overall health status
+   * Get overall health status from new health store
    */
-  const overallHealth = storeGetOverallHealth();
-  const healthScoreValue = storeGetHealthScore();
-  const systemReady = storeIsSystemReady();
+  const overallHealth = storeIsHealthy ? 'healthy' : 'unhealthy';
+  const healthScoreValue = storeHealthScore;
+  const systemReady = storeIsHealthy;
 
   /**
    * Format timestamp
@@ -249,8 +228,8 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
                   Monitoring
                 </Typography>
                 <Chip
-                                label={storeIsMonitoring ? 'Active' : 'Inactive'}
-              color={storeIsMonitoring ? 'success' : 'default'}
+                  label={storeIsHealthy ? 'Active' : 'Inactive'}
+                  color={storeIsHealthy ? 'success' : 'default'}
                   size="small"
                   sx={{ mt: 0.5 }}
                 />
@@ -262,7 +241,7 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
                   Last Update
                 </Typography>
                 <Typography variant="caption" display="block">
-                  {storeLastUpdate ? storeLastUpdate.toLocaleTimeString() : 'Never'}
+                  {storeLatency ? `${storeLatency}ms` : 'Unknown'}
                 </Typography>
               </Box>
             </Grid>
@@ -273,7 +252,8 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
       {/* Detailed Health Information */}
       <Collapse in={expanded && showDetails}>
         <Grid container spacing={2}>
-          {/* System Health */}
+          {/* System Health - Temporarily disabled during migration */}
+          {/* 
           {storeSystemHealth && (
             <Grid item xs={12} md={6}>
               <Card>
@@ -303,8 +283,10 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
               </Card>
             </Grid>
           )}
+          */}
 
-          {/* Camera Health */}
+          {/* Camera Health - Temporarily disabled during migration */}
+          {/* 
           {storeCameraHealth && (
             <Grid item xs={12} md={6}>
               <Card>
@@ -330,8 +312,10 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
               </Card>
             </Grid>
           )}
+          */}
 
-          {/* MediaMTX Health */}
+          {/* MediaMTX Health - Temporarily disabled during migration */}
+          {/* 
           {storeMediaMTXHealth && (
             <Grid item xs={12} md={6}>
               <Card>
@@ -357,8 +341,10 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
               </Card>
             </Grid>
           )}
+          */}
 
-          {/* Readiness Status */}
+          {/* Readiness Status - Temporarily disabled during migration */}
+          {/* 
           {storeReadinessStatus && (
             <Grid item xs={12} md={6}>
               <Card>
@@ -390,6 +376,7 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
               </Card>
             </Grid>
           )}
+          */}
         </Grid>
 
         {/* Error Alert */}
@@ -399,11 +386,7 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
           </Alert>
         )}
 
-        {overallHealth === 'degraded' && (
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            System health is degraded. Some components may not be functioning optimally.
-          </Alert>
-        )}
+        {/* Degraded health alert removed - new health store only has healthy/unhealthy states */}
       </Collapse>
     </Box>
   );

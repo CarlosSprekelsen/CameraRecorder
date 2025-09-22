@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { logger, loggers } from '../../services/loggerService';
 import {
   Box,
   Card,
@@ -76,9 +77,9 @@ const AuthUI: React.FC<AuthUIProps> = ({
 
   // Auto-login if token exists in storage
   useEffect(() => {
-    const storedToken = authService.getToken();
-    if (storedToken && !storeIsAuthenticated) {
-      handleAutoLogin(storedToken);
+    const authState = authService.getAuthState();
+    if (authState.token && !storeIsAuthenticated) {
+      handleAutoLogin(authState.token);
     }
   }, [storeIsAuthenticated]);
 
@@ -89,8 +90,8 @@ const AuthUI: React.FC<AuthUIProps> = ({
     } catch (error: unknown) {
       // Auto-login failed, clear invalid token
       const errorMessage = error instanceof Error ? error.message : 'Auto-login failed';
-      console.error('Auto-login failed:', errorMessage);
-      authService.clearToken();
+      logger.error('Auto-login failed', { errorMessage }, 'authUI');
+      authService.logout();
     }
   };
 
@@ -107,7 +108,7 @@ const AuthUI: React.FC<AuthUIProps> = ({
     } catch (error: unknown) {
       // Error is handled by the store
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
-      console.error('Login failed:', errorMessage);
+      logger.error('Login failed', { errorMessage }, 'authUI');
     }
   };
 

@@ -39,7 +39,8 @@ import type {
 } from '../types';
 import { authService } from './authService';
 import { NOTIFICATION_METHODS, ERROR_CODES } from '../types';
-import { HTTPPollingService, HTTPPollingConfig, HTTPPollingError } from './httpPollingService';
+import { logger } from './loggerService';
+// HTTP polling service removed - Go server is WebSocket-only
 
 // Store interface types for better type safety
 // These interfaces match the actual store state objects returned by getState()
@@ -225,84 +226,17 @@ export class WebSocketService {
   private lastNotificationTime = 0;
   private notificationLatency: number[] = [];
 
-  // REQ-NET01-003: HTTP Polling Fallback
-  private httpPollingService: HTTPPollingService | null = null;
-  private fallbackMode = false;
-  private fallbackStartTime = 0;
+  // HTTP polling fallback removed - Go server is WebSocket-only
 
   private config: WebSocketConfig;
 
   constructor(config: WebSocketConfig) {
     this.config = config;
     
-    // Initialize HTTP polling fallback service
-    this.initializeHTTPPollingFallback();
+    // HTTP polling removed - Go server is WebSocket-only
   }
 
-  /**
-   * Initialize HTTP polling fallback service (REQ-NET01-003)
-   */
-  private initializeHTTPPollingFallback(): void {
-    // Extract HTTP base URL from WebSocket URL
-    const wsUrl = new URL(this.config.url);
-    const httpBaseUrl = `http://${wsUrl.hostname}:8003`; // Health server port
-    
-    const pollingConfig: HTTPPollingConfig = {
-      baseUrl: httpBaseUrl,
-      pollingInterval: 5000, // 5 seconds
-      timeout: 3000, // 3 seconds
-      maxRetries: 3,
-      retryDelay: 1000,
-    };
-    
-    this.httpPollingService = new HTTPPollingService(pollingConfig);
-    
-    // Set up event handlers for polling service
-    this.httpPollingService.onCameraListUpdate((cameras) => {
-      console.log('📡 HTTP Polling: Camera list updated', cameras.length, 'cameras');
-      
-      // Update camera store if available
-      if (this.cameraStore && this.cameraStore.handleNotification) {
-        this.cameraStore.handleNotification({
-          type: 'camera_list_update',
-          cameras: cameras
-        });
-      }
-    });
-    
-    this.httpPollingService.onError((error) => {
-      console.error('📡 HTTP Polling Error:', error.message);
-      
-      // Update connection store
-      if (this.connectionStore) {
-        this.connectionStore.setError(`HTTP Polling: ${error.message}`, error.statusCode);
-        this.connectionStore.incrementErrorCount();
-      }
-    });
-    
-    this.httpPollingService.onPollingStart(() => {
-      console.log('🔄 HTTP Polling Fallback: Started');
-      this.fallbackMode = true;
-      this.fallbackStartTime = Date.now();
-      
-      // Update connection store
-      if (this.connectionStore) {
-        this.connectionStore.setError('WebSocket disconnected - using HTTP polling fallback');
-        this.connectionStore.updateConnectionQuality('poor');
-      }
-    });
-    
-    this.httpPollingService.onPollingStop(() => {
-      console.log('🔄 HTTP Polling Fallback: Stopped');
-      this.fallbackMode = false;
-      this.fallbackStartTime = 0;
-      
-      // Update connection store
-      if (this.connectionStore) {
-        this.connectionStore.updateConnectionQuality('excellent');
-      }
-    });
-  }
+  // HTTP polling fallback method removed - Go server is WebSocket-only
 
   /**
    * Set connection store reference for integration
@@ -350,13 +284,10 @@ export class WebSocketService {
   /**
    * Make a JSON-RPC call
    */
-  public call(method: string, params: Record<string, unknown> = {}): Promise<unknown> {
+  public call(method: string, params: Record<string, unknown> = {}, requireAuth: boolean = true): Promise<unknown> {
     if (!this.isConnected()) {
       console.warn(`⚠️ WebSocket not connected for method: ${method}`);
-      if (this.isFallbackMethodSupported(method)) {
-        return this.getFallbackResponse(method, params);
-      }
-      return Promise.reject(new WebSocketError('WebSocket not connected'));
+      return Promise.reject(new WebSocketError('WebSocket not connected - Go server requires WebSocket connection'));
     }
 
     const id = this.generateRequestId();
@@ -378,7 +309,7 @@ export class WebSocketService {
 
     try {
       this.ws!.send(JSON.stringify(request));
-      console.log(`📤 Sent request #${id}: ${method}`);
+      logger.info(`Request sent`, { requestId: id, method }, 'websocket');
     } catch (error) {
       this.pendingRequests.delete(id);
       throw new WebSocketError(`Failed to send request: ${error}`);
@@ -410,7 +341,7 @@ export class WebSocketService {
    * Handle error with specific error code processing
    */
   private handleError(error: JSONRPCError): void {
-    console.log(`🔍 Handling error: ${error.code} - ${error.message}`);
+    logger.info(`Handling error`, { code: error.code, message: error.message }, 'websocket');
     
     // Update connection store
     if (this.connectionStore) {
@@ -421,37 +352,37 @@ export class WebSocketService {
     // Process specific error codes with enhanced handling
     switch (error.code) {
       case ERROR_CODES.CAMERA_ALREADY_RECORDING:
-        console.warn(`⚠️ Recording conflict detected: ${error.message}`);
+        logger.warn(`Recording conflict detected: ${error.message}`, undefined, 'websocket');
         this.handleRecordingConflict(error);
         break;
       case ERROR_CODES.STORAGE_SPACE_LOW:
-        console.warn(`⚠️ Storage space low: ${error.message}`);
+        logger.warn(`Storage space low: ${error.message}`, undefined, 'websocket');
         this.handleStorageWarning(error);
         break;
       case ERROR_CODES.STORAGE_SPACE_CRITICAL:
-        console.error(`🚨 Storage space critical: ${error.message}`);
+        logger.error(`Storage space critical: ${error.message}`, undefined, 'websocket');
         this.handleStorageCritical(error);
         break;
       case ERROR_CODES.CAMERA_NOT_FOUND_OR_DISCONNECTED:
-        console.error(`❌ Camera not found or disconnected: ${error.message}`);
+        logger.error(`Camera not found or disconnected: ${error.message}`, undefined, 'websocket');
         break;
       case ERROR_CODES.RECORDING_ALREADY_IN_PROGRESS:
-        console.warn(`⚠️ Recording already in progress: ${error.message}`);
+        logger.warn(`Recording already in progress: ${error.message}`, undefined, 'websocket');
         break;
       case ERROR_CODES.MEDIAMTX_SERVICE_UNAVAILABLE:
-        console.error(`❌ MediaMTX service unavailable: ${error.message}`);
+        logger.error(`MediaMTX service unavailable: ${error.message}`, undefined, 'websocket');
         break;
-      case ERROR_CODES.AUTHENTICATION_REQUIRED:
+      case ERROR_CODES.AUTHENTICATION_FAILED:
         console.error(`❌ Authentication required: ${error.message}`);
         break;
       case ERROR_CODES.INSUFFICIENT_STORAGE_SPACE:
-        console.error(`❌ Insufficient storage space: ${error.message}`);
+        logger.error(`Insufficient storage space: ${error.message}`, undefined, 'websocket');
         break;
       case ERROR_CODES.CAMERA_CAPABILITY_NOT_SUPPORTED:
-        console.warn(`⚠️ Camera capability not supported: ${error.message}`);
+        logger.warn(`Camera capability not supported: ${error.message}`, undefined, 'websocket');
         break;
       default:
-        console.error(`❌ Standard error: ${error.code} - ${error.message}`);
+        logger.error(`Standard error: ${error.code} - ${error.message}`, undefined, 'websocket');
     }
     
     // Notify UI components about the error
@@ -544,7 +475,7 @@ export class WebSocketService {
    */
   public async connect(): Promise<void> {
     if (this.isConnecting || this.isConnected()) {
-      console.log('🔄 Already connecting or connected');
+      logger.info('Already connecting or connected', undefined, 'websocket');
       return;
     }
 
@@ -553,7 +484,7 @@ export class WebSocketService {
     }
 
     this.isConnecting = true;
-    console.log('🔌 Connecting to WebSocket server...');
+    logger.info('Connecting to WebSocket server', undefined, 'websocket');
 
     return new Promise<void>((resolve, reject) => {
       try {
@@ -570,7 +501,7 @@ export class WebSocketService {
    * Disconnect from WebSocket server
    */
   public async disconnect(): Promise<void> {
-    console.log('🔌 Disconnecting from WebSocket server...');
+    logger.info('Disconnecting from WebSocket server', undefined, 'websocket');
     
     this.isDestroyed = true;
     this.isConnecting = false;
@@ -598,12 +529,9 @@ export class WebSocketService {
       this.ws = null;
     }
     
-    // Stop HTTP polling fallback
-    if (this.httpPollingService) {
-      this.httpPollingService.stopPolling();
-    }
+    // HTTP polling removed - Go server is WebSocket-only
     
-    console.log('✅ WebSocket disconnected');
+    logger.info('WebSocket disconnected', undefined, 'websocket');
   }
 
   /**
@@ -664,17 +592,13 @@ export class WebSocketService {
     if (!this.ws) return;
 
     this.ws.onopen = () => {
-      console.log('✅ WebSocket connection established');
+      logger.info('WebSocket connection established', undefined, 'websocket');
       this.isConnecting = false;
       this.reconnectAttempts = 0;
       this.startHeartbeat();
       this.startMetricsCollection();
       
-      // REQ-NET01-003: Stop HTTP polling fallback when WebSocket is restored
-      if (this.httpPollingService && this.httpPollingService.isActive) {
-        console.log('🔄 WebSocket restored - stopping HTTP polling fallback');
-        this.httpPollingService.stopPolling();
-      }
+      // HTTP polling removed - Go server is WebSocket-only
       
       // Update connection store
       if (this.connectionStore) {
@@ -697,13 +621,7 @@ export class WebSocketService {
       this.clearHeartbeat();
       this.clearMetricsInterval();
       
-      // REQ-NET01-003: Start HTTP polling fallback when WebSocket closes
-      if (this.httpPollingService && !this.httpPollingService.isActive) {
-        console.log('🔄 WebSocket closed - starting HTTP polling fallback');
-        this.httpPollingService.startPolling();
-        this.fallbackMode = true;
-        this.fallbackStartTime = Date.now();
-      }
+      // HTTP polling removed - Go server is WebSocket-only
       
       // Update connection store
       if (this.connectionStore) {
@@ -743,11 +661,11 @@ export class WebSocketService {
       try {
         const message: WebSocketMessage = JSON.parse(event.data);
         const receiveTime = performance.now();
-        console.log('📥 Received message:', JSON.stringify(message));
+        logger.debug('Received message', { message: JSON.stringify(message) }, 'websocket');
         this.handleMessage(message, receiveTime);
       } catch (error) {
         const wsError = new WebSocketError('Failed to parse message');
-        console.error('❌ Message parsing error:', wsError);
+        logger.error('Message parsing error', wsError, 'websocket');
         
         // Update connection store
         if (this.connectionStore) {
@@ -775,7 +693,7 @@ export class WebSocketService {
           await this.call('ping', {});
           const responseTime = performance.now() - startTime;
           
-          console.log('💓 Heartbeat sent');
+          logger.debug('Heartbeat sent', undefined, 'websocket');
           
           // Update connection store with heartbeat metrics
           if (this.connectionStore) {
@@ -826,7 +744,7 @@ export class WebSocketService {
     }
 
     if (message.jsonrpc !== '2.0') {
-      console.warn('⚠️ Received non-JSON-RPC message:', message);
+      logger.warn('Received non-JSON-RPC message', { message }, 'websocket');
       return;
     }
 
@@ -891,98 +809,7 @@ export class WebSocketService {
     }
   }
 
-  /**
-   * Check if a method is supported for HTTP polling fallback
-   */
-  private isFallbackMethodSupported(method: string): boolean {
-    const supportedMethods = [
-      'get_camera_list',
-      'get_camera_status',
-      'ping'
-    ];
-    return supportedMethods.includes(method);
-  }
-
-  /**
-   * Get a fallback response using HTTP polling service
-   */
-  private async getFallbackResponse(method: string, params: Record<string, unknown>): Promise<unknown> {
-    console.warn(`⚠️ WebSocket disconnected - using HTTP polling fallback for method: ${method}`);
-    
-    if (!this.httpPollingService) {
-      throw new WebSocketError('HTTP polling service not available for fallback');
-    }
-
-    try {
-      switch (method) {
-        case 'get_camera_list':
-          return await this.httpPollingService.getCameraList();
-        
-        case 'get_camera_status':
-          const device = params.device as string;
-          return await this.httpPollingService.getCameraStatus(device);
-        
-        case 'take_snapshot':
-          const snapshotDevice = params.device as string;
-          return await this.httpPollingService.takeSnapshot(snapshotDevice);
-        
-        case 'start_recording':
-          const recordingDevice = params.device as string;
-          return await this.httpPollingService.startRecording(recordingDevice);
-        
-        case 'stop_recording':
-          const stopDevice = params.device as string;
-          return await this.httpPollingService.stopRecording(stopDevice);
-        
-        case 'list_recordings':
-          return await this.httpPollingService.listRecordings();
-        
-        case 'list_snapshots':
-          return await this.httpPollingService.listSnapshots();
-        
-        case 'get_recording_info':
-          const recordingFilename = params.filename as string;
-          return await this.httpPollingService.getRecordingInfo(recordingFilename);
-        
-        case 'get_snapshot_info':
-          const snapshotFilename = params.filename as string;
-          return await this.httpPollingService.getSnapshotInfo(snapshotFilename);
-        
-        case 'delete_recording':
-          const deleteRecordingFilename = params.filename as string;
-          return await this.httpPollingService.deleteRecording(deleteRecordingFilename);
-        
-        case 'delete_snapshot':
-          const deleteSnapshotFilename = params.filename as string;
-          return await this.httpPollingService.deleteSnapshot(deleteSnapshotFilename);
-        
-        case 'get_storage_info':
-          return await this.httpPollingService.getStorageInfo();
-        
-        case 'get_metrics':
-          return await this.httpPollingService.getMetrics();
-        
-        case 'get_status':
-          return await this.httpPollingService.getStatus();
-        
-        case 'get_server_info':
-          return await this.httpPollingService.getServerInfo();
-        
-        case 'get_streams':
-          return await this.httpPollingService.getStreams();
-        
-        case 'ping':
-          // Use health endpoint as ping alternative
-          const health = await this.httpPollingService.getSystemHealth();
-          return { status: 'healthy', health };
-        
-        default:
-          throw new WebSocketError(`HTTP polling fallback not implemented for method: ${method}`);
-      }
-    } catch (error) {
-      throw new WebSocketError(`HTTP polling fallback failed for method: ${method}: ${error}`);
-    }
-  }
+  // HTTP polling fallback methods removed - Go server is WebSocket-only
 }
 
 /**
@@ -1011,7 +838,7 @@ export async function createWebSocketService(config: Partial<WebSocketConfig> = 
   // Integrate with connection store if available (only in non-test environment)
   if (process.env.NODE_ENV !== 'test') {
     try {
-      const { useConnectionStore } = await import('../stores/connectionStore');
+      const { useConnectionStore } = await import('../stores/connection');
       const store = useConnectionStore.getState();
       service.setConnectionStore(store);
     } catch {
