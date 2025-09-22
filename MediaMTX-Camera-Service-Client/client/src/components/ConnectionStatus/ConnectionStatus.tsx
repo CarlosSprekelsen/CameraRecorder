@@ -68,7 +68,7 @@ const ConnectionStatus: React.FC = () => {
     try {
       await connectionService.connect();
       loggers.service.success('ConnectionService', 'connect');
-    } catch (error: unknown) {
+    } catch (error: any) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to connect';
       setLocalError(errorMessage);
       loggers.service.error('ConnectionService', 'connect', error as Error);
@@ -85,7 +85,7 @@ const ConnectionStatus: React.FC = () => {
     try {
       await connectionService.disconnect();
       loggers.service.success('ConnectionService', 'disconnect');
-    } catch (error: unknown) {
+    } catch (error: any) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to disconnect';
       setLocalError(errorMessage);
       loggers.service.error('ConnectionService', 'disconnect', error as Error);
@@ -102,7 +102,7 @@ const ConnectionStatus: React.FC = () => {
     try {
       await connectionService.forceReconnect();
       loggers.service.success('ConnectionService', 'reconnect');
-    } catch (error: unknown) {
+    } catch (error: any) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to reconnect';
       setLocalError(errorMessage);
       loggers.service.error('ConnectionService', 'reconnect', error as Error);
@@ -116,7 +116,7 @@ const ConnectionStatus: React.FC = () => {
     setLocalError(null);
     try {
       await refreshHealth();
-    } catch (error: unknown) {
+    } catch (error: any) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to refresh health';
       setLocalError(errorMessage);
     } finally {

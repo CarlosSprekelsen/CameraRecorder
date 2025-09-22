@@ -174,9 +174,9 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
             size="small"
           />
           <Chip
-            icon={storeCameraRealTimeEnabled ? <CheckCircle /> : <Error />}
+            icon={storeRealTimeUpdatesEnabled ? <CheckCircle /> : <Error />}
             label="Camera Updates"
-            color={storeCameraRealTimeEnabled ? 'success' : 'error'}
+            color={storeRealTimeUpdatesEnabled ? 'success' : 'error'}
             size="small"
           />
           {storeNotificationCount > 0 && (

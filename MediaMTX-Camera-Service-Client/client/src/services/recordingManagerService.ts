@@ -1,5 +1,5 @@
 import { WebSocketService } from './websocket';
-import { HTTPPollingService } from './httpPollingService';
+// HTTP polling service removed - Go server is WebSocket-only
 import { errorRecoveryService } from './errorRecoveryService';
 import type {
   RecordingSession,

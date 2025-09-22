@@ -39,7 +39,7 @@ import type {
 } from '../types';
 import { authService } from './authService';
 import { NOTIFICATION_METHODS, ERROR_CODES } from '../types';
-import { HTTPPollingService, HTTPPollingConfig, HTTPPollingError } from './httpPollingService';
+// HTTP polling service removed - Go server is WebSocket-only
 
 // Store interface types for better type safety
 // These interfaces match the actual store state objects returned by getState()
@@ -225,18 +225,14 @@ export class WebSocketService {
   private lastNotificationTime = 0;
   private notificationLatency: number[] = [];
 
-  // REQ-NET01-003: HTTP Polling Fallback
-  private httpPollingService: HTTPPollingService | null = null;
-  private fallbackMode = false;
-  private fallbackStartTime = 0;
+  // HTTP polling removed - Go server is WebSocket-only
 
   private config: WebSocketConfig;
 
   constructor(config: WebSocketConfig) {
     this.config = config;
     
-    // Initialize HTTP polling fallback service
-    this.initializeHTTPPollingFallback();
+    // HTTP polling removed - Go server is WebSocket-only
   }
 
   /**

@@ -49,7 +49,7 @@ const CameraGrid: React.FC = () => {
     setLocalError(null);
     try {
       await refreshCameras();
-    } catch (error: unknown) {
+    } catch (error: any) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to refresh cameras';
       setLocalError(errorMessage);
     } finally {
