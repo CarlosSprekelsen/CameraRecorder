@@ -29,13 +29,11 @@ func TestExternalStreamDiscovery_DiscoverExternalStreams_ReqMTX001(t *testing.T)
 	// REQ-MTX-001: MediaMTX service integration
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
+	// Use Progressive Readiness pattern
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -66,13 +64,11 @@ func TestExternalStreamDiscovery_AddExternalStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
+	// Use Progressive Readiness pattern
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -88,7 +84,7 @@ func TestExternalStreamDiscovery_AddExternalStream_ReqMTX002(t *testing.T) {
 		Type: "skydio",
 	}
 
-	_, err = controller.AddExternalStream(ctx, stream)
+	_, err := controller.AddExternalStream(ctx, stream)
 	require.NoError(t, err, "Adding external stream should succeed")
 
 	// Verify stream was added
@@ -115,13 +111,11 @@ func TestExternalStreamDiscovery_RemoveExternalStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
+	// Use Progressive Readiness pattern
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -137,7 +131,7 @@ func TestExternalStreamDiscovery_RemoveExternalStream_ReqMTX002(t *testing.T) {
 		Type: "skydio",
 	}
 
-	_, err = controller.AddExternalStream(ctx, stream)
+	_, err := controller.AddExternalStream(ctx, stream)
 	require.NoError(t, err, "Adding external stream should succeed")
 
 	// Verify stream was added
@@ -160,7 +154,7 @@ func TestExternalStreamDiscovery_RemoveExternalStream_ReqMTX002(t *testing.T) {
 	require.NoError(t, err, "Removing external stream should succeed")
 
 	// Verify stream was removed
-	streams, err = controller.GetExternalStreams(ctx)
+	streams, err := controller.GetExternalStreams(ctx)
 	require.NoError(t, err, "Getting external streams should succeed")
 	require.NotNil(t, streams, "Streams should not be nil")
 
@@ -181,13 +175,11 @@ func TestExternalStreamDiscovery_GetExternalStreams_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
+	// Use Progressive Readiness pattern
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -209,11 +201,11 @@ func TestExternalStreamDiscovery_GetExternalStreams_ReqMTX002(t *testing.T) {
 		Type: "skydio",
 	}
 
-	_, err = controller.AddExternalStream(ctx, stream)
+	_, err := controller.AddExternalStream(ctx, stream)
 	require.NoError(t, err, "Adding external stream should succeed")
 
 	// Get streams again and verify our stream is there
-	streams, err = controller.GetExternalStreams(ctx)
+	streams, err := controller.GetExternalStreams(ctx)
 	require.NoError(t, err, "Getting external streams should succeed")
 	require.NotNil(t, streams, "Streams should not be nil")
 	assert.GreaterOrEqual(t, len(streams.ExternalStreams), 1, "Should have at least one stream")
@@ -237,13 +229,11 @@ func TestExternalStreamDiscovery_ErrorHandling_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring and error handling
 	helper, ctx := SetupMediaMTXTest(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
+	// Use Progressive Readiness pattern
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -315,7 +305,7 @@ func TestExternalStreamDiscovery_OptionalComponent_ReqMTX004(t *testing.T) {
 		URL:  "rtsp://192.168.42.10:6554/infrared",
 		Type: "skydio",
 	}
-	_, err = controller.AddExternalStream(ctx, stream)
+	_, err := controller.AddExternalStream(ctx, stream)
 	assert.Error(t, err, "AddExternalStream should error when not configured")
 	assert.Contains(t, err.Error(), "not configured", "Error should indicate external discovery not configured")
 
