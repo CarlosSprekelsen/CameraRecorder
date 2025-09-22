@@ -342,17 +342,20 @@ export const useHealthStore = create<HealthStore>()(
         
         try {
           // Import health service dynamically to avoid circular dependencies
-          const { healthService } = await import('../services/healthService');
+          // HTTP health service removed - using WebSocket-only health monitoring
           
-          // Get all health information
-          const health = await healthService.getAllHealth();
+          // Use WebSocket-based health methods
+          const [status, metrics] = await Promise.all([
+            get().getSystemStatus(),
+            get().getSystemMetrics()
+          ]);
           
-          // Update store with health data
+          // Update store with health data from WebSocket
           set({
-            systemHealth: health.system,
-            cameraHealth: health.cameras,
-            mediamtxHealth: health.mediamtx,
-            readinessStatus: health.readiness,
+            systemHealth: { status: status.status, uptime: status.uptime, version: status.version },
+            cameraHealth: { status: 'healthy', count: 0 }, // Will be updated by camera store
+            mediamtxHealth: { status: 'healthy', streams: 0 }, // Will be updated by camera store
+            readinessStatus: { ready: status.status === 'healthy', components: status.components },
             lastUpdate: new Date(),
             isLoading: false,
             error: null,
