@@ -278,12 +278,14 @@ type GetSystemMetricsResponse struct {
 
 // GetServerInfoResponse represents the response from get_server_info method
 type GetServerInfoResponse struct {
-	ServiceName   string `json:"service_name"`   // Service name
-	Version       string `json:"version"`        // Service version
-	Status        string `json:"status"`         // Service status
-	StartTime     string `json:"start_time"`     // Service start time (ISO 8601)
-	Uptime        string `json:"uptime"`         // Service uptime
-	MediaMTXReady bool   `json:"mediamtx_ready"` // MediaMTX connection status
+	Name             string   `json:"name"`              // Service name
+	Version          string   `json:"version"`           // Service version
+	BuildDate        string   `json:"build_date"`        // Build date
+	GoVersion        string   `json:"go_version"`        // Go version
+	Architecture     string   `json:"architecture"`      // System architecture
+	Capabilities     []string `json:"capabilities"`      // Service capabilities
+	SupportedFormats []string `json:"supported_formats"` // Supported file formats
+	MaxCameras       int      `json:"max_cameras"`       // Maximum supported cameras
 }
 
 // SetRetentionPolicyResponse represents the response from set_retention_policy method

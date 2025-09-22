@@ -35,6 +35,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"runtime"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -511,23 +512,19 @@ func (c *controller) GetServerInfo(ctx context.Context) (*GetServerInfoResponse,
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	// Check MediaMTX connection status
-	mediaMTXStatus := "connected"
-	if _, err := c.pathManager.ListPaths(ctx); err != nil {
-		mediaMTXStatus = "disconnected"
-	}
-
 	// Get version from centralized configuration
 	versionInfo := c.configIntegration.GetVersionInfo()
 
-	// Build API-ready response
+	// Build API-ready response matching the API documentation
 	response := &GetServerInfoResponse{
-		ServiceName:   "MediaMTX Camera Service",
-		Version:       versionInfo.Version,
-		Status:        "running",
-		StartTime:     c.startTime.Format(time.RFC3339),
-		Uptime:        time.Since(c.startTime).String(),
-		MediaMTXReady: mediaMTXStatus == "connected",
+		Name:             "MediaMTX Camera Service",
+		Version:          versionInfo.Version,
+		BuildDate:        versionInfo.BuildDate,
+		GoVersion:        runtime.Version(),
+		Architecture:     runtime.GOARCH,
+		Capabilities:     []string{"snapshots", "recordings", "streaming"},
+		SupportedFormats: []string{"fmp4", "mp4", "mkv", "jpg"},
+		MaxCameras:       10,
 	}
 
 	return response, nil
