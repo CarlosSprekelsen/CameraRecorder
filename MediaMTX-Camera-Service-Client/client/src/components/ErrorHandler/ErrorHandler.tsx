@@ -16,7 +16,7 @@ const ErrorHandler: React.FC = () => {
   const [localShowErrorLogs, setLocalShowErrorLogs] = useState(false);
   const [localSelectedError, setLocalSelectedError] = useState<string | null>(null);
 
-  // Store state with aliases
+  // Store state
   const {
     currentError: storeCurrentError,
     errorHistory: storeErrorHistory,

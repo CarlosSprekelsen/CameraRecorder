@@ -107,7 +107,7 @@ export type {
   SettingsFormState,
 } from './ui';
 
-// Settings types (re-exported for UI compatibility)
+// Settings types
 export type {
   RecordingSettings as UIRecordingSettings,
   SnapshotSettings as UISnapshotSettings,
