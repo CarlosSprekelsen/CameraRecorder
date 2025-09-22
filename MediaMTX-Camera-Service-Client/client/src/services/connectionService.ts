@@ -74,7 +74,7 @@ export class ConnectionService {
   public async initialize(): Promise<void> {
     try {
       // Dynamically import to avoid circular dependencies
-      const { useConnectionStore } = await import('../stores/connectionStore');
+      const { useConnectionStore } = await import('../stores/connection');
       this.connectionStore = useConnectionStore.getState();
     } catch (error) {
       throw new ConnectionServiceError(

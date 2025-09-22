@@ -1011,7 +1011,7 @@ export async function createWebSocketService(config: Partial<WebSocketConfig> = 
   // Integrate with connection store if available (only in non-test environment)
   if (process.env.NODE_ENV !== 'test') {
     try {
-      const { useConnectionStore } = await import('../stores/connectionStore');
+      const { useConnectionStore } = await import('../stores/connection');
       const store = useConnectionStore.getState();
       service.setConnectionStore(store);
     } catch {

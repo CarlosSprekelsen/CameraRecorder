@@ -1,7 +1,9 @@
 import React, { useEffect, useRef } from 'react';
 import { Box, Alert, Button, Typography, CircularProgress } from '@mui/material';
-import { useConnectionStore } from '../../stores/connectionStore';
+import { useConnectionStore, useHealthStore } from '../../stores/connection';
 import ConnectionStatus from './ConnectionStatus';
+import { connectionService } from '../../services/connectionService';
+import { logger, loggers } from '../../services/loggerService';
 
 interface ConnectionManagerProps {
   children: React.ReactNode;
@@ -14,17 +16,21 @@ const ConnectionManager: React.FC<ConnectionManagerProps> = ({
   autoConnect = true,
   showConnectionUI = true
 }) => {
+  // Use new modular stores
   const {
     status,
     isConnecting,
     isReconnecting,
     error,
     autoReconnect,
-    connect,
-    forceReconnect,
     setAutoReconnect,
     clearError
   } = useConnectionStore();
+
+  const {
+    isHealthy,
+    healthScore
+  } = useHealthStore();
 
   const hasInitialized = useRef(false);
 
@@ -32,24 +38,46 @@ const ConnectionManager: React.FC<ConnectionManagerProps> = ({
   useEffect(() => {
     if (autoConnect && !hasInitialized.current) {
       hasInitialized.current = true;
-      connect().catch(console.error);
+      loggers.service.start('ConnectionManager', 'initialize');
+      
+      connectionService.connect()
+        .then(() => {
+          loggers.service.success('ConnectionManager', 'initialize');
+        })
+        .catch((error) => {
+          loggers.service.error('ConnectionManager', 'initialize', error);
+        });
     }
-  }, [autoConnect, connect]);
+  }, [autoConnect]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       // Don't disconnect on unmount to allow for reconnection attempts
-      // The connection store will handle cleanup
+      // The connection service will handle cleanup
     };
   }, []);
 
   const handleConnect = () => {
-    connect().catch(console.error);
+    loggers.service.start('ConnectionManager', 'connect');
+    connectionService.connect()
+      .then(() => {
+        loggers.service.success('ConnectionManager', 'connect');
+      })
+      .catch((error) => {
+        loggers.service.error('ConnectionManager', 'connect', error);
+      });
   };
 
   const handleForceReconnect = () => {
-    forceReconnect().catch(console.error);
+    loggers.service.start('ConnectionManager', 'forceReconnect');
+    connectionService.forceReconnect()
+      .then(() => {
+        loggers.service.success('ConnectionManager', 'forceReconnect');
+      })
+      .catch((error) => {
+        loggers.service.error('ConnectionManager', 'forceReconnect', error);
+      });
   };
 
   const handleToggleAutoReconnect = () => {

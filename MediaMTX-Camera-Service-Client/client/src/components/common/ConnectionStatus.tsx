@@ -38,7 +38,8 @@ import {
   ExpandLess as ExpandLessIcon,
   Settings as SettingsIcon,
 } from '@mui/icons-material';
-import { useConnectionStore } from '../../stores/connectionStore';
+import { useConnectionStore, useHealthStore, useMetricsStore } from '../../stores/connection';
+import { connectionService } from '../../services/connectionService';
 
 interface ConnectionStatusProps {
   onRefresh?: () => void;
@@ -81,12 +82,12 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
       onRefresh();
     } else {
       // Default refresh behavior - force reconnect
-      useConnectionStore.getState().forceReconnect();
+      connectionService.forceReconnect();
     }
   };
 
   const handleToggleAutoReconnect = () => {
-    useConnectionStore.getState().setAutoReconnect(!storeAutoReconnect);
+    connectionService.setAutoReconnect(!storeAutoReconnect);
   };
 
   const getStatusColor = () => {
@@ -282,7 +283,7 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
             severity="error" 
             sx={{ mt: 1 }}
             action={
-              <Button color="inherit" size="small" onClick={() => useConnectionStore.getState().clearError()}>
+              <Button color="inherit" size="small" onClick={() => connectionService.clearError()}>
                 Dismiss
               </Button>
             }
@@ -423,7 +424,7 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
               <Button
                 size="small"
                 variant="outlined"
-                onClick={() => useConnectionStore.getState().resetMetrics()}
+                onClick={() => useMetricsStore.getState().resetMetrics()}
               >
                 Reset Metrics
               </Button>

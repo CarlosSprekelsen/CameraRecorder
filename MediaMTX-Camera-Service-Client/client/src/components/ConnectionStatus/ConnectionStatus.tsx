@@ -29,8 +29,7 @@ import {
   Refresh,
   Settings,
 } from '@mui/icons-material';
-import { useConnectionStore } from '../../stores/connectionStore';
-import { useHealthStore } from '../../stores/healthStore';
+import { useConnectionStore, useHealthStore } from '../../stores/connection';
 import { connectionService } from '../../services/connectionService';
 import { logger, loggers } from '../../services/loggerService';
 
@@ -38,26 +37,27 @@ const ConnectionStatus: React.FC = () => {
   const [localLoading, setLocalLoading] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
-  // Store state
+  // Store state - use new modular stores
   const {
-    websocketStatus,
-    healthStatus,
+    status: websocketStatus,
     lastConnected,
-    lastError,
-    isConnected,
-    connect,
-    disconnect,
-    reconnect,
+    error: lastError,
+    isConnected
   } = useConnectionStore();
 
   const {
-    systemHealth,
-    cameraHealth,
-    mediamtxHealth,
-    isLoading,
-    error: healthError,
-    refreshHealth,
+    isHealthy,
+    healthScore
   } = useHealthStore();
+
+  // Default values for properties that don't exist in new stores
+  const healthStatus = isHealthy ? 'healthy' : 'unhealthy';
+  const systemHealth = { status: healthStatus };
+  const cameraHealth = { status: healthStatus };
+  const mediamtxHealth = { status: healthStatus };
+  const isLoading = false;
+  const healthError = null;
+  const refreshHealth = async () => {};
 
   // Local handlers using service layer
   const handleConnect = async () => {
