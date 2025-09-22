@@ -127,7 +127,7 @@ export interface CameraStoreState {
   reset: () => void;
   cleanup: () => void;
   
-  // Legacy compatibility
+  // Backward compatibility aliases
   loading: boolean; // Alias for isLoading
   isRefreshing: boolean; // Alias for loadingStates.refreshing
   isConnecting: boolean; // Alias for loadingStates.connecting
@@ -198,7 +198,7 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
   lastRecordingUpdate: null,
   notificationCount: 0,
   
-  // Legacy compatibility
+  // Backward compatibility aliases
   loading: false, // Alias for isLoading
   isRefreshing: false, // Alias for loadingStates.refreshing
   isConnecting: false, // Alias for loadingStates.connecting
@@ -286,7 +286,7 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
     get().reset();
   },
 
-  // Legacy compatibility methods
+  // Backward compatibility methods
   connect: async (url?: string) => {
     // Implementation will be added
     logger.info('Connect method called', { url }, 'cameraStore');

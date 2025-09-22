@@ -48,7 +48,7 @@ const StorageMonitor: React.FC = () => {
     setLocalError(null);
     try {
       await refreshStorage();
-    } catch (error) {
+    } catch (error: any) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to refresh storage';
       setLocalError(errorMessage);
     } finally {

@@ -102,7 +102,7 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
       await storeRefreshHealth();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to refresh health data';
-      logger.error('Failed to refresh health data', { errorMessage }, 'healthMonitor');
+      logger.error('Failed to refresh health data', error instanceof Error ? error : new Error(errorMessage), 'healthMonitor');
     } finally {
       setIsRefreshing(false);
     }
@@ -341,9 +341,11 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
               </Card>
             </Grid>
           )}
+          */}
 
           {/* Readiness Status - Temporarily disabled during migration */}
-          {false && storeReadinessStatus && (
+          {/* 
+          {storeReadinessStatus && (
             <Grid item xs={12} md={6}>
               <Card>
                 <CardContent>
@@ -374,6 +376,7 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
               </Card>
             </Grid>
           )}
+          */}
         </Grid>
 
         {/* Error Alert */}
@@ -383,11 +386,7 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
           </Alert>
         )}
 
-        {overallHealth === 'degraded' && (
-          <Alert severity="warning" sx={{ mt: 2 }}>
-            System health is degraded. Some components may not be functioning optimally.
-          </Alert>
-        )}
+        {/* Degraded health alert removed - new health store only has healthy/unhealthy states */}
       </Collapse>
     </Box>
   );

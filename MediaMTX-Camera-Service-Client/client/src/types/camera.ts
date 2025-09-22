@@ -210,7 +210,7 @@ export interface RecordingSession {
  */
 export interface StartRecordingParams {
   device: string;
-  duration?: number; // Legacy seconds parameter
+  duration?: number; // Backward compatibility seconds parameter
   duration_seconds?: number; // 1-3600 seconds
   duration_minutes?: number; // 1-1440 minutes  
   duration_hours?: number; // 1-24 hours
