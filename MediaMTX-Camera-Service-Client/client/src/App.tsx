@@ -13,6 +13,8 @@ import HealthMonitor from './components/HealthMonitor/HealthMonitor';
 import AdminDashboard from './components/AdminDashboard/AdminDashboard';
 import Settings from './components/Settings/Settings';
 import ErrorBoundary from './components/common/ErrorBoundary';
+import FeatureErrorBoundary from './components/ErrorBoundaries/FeatureErrorBoundary';
+import ServiceErrorBoundary from './components/ErrorBoundaries/ServiceErrorBoundary';
 
 const App: React.FC = () => {
   return (
@@ -20,20 +22,46 @@ const App: React.FC = () => {
       <ThemeProvider theme={theme}>
         <CssBaseline />
         <NotificationProvider maxNotifications={5}>
-          <ConnectionManager autoConnect={true} showConnectionUI={true}>
-            <Router>
-              <Routes>
-                <Route path="/" element={<AppShell />}>
-                  <Route index element={<Dashboard />} />
-                  <Route path="camera/:deviceId" element={<CameraDetail />} />
-                  <Route path="files" element={<FileManager />} />
-                  <Route path="health" element={<HealthMonitor />} />
-                  <Route path="admin" element={<AdminDashboard />} />
-                  <Route path="settings" element={<Settings />} />
-                </Route>
-              </Routes>
-            </Router>
-          </ConnectionManager>
+          <ServiceErrorBoundary serviceName="ConnectionManager" retryable={true}>
+            <ConnectionManager autoConnect={true} showConnectionUI={true}>
+              <Router>
+                <Routes>
+                  <Route path="/" element={<AppShell />}>
+                    <Route index element={
+                      <FeatureErrorBoundary featureName="Dashboard">
+                        <Dashboard />
+                      </FeatureErrorBoundary>
+                    } />
+                    <Route path="camera/:deviceId" element={
+                      <FeatureErrorBoundary featureName="CameraDetail">
+                        <CameraDetail />
+                      </FeatureErrorBoundary>
+                    } />
+                    <Route path="files" element={
+                      <FeatureErrorBoundary featureName="FileManager">
+                        <FileManager />
+                      </FeatureErrorBoundary>
+                    } />
+                    <Route path="health" element={
+                      <FeatureErrorBoundary featureName="HealthMonitor">
+                        <HealthMonitor />
+                      </FeatureErrorBoundary>
+                    } />
+                    <Route path="admin" element={
+                      <FeatureErrorBoundary featureName="AdminDashboard">
+                        <AdminDashboard />
+                      </FeatureErrorBoundary>
+                    } />
+                    <Route path="settings" element={
+                      <FeatureErrorBoundary featureName="Settings">
+                        <Settings />
+                      </FeatureErrorBoundary>
+                    } />
+                  </Route>
+                </Routes>
+              </Router>
+            </ConnectionManager>
+          </ServiceErrorBoundary>
         </NotificationProvider>
       </ThemeProvider>
     </ErrorBoundary>
