@@ -68,8 +68,8 @@ const ConnectionStatus: React.FC = () => {
     try {
       await connectionService.connect();
       loggers.service.success('ConnectionService', 'connect');
-    } catch (error: any) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to connect';
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error) || 'Failed to connect';
       setLocalError(errorMessage);
       loggers.service.error('ConnectionService', 'connect', error as Error);
     } finally {
@@ -85,8 +85,8 @@ const ConnectionStatus: React.FC = () => {
     try {
       await connectionService.disconnect();
       loggers.service.success('ConnectionService', 'disconnect');
-    } catch (error: any) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to disconnect';
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error) || 'Failed to disconnect';
       setLocalError(errorMessage);
       loggers.service.error('ConnectionService', 'disconnect', error as Error);
     } finally {
@@ -102,8 +102,8 @@ const ConnectionStatus: React.FC = () => {
     try {
       await connectionService.forceReconnect();
       loggers.service.success('ConnectionService', 'reconnect');
-    } catch (error: any) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to reconnect';
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error) || 'Failed to reconnect';
       setLocalError(errorMessage);
       loggers.service.error('ConnectionService', 'reconnect', error as Error);
     } finally {
@@ -116,8 +116,8 @@ const ConnectionStatus: React.FC = () => {
     setLocalError(null);
     try {
       await refreshHealth();
-    } catch (error: any) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to refresh health';
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error) || 'Failed to refresh health';
       setLocalError(errorMessage);
     } finally {
       setLocalLoading(false);
