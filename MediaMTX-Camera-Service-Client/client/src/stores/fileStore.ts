@@ -91,6 +91,10 @@ interface FileActions {
   deleteRecording: (filename: string) => Promise<FileDeletionResponse>;
   deleteSnapshot: (filename: string) => Promise<FileDeletionResponse>;
   
+  // Storage management
+  setRetentionPolicy: (policyType: string, maxAgeDays?: number, maxSizeGb?: number, enabled?: boolean) => Promise<any>;
+  cleanupOldFiles: () => Promise<any>;
+  
   // State management
   setError: (error: string | null) => void;
   clearError: () => void;
@@ -313,7 +317,7 @@ export const useFileStore = create<FileStore>()(
         set({ isLoadingFileInfo: true, error: null });
 
         try {
-          const response = await wsService.call('get_recording_info', {
+          const response = await wsService.call(RPC_METHODS.GET_RECORDING_INFO, {
             filename
           });
 
@@ -356,7 +360,7 @@ export const useFileStore = create<FileStore>()(
         set({ isLoadingFileInfo: true, error: null });
 
         try {
-          const response = await wsService.call('get_snapshot_info', {
+          const response = await wsService.call(RPC_METHODS.GET_SNAPSHOT_INFO, {
             filename
           });
 
@@ -400,7 +404,7 @@ export const useFileStore = create<FileStore>()(
         set({ isDeleting: true, error: null });
 
         try {
-          const response = await wsService.call('delete_recording', {
+          const response = await wsService.call(RPC_METHODS.DELETE_RECORDING, {
             filename
           });
 
@@ -441,7 +445,7 @@ export const useFileStore = create<FileStore>()(
         set({ isDeleting: true, error: null });
 
         try {
-          const response = await wsService.call('delete_snapshot', {
+          const response = await wsService.call(RPC_METHODS.DELETE_SNAPSHOT, {
             filename
           });
 
@@ -469,6 +473,64 @@ export const useFileStore = create<FileStore>()(
           throw new Error(errorMessage);
         } finally {
           set({ isDeleting: false });
+        }
+      },
+
+      // Storage management methods
+      setRetentionPolicy: async (policyType: string, maxAgeDays?: number, maxSizeGb?: number, enabled: boolean = true) => {
+        try {
+          const { wsService } = get();
+          
+          if (!wsService) {
+            throw new Error('WebSocket service not initialized');
+          }
+
+          if (!wsService.isConnected()) {
+            throw new Error('WebSocket not connected');
+          }
+
+          console.log('Setting retention policy');
+          const result = await wsService.call(RPC_METHODS.SET_RETENTION_POLICY, {
+            policy_type: policyType,
+            max_age_days: maxAgeDays,
+            max_size_gb: maxSizeGb,
+            enabled
+          });
+          
+          return result;
+          
+        } catch (error) {
+          console.error('Failed to set retention policy:', error);
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to set retention policy'
+          });
+          return null;
+        }
+      },
+
+      cleanupOldFiles: async () => {
+        try {
+          const { wsService } = get();
+          
+          if (!wsService) {
+            throw new Error('WebSocket service not initialized');
+          }
+
+          if (!wsService.isConnected()) {
+            throw new Error('WebSocket not connected');
+          }
+
+          console.log('Cleaning up old files');
+          const result = await wsService.call(RPC_METHODS.CLEANUP_OLD_FILES, {});
+          
+          return result;
+          
+        } catch (error) {
+          console.error('Failed to cleanup old files:', error);
+          set({ 
+            error: error instanceof Error ? error.message : 'Failed to cleanup old files'
+          });
+          return null;
         }
       },
 

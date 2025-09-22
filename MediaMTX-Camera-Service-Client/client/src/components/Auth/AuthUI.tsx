@@ -76,9 +76,9 @@ const AuthUI: React.FC<AuthUIProps> = ({
 
   // Auto-login if token exists in storage
   useEffect(() => {
-    const storedToken = authService.getToken();
-    if (storedToken && !storeIsAuthenticated) {
-      handleAutoLogin(storedToken);
+    const authState = authService.getAuthState();
+    if (authState.token && !storeIsAuthenticated) {
+      handleAutoLogin(authState.token);
     }
   }, [storeIsAuthenticated]);
 
@@ -90,7 +90,7 @@ const AuthUI: React.FC<AuthUIProps> = ({
       // Auto-login failed, clear invalid token
       const errorMessage = error instanceof Error ? error.message : 'Auto-login failed';
       console.error('Auto-login failed:', errorMessage);
-      authService.clearToken();
+      authService.logout();
     }
   };
 

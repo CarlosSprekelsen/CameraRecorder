@@ -583,6 +583,35 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
     }
   },
 
+  /**
+   * Get camera capabilities
+   */
+  getCameraCapabilities: async (device: string) => {
+    try {
+      const { wsService } = get();
+      
+      if (!wsService) {
+        throw new Error('WebSocket service not initialized');
+      }
+
+      if (!wsService.isConnected()) {
+        throw new Error('WebSocket not connected');
+      }
+
+      console.log(`Getting camera capabilities for ${device}`);
+      const result = await wsService.call(RPC_METHODS.GET_CAMERA_CAPABILITIES, { device });
+      
+      return result;
+      
+    } catch (error) {
+      console.error(`Failed to get camera capabilities for ${device}:`, error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to get camera capabilities'
+      });
+      return null;
+    }
+  },
+
   // Stream operations
   getStreams: async (): Promise<StreamListResponse | null> => {
     try {
@@ -605,6 +634,122 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
       console.error('Failed to get stream list:', error);
       set({ 
         error: error instanceof Error ? error.message : 'Failed to get stream list' 
+      });
+      return null;
+    }
+  },
+
+  /**
+   * Start streaming for a camera
+   */
+  startStreaming: async (device: string) => {
+    try {
+      const { wsService } = get();
+      
+      if (!wsService) {
+        throw new Error('WebSocket service not initialized');
+      }
+
+      if (!wsService.isConnected()) {
+        throw new Error('WebSocket not connected');
+      }
+
+      console.log(`Starting streaming for ${device}`);
+      const result = await wsService.call(RPC_METHODS.START_STREAMING, { device });
+      
+      return result;
+      
+    } catch (error) {
+      console.error(`Failed to start streaming for ${device}:`, error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to start streaming'
+      });
+      return null;
+    }
+  },
+
+  /**
+   * Stop streaming for a camera
+   */
+  stopStreaming: async (device: string) => {
+    try {
+      const { wsService } = get();
+      
+      if (!wsService) {
+        throw new Error('WebSocket service not initialized');
+      }
+
+      if (!wsService.isConnected()) {
+        throw new Error('WebSocket not connected');
+      }
+
+      console.log(`Stopping streaming for ${device}`);
+      const result = await wsService.call(RPC_METHODS.STOP_STREAMING, { device });
+      
+      return result;
+      
+    } catch (error) {
+      console.error(`Failed to stop streaming for ${device}:`, error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to stop streaming'
+      });
+      return null;
+    }
+  },
+
+  /**
+   * Get stream URL for a camera
+   */
+  getStreamUrl: async (device: string) => {
+    try {
+      const { wsService } = get();
+      
+      if (!wsService) {
+        throw new Error('WebSocket service not initialized');
+      }
+
+      if (!wsService.isConnected()) {
+        throw new Error('WebSocket not connected');
+      }
+
+      console.log(`Getting stream URL for ${device}`);
+      const result = await wsService.call(RPC_METHODS.GET_STREAM_URL, { device });
+      
+      return result;
+      
+    } catch (error) {
+      console.error(`Failed to get stream URL for ${device}:`, error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to get stream URL'
+      });
+      return null;
+    }
+  },
+
+  /**
+   * Get stream status for a camera
+   */
+  getStreamStatus: async (device: string) => {
+    try {
+      const { wsService } = get();
+      
+      if (!wsService) {
+        throw new Error('WebSocket service not initialized');
+      }
+
+      if (!wsService.isConnected()) {
+        throw new Error('WebSocket not connected');
+      }
+
+      console.log(`Getting stream status for ${device}`);
+      const result = await wsService.call(RPC_METHODS.GET_STREAM_STATUS, { device });
+      
+      return result;
+      
+    } catch (error) {
+      console.error(`Failed to get stream status for ${device}:`, error);
+      set({ 
+        error: error instanceof Error ? error.message : 'Failed to get stream status'
       });
       return null;
     }

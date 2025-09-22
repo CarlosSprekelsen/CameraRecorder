@@ -54,11 +54,11 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
 }) => {
   const [showAdvancedDetails, setShowAdvancedDetails] = React.useState(false);
   
+  // Use new modular stores
   const {
     status: storeStatus,
     isConnecting: storeIsConnecting,
     isReconnecting: storeIsReconnecting,
-    isHealthy: storeIsHealthy,
     error: storeError,
     errorCode: storeErrorCode,
     errorTimestamp: storeErrorTimestamp,
@@ -68,14 +68,21 @@ const ConnectionStatus: React.FC<ConnectionStatusProps> = ({
     lastConnected: storeLastConnected,
     lastDisconnected: storeLastDisconnected,
     url: storeUrl,
-    healthScore: storeHealthScore,
-    connectionQuality: storeConnectionQuality,
-    latency: storeLatency,
-    messageCount: storeMessageCount,
-    errorCount: storeErrorCount,
-    connectionUptime: storeConnectionUptime,
     autoReconnect: storeAutoReconnect
   } = useConnectionStore();
+
+  const {
+    isHealthy: storeIsHealthy,
+    healthScore: storeHealthScore,
+    connectionQuality: storeConnectionQuality
+  } = useHealthStore();
+
+  const {
+    averageResponseTime: storeLatency,
+    messageCount: storeMessageCount,
+    errorCount: storeErrorCount,
+    connectionUptime: storeConnectionUptime
+  } = useMetricsStore();
 
   const handleRefresh = () => {
     if (onRefresh) {

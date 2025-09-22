@@ -65,16 +65,16 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({
 
   // Update component sync status
   useEffect(() => {
-    storeUpdateComponentSyncStatus('real-time-status', true);
-    return () => storeUpdateComponentSyncStatus('real-time-status', false);
+    storeUpdateComponentSyncStatus();
+    return () => storeUpdateComponentSyncStatus();
   }, [storeUpdateComponentSyncStatus]);
 
   // Update last update time when notifications are received
   useEffect(() => {
-    if (storeNotificationCount > 0 || storeCameraNotificationCount > 0) {
+    if (storeNotificationCount > 0) {
       setLastUpdate(new Date());
     }
-  }, [storeNotificationCount, storeCameraNotificationCount]);
+  }, [storeNotificationCount]);
 
   // Note: handleRecordingStatusUpdate is handled by the connection store
   // This callback is not needed in this component
