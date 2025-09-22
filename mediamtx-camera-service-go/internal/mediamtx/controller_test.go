@@ -1465,8 +1465,20 @@ func TestController_Start_ReqARCH001_ParallelEventDriven(t *testing.T) {
 			<-done
 		}
 
-		// Verify controller is ready
-		assert.True(t, controller.IsReady(), "Controller should be ready after parallel events")
+		// Progressive Readiness: Wait for readiness event instead of expecting immediate readiness
+		readinessChan := controller.SubscribeToReadiness()
+		select {
+		case <-readinessChan:
+			t.Log("Controller became ready via readiness event - Progressive Readiness working")
+			assert.True(t, controller.IsReady(), "Controller should be ready after readiness event")
+		case <-time.After(testutils.UniversalTimeoutVeryLong):
+			// Check if already ready (might have become ready before we subscribed)
+			if controller.IsReady() {
+				t.Log("Controller was already ready - Progressive Readiness working")
+			} else {
+				t.Fatal("Timeout waiting for controller readiness event")
+			}
+		}
 	})
 
 	t.Log("Parallel event-driven test completed successfully")

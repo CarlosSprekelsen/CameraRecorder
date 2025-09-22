@@ -43,8 +43,21 @@ func (dm *DirectoryManager) CreateDirectoriesFromFixture(fixtureName string) {
 
 	// Create directories with proper permissions
 	for _, dir := range directories {
+		// Skip system directories that we shouldn't modify
+		if dir == "/tmp" || dir == "/" || dir == "/usr" || dir == "/var" {
+			continue
+		}
+		
+		// Ensure directory exists
 		err := os.MkdirAll(dir, 0777)
 		require.NoError(dm.t, err, "Failed to create directory: %s", dir)
+		
+		// Ensure proper permissions even if directory already existed (skip if permission denied)
+		if err := os.Chmod(dir, 0777); err != nil {
+			// Log warning but don't fail - might be permission issue on existing directories
+			dm.t.Logf("Warning: Could not set permissions on %s: %v", dir, err)
+		}
+		
 		dm.createdDirs = append(dm.createdDirs, dir)
 	}
 }

@@ -274,7 +274,11 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 		},
 	}
 
-	// Create config manager for centralized configuration
+	// CRITICAL: Create directories BEFORE config validation (fixes permission issues)
+	dirManager := testutils.NewDirectoryManager(t)
+	dirManager.CreateDirectoriesFromFixture("config_test_minimal.yaml")
+
+	// Create config manager for centralized configuration  
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
 
 	// Load configuration
