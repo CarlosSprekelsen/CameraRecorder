@@ -22,7 +22,7 @@ import (
 // TestNewErrorMetricsCollector_ReqMTX008 tests error metrics collector creation
 func TestNewErrorMetricsCollector_ReqMTX008(t *testing.T) {
 	// REQ-MTX-008: Logging and monitoring
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	collector := NewErrorMetricsCollector(logger)
@@ -36,7 +36,7 @@ func TestNewErrorMetricsCollector_ReqMTX008(t *testing.T) {
 // TestErrorMetricsCollector_RecordError_ReqMTX008 tests error recording
 func TestErrorMetricsCollector_RecordError_ReqMTX008(t *testing.T) {
 	// REQ-MTX-008: Logging and monitoring
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	collector := NewErrorMetricsCollector(logger)
@@ -60,7 +60,7 @@ func TestErrorMetricsCollector_RecordError_ReqMTX008(t *testing.T) {
 // TestErrorMetricsCollector_RecordRecoveryAttempt_ReqMTX008 tests recovery attempt recording
 func TestErrorMetricsCollector_RecordRecoveryAttempt_ReqMTX008(t *testing.T) {
 	// REQ-MTX-008: Logging and monitoring
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	collector := NewErrorMetricsCollector(logger)
@@ -81,7 +81,7 @@ func TestErrorMetricsCollector_RecordRecoveryAttempt_ReqMTX008(t *testing.T) {
 // TestErrorMetricsCollector_GetMetrics_ReqMTX008 tests metrics retrieval
 func TestErrorMetricsCollector_GetMetrics_ReqMTX008(t *testing.T) {
 	// REQ-MTX-008: Logging and monitoring
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	collector := NewErrorMetricsCollector(logger)
@@ -103,7 +103,7 @@ func TestErrorMetricsCollector_GetMetrics_ReqMTX008(t *testing.T) {
 // TestErrorMetricsCollector_GetUptime_ReqMTX008 tests uptime calculation
 func TestErrorMetricsCollector_GetUptime_ReqMTX008(t *testing.T) {
 	// REQ-MTX-008: Logging and monitoring
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	collector := NewErrorMetricsCollector(logger)
@@ -119,7 +119,7 @@ func TestErrorMetricsCollector_GetUptime_ReqMTX008(t *testing.T) {
 // TestErrorMetricsCollector_Reset_ReqMTX008 tests metrics reset
 func TestErrorMetricsCollector_Reset_ReqMTX008(t *testing.T) {
 	// REQ-MTX-008: Logging and monitoring
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	collector := NewErrorMetricsCollector(logger)
@@ -151,7 +151,7 @@ func TestErrorMetricsCollector_Reset_ReqMTX008(t *testing.T) {
 // TestNewErrorAlerter_ReqMTX008 tests error alerter creation
 func TestNewErrorAlerter_ReqMTX008(t *testing.T) {
 	// REQ-MTX-008: Logging and monitoring
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	thresholds := ErrorAlertThresholds{
@@ -173,7 +173,7 @@ func TestNewErrorAlerter_ReqMTX008(t *testing.T) {
 // TestErrorAlerter_CheckThresholds_ReqMTX008 tests threshold checking
 func TestErrorAlerter_CheckThresholds_ReqMTX008(t *testing.T) {
 	// REQ-MTX-008: Logging and monitoring
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	thresholds := ErrorAlertThresholds{
@@ -207,7 +207,7 @@ func TestErrorAlerter_CheckThresholds_ReqMTX008(t *testing.T) {
 // TestErrorAlerter_GetAlertStatus_ReqMTX008 tests alert status retrieval
 func TestErrorAlerter_GetAlertStatus_ReqMTX008(t *testing.T) {
 	// REQ-MTX-008: Logging and monitoring
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	thresholds := ErrorAlertThresholds{
@@ -241,7 +241,7 @@ func TestErrorAlerter_GetAlertStatus_ReqMTX008(t *testing.T) {
 // TestErrorAlerter_RateLimit_ReqMTX008 tests alert rate limiting
 func TestErrorAlerter_RateLimit_ReqMTX008(t *testing.T) {
 	// REQ-MTX-008: Logging and monitoring
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	thresholds := ErrorAlertThresholds{

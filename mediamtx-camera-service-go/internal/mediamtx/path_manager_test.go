@@ -23,8 +23,8 @@ import (
 // TestNewPathManager_ReqMTX001 tests path manager creation
 func TestNewPathManager_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := SetupMediaMTXTestHelperOnly(t)
-
+	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared path manager from test helper
 	pathManager := helper.GetPathManager()
@@ -35,7 +35,7 @@ func TestNewPathManager_ReqMTX001(t *testing.T) {
 func TestPathManager_CreatePath_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
 	helper, ctx := SetupMediaMTXTest(t)
-
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared path manager from test helper
 	pathManager := helper.GetPathManager()
@@ -64,7 +64,7 @@ func TestPathManager_CreatePath_ReqMTX003(t *testing.T) {
 func TestPathManager_DeletePath_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
 	helper, ctx := SetupMediaMTXTest(t)
-
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared path manager from test helper
 	pathManager := helper.GetPathManager()
@@ -93,7 +93,7 @@ func TestPathManager_DeletePath_ReqMTX003(t *testing.T) {
 func TestPathManager_GetPath_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
 	helper, ctx := SetupMediaMTXTest(t)
-
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared path manager from test helper
 	pathManager := helper.GetPathManager()
@@ -120,12 +120,11 @@ func TestPathManager_GetPath_ReqMTX003(t *testing.T) {
 func TestPathManager_ListPaths_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
 	helper, ctx := SetupMediaMTXTest(t)
-
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared path manager from test helper
 	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
-
 
 	// List all paths
 	paths, err := pathManager.ListPaths(ctx)
@@ -138,7 +137,7 @@ func TestPathManager_ListPaths_ReqMTX003(t *testing.T) {
 func TestPathManager_ValidatePath_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
 	helper, ctx := SetupMediaMTXTest(t)
-
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared path manager from test helper
 	pathManager := helper.GetPathManager()
@@ -163,12 +162,11 @@ func TestPathManager_ValidatePath_ReqMTX003(t *testing.T) {
 func TestPathManager_ErrorHandling_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	helper, ctx := SetupMediaMTXTest(t)
-
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared path manager from test helper
 	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager)
-
 
 	// Test invalid path name
 	err := pathManager.CreatePath(ctx, "", "publisher", nil)

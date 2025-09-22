@@ -23,7 +23,8 @@ import (
 // TestNewStreamManager_ReqMTX001 tests stream manager creation
 func TestNewStreamManager_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	streamManager := helper.GetStreamManager()
 	require.NotNil(t, streamManager, "Stream manager should not be nil")
@@ -33,6 +34,7 @@ func TestNewStreamManager_ReqMTX001(t *testing.T) {
 func TestStreamManager_CreateStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()
@@ -57,6 +59,7 @@ func TestStreamManager_CreateStream_ReqMTX002(t *testing.T) {
 func TestStreamManager_DeleteStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()
@@ -78,6 +81,7 @@ func TestStreamManager_DeleteStream_ReqMTX002(t *testing.T) {
 func TestStreamManager_StartStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - cameraID-first architecture
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()
@@ -121,6 +125,7 @@ func TestStreamManager_StartStream_ReqMTX002(t *testing.T) {
 func TestStreamManager_GetStreamStatus_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - cameraID-first architecture
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()
@@ -169,6 +174,7 @@ func TestStreamManager_GetStreamStatus_ReqMTX002(t *testing.T) {
 func TestStreamManager_ListStreamsAPI_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - API-ready responses
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()
@@ -221,6 +227,7 @@ func TestStreamManager_ListStreamsAPI_ReqMTX002(t *testing.T) {
 func TestStreamManager_GetStreamURL_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - cameraID-first architecture
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()
@@ -270,6 +277,7 @@ func TestStreamManager_GetStreamURL_ReqMTX002(t *testing.T) {
 func TestStreamManager_GetStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()
@@ -297,6 +305,7 @@ func TestStreamManager_GetStream_ReqMTX002(t *testing.T) {
 func TestStreamManager_ListStreams_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()
@@ -313,6 +322,7 @@ func TestStreamManager_ListStreams_ReqMTX002(t *testing.T) {
 func TestStreamManager_StartRecordingStream_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()
@@ -356,6 +366,7 @@ func TestStreamManager_StartRecordingStream_ReqMTX002(t *testing.T) {
 func TestStreamManager_StartStream_Viewing_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()
@@ -399,6 +410,7 @@ func TestStreamManager_StartStream_Viewing_ReqMTX002(t *testing.T) {
 func TestStreamManager_StartStream_Snapshot_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()
@@ -442,6 +454,7 @@ func TestStreamManager_StartStream_Snapshot_ReqMTX002(t *testing.T) {
 func TestStreamManager_ErrorHandling_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()

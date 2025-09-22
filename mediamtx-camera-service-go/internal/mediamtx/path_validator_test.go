@@ -12,6 +12,7 @@ import (
 func TestPathFallback(t *testing.T) {
 	// Use fixture-based test helper following Path Management Solution
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Get configured paths from fixture
 	recordingsPath := helper.GetConfiguredRecordingPath()
@@ -46,6 +47,7 @@ func TestPathFallback(t *testing.T) {
 func TestPathValidatorCaching(t *testing.T) {
 	// Use fixture-based test helper following Path Management Solution
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Create path validator using fixture configuration
 	configManager := helper.GetConfigManager()
@@ -132,7 +134,8 @@ func TestPathValidatorErrorHandling(t *testing.T) {
 
 func TestPathValidatorSinglePathValidation(t *testing.T) {
 	// Use centralized path management instead of hardcoded paths
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Create test directory using configured path
 	testDir := helper.GetConfig().TestDataDir

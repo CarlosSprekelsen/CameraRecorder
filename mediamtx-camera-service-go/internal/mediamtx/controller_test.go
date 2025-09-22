@@ -34,7 +34,7 @@ import (
 // EXAMPLE: PERFECT STANDARDIZED PATTERN - USE THIS AS TEMPLATE FOR NEW TESTS
 func TestController_New_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	controller, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
@@ -48,15 +48,11 @@ func TestController_New_ReqMTX001_Success(t *testing.T) {
 // ARCHITECTURE COMPLIANCE: Uses Progressive Readiness Pattern - event-driven readiness
 func TestController_GetHealth_ReqMTX004_Success(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
-	// CORRECT Progressive Readiness pattern: Attempt operation immediately, fallback to readiness events
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
-
-	// Start controller (returns immediately - no waiting)
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
+	// Use correct Progressive Readiness pattern (like other passing tests)
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
 	defer controller.Stop(ctx)
 
 	// Progressive Readiness: Try operation immediately
@@ -103,7 +99,7 @@ func TestController_GetHealth_ReqMTX004_Success(t *testing.T) {
 // TestController_GetMetrics_ReqMTX004 tests controller metrics with real server
 func TestController_GetMetrics_ReqMTX004_Success(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use Progressive Readiness pattern (like other working tests)
 	controller, ctx, cancel := helper.GetReadyController(t)
@@ -118,7 +114,7 @@ func TestController_GetMetrics_ReqMTX004_Success(t *testing.T) {
 // TestController_GetSystemMetrics_ReqMTX004 tests controller system metrics with real server
 func TestController_GetSystemMetrics_ReqMTX004_Success(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use Progressive Readiness pattern (like other working tests)
 	controller, ctx, cancel := helper.GetReadyController(t)
@@ -133,7 +129,7 @@ func TestController_GetSystemMetrics_ReqMTX004_Success(t *testing.T) {
 // TestController_GetPaths_ReqMTX003 tests path listing with real server
 func TestController_GetPaths_ReqMTX003_Success(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use Progressive Readiness pattern (like other working tests)
 	controller, ctx, cancel := helper.GetReadyController(t)
@@ -149,7 +145,7 @@ func TestController_GetPaths_ReqMTX003_Success(t *testing.T) {
 // TestController_GetStreams_ReqMTX002 tests stream listing with real server
 func TestController_GetStreams_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use Progressive Readiness pattern (like other working tests)
 	controller, ctx, cancel := helper.GetReadyController(t)
@@ -166,7 +162,7 @@ func TestController_GetStreams_ReqMTX002_Success(t *testing.T) {
 func TestController_GetStream_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// No sequential execution needed - only reads stream information
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use Progressive Readiness pattern (like other working tests)
 	controller, ctx, cancel := helper.GetReadyController(t)
@@ -190,7 +186,7 @@ func TestController_GetStream_ReqMTX002_Success(t *testing.T) {
 // TestConfigIntegration_GetRecordingConfig_ReqMTX001 tests recording config retrieval
 func TestConfigIntegration_GetRecordingConfig_ReqMTX001_Success(t *testing.T) {
 	// No sequential execution needed - only reads configuration
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
@@ -205,7 +201,7 @@ func TestConfigIntegration_GetRecordingConfig_ReqMTX001_Success(t *testing.T) {
 // TestConfigIntegration_GetSnapshotConfig_ReqMTX001 tests snapshot config retrieval
 func TestConfigIntegration_GetSnapshotConfig_ReqMTX001_Success(t *testing.T) {
 	// No sequential execution needed - only reads configuration
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
@@ -220,7 +216,7 @@ func TestConfigIntegration_GetSnapshotConfig_ReqMTX001_Success(t *testing.T) {
 // TestConfigIntegration_GetFFmpegConfig_ReqMTX001 tests FFmpeg config retrieval
 func TestConfigIntegration_GetFFmpegConfig_ReqMTX001_Success(t *testing.T) {
 	// No sequential execution needed - only reads configuration
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
@@ -235,7 +231,7 @@ func TestConfigIntegration_GetFFmpegConfig_ReqMTX001_Success(t *testing.T) {
 // TestConfigIntegration_GetCameraConfig_ReqMTX001 tests camera config retrieval
 func TestConfigIntegration_GetCameraConfig_ReqMTX001_Success(t *testing.T) {
 	// No sequential execution needed - only reads configuration
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
@@ -250,7 +246,7 @@ func TestConfigIntegration_GetCameraConfig_ReqMTX001_Success(t *testing.T) {
 // TestConfigIntegration_GetPerformanceConfig_ReqMTX001 tests performance config retrieval
 func TestConfigIntegration_GetPerformanceConfig_ReqMTX001_Success(t *testing.T) {
 	// No sequential execution needed - only reads configuration
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
@@ -265,7 +261,7 @@ func TestConfigIntegration_GetPerformanceConfig_ReqMTX001_Success(t *testing.T) 
 // TestController_GetConfig_ReqMTX001 tests configuration retrieval with real server
 func TestController_GetConfig_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use Progressive Readiness pattern (like other working tests)
 	controller, ctx, cancel := helper.GetReadyController(t)
@@ -282,7 +278,7 @@ func TestController_GetConfig_ReqMTX001_Success(t *testing.T) {
 // TestController_ListRecordings_ReqMTX002 tests recording listing with real server
 func TestController_ListRecordings_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use Progressive Readiness pattern (like other working tests)
 	controller, ctx, cancel := helper.GetReadyController(t)
@@ -298,7 +294,7 @@ func TestController_ListRecordings_ReqMTX002_Success(t *testing.T) {
 // TestController_ListSnapshots_ReqMTX002 tests snapshot listing with real server
 func TestController_ListSnapshots_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use Progressive Readiness pattern (like other working tests)
 	controller, ctx, cancel := helper.GetReadyController(t)
@@ -314,7 +310,7 @@ func TestController_ListSnapshots_ReqMTX002_Success(t *testing.T) {
 // TestController_ConcurrentAccess_ReqMTX001 tests concurrent operations with real server
 func TestController_GetHealth_ReqMTX001_Concurrent(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use Progressive Readiness pattern (like other working tests)
 	controller, ctx, cancel := helper.GetReadyController(t)
@@ -365,7 +361,7 @@ func TestController_GetHealth_ReqMTX001_Concurrent(t *testing.T) {
 // Enterprise-grade test that verifies actual file creation by MediaMTX
 func TestController_StartRecording_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	controllerInterface, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
@@ -526,7 +522,7 @@ func TestController_StopRecording_ReqMTX002_Success(t *testing.T) {
 // TestController_TakeSnapshot_ReqMTX002 tests snapshot functionality through controller
 func TestController_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use Progressive Readiness pattern (like other working tests)
 	controllerInterface, ctx, cancel := helper.GetReadyController(t)
@@ -581,7 +577,7 @@ func TestController_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
 // TestController_StreamManagement_ReqMTX002 tests stream management through controller
 func TestController_CreateStream_ReqMTX002_StreamManagement(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use Progressive Readiness pattern (like other working tests)
 	controller, ctx, cancel := helper.GetReadyController(t)
@@ -602,7 +598,7 @@ func TestController_CreateStream_ReqMTX002_StreamManagement(t *testing.T) {
 // TestController_AdvancedRecording_ReqMTX002 tests advanced recording functionality
 func TestController_StartRecording_ReqMTX002_Advanced(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities (advanced recording)
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	controllerInterface, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
@@ -720,7 +716,7 @@ func TestController_StartRecording_ReqMTX002_Stream(t *testing.T) {
 // TestController_HealthMonitoring_ReqMTX004 tests health monitoring functionality
 func TestController_GetHealth_ReqMTX004_Monitoring(t *testing.T) {
 	// REQ-MTX-004: Health monitoring capabilities
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	controllerInterface, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
@@ -757,7 +753,7 @@ func TestController_GetHealth_ReqMTX004_Monitoring(t *testing.T) {
 // TestController_PathManagement_ReqMTX003 tests path management functionality
 func TestController_GetPaths_ReqMTX003_Management(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	controllerInterface, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
@@ -806,7 +802,7 @@ func TestController_GetPaths_ReqMTX003_Management(t *testing.T) {
 // TestController_RTSPOperations_ReqMTX004 tests RTSP operations functionality
 func TestController_GetStream_ReqMTX004_RTSPOperations(t *testing.T) {
 	// REQ-MTX-004: RTSP connection management
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	controllerInterface, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
@@ -923,7 +919,7 @@ func TestController_TakeSnapshot_ReqMTX002_Advanced(t *testing.T) {
 // TestController_SetSystemEventNotifier_ReqMTX004 tests SetSystemEventNotifier integration
 func TestController_SetSystemEventNotifier_ReqMTX004_Success(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use Progressive Readiness pattern (like other working tests)
 	controller, ctx, cancel := helper.GetReadyController(t)
@@ -970,7 +966,7 @@ func TestController_SetSystemEventNotifier_ReqMTX004_Success(t *testing.T) {
 // TestController_CreateStream_ReqMTX002 tests stream creation functionality
 func TestController_CreateStream_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use Progressive Readiness pattern (like other working tests)
 	controller, ctx, cancel := helper.GetReadyController(t)
@@ -997,7 +993,7 @@ func TestController_CreateStream_ReqMTX002_Success(t *testing.T) {
 // TestController_DeleteStream_ReqMTX002 tests stream deletion functionality
 func TestController_DeleteStream_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use Progressive Readiness pattern (like other working tests)
 	controller, ctx, cancel := helper.GetReadyController(t)
@@ -1018,21 +1014,13 @@ func TestController_DeleteStream_ReqMTX002_Success(t *testing.T) {
 
 // TestControllerWithConfigManagerFunction_ReqMTX001 tests ControllerWithConfigManager for 0% coverage
 func TestController_New_ReqMTX001_WithConfigManagerFunction(t *testing.T) {
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Test controller creation with config manager
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "ControllerWithConfigManager should succeed")
-	require.NotNil(t, controller, "Controller should not be nil")
-
-	// Verify controller can be started and stopped
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller should start successfully")
-
-	stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	controller, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
-	err = controller.Stop(stopCtx)
-	require.NoError(t, err, "Controller should stop successfully")
+	defer controller.Stop(ctx)
+	require.NotNil(t, controller, "Controller should not be nil")
 }
 
 // TestController_InputValidation_DangerousBugs tests input validation
@@ -1040,22 +1028,12 @@ func TestController_New_ReqMTX001_WithConfigManagerFunction(t *testing.T) {
 func TestController_Validate_ReqMTX007_InputValidation_DangerousBugs(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
 	// No sequential execution needed - only validates input parameters
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
-
-	// Ensure controller is stopped after test
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+	// Use correct Progressive Readiness pattern (like other passing tests)
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// Test input validation scenarios that can catch dangerous bugs
 	helper.TestControllerInputValidation(t, controller)
@@ -1066,22 +1044,12 @@ func TestController_Validate_ReqMTX007_InputValidation_DangerousBugs(t *testing.
 func TestController_Validate_ReqMTX007_BoundaryConditions_DangerousBugs(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
 	// No sequential execution needed - only validates boundary conditions
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
-
-	// Ensure controller is stopped after test
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+	// Use correct Progressive Readiness pattern (like other passing tests)
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// Test boundary conditions that can catch dangerous bugs
 	helper.TestInputValidationBoundaryConditions(t, controller)
@@ -1092,11 +1060,12 @@ func TestController_Validate_ReqMTX007_BoundaryConditions_DangerousBugs(t *testi
 func TestController_Start_ReqMTX001_StateRaceConditions_DangerousBugs(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
 	// Sequential execution needed - tests concurrent start/stop operations
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
+	// Use correct Progressive Readiness pattern (like other passing tests)
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// Test concurrent start/stop operations - should be handled gracefully by controller
 	t.Run("concurrent_start_stop_race_condition", func(t *testing.T) {
@@ -1214,19 +1183,16 @@ func TestController_Start_ReqMTX001_StateRaceConditions_DangerousBugs(t *testing
 // TestEventDrivenReadiness tests event-driven readiness patterns
 func TestController_Start_ReqARCH001_EventDrivenReadiness(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration with event-driven patterns
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Create event-driven test helper
 	eventHelper := helper.CreateEventDrivenTestHelper(t)
 	defer eventHelper.Cleanup()
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	helper.AssertStandardResponse(t, controller, err, "Controller creation")
-
-	// Start controller in background
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
+	// Use correct Progressive Readiness pattern (like other passing tests)
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -1369,18 +1335,12 @@ func TestController_Start_ReqARCH001_ParallelEventDriven(t *testing.T) {
 
 // TestEventAggregationSystem tests the event aggregation system
 func TestController_ProcessEvents_ReqARCH001_EventAggregation(t *testing.T) {
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 	eventHelper := helper.CreateEventDrivenTestHelper(t)
 	defer eventHelper.Cleanup()
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
-	err = controller.Start(context.Background())
-	require.NoError(t, err, "Controller start should succeed")
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	t.Run("observe_any_event", func(t *testing.T) {
 		// Observe any of the specified events (non-blocking)
@@ -1408,7 +1368,7 @@ func TestController_ProcessEvents_ReqARCH001_EventAggregation(t *testing.T) {
 // TestGracefulShutdown verifies that all components shut down cleanly within timeout
 func TestController_Stop_ReqMTX001_GracefulShutdown(t *testing.T) {
 	t.Run("health_monitor_graceful_shutdown", func(t *testing.T) {
-		helper, ctx := SetupMediaMTXTest(t)
+		helper, _ := SetupMediaMTXTest(t)
 
 		// Create health monitor
 		client := helper.GetClient()
@@ -1446,7 +1406,7 @@ func TestController_Stop_ReqMTX001_GracefulShutdown(t *testing.T) {
 	})
 
 	t.Run("path_integration_graceful_shutdown", func(t *testing.T) {
-		helper := SetupMediaMTXTestHelperOnly(t)
+		helper, _ := SetupMediaMTXTest(t)
 
 		// Create path integration
 		pathManager := helper.GetPathManager()
@@ -1474,33 +1434,26 @@ func TestController_Stop_ReqMTX001_GracefulShutdown(t *testing.T) {
 	})
 
 	t.Run("controller_graceful_shutdown", func(t *testing.T) {
-		helper, ctx := SetupMediaMTXTest(t)
+		helper, _ := SetupMediaMTXTest(t)
 
-		// Create controller
-		controller, err := helper.GetController(t)
-		require.NoError(t, err, "Controller creation should succeed")
-
-		// Start components
-		ctx, cancel := helper.GetStandardContext()
+		// Use correct Progressive Readiness pattern (like other passing tests)
+		controller, ctx, cancel := helper.GetReadyController(t)
 		defer cancel()
-		err = controller.Start(ctx)
-		// Use assertion helper
-		// Use assertion helper
-		require.NoError(t, err, "Controller start should succeed")
+		defer controller.Stop(ctx)
 
 		// Trigger shutdown with timeout
 		shutdownCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 		defer cancel()
 
 		// Should complete within timeout
-		err = controller.Stop(shutdownCtx)
+		err := controller.Stop(shutdownCtx)
 		require.NoError(t, err, "Controller should shut down gracefully")
 
 		t.Logf("Controller graceful shutdown test passed")
 	})
 
 	t.Run("context_cancellation_propagation", func(t *testing.T) {
-		helper, ctx := SetupMediaMTXTest(t)
+		helper, _ := SetupMediaMTXTest(t)
 
 		// Create health monitor
 		client := helper.GetClient()
@@ -1543,7 +1496,7 @@ func TestController_Stop_ReqMTX001_GracefulShutdown(t *testing.T) {
 	})
 
 	t.Run("fast_shutdown_verification", func(t *testing.T) {
-		helper, ctx := SetupMediaMTXTest(t)
+		helper, _ := SetupMediaMTXTest(t)
 
 		// Create health monitor
 		client := helper.GetClient()

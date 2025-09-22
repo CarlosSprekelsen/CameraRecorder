@@ -37,7 +37,8 @@ import (
 // TestNewRTSPConnectionManager_ReqMTX001 tests RTSP connection manager creation
 func TestNewRTSPConnectionManager_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Test server health first
 	err := helper.TestMediaMTXHealth(t)
@@ -55,6 +56,7 @@ func TestNewRTSPConnectionManager_ReqMTX001(t *testing.T) {
 func TestRTSPConnectionManager_ListConnections_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared RTSP connection manager from test helper
 	rtspManager := helper.GetRTSPConnectionManager()
@@ -89,6 +91,7 @@ func TestRTSPConnectionManager_ListConnections_ReqMTX002(t *testing.T) {
 func TestRTSPConnectionManager_ListSessions_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Create RTSP connection manager
 	// Use standardized config from helper
@@ -118,6 +121,7 @@ func TestRTSPConnectionManager_ListSessions_ReqMTX002(t *testing.T) {
 func TestRTSPConnectionManager_GetConnectionHealth_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Create config manager using test fixture (centralized in test helpers)
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
@@ -151,6 +155,7 @@ func TestRTSPConnectionManager_GetConnectionHealth_ReqMTX004(t *testing.T) {
 func TestRTSPConnectionManager_GetConnectionMetrics_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Create RTSP connection manager
 	// Use standardized config from helper
@@ -189,6 +194,7 @@ func TestRTSPConnectionManager_GetConnectionMetrics_ReqMTX004(t *testing.T) {
 func TestRTSPConnectionManager_Configuration_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion (configuration management)
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Create config manager using test fixture (centralized in test helpers)
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
@@ -234,6 +240,7 @@ func TestRTSPConnectionManager_Configuration_ReqMTX003(t *testing.T) {
 func TestRTSPConnectionManager_ErrorHandling_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring (error handling)
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Create RTSP connection manager
 	// Use standardized config from helper
@@ -269,6 +276,7 @@ func TestRTSPConnectionManager_ErrorHandling_ReqMTX004(t *testing.T) {
 func TestRTSPConnectionManager_Performance_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities (performance)
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Create RTSP connection manager
 	// Use standardized config from helper
@@ -309,6 +317,7 @@ func TestRTSPConnectionManager_Performance_ReqMTX002(t *testing.T) {
 func TestRTSPConnectionManager_RealMediaMTXServer(t *testing.T) {
 	// Integration test with real MediaMTX server
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared RTSP connection manager for performance
 	rtspManager := helper.GetRTSPConnectionManager()
@@ -338,7 +347,8 @@ func TestRTSPConnectionManager_RealMediaMTXServer(t *testing.T) {
 
 // TestRTSPConnectionManager_ConfigurationScenarios tests various configuration scenarios
 func TestRTSPConnectionManager_ConfigurationScenarios(t *testing.T) {
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Test different configuration scenarios
 	configScenarios := []struct {
@@ -430,6 +440,7 @@ func TestRTSPConnectionManager_ConfigurationScenarios(t *testing.T) {
 // TestRTSPConnectionManager_ErrorScenarios tests various error scenarios
 func TestRTSPConnectionManager_ErrorScenarios(t *testing.T) {
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	rtspManager := helper.GetRTSPConnectionManager()
 	ctx, cancel := helper.GetStandardContext()
@@ -509,6 +520,7 @@ func TestRTSPConnectionManager_ErrorScenarios(t *testing.T) {
 // TestRTSPConnectionManager_ConcurrentAccess tests concurrent access to RTSP manager
 func TestRTSPConnectionManager_ConcurrentAccess(t *testing.T) {
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	rtspManager := helper.GetRTSPConnectionManager()
 	ctx, cancel := helper.GetStandardContext()
@@ -586,6 +598,7 @@ func TestRTSPConnectionManager_ConcurrentAccess(t *testing.T) {
 // TestRTSPConnectionManager_StressTest tests stress scenarios
 func TestRTSPConnectionManager_StressTest(t *testing.T) {
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	rtspManager := helper.GetRTSPConnectionManager()
 	ctx, cancel := helper.GetStandardContext()
@@ -627,6 +640,7 @@ func TestRTSPConnectionManager_StressTest(t *testing.T) {
 // TestRTSPConnectionManager_IntegrationWithController tests integration with controller
 func TestRTSPConnectionManager_IntegrationWithController(t *testing.T) {
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use test fixture logging level instead of hardcoded logrus
 
@@ -666,7 +680,8 @@ func TestRTSPConnectionManager_IntegrationWithController(t *testing.T) {
 // that can catch dangerous bugs in RTSP connection manager
 func TestRTSPConnectionManager_InputValidation_DangerousBugs(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Create RTSP connection manager
 	rtspManager := helper.GetRTSPConnectionManager()
@@ -679,6 +694,7 @@ func TestRTSPConnectionManager_InputValidation_DangerousBugs(t *testing.T) {
 // that were identified in the original test failures
 func TestRTSPConnectionManager_ErrorScenarios_DangerousBugs(t *testing.T) {
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Create RTSP connection manager
 	rtspManager := helper.GetRTSPConnectionManager()

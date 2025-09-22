@@ -25,7 +25,7 @@ import (
 // TestNewCircuitBreaker_ReqMTX007 tests circuit breaker creation
 func TestNewCircuitBreaker_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	config := CircuitBreakerConfig{
@@ -43,7 +43,7 @@ func TestNewCircuitBreaker_ReqMTX007(t *testing.T) {
 // TestCircuitBreaker_Call_Success_ReqMTX007 tests successful operation
 func TestCircuitBreaker_Call_Success_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	config := CircuitBreakerConfig{
@@ -66,7 +66,7 @@ func TestCircuitBreaker_Call_Success_ReqMTX007(t *testing.T) {
 // TestCircuitBreaker_Call_Failure_ReqMTX007 tests failure handling
 func TestCircuitBreaker_Call_Failure_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	config := CircuitBreakerConfig{
@@ -90,7 +90,7 @@ func TestCircuitBreaker_Call_Failure_ReqMTX007(t *testing.T) {
 // TestCircuitBreaker_Open_ReqMTX007 tests circuit breaker opening
 func TestCircuitBreaker_Open_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	config := CircuitBreakerConfig{
@@ -128,7 +128,7 @@ func TestCircuitBreaker_Open_ReqMTX007(t *testing.T) {
 // TestCircuitBreaker_HalfOpen_ReqMTX007 tests circuit breaker half-open state
 func TestCircuitBreaker_HalfOpen_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	config := CircuitBreakerConfig{
@@ -167,7 +167,7 @@ func TestCircuitBreaker_HalfOpen_ReqMTX007(t *testing.T) {
 // TestCircuitBreaker_HalfOpen_Failure_ReqMTX007 tests half-open state with failure
 func TestCircuitBreaker_HalfOpen_Failure_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	config := CircuitBreakerConfig{
@@ -203,7 +203,7 @@ func TestCircuitBreaker_HalfOpen_Failure_ReqMTX007(t *testing.T) {
 // TestCircuitBreaker_Reset_ReqMTX007 tests circuit breaker reset
 func TestCircuitBreaker_Reset_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	config := CircuitBreakerConfig{
@@ -241,7 +241,7 @@ func TestCircuitBreaker_Reset_ReqMTX007(t *testing.T) {
 // TestCircuitBreaker_ContextCancellation_ReqMTX007 tests context cancellation
 func TestCircuitBreaker_ContextCancellation_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	config := CircuitBreakerConfig{

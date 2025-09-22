@@ -31,7 +31,8 @@ import (
 // TestNewRecordingManager_ReqMTX001 tests recording manager creation with real hardware
 func TestNewRecordingManager_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Get recording manager with full integration (now includes camera monitor)
 	recordingManager := helper.GetRecordingManager()
@@ -43,6 +44,7 @@ func TestRecordingManager_StartRecording_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// No sequential execution - Progressive Readiness enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	controller, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
@@ -93,6 +95,7 @@ func TestRecordingManager_StartRecording_ReqMTX002(t *testing.T) {
 func TestRecordingManager_StopRecording_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
@@ -135,6 +138,7 @@ func TestRecordingManager_StopRecording_ReqMTX002(t *testing.T) {
 func TestRecordingManager_GetRecordingsListAPI_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - API compliance validation
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
@@ -168,6 +172,7 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and persistence - Validate MediaMTX API integration
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Force cleanup of any existing runtime paths first
 	helper.ForceCleanupRuntimePaths(t)
@@ -273,6 +278,7 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 func TestRecordingManager_APISchemaCompliance_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration - Schema validation per swagger.json
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
@@ -322,6 +328,7 @@ func TestRecordingManager_APISchemaCompliance_ReqMTX001(t *testing.T) {
 func TestRecordingManager_APIErrorHandling_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring and circuit breaker - Error handling validation
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
@@ -360,6 +367,7 @@ func TestRecordingManager_APIErrorHandling_ReqMTX004(t *testing.T) {
 func TestRecordingManager_ErrorHandling_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
@@ -389,6 +397,7 @@ func TestRecordingManager_ErrorHandling_ReqMTX007(t *testing.T) {
 func TestRecordingManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
@@ -434,6 +443,7 @@ func TestRecordingManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 func TestRecordingManager_StartRecordingWithSegments_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
@@ -470,6 +480,7 @@ func TestRecordingManager_MultiTierRecording_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - Real hardware recording
 	// No sequential execution - Progressive Readiness enables parallelism
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	controller, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()

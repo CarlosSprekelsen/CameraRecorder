@@ -36,7 +36,8 @@ import (
 func TestSnapshotManager_New_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	snapshotManager := helper.GetSnapshotManager()
 	require.NotNil(t, snapshotManager, "Snapshot manager should not be nil")
@@ -156,6 +157,7 @@ func TestSnapshotManager_GetSnapshotsList_ReqMTX002_Success(t *testing.T) {
 func TestSnapshotManager_GetSnapshotInfo_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	snapshotManager := helper.GetSnapshotManager()
 	ctx, cancel := helper.GetStandardContext()
@@ -199,6 +201,7 @@ func TestSnapshotManager_DeleteSnapshotFile_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -269,7 +272,8 @@ func TestSnapshotManager_DeleteSnapshotFile_ReqMTX002_Success(t *testing.T) {
 func TestSnapshotManager_GetSnapshotSettings_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -435,6 +439,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX004_ErrorHandling(t *testing.T) {
 	// REQ-MTX-004: Health monitoring and error handling
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -484,7 +489,8 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX004_ErrorHandling(t *testing.T) {
 func TestSnapshotManager_TakeSnapshot_ReqMTX001_Concurrent(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -569,6 +575,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier1_USBDirect(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - Tier 1 testing
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -646,6 +653,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier2_RTSPImmediate(t *testing.T
 	// REQ-MTX-002: Stream management capabilities - Tier 2 testing
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -730,6 +738,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier3_RTSPActivation(t *testing.
 	// REQ-MTX-002: Stream management capabilities - Tier 3 testing
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -809,7 +818,8 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier3_RTSPActivation(t *testing.
 func TestSnapshotManager_TakeSnapshot_ReqMTX002_MultiTier_Integration(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities - Complete multi-tier testing
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	mediaMTXConfig := &config.MediaMTXConfig{
 		BaseURL:       "http://localhost:9997",
@@ -908,6 +918,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_MultiTier_Tiers2And3(t *testing.
 	// REQ-MTX-002: Stream management capabilities (snapshot tiers 2 & 3)
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Create config manager using test fixture
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
@@ -997,6 +1008,7 @@ func TestSnapshotManager_TakeSnapshot_ReqCAM001_Tier0_V4L2Direct_RealHardware(t 
 	// Test the new Tier 0 V4L2 direct capture with REAL camera hardware
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Create real hardware test helper for camera devices
 	cameraHelper := camera.NewRealHardwareTestHelper(t)

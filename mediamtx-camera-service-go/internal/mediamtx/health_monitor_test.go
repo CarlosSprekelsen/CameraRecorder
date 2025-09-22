@@ -27,7 +27,8 @@ import (
 // TestNewHealthMonitor_ReqMTX004 tests health monitor creation
 func TestNewHealthMonitor_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
@@ -162,7 +163,8 @@ func TestHealthMonitor_GetMetrics_ReqMTX004(t *testing.T) {
 // TestHealthMonitor_RecordSuccess_ReqMTX004 tests success recording
 func TestHealthMonitor_RecordSuccess_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
@@ -195,7 +197,8 @@ func TestHealthMonitor_RecordSuccess_ReqMTX004(t *testing.T) {
 // TestHealthMonitor_RecordFailure_ReqMTX004 tests failure recording
 func TestHealthMonitor_RecordFailure_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	config := &config.MediaMTXConfig{
 		BaseURL:                helper.GetConfig().BaseURL,
@@ -235,7 +238,8 @@ func TestHealthMonitor_RecordFailure_ReqMTX004(t *testing.T) {
 // TestHealthMonitor_Configuration_ReqMTX004 tests different configurations
 func TestHealthMonitor_Configuration_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Test different configurations
 	configs := []*config.MediaMTXConfig{
@@ -553,7 +557,8 @@ func TestHealthMonitor_GetHealthAPI_APICompliance_ReqAPI001(t *testing.T) {
 // TestHealthMonitor_GetHealthAPI_ErrorScenarios_ReqMTX004 tests error handling for GetHealthAPI
 func TestHealthMonitor_GetHealthAPI_ErrorScenarios_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring - error handling
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Create health monitor using existing test infrastructure
 	config := &config.MediaMTXConfig{

@@ -23,7 +23,7 @@ import (
 // TestNewClient_ReqMTX001 tests client creation with real server
 func TestClient_New_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
@@ -39,7 +39,7 @@ func TestClient_New_ReqMTX001_Success(t *testing.T) {
 // TestClient_Get_ReqMTX001 tests GET request functionality with real server
 func TestClient_Get_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	client := helper.GetClient()
 	ctx, cancel := helper.GetStandardContext()
@@ -61,7 +61,7 @@ func TestClient_Get_ReqMTX001_Success(t *testing.T) {
 // TestClient_Post_ReqMTX001 tests POST request functionality with real server
 func TestClient_Post_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	client := helper.GetClient()
 	ctx, cancel := helper.GetStandardContext()
@@ -81,7 +81,7 @@ func TestClient_Post_ReqMTX001_Success(t *testing.T) {
 // TestClient_Put_ReqMTX001 tests PUT request functionality with real server
 func TestClient_Put_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	client := helper.GetClient()
 	ctx, cancel := helper.GetStandardContext()
@@ -106,7 +106,7 @@ func TestClient_Put_ReqMTX001_Success(t *testing.T) {
 // TestClient_Delete_ReqMTX001 tests DELETE request functionality with real server
 func TestClient_Delete_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	client := helper.GetClient()
 	ctx, cancel := helper.GetStandardContext()
@@ -125,7 +125,7 @@ func TestClient_Delete_ReqMTX001_Success(t *testing.T) {
 // TestClient_HealthCheck_ReqMTX004 tests health check functionality with real server
 func TestClient_GetHealth_ReqMTX004_Success(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	client := helper.GetClient()
 	ctx, cancel := helper.GetStandardContext()
@@ -139,7 +139,7 @@ func TestClient_GetHealth_ReqMTX004_Success(t *testing.T) {
 // TestClient_ErrorHandling_ReqMTX007 tests error scenarios with real server
 func TestClient_Get_ReqMTX007_ErrorHandling(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	client := helper.GetClient()
 	ctx, cancel := helper.GetStandardContext()
@@ -161,7 +161,7 @@ func TestClient_Get_ReqMTX007_ErrorHandling(t *testing.T) {
 // TestClient_APICompliance_ReqMTX001 tests API compliance against swagger.json
 func TestClient_Get_ReqMTX001_APICompliance(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	client := helper.GetClient()
 	ctx, cancel := helper.GetStandardContext()
@@ -200,7 +200,7 @@ func TestClient_Get_ReqMTX001_APICompliance(t *testing.T) {
 
 // TestClient_PutMethod_ReqMTX001 tests the Put method for 0% coverage
 func TestClient_Put_ReqMTX001_PathConfiguration(t *testing.T) {
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	client := helper.GetClient()
 	ctx, cancel := helper.GetStandardContext()
@@ -257,7 +257,7 @@ func TestClient_ParseHealthResponse_ReqMTX001_Success(t *testing.T) {
 // TestClient_ConcurrentAccess_ReqMTX001 tests concurrent access with real server
 func TestClient_Get_ReqMTX001_Concurrent(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	client := helper.GetClient()
 	ctx, cancel := helper.GetStandardContext()
@@ -296,7 +296,7 @@ func TestClient_Get_ReqMTX001_Concurrent(t *testing.T) {
 // TestClient_Close_ReqMTX001 tests client close functionality
 func TestClient_Close_ReqMTX001_Success(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Use MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()

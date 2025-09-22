@@ -11,7 +11,8 @@ import (
 
 func TestRTSPKeepaliveReader_NewRTSPKeepaliveReader(t *testing.T) {
 	// Use fixture-based test helper following Path Management Solution
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
@@ -33,6 +34,7 @@ func TestRTSPKeepaliveReader_NewRTSPKeepaliveReader(t *testing.T) {
 func TestRTSPKeepaliveReader_StartKeepalive(t *testing.T) {
 	// Use fixture-based test helper following Path Management Solution
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
@@ -62,6 +64,7 @@ func TestRTSPKeepaliveReader_StartKeepalive(t *testing.T) {
 func TestRTSPKeepaliveReader_StopKeepalive(t *testing.T) {
 	// Use fixture-based test helper following Path Management Solution
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
@@ -95,6 +98,7 @@ func TestRTSPKeepaliveReader_StopKeepalive(t *testing.T) {
 func TestRTSPKeepaliveReader_StopAll(t *testing.T) {
 	// Use fixture-based test helper following Path Management Solution
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
@@ -127,6 +131,7 @@ func TestRTSPKeepaliveReader_StopAll(t *testing.T) {
 func TestRTSPKeepaliveReader_IsActive(t *testing.T) {
 	// Use fixture-based test helper following Path Management Solution
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
@@ -158,6 +163,7 @@ func TestRTSPKeepaliveReader_IsActive(t *testing.T) {
 func TestRTSPKeepaliveReader_GetActiveCount(t *testing.T) {
 	// Use fixture-based test helper following Path Management Solution
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
@@ -203,7 +209,8 @@ func TestRTSPKeepaliveReader_EnvironmentVariables(t *testing.T) {
 	}()
 
 	// Use centralized path management instead of hardcoded paths
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 	testDir := helper.GetConfig().TestDataDir
 	os.Setenv("MEDIAMTX_TEST_DATA_DIR", testDir)
 
@@ -225,6 +232,7 @@ func TestRTSPKeepaliveReader_EnvironmentVariables(t *testing.T) {
 func TestRTSPKeepaliveReader_ConcurrentOperations(t *testing.T) {
 	// Use fixture-based test helper following Path Management Solution
 	helper, ctx := SetupMediaMTXTest(t)
+	_ = ctx // Suppress unused variable warning
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()

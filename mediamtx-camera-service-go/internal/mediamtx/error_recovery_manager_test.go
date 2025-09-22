@@ -51,7 +51,7 @@ func (m *MockRecoveryStrategy) GetStrategyName() string {
 // TestNewErrorRecoveryManager_ReqMTX007 tests error recovery manager creation
 func TestNewErrorRecoveryManager_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	erm := NewErrorRecoveryManager(logger)
@@ -65,7 +65,7 @@ func TestNewErrorRecoveryManager_ReqMTX007(t *testing.T) {
 // TestErrorRecoveryManager_RegisterStrategy_ReqMTX007 tests strategy registration
 func TestErrorRecoveryManager_RegisterStrategy_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	erm := NewErrorRecoveryManager(logger)
@@ -83,7 +83,7 @@ func TestErrorRecoveryManager_RegisterStrategy_ReqMTX007(t *testing.T) {
 // TestErrorRecoveryManager_HandleError_NoRecovery_ReqMTX007 tests error handling without recovery
 func TestErrorRecoveryManager_HandleError_NoRecovery_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	erm := NewErrorRecoveryManager(logger)
@@ -112,7 +112,7 @@ func TestErrorRecoveryManager_HandleError_NoRecovery_ReqMTX007(t *testing.T) {
 // TestErrorRecoveryManager_HandleError_NoApplicableStrategy_ReqMTX007 tests error handling with no applicable strategies
 func TestErrorRecoveryManager_HandleError_NoApplicableStrategy_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	erm := NewErrorRecoveryManager(logger)
@@ -145,7 +145,7 @@ func TestErrorRecoveryManager_HandleError_NoApplicableStrategy_ReqMTX007(t *test
 // TestErrorRecoveryManager_HandleError_SuccessfulRecovery_ReqMTX007 tests successful error recovery
 func TestErrorRecoveryManager_HandleError_SuccessfulRecovery_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	erm := NewErrorRecoveryManager(logger)
@@ -181,7 +181,7 @@ func TestErrorRecoveryManager_HandleError_SuccessfulRecovery_ReqMTX007(t *testin
 // TestErrorRecoveryManager_HandleError_FailedRecovery_ReqMTX007 tests failed error recovery
 func TestErrorRecoveryManager_HandleError_FailedRecovery_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	erm := NewErrorRecoveryManager(logger)
@@ -218,7 +218,7 @@ func TestErrorRecoveryManager_HandleError_FailedRecovery_ReqMTX007(t *testing.T)
 // TestErrorRecoveryManager_HandleError_MultipleStrategies_ReqMTX007 tests multiple recovery strategies
 func TestErrorRecoveryManager_HandleError_MultipleStrategies_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	erm := NewErrorRecoveryManager(logger)
@@ -263,7 +263,7 @@ func TestErrorRecoveryManager_HandleError_MultipleStrategies_ReqMTX007(t *testin
 // TestErrorRecoveryManager_HandleError_RecoveryInProgress_ReqMTX007 tests recovery in progress prevention
 func TestErrorRecoveryManager_HandleError_RecoveryInProgress_ReqMTX007(t *testing.T) {
 	// REQ-MTX-007: Error handling and recovery
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	erm := NewErrorRecoveryManager(logger)
@@ -303,7 +303,7 @@ func TestErrorRecoveryManager_HandleError_RecoveryInProgress_ReqMTX007(t *testin
 // TestErrorRecoveryManager_GetMetrics_ReqMTX008 tests metrics retrieval
 func TestErrorRecoveryManager_GetMetrics_ReqMTX008(t *testing.T) {
 	// REQ-MTX-008: Logging and monitoring
-	helper := SetupMediaMTXTestHelperOnly(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	logger := helper.GetLogger()
 	erm := NewErrorRecoveryManager(logger)

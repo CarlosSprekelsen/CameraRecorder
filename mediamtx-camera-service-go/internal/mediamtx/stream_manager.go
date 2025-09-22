@@ -838,7 +838,7 @@ func (sm *streamManager) GetStreamURL(ctx context.Context, cameraID string) (*Ge
 	// Get actual stream status from MediaMTX
 	streamStatus, err := sm.GetStreamStatus(ctx, cameraID)
 	streamName := fmt.Sprintf("camera_%s_viewing", cameraID)
-	
+
 	if err != nil {
 		// Stream doesn't exist or error - return available URL anyway
 		return &GetStreamURLResponse{
@@ -858,7 +858,13 @@ func (sm *streamManager) GetStreamURL(ctx context.Context, cameraID string) (*Ge
 		StreamURL:       streamURL,
 		Available:       streamStatus.Status == "active",
 		ActiveConsumers: streamStatus.Viewers,
-		StreamStatus:    func() string { if streamStatus.Status == "active" { return "READY" } else { return "NOT_READY" } }(),
+		StreamStatus: func() string {
+			if streamStatus.Status == "active" {
+				return "READY"
+			} else {
+				return "NOT_READY"
+			}
+		}(),
 	}
 
 	return response, nil
