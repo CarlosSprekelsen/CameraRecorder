@@ -491,7 +491,7 @@ Start recording video from the specified camera.
 
 - `device`: Camera device identifier (string)
 - `filename`: Generated recording filename (string)
-- `status`: Recording status ("RECORDING", "FAILED") (string)
+- `status`: Recording status ("RECORDING", "STARTING", "STOPPING", "PAUSED", "ERROR", "FAILED") (string)
 - `start_time`: Recording start timestamp (ISO 8601 string)
 - `format`: Recording format ("fmp4", "mp4", "mkv") (string)
 
@@ -545,7 +545,7 @@ Stop active recording for the specified camera.
 
 - `device`: Camera device identifier (string)
 - `filename`: Generated recording filename (string)
-- `status`: Recording status ("STOPPED", "FAILED") (string)
+- `status`: Recording status ("STOPPED", "STARTING", "STOPPING", "PAUSED", "ERROR", "FAILED") (string)
 - `start_time`: Recording start timestamp (ISO 8601 string)
 - `end_time`: Recording end timestamp (ISO 8601 string)
 - `duration`: Total recording duration in seconds (integer)
@@ -664,7 +664,7 @@ Stop the active streaming session for the specified camera device.
 - `start_time`: Streaming start timestamp (ISO 8601 string)
 - `end_time`: Streaming end timestamp (ISO 8601 string)
 - `duration`: Total streaming duration in seconds (integer)
-- `stream_continues`: Whether stream continues for other consumers (boolean)
+- `stream_continues`: Whether stream continues for other consumers after this stop (boolean, true if other clients still connected, false if this was the last consumer)
 - `message`: Success message (string)
 
 ### get_stream_url
@@ -719,6 +719,23 @@ Get the stream URL for a specific camera device without starting a new stream.
 - `available`: Whether stream is available (boolean)
 - `active_consumers`: Number of active stream consumers (integer)
 - `stream_status`: Stream readiness status ("READY", "NOT_READY", "ERROR") (string)
+
+**Error Response (Device Not Found):**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32004,
+    "message": "Camera not found or disconnected",
+    "data": {
+      "reason": "Device 'camera0' not found",
+      "suggestion": "Use get_camera_list to see available cameras"
+    }
+  },
+  "id": 22
+}
+```
 
 ### get_stream_status
 
@@ -874,7 +891,31 @@ List available recording files with metadata and pagination support.
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `files`: Array of recording file information objects (array)
+  - `filename`: Recording filename without extension (string)
+  - `file_size`: File size in bytes (integer)
+  - `modified_time`: File modification timestamp (ISO 8601 string)
+  - `download_url`: HTTP download URL for the file (string)
+- `total`: Total number of recording files (integer)
+- `limit`: Maximum number of files requested (integer)
+- `offset`: Number of files skipped for pagination (integer)
+
+**Error Response (Directory Not Found):**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32603,
+    "message": "Internal server error",
+    "data": {
+      "reason": "Recordings directory not found or inaccessible",
+      "suggestion": "Check storage configuration and permissions"
+    }
+  },
+  "id": 7
+}
+```
 
 ---
 
@@ -922,7 +963,15 @@ Get system performance metrics and statistics.
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `active_connections`: Number of active WebSocket connections (integer)
+- `total_requests`: Total number of requests processed (integer)
+- `average_response_time`: Average response time in milliseconds (float64)
+- `error_rate`: Error rate as percentage (0.0-1.0) (float64)
+- `memory_usage`: Memory usage percentage (0.0-100.0) (float64)
+- `cpu_usage`: CPU usage percentage (0.0-100.0) (float64)
+- `disk_usage`: Disk usage percentage (0.0-100.0) (float64)
+- `goroutines`: Number of active goroutines (integer)
+- `heap_alloc`: Heap allocation in bytes (integer)
 
 }
 
@@ -983,7 +1032,14 @@ Get list of all active streams from MediaMTX.
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `files`: Array of recording file information objects (array)
+  - `filename`: Recording filename without extension (string)
+  - `file_size`: File size in bytes (integer)
+  - `modified_time`: File modification timestamp (ISO 8601 string)
+  - `download_url`: HTTP download URL for the file (string)
+- `total`: Total number of recording files (integer)
+- `limit`: Maximum number of files requested (integer)
+- `offset`: Number of files skipped for pagination (integer)
 
 **Error Response (MediaMTX Unavailable):**
 
@@ -1196,7 +1252,14 @@ List available snapshot files with metadata and pagination support.
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `files`: Array of snapshot file information objects (array)
+  - `filename`: Snapshot filename (string)
+  - `file_size`: File size in bytes (integer)
+  - `modified_time`: File modification timestamp (ISO 8601 string)
+  - `download_url`: HTTP download URL for the file (string)
+- `total`: Total number of snapshot files (integer)
+- `limit`: Maximum number of files requested (integer)
+- `offset`: Number of files skipped for pagination (integer)
 
 ### get_recording_info
 
@@ -1241,7 +1304,11 @@ Get detailed information about a specific recording file.
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `filename`: Recording filename without extension (string)
+- `file_size`: File size in bytes (integer)
+- `duration`: Recording duration in seconds (integer)
+- `created_time`: File creation timestamp (ISO 8601 string)
+- `download_url`: HTTP download URL for the file (string)
 
 ### get_snapshot_info
 
@@ -1285,7 +1352,10 @@ Get detailed information about a specific snapshot file.
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `filename`: Snapshot filename (string)
+- `file_size`: File size in bytes (integer)
+- `created_time`: File creation timestamp (ISO 8601 string)
+- `download_url`: HTTP download URL for the file (string)
 
 ### delete_recording
 
@@ -1328,7 +1398,9 @@ Delete a specific recording file.
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `filename`: Recording filename that was deleted (string)
+- `deleted`: Whether deletion was successful (boolean)
+- `message`: Deletion status message (string)
 
 ### delete_snapshot
 
@@ -1371,7 +1443,9 @@ Delete a specific snapshot file.
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `filename`: Snapshot filename that was deleted (string)
+- `deleted`: Whether deletion was successful (boolean)
+- `message`: Deletion status message (string)
 
 ### get_storage_info
 
@@ -1413,7 +1487,13 @@ Get storage space information and usage statistics.
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `total_space`: Total storage space in bytes (integer)
+- `used_space`: Used storage space in bytes (integer)
+- `available_space`: Available storage space in bytes (integer)
+- `usage_percentage`: Storage usage percentage (0.0-100.0) (float64)
+- `recordings_size`: Total size of recording files in bytes (integer)
+- `snapshots_size`: Total size of snapshot files in bytes (integer)
+- `low_space_warning`: Whether low space warning is active (boolean)
 
 ### set_retention_policy
 
@@ -1462,7 +1542,11 @@ Configure file retention policies for automatic cleanup.
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `policy_type`: Type of retention policy ("age", "size", "manual") (string)
+- `max_age_days`: Maximum age in days for age-based retention (integer)
+- `max_size_gb`: Maximum size in GB for size-based retention (integer)
+- `enabled`: Whether the retention policy is enabled (boolean)
+- `message`: Policy configuration status message (string)
 
 ### cleanup_old_files
 
@@ -1501,7 +1585,14 @@ Manually trigger cleanup of old files based on retention policies.
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `files`: Array of recording file information objects (array)
+  - `filename`: Recording filename without extension (string)
+  - `file_size`: File size in bytes (integer)
+  - `modified_time`: File modification timestamp (ISO 8601 string)
+  - `download_url`: HTTP download URL for the file (string)
+- `total`: Total number of recording files (integer)
+- `limit`: Maximum number of files requested (integer)
+- `offset`: Number of files skipped for pagination (integer)
 
 ---
 
@@ -1641,7 +1732,14 @@ Get server configuration and capability information.
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `name`: Service name (string)
+- `version`: Service version (string)
+- `build_date`: Build date (string)
+- `go_version`: Go version used (string)
+- `architecture`: System architecture (string)
+- `capabilities`: Array of supported capabilities (array of strings)
+- `supported_formats`: Array of supported file formats (array of strings)
+- `max_cameras`: Maximum number of supported cameras (integer)
 
 ---
 
@@ -1696,7 +1794,9 @@ Subscribe to real-time event notifications for specific topics.
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `subscribed`: Whether subscription was successful (boolean)
+- `topics`: Array of successfully subscribed topics (array of strings)
+- `filters`: Applied filters for event filtering (object)
 
 ### unsubscribe_events
 
@@ -1740,7 +1840,8 @@ Unsubscribe from event notifications for specific topics or all topics.
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `unsubscribed`: Whether unsubscription was successful (boolean)
+- `topics`: Array of unsubscribed topics (array of strings)
 
 ### get_subscription_stats
 
@@ -1788,7 +1889,12 @@ Get statistics about event subscriptions including global stats and client-speci
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `global_stats`: Global subscription statistics (object)
+  - `total_subscriptions`: Total number of subscriptions (integer)
+  - `active_clients`: Number of active clients (integer)
+  - `topic_counts`: Count of subscriptions per topic (object)
+- `client_topics`: Array of topics subscribed by current client (array of strings)
+- `client_id`: Unique client identifier (string)
 
 **Available Event Topics:**
 
@@ -1886,7 +1992,7 @@ Discover external RTSP streams including UAVs and other network-based video sour
       }
     ],
     "generic_streams": [],
-    "scan_timestamp": 1737039000,
+    "scan_timestamp": "2025-01-15T14:30:00Z",
     "total_found": 1,
     "discovery_options": {
       "skydio_enabled": true,
@@ -1903,7 +2009,21 @@ Discover external RTSP streams including UAVs and other network-based video sour
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `discovered_streams`: Array of all discovered streams (array of objects)
+  - `url`: Stream RTSP URL (string)
+  - `type`: Stream type identifier (string)
+  - `name`: Human-readable stream name (string)
+  - `status`: Discovery status ("DISCOVERED", "ERROR") (string)
+  - `discovered_at`: Discovery timestamp (ISO 8601 string)
+  - `last_seen`: Last seen timestamp (ISO 8601 string)
+  - `capabilities`: Stream capabilities object (object)
+- `skydio_streams`: Array of Skydio-specific streams (array of objects)
+- `generic_streams`: Array of generic RTSP streams (array of objects)
+- `scan_timestamp`: Scan completion timestamp (ISO 8601 string)
+- `total_found`: Total number of streams found (integer)
+- `discovery_options`: Options used for discovery (object)
+- `scan_duration`: Time taken for scan (string)
+- `errors`: Array of scan errors (array of strings)
 
 ### add_external_stream
 
@@ -1944,11 +2064,19 @@ Add an external RTSP stream to the system for management and monitoring.
     "stream_name": "Skydio_UAV_15",
     "stream_type": "skydio_stanag4609",
     "status": "ADDED",
-    "timestamp": 1737039000
+    "timestamp": "2025-01-15T14:30:00Z"
   },
   "id": 28
 }
 ```
+
+**Response Fields:**
+
+- `stream_url`: RTSP URL that was added (string)
+- `stream_name`: Human-readable name assigned (string)
+- `stream_type`: Type of stream added (string)
+- `status`: Addition status ("ADDED", "ERROR") (string)
+- `timestamp`: Addition timestamp (ISO 8601 string)
 
 ### remove_external_stream
 
@@ -1983,7 +2111,7 @@ Remove an external stream from the system.
   "result": {
     "stream_url": "rtsp://192.168.42.15:5554/subject",
     "status": "REMOVED",
-    "timestamp": 1737039000
+    "timestamp": "2025-01-15T14:30:00Z"
   },
   "id": 29
 }
@@ -2057,11 +2185,26 @@ Get all currently discovered and managed external streams.
     ],
     "generic_streams": [],
     "total_count": 1,
-    "timestamp": 1737039000
+    "timestamp": "2025-01-15T14:30:00Z"
   },
   "id": 30
 }
 ```
+
+**Response Fields:**
+
+- `external_streams`: Array of all external streams (array of objects)
+  - `url`: Stream RTSP URL (string)
+  - `type`: Stream type identifier (string)
+  - `name`: Human-readable stream name (string)
+  - `status`: Stream status ("DISCOVERED", "ERROR") (string)
+  - `discovered_at`: Discovery timestamp (ISO 8601 string)
+  - `last_seen`: Last seen timestamp (ISO 8601 string)
+  - `capabilities`: Stream capabilities object (object)
+- `skydio_streams`: Array of Skydio-specific streams (array of objects)
+- `generic_streams`: Array of generic RTSP streams (array of objects)
+- `total_count`: Total number of streams (integer)
+- `timestamp`: Response timestamp (ISO 8601 string)
 
 ### set_discovery_interval
 
@@ -2097,11 +2240,18 @@ Configure the automatic discovery scan interval for external streams.
     "scan_interval": 300,
     "status": "UPDATED",
     "message": "Discovery interval updated (restart required for changes to take effect)",
-    "timestamp": 1737039000
+    "timestamp": "2025-01-15T14:30:00Z"
   },
   "id": 31
 }
 ```
+
+**Response Fields:**
+
+- `scan_interval`: Configured scan interval in seconds (integer)
+- `status`: Configuration status ("UPDATED", "ERROR") (string)
+- `message`: Status message (string)
+- `timestamp`: Response timestamp (ISO 8601 string)
 
 ---
 
