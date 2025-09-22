@@ -231,7 +231,7 @@ Get list of all discovered cameras with their current status.
 
 - `cameras`: Array of camera information objects (array)
   - `device`: Camera device identifier (string)
-  - `status`: Camera status ("connected", "disconnected", "error") (string)
+  - `status`: Camera status ("CONNECTED", "DISCONNECTED", "ERROR") (string)
   - `name`: Human-readable camera name (string)
   - `resolution`: Current resolution setting (string)
   - `fps`: Frames per second (integer)
@@ -303,7 +303,7 @@ Get status for a specific camera device.
 **Response Fields:**
 
 - `device`: Camera device identifier (string)
-- `status`: Camera status ("connected", "disconnected", "error") (string)
+- `status`: Camera status ("CONNECTED", "DISCONNECTED", "ERROR") (string)
 - `name`: Human-readable camera name (string)
 - `resolution`: Current resolution setting (string)
 - `fps`: Frames per second (integer)
@@ -353,7 +353,7 @@ Get detailed capabilities and supported formats for a specific camera device.
     "formats": ["YUYV", "MJPEG", "RGB24"],
     "resolutions": ["1920x1080", "1280x720", "640x480"],
     "fps_options": [15, 30, 60],
-    "validation_status": "confirmed"
+    "validation_status": "CONFIRMED"
   },
   "id": 4
 }
@@ -365,7 +365,7 @@ Get detailed capabilities and supported formats for a specific camera device.
 - `formats`: Array of supported pixel formats (array of strings)
 - `resolutions`: Array of supported resolutions (array of strings)
 - `fps_options`: Array of supported frame rates (array of integers)
-- `validation_status`: Capability validation status ("none", "disconnected", "confirmed") (string)
+- `validation_status`: Capability validation status ("NONE", "DISCONNECTED", "CONFIRMED") (string)
 
 **Error Response (Camera Not Found):**
 
@@ -422,7 +422,7 @@ Capture a snapshot from the specified camera.
   "result": {
     "device": "camera0",
     "filename": "snapshot_001.jpg",
-    "status": "completed",
+    "status": "COMPLETED",
     "timestamp": "2025-01-15T14:30:00Z",
     "file_size": 204800,
     "file_path": "/opt/camera-service/snapshots/snapshot_001.jpg"
@@ -435,7 +435,7 @@ Capture a snapshot from the specified camera.
 
 - `device`: Camera device identifier (string)
 - `filename`: Generated snapshot filename (string)
-- `status`: Snapshot status ("success", "failed") (string)
+- `status`: Snapshot status ("SUCCESS", "FAILED") (string)
 - `timestamp`: Snapshot capture timestamp (ISO 8601 string)
 - `file_size`: File size in bytes (integer)
 - `file_path`: Full file path to saved snapshot (string)
@@ -606,7 +606,7 @@ Start a live streaming session for the specified camera device.
 - `device`: Camera device identifier (string)
 - `stream_name`: Generated stream name (string)
 - `stream_url`: Stream URL for consumption (string)
-- `status`: Streaming status ("started", "failed") (string)
+- `status`: Streaming status ("STARTED", "FAILED") (string)
 - `start_time`: Streaming start timestamp (ISO 8601 string)
 - `auto_close_after`: Auto-close timeout setting (string)
 - `ffmpeg_command`: FFmpeg command used (string)
@@ -658,7 +658,14 @@ Stop the active streaming session for the specified camera device.
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `device`: Camera device identifier (string)
+- `stream_name`: Generated stream name (string)
+- `status`: Streaming status ("STOPPED", "FAILED") (string)
+- `start_time`: Streaming start timestamp (ISO 8601 string)
+- `end_time`: Streaming end timestamp (ISO 8601 string)
+- `duration`: Total streaming duration in seconds (integer)
+- `stream_continues`: Whether stream continues for other consumers (boolean)
+- `message`: Success message (string)
 
 ### get_stream_url
 
@@ -698,7 +705,7 @@ Get the stream URL for a specific camera device without starting a new stream.
     "stream_url": "rtsp://localhost:8554/camera_video0_viewing",
     "available": true,
     "active_consumers": 2,
-    "stream_status": "ready"
+    "stream_status": "READY"
   },
   "id": 22
 }
@@ -706,7 +713,12 @@ Get the stream URL for a specific camera device without starting a new stream.
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `device`: Camera device identifier (string)
+- `stream_name`: Generated stream name (string)
+- `stream_url`: Stream URL for consumption (string)
+- `available`: Whether stream is available (boolean)
+- `active_consumers`: Number of active stream consumers (integer)
+- `stream_status`: Stream readiness status ("READY", "NOT_READY", "ERROR") (string)
 
 ### get_stream_status
 
@@ -743,7 +755,7 @@ Get detailed status information for a specific camera stream.
   "result": {
     "device": "camera0",
     "stream_name": "camera_video0_viewing",
-    "status": "active",
+    "status": "ACTIVE",
     "ready": true,
     "ffmpeg_process": {
       "running": true,
@@ -769,7 +781,24 @@ Get detailed status information for a specific camera stream.
 
 **Response Fields:**
 
-- See the JSON response example above for field descriptions and types
+- `device`: Camera device identifier (string)
+- `stream_name`: Generated stream name (string)
+- `status`: Stream status ("ACTIVE", "INACTIVE", "ERROR", "STARTING", "STOPPING") (string)
+- `ready`: Whether stream is ready for consumption (boolean)
+- `ffmpeg_process`: FFmpeg process information (object)
+  - `running`: Whether FFmpeg process is running (boolean)
+  - `pid`: Process ID (integer)
+  - `uptime`: Process uptime in seconds (integer)
+- `mediamtx_path`: MediaMTX path information (object)
+  - `exists`: Whether path exists (boolean)
+  - `ready`: Whether path is ready (boolean)
+  - `readers`: Number of active readers (integer)
+- `metrics`: Stream performance metrics (object)
+  - `bytes_sent`: Total bytes sent (integer)
+  - `frames_sent`: Total frames sent (integer)
+  - `bitrate`: Current bitrate (integer)
+  - `fps`: Frames per second (integer)
+- `start_time`: Stream start timestamp (ISO 8601 string)
 
 **Error Response (Stream Not Found):**
 
@@ -1494,7 +1523,7 @@ Get system status and health information with comprehensive health monitoring an
 
 The system status is determined by comprehensive monitoring of multiple metrics and thresholds:
 
-- **`"healthy"`** - All systems operational within normal parameters
+- **`"HEALTHY"`** - All systems operational within normal parameters
   - MediaMTX connectivity: API responding within 10s timeout
   - Memory usage: < 90% (configurable threshold)
   - Error rate: < 5% (configurable threshold)
@@ -1504,7 +1533,7 @@ The system status is determined by comprehensive monitoring of multiple metrics 
   - Storage space: > 30% available (warn at 70%, block at 85%)
   - Health check failures: < 5 consecutive failures (configurable threshold)
 
-- **`"degraded"`** - System experiencing performance issues but core functionality available
+- **`"DEGRADED"`** - System experiencing performance issues but core functionality available
   - MediaMTX connectivity: API responding but with delays (>5s response time)
   - Memory usage: 90-95% (approaching critical threshold)
   - Error rate: 5-10% (elevated error rate)
@@ -1514,7 +1543,7 @@ The system status is determined by comprehensive monitoring of multiple metrics 
   - Storage space: 15-30% available (warning zone)
   - Health check failures: 3-4 consecutive failures (approaching threshold)
 
-- **`"unhealthy"`** - System experiencing critical failures impacting core functionality
+- **`"UNHEALTHY"`** - System experiencing critical failures impacting core functionality
   - MediaMTX connectivity: API not responding or >10s timeout
   - Memory usage: >95% (critical memory pressure)
   - Error rate: >10% (high failure rate)
@@ -1528,11 +1557,11 @@ The system status is determined by comprehensive monitoring of multiple metrics 
 
 Each component reports its operational state:
 
-- **`"running"`** - Component operational and healthy
-- **`"stopped"`** - Component intentionally stopped or disabled
-- **`"error"`** - Component experiencing errors or failures
-- **`"starting"`** - Component in startup process
-- **`"stopping"`** - Component in shutdown process
+- **`"RUNNING"`** - Component operational and healthy
+- **`"STOPPED"`** - Component intentionally stopped or disabled
+- **`"ERROR"`** - Component experiencing errors or failures
+- **`"STARTING"`** - Component in startup process
+- **`"STOPPING"`** - Component in shutdown process
 
 **Example:**
 
@@ -1548,13 +1577,13 @@ Each component reports its operational state:
 {
   "jsonrpc": "2.0",
   "result": {
-    "status": "healthy",
+    "status": "HEALTHY",
     "uptime": 86400.5,
     "version": "1.0.0",
     "components": {
-      "websocket_server": "running",
-      "camera_monitor": "running",
-      "mediamtx": "running"
+      "websocket_server": "RUNNING",
+      "camera_monitor": "RUNNING",
+      "mediamtx": "RUNNING"
     }
   },
   "id": 10
@@ -1563,13 +1592,13 @@ Each component reports its operational state:
 
 **Response Fields:**
 
-- `status`: System health status ("healthy", "degraded", "unhealthy") (string)
+- `status`: System health status ("HEALTHY", "DEGRADED", "UNHEALTHY") (string)
 - `uptime`: System uptime in seconds with sub-second precision (float64)
 - `version`: Service version string (string)
 - `components`: Object containing component operational states (object)
-  - `websocket_server`: WebSocket server status ("running", "stopped", "error", "starting", "stopping") (string)
-  - `camera_monitor`: Camera discovery monitor status (string)
-  - `mediamtx`: MediaMTX service connectivity status (string)
+  - `websocket_server`: WebSocket server status ("RUNNING", "STOPPED", "ERROR", "STARTING", "STOPPING") (string)
+  - `camera_monitor`: Camera discovery monitor status ("RUNNING", "STOPPED", "ERROR", "STARTING", "STOPPING") (string)
+  - `mediamtx`: MediaMTX service connectivity status ("RUNNING", "STOPPED", "ERROR", "STARTING", "STOPPING") (string)
 
 ### get_server_info
 
@@ -1821,7 +1850,7 @@ Discover external RTSP streams including UAVs and other network-based video sour
         "url": "rtsp://192.168.42.10:5554/subject",
         "type": "skydio_stanag4609",
         "name": "Skydio_EO_192.168.42.10_eo_/subject",
-        "status": "discovered",
+        "status": "DISCOVERED",
         "discovered_at": "2025-01-15T14:30:00Z",
         "last_seen": "2025-01-15T14:30:00Z",
         "capabilities": {
@@ -1841,7 +1870,7 @@ Discover external RTSP streams including UAVs and other network-based video sour
         "url": "rtsp://192.168.42.10:5554/subject",
         "type": "skydio_stanag4609",
         "name": "Skydio_EO_192.168.42.10_eo_/subject",
-        "status": "discovered",
+        "status": "DISCOVERED",
         "discovered_at": "2025-01-15T14:30:00Z",
         "last_seen": "2025-01-15T14:30:00Z",
         "capabilities": {
@@ -1914,7 +1943,7 @@ Add an external RTSP stream to the system for management and monitoring.
     "stream_url": "rtsp://192.168.42.15:5554/subject",
     "stream_name": "Skydio_UAV_15",
     "stream_type": "skydio_stanag4609",
-    "status": "added",
+    "status": "ADDED",
     "timestamp": 1737039000
   },
   "id": 28
@@ -1953,7 +1982,7 @@ Remove an external stream from the system.
   "jsonrpc": "2.0",
   "result": {
     "stream_url": "rtsp://192.168.42.15:5554/subject",
-    "status": "removed",
+    "status": "REMOVED",
     "timestamp": 1737039000
   },
   "id": 29
@@ -1991,7 +2020,7 @@ Get all currently discovered and managed external streams.
         "url": "rtsp://192.168.42.10:5554/subject",
         "type": "skydio_stanag4609",
         "name": "Skydio_EO_192.168.42.10_eo_/subject",
-        "status": "discovered",
+        "status": "DISCOVERED",
         "discovered_at": "2025-01-15T14:30:00Z",
         "last_seen": "2025-01-15T14:30:00Z",
         "capabilities": {
@@ -2011,7 +2040,7 @@ Get all currently discovered and managed external streams.
         "url": "rtsp://192.168.42.10:5554/subject",
         "type": "skydio_stanag4609",
         "name": "Skydio_EO_192.168.42.10_eo_/subject",
-        "status": "discovered",
+        "status": "DISCOVERED",
         "discovered_at": "2025-01-15T14:30:00Z",
         "last_seen": "2025-01-15T14:30:00Z",
         "capabilities": {
@@ -2066,7 +2095,7 @@ Configure the automatic discovery scan interval for external streams.
   "jsonrpc": "2.0",
   "result": {
     "scan_interval": 300,
-    "status": "updated",
+    "status": "UPDATED",
     "message": "Discovery interval updated (restart required for changes to take effect)",
     "timestamp": 1737039000
   },

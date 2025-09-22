@@ -106,30 +106,36 @@ const (
 	RECORDING_STATUS_STOPPED   = "STOPPED"
 	RECORDING_STATUS_FAILED    = "FAILED"
 
-	// Streaming Status Values (from API documentation)
-	STREAMING_STATUS_STARTED = "STARTED"
-	STREAMING_STATUS_STOPPED = "STOPPED"
-	STREAMING_STATUS_FAILED  = "failed"
+	// Streaming Status Values (standardized to UPPERCASE)
+	STREAMING_STATUS_STARTED   = "STARTED"
+	STREAMING_STATUS_STOPPED   = "STOPPED"
+	STREAMING_STATUS_FAILED    = "FAILED"
+	STREAMING_STATUS_ACTIVE    = "ACTIVE"
+	STREAMING_STATUS_INACTIVE  = "INACTIVE"
+	STREAMING_STATUS_STARTING  = "STARTING"
+	STREAMING_STATUS_STOPPING  = "STOPPING"
 
-	// System Status Values (from API documentation)
-	SYSTEM_STATUS_HEALTHY   = "healthy"
-	SYSTEM_STATUS_DEGRADED  = "degraded"
-	SYSTEM_STATUS_UNHEALTHY = "unhealthy"
+	// System Status Values (standardized to UPPERCASE)
+	SYSTEM_STATUS_HEALTHY   = "HEALTHY"
+	SYSTEM_STATUS_DEGRADED  = "DEGRADED"
+	SYSTEM_STATUS_UNHEALTHY = "UNHEALTHY"
 
-	// Component Status Values (from API documentation)
-	COMPONENT_STATUS_RUNNING = "running"
-	COMPONENT_STATUS_STOPPED = "stopped"
-	COMPONENT_STATUS_ERROR   = "error"
+	// Component Status Values (standardized to UPPERCASE)
+	COMPONENT_STATUS_RUNNING  = "RUNNING"
+	COMPONENT_STATUS_STOPPED  = "STOPPED"
+	COMPONENT_STATUS_ERROR    = "ERROR"
+	COMPONENT_STATUS_STARTING = "STARTING"
+	COMPONENT_STATUS_STOPPING = "STOPPING"
 
-	// Snapshot Status Values (from API documentation)
-	SNAPSHOT_STATUS_COMPLETED = "completed"
-	SNAPSHOT_STATUS_SUCCESS   = "success"
-	SNAPSHOT_STATUS_FAILED    = "failed"
+	// Snapshot Status Values (standardized to UPPERCASE)
+	SNAPSHOT_STATUS_COMPLETED = "COMPLETED"
+	SNAPSHOT_STATUS_SUCCESS   = "SUCCESS"
+	SNAPSHOT_STATUS_FAILED    = "FAILED"
 
-	// Validation Status Values (from API documentation)
-	VALIDATION_STATUS_NONE         = "none"
-	VALIDATION_STATUS_DISCONNECTED = "disconnected"
-	VALIDATION_STATUS_CONFIRMED    = "confirmed"
+	// Validation Status Values (standardized to UPPERCASE)
+	VALIDATION_STATUS_NONE         = "NONE"
+	VALIDATION_STATUS_DISCONNECTED = "DISCONNECTED"
+	VALIDATION_STATUS_CONFIRMED    = "CONFIRMED"
 )
 
 // =============================================================================
