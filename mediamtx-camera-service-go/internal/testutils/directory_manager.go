@@ -47,17 +47,17 @@ func (dm *DirectoryManager) CreateDirectoriesFromFixture(fixtureName string) {
 		if dir == "/tmp" || dir == "/" || dir == "/usr" || dir == "/var" {
 			continue
 		}
-		
+
 		// Ensure directory exists
 		err := os.MkdirAll(dir, 0777)
 		require.NoError(dm.t, err, "Failed to create directory: %s", dir)
-		
+
 		// Ensure proper permissions even if directory already existed (skip if permission denied)
 		if err := os.Chmod(dir, 0777); err != nil {
 			// Log warning but don't fail - might be permission issue on existing directories
 			dm.t.Logf("Warning: Could not set permissions on %s: %v", dir, err)
 		}
-		
+
 		dm.createdDirs = append(dm.createdDirs, dir)
 	}
 }
@@ -108,7 +108,7 @@ func (dm *DirectoryManager) extractDirectoryPaths(config map[string]interface{})
 		if configPath, ok := mediamtx["config_path"].(string); ok {
 			// For config files, create parent directory
 			directories = append(directories, filepath.Dir(configPath))
-			
+
 			// Create minimal MediaMTX config file if it doesn't exist
 			if _, err := os.Stat(configPath); os.IsNotExist(err) {
 				err := os.WriteFile(configPath, []byte("# Test MediaMTX configuration\n"), 0644)
