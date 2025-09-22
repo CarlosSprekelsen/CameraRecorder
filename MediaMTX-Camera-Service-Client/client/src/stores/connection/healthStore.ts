@@ -64,6 +64,11 @@ export interface HealthStoreActions {
   addHealthRecord: (score: number, quality: string) => void;
   clearHealthHistory: () => void;
   
+  // WebSocket-based health methods
+  getSystemStatus: () => Promise<any>;
+  getSystemMetrics: () => Promise<any>;
+  refreshHealth: () => Promise<void>;
+  
   // Utility actions
   reset: () => void;
   calculateHealthScore: () => number;
@@ -167,6 +172,99 @@ export const useHealthStore = create<HealthStore>()(
 
       clearHealthHistory: () => {
         set({ healthHistory: [] });
+      },
+
+      // WebSocket-based health methods
+      getSystemStatus: async () => {
+        try {
+          const { websocketService } = await import('../../services/websocket');
+          const wsService = websocketService;
+
+          if (!wsService.isConnected()) {
+            throw new Error('WebSocket not connected');
+          }
+
+          console.log('Getting system status via WebSocket');
+          const result = await wsService.call('get_status', {});
+          
+          // Update health based on system status
+          const isHealthy = result.status === 'healthy';
+          set({ isHealthy });
+          
+          return result;
+        } catch (error) {
+          console.error('Failed to get system status:', error);
+          set({ isHealthy: false });
+          throw error;
+        }
+      },
+
+      getSystemMetrics: async () => {
+        try {
+          const { websocketService } = await import('../../services/websocket');
+          const wsService = websocketService;
+
+          if (!wsService.isConnected()) {
+            throw new Error('WebSocket not connected');
+          }
+
+          console.log('Getting system metrics via WebSocket');
+          const result = await wsService.call('get_metrics', {});
+          
+          // Update health score based on metrics
+          if (result.average_response_time) {
+            const latency = result.average_response_time;
+            set({ latency });
+            
+            // Calculate health score based on response time
+            let healthScore = 100;
+            if (latency > 100) {
+              healthScore -= Math.min(30, (latency - 100) / 10);
+            }
+            set({ healthScore: Math.max(0, healthScore) });
+          }
+          
+          return result;
+        } catch (error) {
+          console.error('Failed to get system metrics:', error);
+          set({ isHealthy: false });
+          throw error;
+        }
+      },
+
+      refreshHealth: async () => {
+        try {
+          // Get both system status and metrics
+          const [status, metrics] = await Promise.all([
+            get().getSystemStatus(),
+            get().getSystemMetrics()
+          ]);
+          
+          // Update connection quality based on health score
+          const { healthScore } = get();
+          let connectionQuality: 'excellent' | 'good' | 'poor' | 'unstable';
+          
+          if (healthScore >= 90) {
+            connectionQuality = 'excellent';
+          } else if (healthScore >= 70) {
+            connectionQuality = 'good';
+          } else if (healthScore >= 40) {
+            connectionQuality = 'poor';
+          } else {
+            connectionQuality = 'unstable';
+          }
+          
+          set({ connectionQuality });
+          
+          // Add to health history
+          get().addHealthRecord(healthScore, connectionQuality);
+          
+          console.log('Health refreshed successfully', { status, metrics, healthScore, connectionQuality });
+        } catch (error) {
+          console.error('Failed to refresh health:', error);
+          set({ isHealthy: false, connectionQuality: 'unstable' });
+          throw error;
+        }
       },
 
       // Utility actions
