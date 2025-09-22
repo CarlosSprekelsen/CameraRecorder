@@ -1139,7 +1139,7 @@ func (c *controller) GetRTSPConnectionMetrics(ctx context.Context) map[string]in
 }
 
 // StartStreaming starts a live streaming session
-func (c *controller) StartStreaming(ctx context.Context, cameraID string) (*GetStreamURLResponse, error) {
+func (c *controller) StartStreaming(ctx context.Context, cameraID string) (*StartStreamingResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}

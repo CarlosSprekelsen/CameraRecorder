@@ -166,7 +166,7 @@ func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *co
 }
 
 // StartStream starts a stream for a camera using cameraID-first architecture
-func (sm *streamManager) StartStream(ctx context.Context, cameraID string) (*GetStreamURLResponse, error) {
+func (sm *streamManager) StartStream(ctx context.Context, cameraID string) (*StartStreamingResponse, error) {
 	// Add panic recovery for stream operations
 	defer func() {
 		if r := recover(); r != nil {
@@ -192,18 +192,22 @@ func (sm *streamManager) StartStream(ctx context.Context, cameraID string) (*Get
 	sm.logger.WithField("cameraID", cameraID).Info("Starting stream with cameraID-first approach")
 
 	// Pure delegation to startStreamForUseCase - no conversion ping-pong!
-	path, err := sm.startStreamForUseCase(ctx, cameraID, UseCaseRecording)
+	_, err := sm.startStreamForUseCase(ctx, cameraID, UseCaseRecording)
 	if err != nil {
 		return nil, err
 	}
 
 	// Build API-ready response
-	response := &GetStreamURLResponse{
-		Device:    cameraID,
-		StreamURL: sm.GenerateStreamURL(cameraID),
-		Status:    "active",
-		Format:    "rtsp",
-		Ready:     path.Ready,
+	streamName := fmt.Sprintf("camera_%s_viewing", cameraID)
+	streamURL := sm.GenerateStreamURL(cameraID)
+	response := &StartStreamingResponse{
+		Device:         cameraID,
+		StreamName:     streamName,
+		StreamURL:      streamURL,
+		Status:         "STARTED",
+		StartTime:      time.Now().Format(time.RFC3339),
+		AutoCloseAfter: "300s",
+		FfmpegCommand:  fmt.Sprintf("ffmpeg -f v4l2 -i /dev/%s -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp %s", cameraID, streamURL),
 	}
 
 	return response, nil
@@ -833,24 +837,28 @@ func (sm *streamManager) GetStreamURL(ctx context.Context, cameraID string) (*Ge
 
 	// Get actual stream status from MediaMTX
 	streamStatus, err := sm.GetStreamStatus(ctx, cameraID)
+	streamName := fmt.Sprintf("camera_%s_viewing", cameraID)
+	
 	if err != nil {
 		// Stream doesn't exist or error - return available URL anyway
 		return &GetStreamURLResponse{
-			Device:    cameraID,
-			StreamURL: streamURL,
-			Status:    "available",
-			Format:    "rtsp",
-			Ready:     false,
+			Device:          cameraID,
+			StreamName:      streamName,
+			StreamURL:       streamURL,
+			Available:       true,
+			ActiveConsumers: 0,
+			StreamStatus:    "NOT_READY",
 		}, nil
 	}
 
 	// Use actual status from StreamManager
 	response := &GetStreamURLResponse{
-		Device:    cameraID,
-		StreamURL: streamURL,
-		Status:    streamStatus.Status,
-		Format:    "rtsp",
-		Ready:     streamStatus.Status == "active",
+		Device:          cameraID,
+		StreamName:      streamName,
+		StreamURL:       streamURL,
+		Available:       streamStatus.Status == "active",
+		ActiveConsumers: streamStatus.Viewers,
+		StreamStatus:    func() string { if streamStatus.Status == "active" { return "READY" } else { return "NOT_READY" } }(),
 	}
 
 	return response, nil

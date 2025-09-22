@@ -327,7 +327,7 @@ type MediaMTXController interface {
 	StopRecording(ctx context.Context, device string) (*StopRecordingResponse, error)
 
 	// Streaming operations
-	StartStreaming(ctx context.Context, device string) (*GetStreamURLResponse, error)
+	StartStreaming(ctx context.Context, device string) (*StartStreamingResponse, error)
 	StopStreaming(ctx context.Context, device string) error
 	GetStreamURL(ctx context.Context, device string) (*GetStreamURLResponse, error)
 	GetStreamStatus(ctx context.Context, device string) (*GetStreamStatusResponse, error)
@@ -391,7 +391,7 @@ type MediaMTXControllerAPI interface {
 
 	// Streaming (uses Path from api_types.go)
 	GetStreams(ctx context.Context) (*GetStreamsResponse, error)
-	StartStreaming(ctx context.Context, device string) (*GetStreamURLResponse, error)
+	StartStreaming(ctx context.Context, device string) (*StartStreamingResponse, error)
 	StopStreaming(ctx context.Context, device string) error
 	GetStreamURL(ctx context.Context, device string) (*GetStreamURLResponse, error)
 	GetStreamStatus(ctx context.Context, device string) (*GetStreamStatusResponse, error)
@@ -505,7 +505,7 @@ type PathManager interface {
 // StreamManager interface defines stream management operations
 type StreamManager interface {
 	// Stream operations (cameraID-first - no conversion ping-pong)
-	StartStream(ctx context.Context, cameraID string) (*GetStreamURLResponse, error)
+	StartStream(ctx context.Context, cameraID string) (*StartStreamingResponse, error)
 
 	// Stream lifecycle management (cameraID-first)
 	StopStream(ctx context.Context, cameraID string) error

@@ -22,7 +22,7 @@ package mediamtx
 type TakeSnapshotResponse struct {
 	Device    string `json:"device"`    // Camera device identifier (e.g., "camera0")
 	Filename  string `json:"filename"`  // Generated snapshot filename
-	Status    string `json:"status"`    // Snapshot status ("completed", "failed")
+	Status    string `json:"status"`    // Snapshot status ("COMPLETED", "FAILED")
 	Timestamp string `json:"timestamp"` // Snapshot capture timestamp (ISO 8601)
 	FileSize  int64  `json:"file_size"` // File size in bytes
 	FilePath  string `json:"file_path"` // Full file path to saved snapshot
@@ -127,11 +127,12 @@ type StopStreamingResponse struct {
 
 // GetStreamURLResponse represents the response from get_stream_url method
 type GetStreamURLResponse struct {
-	Device    string `json:"device"`     // Camera device identifier
-	StreamURL string `json:"stream_url"` // Stream URL
-	Status    string `json:"status"`     // Stream status ("active", "inactive")
-	Format    string `json:"format"`     // Stream format
-	Ready     bool   `json:"ready"`      // Stream readiness status
+	Device          string `json:"device"`           // Camera device identifier
+	StreamName      string `json:"stream_name"`      // Generated stream name
+	StreamURL       string `json:"stream_url"`       // Stream URL for consumption
+	Available       bool   `json:"available"`        // Whether stream is available
+	ActiveConsumers int    `json:"active_consumers"` // Number of active stream consumers
+	StreamStatus    string `json:"stream_status"`    // Stream readiness status ("READY", "NOT_READY", "ERROR")
 }
 
 // GetStreamStatusResponse represents the response from get_stream_status method
@@ -147,10 +148,10 @@ type GetStreamStatusResponse struct {
 
 // ListRecordingsResponse represents the response from list_recordings method
 type ListRecordingsResponse struct {
-	Recordings []RecordingFileInfo `json:"recordings"` // List of recording files
-	Total      int                 `json:"total"`      // Total number of recordings
-	Limit      int                 `json:"limit"`      // Requested limit
-	Offset     int                 `json:"offset"`     // Requested offset
+	Files  []RecordingFileInfo `json:"files"`  // List of recording files
+	Total  int                 `json:"total"`  // Total number of recordings
+	Limit  int                 `json:"limit"`  // Requested limit
+	Offset int                 `json:"offset"` // Requested offset
 }
 
 // RecordingFileInfo represents recording file information for API responses
@@ -407,11 +408,10 @@ type SubscriptionGlobalStats struct {
 
 // GetStatusResponse represents the response from get_status method
 type GetStatusResponse struct {
-	Status    string                 `json:"status"`    // Overall system status
-	Uptime    string                 `json:"uptime"`    // System uptime
-	Version   string                 `json:"version"`   // Service version
-	Timestamp string                 `json:"timestamp"` // Status check timestamp (ISO 8601)
-	Details   map[string]interface{} `json:"details"`   // Additional status details
+	Status     string                 `json:"status"`     // Overall system status ("HEALTHY", "DEGRADED", "UNHEALTHY")
+	Uptime     float64                `json:"uptime"`     // System uptime in seconds with sub-second precision
+	Version    string                 `json:"version"`    // Service version
+	Components map[string]interface{} `json:"components"` // Component operational states
 }
 
 // CameraStatusUpdateResponse represents the response from camera_status_update method

@@ -646,10 +646,10 @@ func (rm *RecordingManager) ListRecordings(ctx context.Context, limit, offset in
 	}
 
 	response := &ListRecordingsResponse{
-		Recordings: recordings,
-		Total:      fileList.Total,
-		Limit:      limit,
-		Offset:     offset,
+		Files:  recordings,
+		Total:  fileList.Total,
+		Limit:  limit,
+		Offset: offset,
 	}
 
 	return response, nil
