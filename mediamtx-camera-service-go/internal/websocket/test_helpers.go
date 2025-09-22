@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/constants"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
@@ -65,15 +66,15 @@ func DefaultWebSocketTestConfig() *WebSocketTestConfig {
 	return &WebSocketTestConfig{
 		Host:                 "localhost",
 		Port:                 0, // Will be assigned dynamically
-		WebSocketPath:        "/ws",
-		MaxConnections:       100,
+		WebSocketPath:        constants.WEBSOCKET_DEFAULT_PATH,
+		MaxConnections:       constants.WEBSOCKET_MAX_CONNECTIONS_TEST,
 		ReadTimeout:          testutils.DefaultTestTimeout,
 		WriteTimeout:         testutils.DefaultTestTimeout,
 		PingInterval:         testutils.DefaultTestTimeout,
 		PongWait:             testutils.LongTestTimeout,
-		MaxMessageSize:       1024 * 1024, // 1MB
-		ReadBufferSize:       4096,
-		WriteBufferSize:      4096,
+		MaxMessageSize:       constants.WEBSOCKET_MAX_MESSAGE_SIZE,
+		ReadBufferSize:       constants.WEBSOCKET_TEST_BUFFER_SIZE,
+		WriteBufferSize:      constants.WEBSOCKET_TEST_BUFFER_SIZE,
 		ShutdownTimeout:      testutils.DefaultTestTimeout,
 		ClientCleanupTimeout: testutils.ShortTestTimeout,
 		TestDataDir:          "/tmp/websocket_test_data",

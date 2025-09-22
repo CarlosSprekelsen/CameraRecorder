@@ -19,57 +19,41 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/constants"
 	"github.com/gorilla/websocket"
 )
 
-// JSON-RPC Error Codes (RFC 32700) - Following Python implementation
+// JSON-RPC Error Codes - Using common constants for consistency
 const (
-	INVALID_REQUEST          = -32600
-	AUTHENTICATION_REQUIRED  = -32001
-	RATE_LIMIT_EXCEEDED      = -32002
-	INSUFFICIENT_PERMISSIONS = -32003
-	CAMERA_NOT_FOUND         = -32004
-	RECORDING_IN_PROGRESS    = -32005
-	MEDIAMTX_UNAVAILABLE     = -32006
-	INSUFFICIENT_STORAGE     = -32007
-	CAPABILITY_NOT_SUPPORTED = -32008
-	METHOD_NOT_FOUND         = -32601
-	INVALID_PARAMS           = -32602
-	INTERNAL_ERROR           = -32603
+	// Standard JSON-RPC 2.0 Error Codes
+	INVALID_REQUEST  = constants.JSONRPC_INVALID_REQUEST
+	METHOD_NOT_FOUND = constants.JSONRPC_METHOD_NOT_FOUND
+	INVALID_PARAMS   = constants.JSONRPC_INVALID_PARAMS
+	INTERNAL_ERROR   = constants.JSONRPC_INTERNAL_ERROR
+
+	// Service-Specific Error Codes
+	AUTHENTICATION_REQUIRED  = constants.API_AUTHENTICATION_REQUIRED
+	RATE_LIMIT_EXCEEDED      = constants.API_RATE_LIMIT_EXCEEDED
+	INSUFFICIENT_PERMISSIONS = constants.API_INSUFFICIENT_PERMISSIONS
+	CAMERA_NOT_FOUND         = constants.API_CAMERA_NOT_FOUND
+	RECORDING_IN_PROGRESS    = constants.API_RECORDING_IN_PROGRESS
+	MEDIAMTX_UNAVAILABLE     = constants.API_MEDIAMTX_UNAVAILABLE
+	INSUFFICIENT_STORAGE     = constants.API_INSUFFICIENT_STORAGE
+	CAPABILITY_NOT_SUPPORTED = constants.API_CAPABILITY_NOT_SUPPORTED
 
 	// Enhanced Recording Management Error Codes
-	ERROR_CAMERA_NOT_FOUND         = -1000
-	ERROR_CAMERA_NOT_AVAILABLE     = -1001
-	ERROR_RECORDING_IN_PROGRESS    = -1002
-	ERROR_MEDIAMTX_ERROR           = -1003
-	ERROR_CAMERA_ALREADY_RECORDING = -1006
-	ERROR_STORAGE_LOW              = -1008
-	ERROR_STORAGE_CRITICAL         = -1010
+	ERROR_CAMERA_NOT_FOUND         = constants.ERROR_CAMERA_NOT_FOUND
+	ERROR_CAMERA_NOT_AVAILABLE     = constants.ERROR_CAMERA_NOT_AVAILABLE
+	ERROR_RECORDING_IN_PROGRESS    = constants.ERROR_RECORDING_IN_PROGRESS
+	ERROR_MEDIAMTX_ERROR           = constants.ERROR_MEDIAMTX_ERROR
+	ERROR_CAMERA_ALREADY_RECORDING = constants.ERROR_CAMERA_ALREADY_RECORDING
+	ERROR_STORAGE_LOW              = constants.ERROR_STORAGE_LOW
+	ERROR_STORAGE_CRITICAL         = constants.ERROR_STORAGE_CRITICAL
 )
 
 // ErrorMessages maps error codes to their corresponding messages
-// Following Go API Documentation exactly
-var ErrorMessages = map[int]string{
-	INVALID_REQUEST:                "Invalid Request",
-	AUTHENTICATION_REQUIRED:        "Authentication failed or token expired",
-	RATE_LIMIT_EXCEEDED:            "Rate limit exceeded",
-	INSUFFICIENT_PERMISSIONS:       "Insufficient permissions",
-	CAMERA_NOT_FOUND:               "Camera not found or disconnected",
-	RECORDING_IN_PROGRESS:          "Recording already in progress",
-	MEDIAMTX_UNAVAILABLE:           "MediaMTX service unavailable",
-	INSUFFICIENT_STORAGE:           "Insufficient storage space",
-	CAPABILITY_NOT_SUPPORTED:       "Camera capability not supported",
-	METHOD_NOT_FOUND:               "Method not found",
-	INVALID_PARAMS:                 "Invalid parameters",
-	INTERNAL_ERROR:                 "Internal server error",
-	ERROR_CAMERA_NOT_FOUND:         "Camera not found",
-	ERROR_CAMERA_NOT_AVAILABLE:     "Camera not available",
-	ERROR_RECORDING_IN_PROGRESS:    "Recording in progress",
-	ERROR_MEDIAMTX_ERROR:           "MediaMTX error",
-	ERROR_CAMERA_ALREADY_RECORDING: "Camera is currently recording",
-	ERROR_STORAGE_LOW:              "Storage space is low",
-	ERROR_STORAGE_CRITICAL:         "Storage space is critical",
-}
+// Using common constants for consistency with API documentation
+var ErrorMessages = constants.APIErrorMessages
 
 // JsonRpcRequest represents a JSON-RPC 2.0 request structure
 // Following Python JsonRpcRequest dataclass
@@ -183,19 +167,19 @@ type ServerConfig struct {
 // Optimized for Epic E3 performance requirements: <50ms response time, 1000+ connections
 func DefaultServerConfig() *ServerConfig {
 	return &ServerConfig{
-		Host:                 "0.0.0.0",
-		Port:                 8002,
-		WebSocketPath:        "/ws",
-		MaxConnections:       1000,
-		ReadTimeout:          5 * time.Second,  // Reduced for faster response detection
-		WriteTimeout:         1 * time.Second,  // Reduced for faster message delivery
-		PingInterval:         30 * time.Second, // Keep reasonable for connection health
-		PongWait:             60 * time.Second, // Keep reasonable for connection stability
-		MaxMessageSize:       1024 * 1024,      // 1MB
-		ReadBufferSize:       1024,
-		WriteBufferSize:      1024,
-		ShutdownTimeout:      30 * time.Second, // Default shutdown timeout
-		ClientCleanupTimeout: 10 * time.Second, // Default client cleanup timeout
-		AutoCloseAfter:       0,                // Default: never auto-close
+		Host:                 constants.WEBSOCKET_DEFAULT_HOST,
+		Port:                 constants.WEBSOCKET_DEFAULT_PORT,
+		WebSocketPath:        constants.WEBSOCKET_DEFAULT_PATH,
+		MaxConnections:       constants.WEBSOCKET_MAX_CONNECTIONS_PRODUCTION,
+		ReadTimeout:          constants.WEBSOCKET_READ_TIMEOUT,
+		WriteTimeout:         constants.WEBSOCKET_WRITE_TIMEOUT,
+		PingInterval:         constants.WEBSOCKET_PING_INTERVAL,
+		PongWait:             constants.WEBSOCKET_PONG_WAIT,
+		MaxMessageSize:       constants.WEBSOCKET_MAX_MESSAGE_SIZE,
+		ReadBufferSize:       constants.WEBSOCKET_READ_BUFFER_SIZE,
+		WriteBufferSize:      constants.WEBSOCKET_WRITE_BUFFER_SIZE,
+		ShutdownTimeout:      constants.WEBSOCKET_SHUTDOWN_TIMEOUT,
+		ClientCleanupTimeout: constants.WEBSOCKET_CLIENT_CLEANUP_TIMEOUT,
+		AutoCloseAfter:       0, // Default: never auto-close
 	}
 }

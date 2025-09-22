@@ -444,21 +444,8 @@ func (s *WebSocketServer) MethodGetCameraCapabilities(params map[string]interfac
 		// Extract validated device parameter
 		device := validationResult.Data["device"].(string)
 
-		// ULTRA THIN: Delegate to MediaMTX controller - returns complete API-ready capabilities
-		cameraCapabilities, err := s.mediaMTXController.GetCameraCapabilities(context.Background(), device)
-		if err != nil {
-			return map[string]interface{}{
-				"device":            device,
-				"formats":           []string{},
-				"resolutions":       []string{},
-				"fps_options":       []int{},
-				"validation_status": "disconnected",
-			}, nil
-		}
-
-		// Return Controller's complete API-ready response - NO manual extraction needed
-		// PathManager now provides ALL formats, resolutions, and FPS from camera module
-		return cameraCapabilities, nil
+		// Pure delegation to Controller - returns API-ready GetCameraCapabilitiesResponse
+		return s.mediaMTXController.GetCameraCapabilities(context.Background(), device)
 	})(params, client)
 }
 

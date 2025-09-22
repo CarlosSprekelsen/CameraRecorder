@@ -34,6 +34,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/constants"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/gorilla/websocket"
@@ -157,7 +158,7 @@ func TestWebSocketMethods_GetServerInfo_ReqAPI002_Success(t *testing.T) {
 	require.NotNil(t, response.Result, "Success response must have result")
 
 	// ✅ VALIDATE JSON-RPC PROTOCOL
-	assert.Equal(t, "2.0", response.JSONRPC, "Must be JSON-RPC 2.0")
+	assert.Equal(t, constants.JSONRPC_VERSION, response.JSONRPC, "Must be JSON-RPC 2.0")
 	assert.NotNil(t, response.ID, "Must have request ID")
 
 	// ✅ VALIDATE API CONTRACT per docs/api/json_rpc_methods.md
@@ -214,7 +215,7 @@ func TestWebSocketMethods_GetStatus_ReqAPI002_Success(t *testing.T) {
 	require.NotNil(t, response.Result, "Success response must have result")
 
 	// ✅ VALIDATE JSON-RPC PROTOCOL
-	assert.Equal(t, "2.0", response.JSONRPC, "Must be JSON-RPC 2.0")
+	assert.Equal(t, constants.JSONRPC_VERSION, response.JSONRPC, "Must be JSON-RPC 2.0")
 	assert.NotNil(t, response.ID, "Must have request ID")
 
 	// ✅ VALIDATE API CONTRACT per docs/api/json_rpc_methods.md
@@ -267,7 +268,7 @@ func TestWebSocketMethods_GetCameraList_ReqCAM001_Success(t *testing.T) {
 	require.NotNil(t, response.Result, "Success response must have result")
 
 	// ✅ VALIDATE JSON-RPC PROTOCOL
-	assert.Equal(t, "2.0", response.JSONRPC, "Must be JSON-RPC 2.0")
+	assert.Equal(t, constants.JSONRPC_VERSION, response.JSONRPC, "Must be JSON-RPC 2.0")
 	assert.NotNil(t, response.ID, "Must have request ID")
 
 	// ✅ VALIDATE API CONTRACT per docs/api/json_rpc_methods.md
@@ -315,7 +316,7 @@ func TestWebSocketMethods_GetCameraStatus_ReqCAM001_Success(t *testing.T) {
 	}, "viewer")
 
 	// ✅ VALIDATE JSON-RPC PROTOCOL
-	assert.Equal(t, "2.0", response.JSONRPC, "Must be JSON-RPC 2.0")
+	assert.Equal(t, constants.JSONRPC_VERSION, response.JSONRPC, "Must be JSON-RPC 2.0")
 	assert.NotNil(t, response.ID, "Must have request ID")
 
 	// ✅ VALIDATE API CONTRACT per docs/api/json_rpc_methods.md
@@ -340,7 +341,8 @@ func TestWebSocketMethods_GetCameraStatus_ReqCAM001_Success(t *testing.T) {
 
 		status, ok := result["status"].(string)
 		require.True(t, ok, "Status must be string")
-		assert.Contains(t, []string{"CONNECTED", "DISCONNECTED", "ERROR"}, status, "Status must be valid")
+		validStatuses := []string{constants.CAMERA_STATUS_CONNECTED, constants.CAMERA_STATUS_DISCONNECTED, constants.CAMERA_STATUS_ERROR}
+		assert.Contains(t, validStatuses, status, "Status must be valid per API documentation")
 	}
 }
 
@@ -355,7 +357,7 @@ func TestWebSocketMethods_GetCameraCapabilities_ReqCAM001_Success(t *testing.T) 
 	}, "viewer")
 
 	// ✅ VALIDATE JSON-RPC PROTOCOL
-	assert.Equal(t, "2.0", response.JSONRPC, "Must be JSON-RPC 2.0")
+	assert.Equal(t, constants.JSONRPC_VERSION, response.JSONRPC, "Must be JSON-RPC 2.0")
 	assert.NotNil(t, response.ID, "Must have request ID")
 
 	// ✅ VALIDATE API CONTRACT per docs/api/json_rpc_methods.md
@@ -422,7 +424,7 @@ func TestWebSocketMethods_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
 	}, "operator")
 
 	// ✅ VALIDATE JSON-RPC PROTOCOL
-	assert.Equal(t, "2.0", response.JSONRPC, "Must be JSON-RPC 2.0")
+	assert.Equal(t, constants.JSONRPC_VERSION, response.JSONRPC, "Must be JSON-RPC 2.0")
 	assert.NotNil(t, response.ID, "Must have request ID")
 
 	// ✅ VALIDATE API CONTRACT per docs/api/json_rpc_methods.md
@@ -487,7 +489,7 @@ func TestWebSocketMethods_StartRecording_ReqMTX002_Success(t *testing.T) {
 	require.NotNil(t, response.Result, "Success response must have result")
 
 	// ✅ VALIDATE JSON-RPC PROTOCOL
-	assert.Equal(t, "2.0", response.JSONRPC, "Must be JSON-RPC 2.0")
+	assert.Equal(t, constants.JSONRPC_VERSION, response.JSONRPC, "Must be JSON-RPC 2.0")
 	assert.NotNil(t, response.ID, "Must have request ID")
 
 	// ✅ VALIDATE API CONTRACT
@@ -508,7 +510,8 @@ func TestWebSocketMethods_StartRecording_ReqMTX002_Success(t *testing.T) {
 
 	status, ok := result["status"].(string)
 	require.True(t, ok, "status must be string")
-	assert.Contains(t, []string{"RECORDING", "STARTED", "STARTING"}, status, "Status must be valid")
+	validStatuses := []string{constants.RECORDING_STATUS_RECORDING, "STARTED", "STARTING"}
+	assert.Contains(t, validStatuses, status, "Status must be valid per API documentation")
 
 	// ✅ VALIDATE OPTIONAL FIELDS
 	if startTime, exists := result["start_time"]; exists {
@@ -534,7 +537,7 @@ func TestWebSocketMethods_StopRecording_ReqMTX002_Success(t *testing.T) {
 	}, "operator")
 
 	// ✅ VALIDATE JSON-RPC PROTOCOL
-	assert.Equal(t, "2.0", response.JSONRPC, "Must be JSON-RPC 2.0")
+	assert.Equal(t, constants.JSONRPC_VERSION, response.JSONRPC, "Must be JSON-RPC 2.0")
 	assert.NotNil(t, response.ID, "Must have request ID")
 
 	// ✅ VALIDATE API CONTRACT per docs/api/json_rpc_methods.md
@@ -610,7 +613,7 @@ func TestWebSocketMethods_GetMetrics_ReqMTX004_Success(t *testing.T) {
 	require.NotNil(t, response.Result, "Success response must have result")
 
 	// ✅ VALIDATE JSON-RPC PROTOCOL
-	assert.Equal(t, "2.0", response.JSONRPC, "Must be JSON-RPC 2.0")
+	assert.Equal(t, constants.JSONRPC_VERSION, response.JSONRPC, "Must be JSON-RPC 2.0")
 	assert.NotNil(t, response.ID, "Must have request ID")
 
 	// ✅ VALIDATE API CONTRACT per docs/api/json_rpc_methods.md
@@ -866,7 +869,7 @@ func TestWebSocketMethods_StartStreaming_ReqMTX002_Success(t *testing.T) {
 	}, "operator")
 
 	// ✅ VALIDATE JSON-RPC PROTOCOL
-	assert.Equal(t, "2.0", response.JSONRPC, "Must be JSON-RPC 2.0")
+	assert.Equal(t, constants.JSONRPC_VERSION, response.JSONRPC, "Must be JSON-RPC 2.0")
 	assert.NotNil(t, response.ID, "Must have request ID")
 
 	// ✅ VALIDATE API CONTRACT per docs/api/json_rpc_methods.md
@@ -916,7 +919,7 @@ func TestWebSocketMethods_StopStreaming_ReqMTX002_Success(t *testing.T) {
 	}, "operator")
 
 	// ✅ VALIDATE JSON-RPC PROTOCOL
-	assert.Equal(t, "2.0", response.JSONRPC, "Must be JSON-RPC 2.0")
+	assert.Equal(t, constants.JSONRPC_VERSION, response.JSONRPC, "Must be JSON-RPC 2.0")
 	assert.NotNil(t, response.ID, "Must have request ID")
 
 	// ✅ VALIDATE API CONTRACT per docs/api/json_rpc_methods.md
@@ -971,7 +974,7 @@ func TestWebSocketMethods_GetStreamURL_ReqMTX002_Success(t *testing.T) {
 	}, "viewer")
 
 	// ✅ VALIDATE JSON-RPC PROTOCOL
-	assert.Equal(t, "2.0", response.JSONRPC, "Must be JSON-RPC 2.0")
+	assert.Equal(t, constants.JSONRPC_VERSION, response.JSONRPC, "Must be JSON-RPC 2.0")
 	assert.NotNil(t, response.ID, "Must have request ID")
 
 	// ✅ VALIDATE API CONTRACT per docs/api/json_rpc_methods.md
@@ -1065,7 +1068,7 @@ func TestWebSocketMethods_ListRecordings_ReqMTX002_Success(t *testing.T) {
 	require.NotNil(t, response.Result, "Success response must have result")
 
 	// ✅ VALIDATE JSON-RPC PROTOCOL
-	assert.Equal(t, "2.0", response.JSONRPC, "Must be JSON-RPC 2.0")
+	assert.Equal(t, constants.JSONRPC_VERSION, response.JSONRPC, "Must be JSON-RPC 2.0")
 	assert.NotNil(t, response.ID, "Must have request ID")
 
 	// ✅ VALIDATE API CONTRACT per docs/api/json_rpc_methods.md

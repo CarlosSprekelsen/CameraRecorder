@@ -40,6 +40,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/constants"
 	ws "github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
 )
 
@@ -144,7 +145,7 @@ func testAuthenticationAndAuthorization(t *testing.T, client *testtestutils.WebS
 		require.NoError(t, err, "Should get JSON-RPC response for invalid authentication")
 		require.NotNil(t, response, "Should get response for invalid authentication")
 		require.NotNil(t, response.Error, "Invalid authentication should return error response")
-		assert.Equal(t, AUTHENTICATION_REQUIRED, response.Error.Code, "Error code should be AUTHENTICATION_REQUIRED")
+		assert.Equal(t, constants.API_AUTHENTICATION_REQUIRED, response.Error.Code, "Error code should be AUTHENTICATION_REQUIRED")
 		assert.Contains(t, response.Error.Message, "Authentication failed", "Error message should match API documentation")
 	})
 
@@ -164,7 +165,7 @@ func testAuthenticationAndAuthorization(t *testing.T, client *testtestutils.WebS
 		require.NoError(t, err, "Should get JSON-RPC response for unauthenticated access")
 		require.NotNil(t, response, "Should get response for unauthenticated access")
 		require.NotNil(t, response.Error, "Unauthenticated access should return error response")
-		assert.Equal(t, AUTHENTICATION_REQUIRED, response.Error.Code, "Error code should be AUTHENTICATION_REQUIRED")
+		assert.Equal(t, constants.API_AUTHENTICATION_REQUIRED, response.Error.Code, "Error code should be AUTHENTICATION_REQUIRED")
 		assert.Contains(t, response.Error.Message, "Authentication failed", "Error message should match API documentation")
 	})
 
