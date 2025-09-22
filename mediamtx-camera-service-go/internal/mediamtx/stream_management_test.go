@@ -27,16 +27,13 @@ import (
 // TestController_GetStreams_Management_ReqMTX002 tests getting all streams
 func TestController_GetStreams_Management_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
-	require.NotNil(t, controller, "Controller should not be nil")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
+	// Use Progressive Readiness pattern (like other working tests)
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -56,16 +53,13 @@ func TestController_GetStreams_Management_ReqMTX002(t *testing.T) {
 // TestController_GetStream_Management_ReqMTX002 tests getting a specific stream
 func TestController_GetStream_Management_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
-	require.NotNil(t, controller, "Controller should not be nil")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
+	// Use Progressive Readiness pattern (like other working tests)
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -103,16 +97,13 @@ func TestController_GetStream_Management_ReqMTX002(t *testing.T) {
 // TestController_CreateStream_Management_ReqMTX002 tests creating a new stream
 func TestController_CreateStream_Management_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
-	require.NotNil(t, controller, "Controller should not be nil")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
+	// Use Progressive Readiness pattern (like other working tests)
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -145,16 +136,13 @@ func TestController_CreateStream_Management_ReqMTX002(t *testing.T) {
 // TestController_DeleteStream_Management_ReqMTX002 tests deleting a stream
 func TestController_DeleteStream_Management_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
-	require.NotNil(t, controller, "Controller should not be nil")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
+	// Use Progressive Readiness pattern (like other working tests)
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -190,16 +178,13 @@ func TestController_DeleteStream_Management_ReqMTX002(t *testing.T) {
 // TestController_StreamManagement_ErrorHandling_ReqMTX004 tests error handling for stream management
 func TestController_StreamManagement_ErrorHandling_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring and error handling
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
-	// Create controller
-	controller, err := helper.GetController(t)
-	require.NoError(t, err, "Controller creation should succeed")
-	require.NotNil(t, controller, "Controller should not be nil")
-
-	// Start the controller
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller start should succeed")
+	// Use Progressive Readiness pattern (like other working tests)
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
 
 	// Ensure controller is stopped after test
 	defer func() {
@@ -209,7 +194,7 @@ func TestController_StreamManagement_ErrorHandling_ReqMTX004(t *testing.T) {
 	}()
 
 	// Test getting non-existent stream
-	_, err = controller.GetStream(ctx, "non-existent-stream-id")
+	_, err := controller.GetStream(ctx, "non-existent-stream-id")
 	assert.Error(t, err, "Getting non-existent stream should fail")
 
 	// Test creating stream with empty name

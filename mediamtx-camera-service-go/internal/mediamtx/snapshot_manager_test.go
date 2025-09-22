@@ -53,14 +53,12 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
 	// No sequential execution - Progressive Readiness enables parallelism
 	helper, _ := SetupMediaMTXTest(t)
 
-	// Use Progressive Readiness pattern (like other working tests)
+	// Use Progressive Readiness pattern (this test needs controller for SubscribeToReadiness)
 	controllerInterface, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
 	defer controllerInterface.Stop(ctx)
 	controller := controllerInterface.(*controller)
 	snapshotManager := helper.GetSnapshotManager()
-
-	// Controller is already started by GetReadyController - no need to start again
 
 	// Progressive Readiness: Attempt operation immediately (no waiting)
 	cameraID := "camera0" // Use standard identifier
@@ -106,20 +104,12 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
 func TestSnapshotManager_GetSnapshotsList_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
-	// STANDARDIZED: Use helper's integrated snapshot manager
-	controller, err := helper.GetController(t)
-	// Use assertion helper
-	require.NoError(t, err)
-	snapshotManager := helper.GetSnapshotManager()
-
+	// This test uses SnapshotManager directly - get context from helper instead
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
-
-	// Start controller with Progressive Readiness - returns immediately
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller should start immediately")
+	snapshotManager := helper.GetSnapshotManager()
 
 	// Use configured snapshots directory (created by helper)
 	snapshotsDir := helper.GetConfiguredSnapshotPath()
@@ -347,20 +337,12 @@ func TestSnapshotManager_GetSnapshotSettings_ReqMTX001_Success(t *testing.T) {
 func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002_Success(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
-	// STANDARDIZED: Use helper's integrated snapshot manager
-	controller, err := helper.GetController(t)
-	// Use assertion helper
-	require.NoError(t, err)
-	snapshotManager := helper.GetSnapshotManager()
-
+	// This test uses SnapshotManager directly - get context from helper instead
 	ctx, cancel := helper.GetStandardContext()
 	defer cancel()
-
-	// Start controller with Progressive Readiness - returns immediately
-	err = controller.Start(ctx)
-	require.NoError(t, err, "Controller should start immediately")
+	snapshotManager := helper.GetSnapshotManager()
 
 	// Use configured snapshots directory (created by helper)
 	snapshotsDir := helper.GetConfiguredSnapshotPath()

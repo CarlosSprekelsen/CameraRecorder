@@ -84,6 +84,14 @@ func (dm *DirectoryManager) extractDirectoryPaths(config map[string]interface{})
 		if configPath, ok := mediamtx["config_path"].(string); ok {
 			// For config files, create parent directory
 			directories = append(directories, filepath.Dir(configPath))
+			
+			// Create minimal MediaMTX config file if it doesn't exist
+			if _, err := os.Stat(configPath); os.IsNotExist(err) {
+				err := os.WriteFile(configPath, []byte("# Test MediaMTX configuration\n"), 0644)
+				if err == nil {
+					dm.createdDirs = append(dm.createdDirs, configPath) // Track for cleanup
+				}
+			}
 		}
 	}
 

@@ -725,41 +725,6 @@ func (h *WebSocketTestHelper) TestMethodWithEvents(t *testing.T, method string, 
 	return response
 }
 
-// WaitForServerReady waits for server to be fully ready using Progressive Readiness Pattern
-func (h *WebSocketTestHelper) WaitForServerReady(t *testing.T) {
-	// Check if already ready first
-	response := h.TestMethod(t, "get_camera_list", nil, "viewer")
-	if response.Error == nil || response.Error.Code != MEDIAMTX_UNAVAILABLE {
-		t.Log("MediaMTX controller is already ready for API contract validation")
-		return
-	}
-
-	t.Log("MediaMTX controller not ready, subscribing to readiness events...")
-
-	// Get MediaMTX controller from server
-	server := h.GetServer(t)
-	if server.mediaMTXController == nil {
-		t.Fatal("MediaMTX controller is nil - cannot subscribe to readiness events")
-	}
-
-	// Subscribe to readiness events (Progressive Readiness Pattern)
-	readinessProvider, ok := server.mediaMTXController.(interface{ SubscribeToReadiness() <-chan struct{} })
-	if !ok {
-		t.Fatal("MediaMTX controller does not support readiness subscriptions")
-	}
-	readinessChan := readinessProvider.SubscribeToReadiness()
-
-	ctx, cancel := context.WithTimeout(context.Background(), testutils.LongTestTimeout)
-	defer cancel()
-
-	select {
-	case <-readinessChan:
-		t.Log("MediaMTX controller readiness event received - ready for API contract validation")
-	case <-ctx.Done():
-		t.Fatal("MediaMTX controller readiness timeout - cannot validate API contract")
-	}
-}
-
 // AuthenticateTestClient authenticates a WebSocket connection (standalone function for compatibility)
 func AuthenticateTestClient(t *testing.T, conn *websocket.Conn, userID string, role string) {
 	// Use standardized enterprise JWT handler creation
