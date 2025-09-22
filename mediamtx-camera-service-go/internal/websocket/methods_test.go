@@ -630,20 +630,49 @@ func TestWebSocketMethods_GetMetrics_ReqMTX004_Success(t *testing.T) {
 	result, ok := response.Result.(map[string]interface{})
 	require.True(t, ok, "Result must be object for get_metrics")
 
-	// ✅ VALIDATE EXPECTED METRIC FIELDS (based on API documentation)
-	expectedFields := []string{
-		"active_connections", "total_requests", "average_response_time",
-		"error_rate", "memory_usage", "cpu_usage", "disk_usage",
+	// ✅ VALIDATE EXPECTED METRIC FIELDS (based on updated API documentation)
+	expectedTopLevelFields := []string{
+		"timestamp", "system_metrics", "camera_metrics", "recording_metrics", "stream_metrics",
 	}
 
-	for _, field := range expectedFields {
+	for _, field := range expectedTopLevelFields {
 		assert.Contains(t, result, field, "Must have %s field", field)
+	}
 
+	// ✅ VALIDATE SYSTEM METRICS STRUCTURE
+	systemMetrics, exists := result["system_metrics"]
+	require.True(t, exists, "Must have system_metrics")
+	systemMetricsMap, ok := systemMetrics.(map[string]interface{})
+	require.True(t, ok, "system_metrics must be object")
+
+	expectedSystemFields := []string{"cpu_usage", "memory_usage", "disk_usage", "goroutines"}
+	for _, field := range expectedSystemFields {
+		assert.Contains(t, systemMetricsMap, field, "Must have system_metrics.%s field", field)
 		// Validate that numeric metrics are actually numbers
-		if value, exists := result[field]; exists {
+		if value, exists := systemMetricsMap[field]; exists {
 			_, ok := value.(float64)
-			assert.True(t, ok, "%s must be number", field)
+			assert.True(t, ok, "system_metrics.%s must be number", field)
 		}
+	}
+
+	// ✅ VALIDATE CAMERA METRICS STRUCTURE
+	cameraMetrics, exists := result["camera_metrics"]
+	require.True(t, exists, "Must have camera_metrics")
+	cameraMetricsMap, ok := cameraMetrics.(map[string]interface{})
+	require.True(t, ok, "camera_metrics must be object")
+
+	assert.Contains(t, cameraMetricsMap, "connected_cameras", "Must have camera_metrics.connected_cameras")
+	assert.Contains(t, cameraMetricsMap, "cameras", "Must have camera_metrics.cameras")
+
+	// ✅ VALIDATE STREAM METRICS STRUCTURE
+	streamMetrics, exists := result["stream_metrics"]
+	require.True(t, exists, "Must have stream_metrics")
+	streamMetricsMap, ok := streamMetrics.(map[string]interface{})
+	require.True(t, ok, "stream_metrics must be object")
+
+	expectedStreamFields := []string{"active_streams", "total_streams", "total_viewers"}
+	for _, field := range expectedStreamFields {
+		assert.Contains(t, streamMetricsMap, field, "Must have stream_metrics.%s field", field)
 	}
 
 	// ✅ VALIDATE OPTIONAL GO-SPECIFIC FIELDS (if present)

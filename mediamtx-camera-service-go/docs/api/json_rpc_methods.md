@@ -947,15 +947,47 @@ Get system performance metrics and statistics.
 {
   "jsonrpc": "2.0",
   "result": {
-    "active_connections": 5,
-    "total_requests": 1250,
-    "average_response_time": 45.2,
-    "error_rate": 0.02,
-    "memory_usage": 85.5,
-    "cpu_usage": 23.1,
-    "disk_usage": 45.5,
-    "goroutines": 150,
-    "heap_alloc": 52428800
+    "timestamp": "2025-01-15T14:30:00Z",
+    "system_metrics": {
+      "cpu_usage": 23.1,
+      "memory_usage": 85.5,
+      "disk_usage": 45.5,
+      "goroutines": 150
+    },
+    "camera_metrics": {
+      "connected_cameras": 2,
+      "cameras": {
+        "/dev/video0": {
+          "path": "/dev/video0",
+          "name": "USB 2.0 Camera: USB 2.0 Camera",
+          "status": "CONNECTED",
+          "device_num": 0,
+          "last_seen": "2025-01-15T14:30:00Z",
+          "capabilities": {
+            "driver_name": "uvcvideo",
+            "card_name": "USB 2.0 Camera: USB 2.0 Camera",
+            "bus_info": "usb-0000:00:1a.0-1.2",
+            "version": "6.14.8",
+            "capabilities": ["0x84a00001", "Video Capture", "Metadata Capture", "Streaming", "Extended Pix Format"],
+            "device_caps": ["0x04200001", "Video Capture", "Streaming", "Extended Pix Format"]
+          },
+          "formats": [
+            {
+              "pixel_format": "YUYV",
+              "width": 640,
+              "height": 480,
+              "frame_rates": ["30.000", "20.000", "15.000", "10.000", "5.000"]
+            }
+          ]
+        }
+      }
+    },
+    "recording_metrics": {},
+    "stream_metrics": {
+      "active_streams": 0,
+      "total_streams": 4,
+      "total_viewers": 0
+    }
   },
   "id": 9
 }
@@ -963,15 +995,21 @@ Get system performance metrics and statistics.
 
 **Response Fields:**
 
-- `active_connections`: Number of active WebSocket connections (integer)
-- `total_requests`: Total number of requests processed (integer)
-- `average_response_time`: Average response time in milliseconds (float64)
-- `error_rate`: Error rate as percentage (0.0-1.0) (float64)
-- `memory_usage`: Memory usage percentage (0.0-100.0) (float64)
-- `cpu_usage`: CPU usage percentage (0.0-100.0) (float64)
-- `disk_usage`: Disk usage percentage (0.0-100.0) (float64)
-- `goroutines`: Number of active goroutines (integer)
-- `heap_alloc`: Heap allocation in bytes (integer)
+- `timestamp`: Metrics collection timestamp (ISO 8601 string)
+- `system_metrics`: System-level performance metrics (object)
+  - `cpu_usage`: CPU usage percentage (0.0-100.0) (float64)
+  - `memory_usage`: Memory usage percentage (0.0-100.0) (float64)
+  - `disk_usage`: Disk usage percentage (0.0-100.0) (float64)
+  - `goroutines`: Number of active goroutines (integer)
+- `camera_metrics`: Camera-specific metrics and information (object)
+  - `connected_cameras`: Number of currently connected cameras (integer)
+  - `cameras`: Detailed camera information indexed by device path (object)
+    - Each camera contains: path, name, status, device_num, last_seen, capabilities, formats
+- `recording_metrics`: Recording performance metrics (object, currently empty)
+- `stream_metrics`: Streaming metrics and statistics (object)
+  - `active_streams`: Number of currently active streams (integer)
+  - `total_streams`: Total number of configured streams (integer)
+  - `total_viewers`: Total number of active stream viewers (integer)
 
 }
 
