@@ -86,7 +86,19 @@ export type {
   NotificationMessage,
 } from './rpc';
 
-export { RPC_METHODS, ERROR_CODES, NOTIFICATION_METHODS } from './rpc';
+export { 
+  RPC_METHODS, 
+  ERROR_CODES, 
+  NOTIFICATION_METHODS, 
+  EVENT_TOPICS,
+  type AuthenticationParams,
+  type AuthenticationResponse,
+  type EventSubscriptionParams,
+  type EventSubscriptionResponse,
+  type ExternalStreamDiscoveryParams,
+  type ExternalStream,
+  type ExternalStreamDiscoveryResponse
+} from './rpc';
 
 // UI types
 export type {

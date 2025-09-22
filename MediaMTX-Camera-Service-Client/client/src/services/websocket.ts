@@ -348,9 +348,9 @@ export class WebSocketService {
   }
 
   /**
-   * Make a JSON-RPC call
+   * Make a JSON-RPC call with optional authentication
    */
-  public call(method: string, params: Record<string, unknown> = {}): Promise<unknown> {
+  public call(method: string, params: Record<string, unknown> = {}, requireAuth: boolean = true): Promise<unknown> {
     if (!this.isConnected()) {
       console.warn(`⚠️ WebSocket not connected for method: ${method}`);
       if (this.isFallbackMethodSupported(method)) {
@@ -359,12 +359,24 @@ export class WebSocketService {
       return Promise.reject(new WebSocketError('WebSocket not connected'));
     }
 
+    // Add authentication token if required and available
+    let finalParams = params;
+    if (requireAuth && method !== 'authenticate') {
+      try {
+        const { authService } = require('./authService');
+        finalParams = authService.addAuthToParams(params);
+      } catch (error) {
+        // Auth service not available, continue without auth
+        console.warn(`⚠️ Auth service not available for method: ${method}`);
+      }
+    }
+
     const id = this.generateRequestId();
     const request: JSONRPCRequest = {
       jsonrpc: '2.0',
       id,
       method,
-      params
+      params: finalParams
     };
 
     const requestPromise = new Promise<unknown>((resolve, reject) => {
@@ -416,6 +428,18 @@ export class WebSocketService {
     if (this.connectionStore) {
       this.connectionStore.setError(error.message, error.code);
       this.connectionStore.incrementErrorCount();
+    }
+    
+    // Handle authentication errors
+    if (error.code === ERROR_CODES.AUTHENTICATION_FAILED) {
+      console.error(`🔐 Authentication failed: ${error.message}`);
+      try {
+        const { authService } = require('./authService');
+        authService.handleAuthError(error);
+      } catch (authError) {
+        console.warn('⚠️ Auth service not available for error handling');
+      }
+      return;
     }
     
     // Process specific error codes with enhanced handling

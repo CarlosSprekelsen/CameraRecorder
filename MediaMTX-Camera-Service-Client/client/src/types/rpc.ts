@@ -49,7 +49,7 @@ export type WebSocketMessage = JSONRPCResponse | JSONRPCNotification;
 
 /**
  * Common error codes used by the MediaMTX Camera Service
- * Aligned with server error codes exactly
+ * Aligned with Go server error codes exactly
  */
 export const ERROR_CODES = {
   // Standard JSON-RPC 2.0 error codes
@@ -59,15 +59,22 @@ export const ERROR_CODES = {
   INVALID_PARAMS: -32602,
   INTERNAL_ERROR: -32603,
   
-  // Service-specific error codes (aligned with server)
-  CAMERA_NOT_FOUND_OR_DISCONNECTED: -32001,
-  RECORDING_ALREADY_IN_PROGRESS: -32002,
-  MEDIAMTX_SERVICE_UNAVAILABLE: -32003,
-  AUTHENTICATION_REQUIRED: -32004,
-  INSUFFICIENT_STORAGE_SPACE: -32005,
-  CAMERA_CAPABILITY_NOT_SUPPORTED: -32006,
+  // Go server authentication and authorization error codes
+  AUTHENTICATION_FAILED: -32001,          // "Authentication failed or token expired"
+  RATE_LIMIT_EXCEEDED: -32002,            // "Rate limit exceeded"
+  INSUFFICIENT_PERMISSIONS: -32003,       // "Insufficient permissions"
+  CAMERA_NOT_FOUND_OR_DISCONNECTED: -32004, // "Camera not found or disconnected"
+  RECORDING_ALREADY_IN_PROGRESS: -32005,  // "Recording already in progress"
+  MEDIAMTX_SERVICE_UNAVAILABLE: -32006,   // "MediaMTX service unavailable"
+  INSUFFICIENT_STORAGE_SPACE: -32007,     // "Insufficient storage space"
+  CAMERA_CAPABILITY_NOT_SUPPORTED: -32008, // "Camera capability not supported"
+  STREAM_NOT_FOUND_OR_NOT_ACTIVE: -32009, // "Stream not found or not active"
   
-  // Enhanced recording management error codes (NEW)
+  // Enhanced recording management error codes
+  CAMERA_NOT_FOUND: -1000,                // "Camera not found"
+  CAMERA_NOT_AVAILABLE: -1001,            // "Camera not available"
+  RECORDING_IN_PROGRESS: -1002,           // "Recording in progress"
+  MEDIAMTX_ERROR: -1003,                  // "MediaMTX error"
   CAMERA_ALREADY_RECORDING: -1006,        // "Camera is currently recording"
   STORAGE_SPACE_LOW: -1008,               // "Storage space is low" (below 10% available)
   STORAGE_SPACE_CRITICAL: -1010,          // "Storage space is critical" (below 5% available)
@@ -80,28 +87,59 @@ export type ErrorCode = typeof ERROR_CODES[keyof typeof ERROR_CODES];
 
 /**
  * Available JSON-RPC methods
- * Aligned with server API methods
+ * Aligned with Go server API methods
  */
 export const RPC_METHODS = {
+  // Authentication
+  AUTHENTICATE: 'authenticate',
+  
   // Core methods
   PING: 'ping',
   GET_CAMERA_LIST: 'get_camera_list',
   GET_CAMERA_STATUS: 'get_camera_status',
+  GET_CAMERA_CAPABILITIES: 'get_camera_capabilities',
   
   // Camera control methods
   TAKE_SNAPSHOT: 'take_snapshot',
   START_RECORDING: 'start_recording',
   STOP_RECORDING: 'stop_recording',
   
+  // Streaming methods
+  START_STREAMING: 'start_streaming',
+  STOP_STREAMING: 'stop_streaming',
+  GET_STREAM_URL: 'get_stream_url',
+  GET_STREAM_STATUS: 'get_stream_status',
+  GET_STREAMS: 'get_streams',
+  
   // File management methods
   LIST_RECORDINGS: 'list_recordings',
   LIST_SNAPSHOTS: 'list_snapshots',
+  GET_RECORDING_INFO: 'get_recording_info',
+  GET_SNAPSHOT_INFO: 'get_snapshot_info',
+  DELETE_RECORDING: 'delete_recording',
+  DELETE_SNAPSHOT: 'delete_snapshot',
   
-  // Stream management methods
-  GET_STREAMS: 'get_streams',
+  // Storage management methods
+  GET_STORAGE_INFO: 'get_storage_info',
+  SET_RETENTION_POLICY: 'set_retention_policy',
+  CLEANUP_OLD_FILES: 'cleanup_old_files',
   
-  // Enhanced recording management methods (NEW)
-  GET_STORAGE_INFO: 'get_storage_info',   // Storage monitoring
+  // System information methods
+  GET_STATUS: 'get_status',
+  GET_SERVER_INFO: 'get_server_info',
+  GET_METRICS: 'get_metrics',
+  
+  // Event subscription methods
+  SUBSCRIBE_EVENTS: 'subscribe_events',
+  UNSUBSCRIBE_EVENTS: 'unsubscribe_events',
+  GET_SUBSCRIPTION_STATS: 'get_subscription_stats',
+  
+  // External stream discovery methods
+  DISCOVER_EXTERNAL_STREAMS: 'discover_external_streams',
+  ADD_EXTERNAL_STREAM: 'add_external_stream',
+  REMOVE_EXTERNAL_STREAM: 'remove_external_stream',
+  GET_EXTERNAL_STREAMS: 'get_external_streams',
+  SET_DISCOVERY_INTERVAL: 'set_discovery_interval',
 } as const;
 
 /**
@@ -111,18 +149,121 @@ export type RPCMethod = typeof RPC_METHODS[keyof typeof RPC_METHODS];
 
 /**
  * Available notification methods
- * Aligned with server notification methods
+ * Aligned with Go server notification methods
  */
 export const NOTIFICATION_METHODS = {
   CAMERA_STATUS_UPDATE: 'camera_status_update',
   RECORDING_STATUS_UPDATE: 'recording_status_update',
-  STORAGE_STATUS_UPDATE: 'storage_status_update',  // NEW
+  STORAGE_STATUS_UPDATE: 'storage_status_update',
+} as const;
+
+/**
+ * Available event topics for subscription
+ * Aligned with Go server event system
+ */
+export const EVENT_TOPICS = {
+  CAMERA_CONNECTED: 'camera.connected',
+  CAMERA_DISCONNECTED: 'camera.disconnected',
+  CAMERA_STATUS_CHANGE: 'camera.status_change',
+  RECORDING_START: 'recording.start',
+  RECORDING_STOP: 'recording.stop',
+  RECORDING_ERROR: 'recording.error',
+  SNAPSHOT_TAKEN: 'snapshot.taken',
+  SYSTEM_HEALTH: 'system.health',
+  SYSTEM_STARTUP: 'system.startup',
+  SYSTEM_SHUTDOWN: 'system.shutdown',
 } as const;
 
 /**
  * Type for notification method values
  */
 export type NotificationMethod = typeof NOTIFICATION_METHODS[keyof typeof NOTIFICATION_METHODS];
+
+/**
+ * Type for event topic values
+ */
+export type EventTopic = typeof EVENT_TOPICS[keyof typeof EVENT_TOPICS];
+
+/**
+ * Authentication request parameters
+ */
+export interface AuthenticationParams {
+  auth_token: string; // JWT token or API key
+}
+
+/**
+ * Authentication response
+ */
+export interface AuthenticationResponse {
+  authenticated: boolean;
+  role: 'admin' | 'operator' | 'viewer';
+  permissions: string[];
+  expires_at: string; // ISO 8601 timestamp
+  session_id: string;
+}
+
+/**
+ * Event subscription parameters
+ */
+export interface EventSubscriptionParams {
+  topics: string[];
+  filters?: Record<string, unknown>;
+}
+
+/**
+ * Event subscription response
+ */
+export interface EventSubscriptionResponse {
+  subscribed: boolean;
+  topics: string[];
+  filters?: Record<string, unknown>;
+}
+
+/**
+ * External stream discovery parameters
+ */
+export interface ExternalStreamDiscoveryParams {
+  skydio_enabled?: boolean;
+  generic_enabled?: boolean;
+  force_rescan?: boolean;
+  include_offline?: boolean;
+}
+
+/**
+ * External stream information
+ */
+export interface ExternalStream {
+  url: string;
+  type: string;
+  name: string;
+  status: string;
+  discovered_at: string;
+  last_seen: string;
+  capabilities: {
+    protocol: string;
+    format: string;
+    source: string;
+    stream_type: string;
+    port: number;
+    stream_path: string;
+    codec: string;
+    metadata: string;
+  };
+}
+
+/**
+ * External stream discovery response
+ */
+export interface ExternalStreamDiscoveryResponse {
+  discovered_streams: ExternalStream[];
+  skydio_streams: ExternalStream[];
+  generic_streams: ExternalStream[];
+  scan_timestamp: number;
+  total_found: number;
+  discovery_options: ExternalStreamDiscoveryParams;
+  scan_duration: string;
+  errors: string[];
+}
 
 /**
  * Camera status update notification

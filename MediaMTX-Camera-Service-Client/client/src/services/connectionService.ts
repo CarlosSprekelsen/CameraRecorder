@@ -15,6 +15,7 @@
  */
 
 import type { ConnectionStoreInterface } from './websocket';
+import { authService } from './authService';
 
 /**
  * Connection service configuration
@@ -23,6 +24,8 @@ export interface ConnectionServiceConfig {
   autoReconnect: boolean;
   maxReconnectAttempts: number;
   reconnectInterval: number;
+  authToken?: string;
+  apiKey?: string;
 }
 
 /**
@@ -86,7 +89,7 @@ export class ConnectionService {
   }
 
   /**
-   * Connect to WebSocket server
+   * Connect to WebSocket server with authentication
    */
   public async connect(): Promise<void> {
     if (!this.connectionStore) {
@@ -102,6 +105,15 @@ export class ConnectionService {
       const { createWebSocketService } = await import('./websocket');
       const wsService = await createWebSocketService();
       await wsService.connect();
+
+      // Initialize authentication if token is provided
+      if (this.config.authToken || this.config.apiKey) {
+        await authService.initialize({
+          jwtToken: this.config.authToken,
+          apiKey: this.config.apiKey,
+          autoReauth: true,
+        });
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown connection error';
       throw new ConnectionServiceError(
