@@ -341,7 +341,7 @@ class RecordingManagerService {
       });
     }
 
-    console.log(`✅ File rotation handled seamlessly for camera ${cameraId}`);
+    logger.info(`File rotation handled seamlessly for camera ${cameraId}`, { cameraId }, 'recordingManager');
   }
 
   /**

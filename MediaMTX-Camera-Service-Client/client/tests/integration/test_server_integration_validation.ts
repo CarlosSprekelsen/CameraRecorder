@@ -14,7 +14,6 @@
  * - REQ-NET01-001: WebSocket connection stability under network interruption
  * - REQ-SRV01-001: All JSON-RPC method calls against real MediaMTX server
  * - REQ-NET01-002: Real-time notification handling and state synchronization
- * - REQ-NET01-003: Polling fallback mechanism when WebSocket fails
  * - REQ-SRV01-002: API error handling and user feedback mechanisms
  * 
  * Prerequisites:
@@ -320,41 +319,7 @@ describe('REQ-SRV01: Server Integration Validation', () => {
     });
   });
 
-  describe('REQ-NET01-003: Polling Fallback Mechanism When WebSocket Fails', () => {
-    it('should fallback to polling when WebSocket connection fails', async () => {
-      // This test requires implementation of polling fallback mechanism
-      // Currently not implemented in the codebase
-      
-      // Simulate WebSocket failure
-      wsService.disconnect();
-      
-      // Attempt to get camera list (should trigger polling fallback)
-      try {
-        const response = await cameraStore.getCameraList();
-        // If polling fallback is implemented, this should work
-        expect(response).toBeDefined();
-      } catch (error) {
-        // If polling fallback is not implemented, this is expected to fail
-        console.warn('Polling fallback not implemented (expected for current version)');
-        expect(error).toBeDefined();
-      }
-    });
-
-    it('should automatically switch back to WebSocket when connection restored', async () => {
-      // Disconnect WebSocket
-      wsService.disconnect();
-      
-      // Reconnect WebSocket
-      await wsService.connect();
-      
-      // Verify connection is restored
-      expect(wsService.isConnected).toBe(true);
-      
-      // Test that WebSocket communication works again
-      const response = await wsService.call(RPC_METHODS.PING, {});
-      expect(response).toBe('pong');
-    });
-  });
+  // Note: Polling fallback mechanism removed - WebSocket-only architecture
 
   describe('REQ-SRV01-002: API Error Handling and User Feedback Mechanisms', () => {
     it('should handle invalid method errors with proper error codes', async () => {

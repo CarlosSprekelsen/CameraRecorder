@@ -22,6 +22,7 @@
  * References:
  * - Server API: docs/api/json-rpc-methods.md
  * - WebSocket Protocol: docs/api/websocket-protocol.md
+ * - Health Endpoints: docs/api/health-endpoints.md
  * - Test script: test-websocket.js
  */
 
@@ -38,6 +39,7 @@ import type {
 } from '../types';
 import { authService } from './authService';
 import { NOTIFICATION_METHODS, ERROR_CODES } from '../types';
+import { logger } from './loggerService';
 // HTTP polling service removed - Go server is WebSocket-only
 
 // Store interface types for better type safety
@@ -224,7 +226,7 @@ export class WebSocketService {
   private lastNotificationTime = 0;
   private notificationLatency: number[] = [];
 
-  // HTTP polling removed - Go server is WebSocket-only
+  // HTTP polling fallback removed - Go server is WebSocket-only
 
   private config: WebSocketConfig;
 
@@ -234,11 +236,7 @@ export class WebSocketService {
     // HTTP polling removed - Go server is WebSocket-only
   }
 
-  // HTTP polling fallback removed - Go server is WebSocket-only
-  // No HTTP endpoints exist in Go server architecture
-    
-    // HTTP polling event handlers removed - Go server is WebSocket-only
-  }
+  // HTTP polling fallback method removed - Go server is WebSocket-only
 
   /**
    * Set connection store reference for integration
@@ -284,7 +282,7 @@ export class WebSocketService {
   }
 
   /**
-   * Make a JSON-RPC call with optional authentication
+   * Make a JSON-RPC call
    */
   public call(method: string, params: Record<string, unknown> = {}, requireAuth: boolean = true): Promise<unknown> {
     if (!this.isConnected()) {
@@ -292,24 +290,12 @@ export class WebSocketService {
       return Promise.reject(new WebSocketError('WebSocket not connected - Go server requires WebSocket connection'));
     }
 
-    // Add authentication token if required and available
-    let finalParams = params;
-    if (requireAuth && method !== 'authenticate') {
-      try {
-        const { authService } = require('./authService');
-        finalParams = authService.addAuthToParams(params);
-      } catch (error) {
-        // Auth service not available, continue without auth
-        console.warn(`⚠️ Auth service not available for method: ${method}`);
-      }
-    }
-
     const id = this.generateRequestId();
     const request: JSONRPCRequest = {
       jsonrpc: '2.0',
       id,
       method,
-      params: finalParams
+      params
     };
 
     const requestPromise = new Promise<unknown>((resolve, reject) => {
@@ -323,7 +309,7 @@ export class WebSocketService {
 
     try {
       this.ws!.send(JSON.stringify(request));
-      console.log(`📤 Sent request #${id}: ${method}`);
+      logger.info(`Request sent`, { requestId: id, method }, 'websocket');
     } catch (error) {
       this.pendingRequests.delete(id);
       throw new WebSocketError(`Failed to send request: ${error}`);
@@ -355,7 +341,7 @@ export class WebSocketService {
    * Handle error with specific error code processing
    */
   private handleError(error: JSONRPCError): void {
-    console.log(`🔍 Handling error: ${error.code} - ${error.message}`);
+    logger.info(`Handling error`, { code: error.code, message: error.message }, 'websocket');
     
     // Update connection store
     if (this.connectionStore) {
@@ -363,52 +349,40 @@ export class WebSocketService {
       this.connectionStore.incrementErrorCount();
     }
     
-    // Handle authentication errors
-    if (error.code === ERROR_CODES.AUTHENTICATION_FAILED) {
-      console.error(`🔐 Authentication failed: ${error.message}`);
-      try {
-        const { authService } = require('./authService');
-        authService.handleAuthError(error);
-      } catch (authError) {
-        console.warn('⚠️ Auth service not available for error handling');
-      }
-      return;
-    }
-    
     // Process specific error codes with enhanced handling
     switch (error.code) {
       case ERROR_CODES.CAMERA_ALREADY_RECORDING:
-        console.warn(`⚠️ Recording conflict detected: ${error.message}`);
+        logger.warn(`Recording conflict detected: ${error.message}`, undefined, 'websocket');
         this.handleRecordingConflict(error);
         break;
       case ERROR_CODES.STORAGE_SPACE_LOW:
-        console.warn(`⚠️ Storage space low: ${error.message}`);
+        logger.warn(`Storage space low: ${error.message}`, undefined, 'websocket');
         this.handleStorageWarning(error);
         break;
       case ERROR_CODES.STORAGE_SPACE_CRITICAL:
-        console.error(`🚨 Storage space critical: ${error.message}`);
+        logger.error(`Storage space critical: ${error.message}`, undefined, 'websocket');
         this.handleStorageCritical(error);
         break;
       case ERROR_CODES.CAMERA_NOT_FOUND_OR_DISCONNECTED:
-        console.error(`❌ Camera not found or disconnected: ${error.message}`);
+        logger.error(`Camera not found or disconnected: ${error.message}`, undefined, 'websocket');
         break;
       case ERROR_CODES.RECORDING_ALREADY_IN_PROGRESS:
-        console.warn(`⚠️ Recording already in progress: ${error.message}`);
+        logger.warn(`Recording already in progress: ${error.message}`, undefined, 'websocket');
         break;
       case ERROR_CODES.MEDIAMTX_SERVICE_UNAVAILABLE:
-        console.error(`❌ MediaMTX service unavailable: ${error.message}`);
+        logger.error(`MediaMTX service unavailable: ${error.message}`, undefined, 'websocket');
         break;
-      case ERROR_CODES.AUTHENTICATION_REQUIRED:
+      case ERROR_CODES.AUTHENTICATION_FAILED:
         console.error(`❌ Authentication required: ${error.message}`);
         break;
       case ERROR_CODES.INSUFFICIENT_STORAGE_SPACE:
-        console.error(`❌ Insufficient storage space: ${error.message}`);
+        logger.error(`Insufficient storage space: ${error.message}`, undefined, 'websocket');
         break;
       case ERROR_CODES.CAMERA_CAPABILITY_NOT_SUPPORTED:
-        console.warn(`⚠️ Camera capability not supported: ${error.message}`);
+        logger.warn(`Camera capability not supported: ${error.message}`, undefined, 'websocket');
         break;
       default:
-        console.error(`❌ Standard error: ${error.code} - ${error.message}`);
+        logger.error(`Standard error: ${error.code} - ${error.message}`, undefined, 'websocket');
     }
     
     // Notify UI components about the error
@@ -501,7 +475,7 @@ export class WebSocketService {
    */
   public async connect(): Promise<void> {
     if (this.isConnecting || this.isConnected()) {
-      console.log('🔄 Already connecting or connected');
+      logger.info('Already connecting or connected', undefined, 'websocket');
       return;
     }
 
@@ -510,7 +484,7 @@ export class WebSocketService {
     }
 
     this.isConnecting = true;
-    console.log('🔌 Connecting to WebSocket server...');
+    logger.info('Connecting to WebSocket server', undefined, 'websocket');
 
     return new Promise<void>((resolve, reject) => {
       try {
@@ -527,7 +501,7 @@ export class WebSocketService {
    * Disconnect from WebSocket server
    */
   public async disconnect(): Promise<void> {
-    console.log('🔌 Disconnecting from WebSocket server...');
+    logger.info('Disconnecting from WebSocket server', undefined, 'websocket');
     
     this.isDestroyed = true;
     this.isConnecting = false;
@@ -557,7 +531,7 @@ export class WebSocketService {
     
     // HTTP polling removed - Go server is WebSocket-only
     
-    console.log('✅ WebSocket disconnected');
+    logger.info('WebSocket disconnected', undefined, 'websocket');
   }
 
   /**
@@ -618,7 +592,7 @@ export class WebSocketService {
     if (!this.ws) return;
 
     this.ws.onopen = () => {
-      console.log('✅ WebSocket connection established');
+      logger.info('WebSocket connection established', undefined, 'websocket');
       this.isConnecting = false;
       this.reconnectAttempts = 0;
       this.startHeartbeat();
@@ -637,7 +611,7 @@ export class WebSocketService {
       resolve();
     };
 
-    this.ws.onclose = (event: CloseEvent) => {
+    this.ws.onclose = (event: any) => {
       console.log('🔌 WebSocket connection closed', { 
         wasClean: event.wasClean, 
         code: event.code, 
@@ -664,7 +638,7 @@ export class WebSocketService {
       }
     };
 
-    this.ws.onerror = (event: Event) => {
+    this.ws.onerror = (event: any) => {
       console.error('❌ WebSocket error:', event);
       this.isConnecting = false;
       const error = new WebSocketError('WebSocket error occurred');
@@ -683,15 +657,15 @@ export class WebSocketService {
       }
     };
 
-    this.ws.onmessage = (event: MessageEvent) => {
+    this.ws.onmessage = (event: any) => {
       try {
         const message: WebSocketMessage = JSON.parse(event.data);
         const receiveTime = performance.now();
-        console.log('📥 Received message:', JSON.stringify(message));
+        logger.debug('Received message', { message: JSON.stringify(message) }, 'websocket');
         this.handleMessage(message, receiveTime);
       } catch (error) {
         const wsError = new WebSocketError('Failed to parse message');
-        console.error('❌ Message parsing error:', wsError);
+        logger.error('Message parsing error', wsError, 'websocket');
         
         // Update connection store
         if (this.connectionStore) {
@@ -719,7 +693,7 @@ export class WebSocketService {
           await this.call('ping', {});
           const responseTime = performance.now() - startTime;
           
-          console.log('💓 Heartbeat sent');
+          logger.debug('Heartbeat sent', undefined, 'websocket');
           
           // Update connection store with heartbeat metrics
           if (this.connectionStore) {
@@ -770,7 +744,7 @@ export class WebSocketService {
     }
 
     if (message.jsonrpc !== '2.0') {
-      console.warn('⚠️ Received non-JSON-RPC message:', message);
+      logger.warn('Received non-JSON-RPC message', { message }, 'websocket');
       return;
     }
 

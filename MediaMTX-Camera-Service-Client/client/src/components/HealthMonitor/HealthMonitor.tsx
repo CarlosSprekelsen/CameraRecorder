@@ -7,6 +7,7 @@
  */
 
 import React, { useEffect, useCallback } from 'react';
+import { logger, loggers } from '../../services/loggerService';
 import {
   Box,
   Card,
@@ -101,7 +102,7 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
       await storeRefreshHealth();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to refresh health data';
-      console.error('Failed to refresh health data:', errorMessage);
+      logger.error('Failed to refresh health data', { errorMessage }, 'healthMonitor');
     } finally {
       setIsRefreshing(false);
     }
@@ -227,8 +228,8 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
                   Monitoring
                 </Typography>
                 <Chip
-                                label={storeIsMonitoring ? 'Active' : 'Inactive'}
-              color={storeIsMonitoring ? 'success' : 'default'}
+                  label={storeIsHealthy ? 'Active' : 'Inactive'}
+                  color={storeIsHealthy ? 'success' : 'default'}
                   size="small"
                   sx={{ mt: 0.5 }}
                 />
@@ -240,7 +241,7 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
                   Last Update
                 </Typography>
                 <Typography variant="caption" display="block">
-                  {storeLastUpdate ? storeLastUpdate.toLocaleTimeString() : 'Never'}
+                  {storeLatency ? `${storeLatency}ms` : 'Unknown'}
                 </Typography>
               </Box>
             </Grid>
@@ -251,7 +252,8 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
       {/* Detailed Health Information */}
       <Collapse in={expanded && showDetails}>
         <Grid container spacing={2}>
-          {/* System Health */}
+          {/* System Health - Temporarily disabled during migration */}
+          {/* 
           {storeSystemHealth && (
             <Grid item xs={12} md={6}>
               <Card>
@@ -281,8 +283,10 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
               </Card>
             </Grid>
           )}
+          */}
 
-          {/* Camera Health */}
+          {/* Camera Health - Temporarily disabled during migration */}
+          {/* 
           {storeCameraHealth && (
             <Grid item xs={12} md={6}>
               <Card>
@@ -308,8 +312,10 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
               </Card>
             </Grid>
           )}
+          */}
 
-          {/* MediaMTX Health */}
+          {/* MediaMTX Health - Temporarily disabled during migration */}
+          {/* 
           {storeMediaMTXHealth && (
             <Grid item xs={12} md={6}>
               <Card>
@@ -336,8 +342,8 @@ const HealthMonitor: React.FC<HealthMonitorProps> = ({
             </Grid>
           )}
 
-          {/* Readiness Status */}
-          {storeReadinessStatus && (
+          {/* Readiness Status - Temporarily disabled during migration */}
+          {false && storeReadinessStatus && (
             <Grid item xs={12} md={6}>
               <Card>
                 <CardContent>

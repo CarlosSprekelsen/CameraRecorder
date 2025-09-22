@@ -5,6 +5,7 @@
  */
 
 import React, { useEffect, useState } from 'react';
+import { logger, loggers } from '../../services/loggerService';
 import {
   Box,
   Card,
@@ -62,7 +63,7 @@ const StreamStatus: React.FC<StreamStatusProps> = ({
       await storeGetStreams();
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to refresh streams';
-      console.error('Failed to refresh streams:', errorMessage);
+      logger.error('Failed to refresh streams', { errorMessage }, 'streamStatus');
     } finally {
       setIsRefreshing(false);
     }

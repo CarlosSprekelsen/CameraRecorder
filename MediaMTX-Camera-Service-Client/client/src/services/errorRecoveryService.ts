@@ -5,6 +5,7 @@
  */
 
 import { ERROR_CODES } from '../types/rpc';
+import { logger, loggers } from './loggerService';
 
 /**
  * Retry configuration
@@ -146,7 +147,7 @@ export class ErrorRecoveryService {
 
         // Calculate delay with exponential backoff
         const delay = this.calculateBackoffDelay(attempt, config);
-        console.log(`🔄 Retrying ${operationName} in ${delay}ms (attempt ${attempt}/${config.maxAttempts})`);
+        logger.info(`Retrying ${operationName} in ${delay}ms (attempt ${attempt}/${config.maxAttempts})`, { operationName, delay, attempt, maxAttempts: config.maxAttempts }, 'errorRecovery');
         
         await this.sleep(delay);
       }
@@ -175,7 +176,7 @@ export class ErrorRecoveryService {
         return result;
       }
     } catch (error) {
-      console.warn(`Primary operation failed for ${operationName}, trying fallback`);
+      logger.warn(`Primary operation failed for ${operationName}, trying fallback`, { operationName }, 'errorRecovery');
     }
 
     // Try fallback operation
@@ -306,7 +307,7 @@ export class ErrorRecoveryService {
 
     if (circuitBreaker.failureCount >= circuitBreaker.threshold) {
       circuitBreaker.isOpen = true;
-      console.warn(`🚨 Circuit breaker opened for ${operationName}`);
+      logger.warn(`Circuit breaker opened for ${operationName}`, { operationName }, 'errorRecovery');
     }
   }
 

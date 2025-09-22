@@ -7,6 +7,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { logger, loggers } from '../../services/loggerService';
 import {
   Box,
   Card,
@@ -89,7 +90,7 @@ const AuthUI: React.FC<AuthUIProps> = ({
     } catch (error: unknown) {
       // Auto-login failed, clear invalid token
       const errorMessage = error instanceof Error ? error.message : 'Auto-login failed';
-      console.error('Auto-login failed:', errorMessage);
+      logger.error('Auto-login failed', { errorMessage }, 'authUI');
       authService.logout();
     }
   };
@@ -107,7 +108,7 @@ const AuthUI: React.FC<AuthUIProps> = ({
     } catch (error: unknown) {
       // Error is handled by the store
       const errorMessage = error instanceof Error ? error.message : 'Login failed';
-      console.error('Login failed:', errorMessage);
+      logger.error('Login failed', { errorMessage }, 'authUI');
     }
   };
 
