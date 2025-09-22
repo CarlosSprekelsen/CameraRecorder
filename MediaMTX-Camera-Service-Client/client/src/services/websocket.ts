@@ -637,7 +637,7 @@ export class WebSocketService {
       resolve();
     };
 
-    this.ws.onclose = (event: any) => {
+    this.ws.onclose = (event: CloseEvent) => {
       console.log('🔌 WebSocket connection closed', { 
         wasClean: event.wasClean, 
         code: event.code, 
@@ -664,7 +664,7 @@ export class WebSocketService {
       }
     };
 
-    this.ws.onerror = (event: any) => {
+    this.ws.onerror = (event: Event) => {
       console.error('❌ WebSocket error:', event);
       this.isConnecting = false;
       const error = new WebSocketError('WebSocket error occurred');
@@ -683,7 +683,7 @@ export class WebSocketService {
       }
     };
 
-    this.ws.onmessage = (event: any) => {
+    this.ws.onmessage = (event: MessageEvent) => {
       try {
         const message: WebSocketMessage = JSON.parse(event.data);
         const receiveTime = performance.now();
