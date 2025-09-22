@@ -147,10 +147,7 @@ func SetupMediaMTXTest(t *testing.T) (*MediaMTXTestHelper, context.Context) {
 	helper := NewMediaMTXTestHelper(t, nil)
 	t.Cleanup(func() { helper.Cleanup(t) })
 
-	// Use testutils for configuration-driven directory management
-	// This reads paths from fixtures - edit fixture affects all tests
-	dirManager := testutils.NewDirectoryManager(t)
-	dirManager.CreateDirectoriesFromFixture("config_test_minimal.yaml")
+	// Directories already created in NewMediaMTXTestHelper - no duplication
 
 	ctx, cancel := helper.GetStandardContext()
 	t.Cleanup(cancel)
@@ -276,13 +273,13 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 
 	// CRITICAL: Create directories BEFORE config validation (fixes permission issues)
 	dirManager := testutils.NewDirectoryManager(t)
-	dirManager.CreateDirectoriesFromFixture("config_test_minimal.yaml")
+	dirManager.CreateDirectoriesFromFixture("config_websocket_test.yaml")
 
-	// Create config manager for centralized configuration  
-	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
+	// Create config manager for centralized configuration
+	configManager := CreateConfigManagerWithFixture(t, "config_websocket_test.yaml")
 
 	// Load configuration
-	configPath := "../../tests/fixtures/config_test_minimal.yaml"
+	configPath := "../../tests/fixtures/config_websocket_test.yaml"
 	logger.Info("Loading test configuration", "config_path", configPath)
 	err := configManager.LoadConfig(configPath)
 	if err != nil {
@@ -577,7 +574,7 @@ func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
 	h.cameraMonitorOnce.Do(func() {
 		// Create real camera monitor with SAME configuration as controller (test fixture)
 		// This ensures configuration consistency between camera monitor and controller
-		configManager := CreateConfigManagerWithFixture(nil, "config_test_minimal.yaml")
+		configManager := CreateConfigManagerWithFixture(nil, "config_websocket_test.yaml")
 		logger := logging.GetLogger("mediamtx.camera_monitor") // Component-specific logger
 
 		// Use real implementations for camera hardware

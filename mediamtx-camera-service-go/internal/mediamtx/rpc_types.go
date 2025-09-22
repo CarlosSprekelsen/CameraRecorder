@@ -89,29 +89,40 @@ type GetCameraStatusResponse struct {
 
 // GetCameraCapabilitiesResponse represents the response from get_camera_capabilities method
 type GetCameraCapabilitiesResponse struct {
-	Device       string   `json:"device"`       // Camera device identifier
-	Formats      []string `json:"formats"`      // Supported formats
-	Resolutions  []string `json:"resolutions"`  // Supported resolutions
-	FrameRates   []int    `json:"frame_rates"`  // Supported frame rates
-	Capabilities []string `json:"capabilities"` // Camera capabilities
+	Device           string   `json:"device"`            // Camera device identifier
+	Formats          []string `json:"formats"`           // Supported formats
+	Resolutions      []string `json:"resolutions"`       // Supported resolutions
+	FpsOptions       []int    `json:"fps_options"`       // Supported frame rates (API documentation field name)
+	FrameRates       []int    `json:"frame_rates"`       // Supported frame rates (legacy field name)
+	Capabilities     []string `json:"capabilities"`      // Camera capabilities
+	ValidationStatus string   `json:"validation_status"` // Capability validation status ("none", "disconnected", "confirmed")
 }
 
 // StartStreamingResponse represents the response from start_streaming method
 type StartStreamingResponse struct {
-	Device    string `json:"device"`     // Camera device identifier
-	StreamURL string `json:"stream_url"` // Generated stream URL
-	Status    string `json:"status"`     // Stream status ("active", "starting")
-	Format    string `json:"format"`     // Stream format ("rtsp")
-	Message   string `json:"message"`    // Success message
-	Timestamp string `json:"timestamp"`  // Stream start timestamp (ISO 8601)
+	Device         string `json:"device"`           // Camera device identifier
+	StreamName     string `json:"stream_name"`      // Generated stream name
+	StreamURL      string `json:"stream_url"`       // Generated stream URL
+	Status         string `json:"status"`           // Stream status ("STARTED", "failed")
+	StartTime      string `json:"start_time"`       // Streaming start timestamp (ISO 8601)
+	AutoCloseAfter string `json:"auto_close_after"` // Auto-close timeout setting
+	FfmpegCommand  string `json:"ffmpeg_command"`   // FFmpeg command used
+	Format         string `json:"format"`           // Stream format ("rtsp")
+	Message        string `json:"message"`          // Success message
+	Timestamp      string `json:"timestamp"`        // Stream start timestamp (ISO 8601)
 }
 
 // StopStreamingResponse represents the response from stop_streaming method
 type StopStreamingResponse struct {
-	Device    string `json:"device"`    // Camera device identifier
-	Status    string `json:"status"`    // Operation status ("stopped")
-	Message   string `json:"message"`   // Success message
-	Timestamp string `json:"timestamp"` // Stream stop timestamp (ISO 8601)
+	Device          string `json:"device"`           // Camera device identifier
+	StreamName      string `json:"stream_name"`      // Stream name
+	Status          string `json:"status"`           // Operation status ("STOPPED")
+	StartTime       string `json:"start_time"`       // Streaming start timestamp (ISO 8601)
+	EndTime         string `json:"end_time"`         // Streaming end timestamp (ISO 8601)
+	Duration        int    `json:"duration"`         // Total streaming duration in seconds
+	StreamContinues bool   `json:"stream_continues"` // Whether stream continues for other consumers
+	Message         string `json:"message"`          // Success message
+	Timestamp       string `json:"timestamp"`        // Stream stop timestamp (ISO 8601)
 }
 
 // GetStreamURLResponse represents the response from get_stream_url method

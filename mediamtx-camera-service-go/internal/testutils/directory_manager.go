@@ -67,6 +67,17 @@ func (dm *DirectoryManager) GetCreatedDirectories() []string {
 	return dm.createdDirs
 }
 
+// Cleanup removes all created directories and files
+func (dm *DirectoryManager) Cleanup() {
+	for _, path := range dm.createdDirs {
+		// Remove files first, then directories
+		if err := os.RemoveAll(path); err != nil {
+			dm.t.Logf("Warning: Failed to cleanup %s: %v", path, err)
+		}
+	}
+	dm.createdDirs = nil
+}
+
 // loadFixtureConfig loads fixture configuration
 func (dm *DirectoryManager) loadFixtureConfig(fixtureName string) map[string]interface{} {
 	// Use same fixture resolution as FixtureLoader

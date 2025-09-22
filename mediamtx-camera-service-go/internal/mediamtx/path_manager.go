@@ -950,7 +950,8 @@ func (pm *pathManager) GetCameraCapabilities(ctx context.Context, device string)
 		Device:       device,
 		Formats:      supportedFormats,
 		Resolutions:  supportedResolutions,
-		FrameRates:   fpsOptions,
+		FpsOptions:   fpsOptions,
+		FrameRates:   fpsOptions, // Keep both for backward compatibility
 		Capabilities: cameraDevice.Capabilities.Capabilities,
 	}
 

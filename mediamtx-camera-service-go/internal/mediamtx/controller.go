@@ -1277,7 +1277,7 @@ func (c *controller) GetCameraCapabilities(ctx context.Context, device string) (
 	c.logger.WithFields(logging.Fields{
 		"device":            device,
 		"formats_count":     len(response.Formats),
-		"fps_options_count": len(response.FrameRates),
+		"fps_options_count": len(response.FpsOptions),
 	}).Info("Retrieved camera capabilities through PathManager")
 
 	return response, nil

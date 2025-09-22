@@ -372,7 +372,7 @@ func TestWebSocketMethods_GetCameraCapabilities_ReqCAM001_Success(t *testing.T) 
 		result, ok := response.Result.(map[string]interface{})
 		require.True(t, ok, "Result must be object for get_camera_capabilities")
 
-		// ✅ VALIDATE REQUIRED FIELDS
+		// ✅ VALIDATE REQUIRED FIELDS per API documentation
 		assert.Contains(t, result, "device", "Must have device field")
 		assert.Contains(t, result, "formats", "Must have formats field")
 		assert.Contains(t, result, "resolutions", "Must have resolutions field")
@@ -513,17 +513,27 @@ func TestWebSocketMethods_StartRecording_ReqMTX002_Success(t *testing.T) {
 	validStatuses := []string{constants.RECORDING_STATUS_RECORDING, "STARTED", "STARTING"}
 	assert.Contains(t, validStatuses, status, "Status must be valid per API documentation")
 
-	// ✅ VALIDATE OPTIONAL FIELDS
-	if startTime, exists := result["start_time"]; exists {
-		_, ok := startTime.(string)
-		assert.True(t, ok, "start_time must be string if present")
-	}
+		// ✅ VALIDATE OPTIONAL FIELDS per API documentation
+		if startTime, exists := result["start_time"]; exists {
+			_, ok := startTime.(string)
+			assert.True(t, ok, "start_time must be string if present")
+		}
 
-	if format, exists := result["format"]; exists {
-		formatStr, ok := format.(string)
-		require.True(t, ok, "format must be string if present")
-		assert.Contains(t, []string{"fmp4", "mp4", "mkv"}, formatStr, "format must be valid if present")
-	}
+		if autoCloseAfter, exists := result["auto_close_after"]; exists {
+			_, ok := autoCloseAfter.(string)
+			assert.True(t, ok, "auto_close_after must be string if present")
+		}
+
+		if ffmpegCommand, exists := result["ffmpeg_command"]; exists {
+			_, ok := ffmpegCommand.(string)
+			assert.True(t, ok, "ffmpeg_command must be string if present")
+		}
+
+		if format, exists := result["format"]; exists {
+			formatStr, ok := format.(string)
+			require.True(t, ok, "format must be string if present")
+			assert.Contains(t, []string{"fmp4", "mp4", "mkv"}, formatStr, "format must be valid if present")
+		}
 }
 
 // TestWebSocketMethods_StopRecording tests stop_recording method with event-driven readiness and proper API validation
@@ -555,7 +565,7 @@ func TestWebSocketMethods_StopRecording_ReqMTX002_Success(t *testing.T) {
 		result, ok := response.Result.(map[string]interface{})
 		require.True(t, ok, "Result must be object for stop_recording")
 
-		// ✅ VALIDATE REQUIRED FIELDS
+		// ✅ VALIDATE REQUIRED FIELDS per API documentation
 		assert.Contains(t, result, "device", "Must have device field")
 		assert.Contains(t, result, "filename", "Must have filename field")
 		assert.Contains(t, result, "status", "Must have status field")
@@ -884,7 +894,7 @@ func TestWebSocketMethods_StartStreaming_ReqMTX002_Success(t *testing.T) {
 		result, ok := response.Result.(map[string]interface{})
 		require.True(t, ok, "Result must be object for start_streaming")
 
-		// ✅ VALIDATE REQUIRED FIELDS
+		// ✅ VALIDATE REQUIRED FIELDS per API documentation
 		assert.Contains(t, result, "device", "Must have device field")
 		assert.Contains(t, result, "stream_name", "Must have stream_name field")
 		assert.Contains(t, result, "stream_url", "Must have stream_url field")
@@ -934,7 +944,7 @@ func TestWebSocketMethods_StopStreaming_ReqMTX002_Success(t *testing.T) {
 		result, ok := response.Result.(map[string]interface{})
 		require.True(t, ok, "Result must be object for stop_streaming")
 
-		// ✅ VALIDATE REQUIRED FIELDS
+		// ✅ VALIDATE REQUIRED FIELDS per API documentation
 		assert.Contains(t, result, "device", "Must have device field")
 		assert.Contains(t, result, "stream_name", "Must have stream_name field")
 		assert.Contains(t, result, "status", "Must have status field")
@@ -950,7 +960,17 @@ func TestWebSocketMethods_StopStreaming_ReqMTX002_Success(t *testing.T) {
 		require.True(t, ok, "status must be string")
 		assert.Contains(t, []string{"STOPPED", "stopped"}, status, "status must be valid")
 
-		// ✅ VALIDATE OPTIONAL FIELDS
+		// ✅ VALIDATE OPTIONAL FIELDS per API documentation
+		if startTime, exists := result["start_time"]; exists {
+			_, ok := startTime.(string)
+			assert.True(t, ok, "start_time must be string if present")
+		}
+
+		if endTime, exists := result["end_time"]; exists {
+			_, ok := endTime.(string)
+			assert.True(t, ok, "end_time must be string if present")
+		}
+
 		if duration, exists := result["duration"]; exists {
 			_, ok := duration.(float64)
 			assert.True(t, ok, "duration must be number if present")
@@ -989,7 +1009,7 @@ func TestWebSocketMethods_GetStreamURL_ReqMTX002_Success(t *testing.T) {
 		result, ok := response.Result.(map[string]interface{})
 		require.True(t, ok, "Result must be object for get_stream_url")
 
-		// ✅ VALIDATE REQUIRED FIELDS
+		// ✅ VALIDATE REQUIRED FIELDS per API documentation
 		assert.Contains(t, result, "device", "Must have device field")
 		assert.Contains(t, result, "stream_name", "Must have stream_name field")
 		assert.Contains(t, result, "stream_url", "Must have stream_url field")

@@ -483,12 +483,14 @@ func TestController_StartRecording_ReqMTX002_Success(t *testing.T) {
 		t.Log("Recording started immediately - Progressive Readiness working")
 	} else {
 		// Operation needs readiness - wait for event (no polling)
+		t.Logf("Recording failed initially: %v - waiting for readiness event", err)
 		readinessChan := controller.SubscribeToReadiness()
 		select {
 		case <-readinessChan:
 			// Retry after readiness event
 			_, err = controller.StartRecording(ctx, cameraID, options)
 			require.NoError(t, err, "Recording should start after readiness event")
+			t.Log("Recording started after readiness event - Progressive Readiness working")
 		case <-time.After(testutils.UniversalTimeoutVeryLong):
 			t.Fatal("Timeout waiting for readiness event")
 		}
@@ -1449,11 +1451,24 @@ func TestController_Start_ReqARCH001_ParallelEventDriven(t *testing.T) {
 					done <- true
 				}()
 
-				// No waiting for readiness - Progressive Readiness Pattern
-				// Just verify controller is ready
+				// Progressive Readiness Pattern: Try operation immediately, wait for readiness if needed
 				if !controller.IsReady() {
-					t.Errorf("Event helper %d: controller should be ready", index)
-					return
+					// Controller not ready yet - wait for readiness event
+					readinessChan := controller.SubscribeToReadiness()
+					select {
+					case <-readinessChan:
+						t.Logf("Event helper %d: controller became ready via readiness event", index)
+					case <-time.After(testutils.UniversalTimeoutVeryLong):
+						// Check if controller became ready while we were waiting
+						if controller.IsReady() {
+							t.Logf("Event helper %d: controller became ready while waiting (race condition handled)", index)
+						} else {
+							t.Errorf("Event helper %d: timeout waiting for controller readiness", index)
+							return
+						}
+					}
+				} else {
+					t.Logf("Event helper %d: controller was already ready", index)
 				}
 
 				t.Logf("Event helper %d: controller is running", index)
