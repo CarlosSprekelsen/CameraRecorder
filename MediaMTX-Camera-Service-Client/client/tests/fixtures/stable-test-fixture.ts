@@ -475,19 +475,6 @@ export class StableTestFixture implements ApiComplianceValidator {
     }
   }
 
-  /**
-   * Make HTTP request to health server
-   */
-  async healthRequest(endpoint: string, method: string = 'GET'): Promise<any> {
-    const url = getHealthUrl(endpoint);
-    const response = await fetch(url, { method });
-    
-    if (!response.ok) {
-      throw new Error(`Health request failed: ${response.status} ${response.statusText}`);
-    }
-    
-    return response.json();
-  }
 
   /**
    * Test assertion with result tracking
@@ -1404,72 +1391,5 @@ export class WebSocketTestFixture extends StableTestFixture {
   }
 }
 
-/**
- * Health server test fixture
- */
-export class HealthTestFixture extends StableTestFixture {
-  /**
-   * Test system health endpoint
-   */
-  async testSystemHealth(): Promise<boolean> {
-    try {
-      const response = await this.healthRequest('/health/system');
-      this.assert(response.status === 'healthy' || response.status === 'degraded', 'System health check passed');
-      return true;
-    } catch (error) {
-      this.assert(false, `System health test failed: ${error}`);
-      return false;
-    }
-  }
-
-  /**
-   * Test camera health endpoint
-   */
-  async testCameraHealth(): Promise<boolean> {
-    try {
-      const response = await this.healthRequest('/health/cameras');
-      this.assert(response.status === 'healthy' || response.status === 'unhealthy', 'Camera health check passed');
-      return true;
-    } catch (error) {
-      this.assert(false, `Camera health test failed: ${error}`);
-      return false;
-    }
-  }
-
-  /**
-   * Test MediaMTX health endpoint
-   */
-  async testMediaMTXHealth(): Promise<boolean> {
-    try {
-      const response = await this.healthRequest('/health/mediamtx');
-      this.assert(response.status === 'healthy' || response.status === 'unhealthy', 'MediaMTX health check passed');
-      return true;
-    } catch (error) {
-      this.assert(false, `MediaMTX health test failed: ${error}`);
-      return false;
-    }
-  }
-
-  /**
-   * Test readiness endpoint
-   */
-  async testReadiness(): Promise<boolean> {
-    try {
-      const response = await this.healthRequest('/health/ready');
-      this.assert(response.status === 'ready' || response.status === 'not_ready', 'Readiness check passed');
-      return true;
-    } catch (error) {
-      this.assert(false, `Readiness test failed: ${error}`);
-      return false;
-    }
-  }
-
-  /**
-   * Test health endpoint (alias for system health)
-   */
-  async testHealthEndpoint(): Promise<boolean> {
-    return this.testSystemHealth();
-  }
-}
 
 export default StableTestFixture;

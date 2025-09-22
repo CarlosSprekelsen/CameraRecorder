@@ -13,6 +13,7 @@
  */
 
 import { create } from 'zustand';
+import { logger, loggers } from '../services/loggerService';
 import type {
   CameraDevice,
   CameraListResponse,
@@ -288,7 +289,7 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
   // Legacy compatibility methods
   connect: async (url?: string) => {
     // Implementation will be added
-    console.log('Connect method called with URL:', url);
+    logger.info('Connect method called', { url }, 'cameraStore');
   },
 
   disconnect: () => {
@@ -350,7 +351,7 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
 
   // Notification handling
   handleNotification: (notification: unknown) => {
-    console.log('Notification received:', notification);
+    logger.info('Notification received', { notification }, 'cameraStore');
   },
 
   // Real-time update management
@@ -537,7 +538,7 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
       throw new Error('WebSocket not connected');
     }
 
-          console.log('Getting camera list with error recovery');
+          loggers.service.start('cameraStore', 'getCameraList');
     
     const result = await errorRecoveryService.executeWithRetry(
       async () => {
@@ -562,7 +563,7 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
         throw new Error('WebSocket not connected');
       }
 
-      console.log(`Getting camera status for ${device}`);
+      logger.info(`Getting camera status for ${device}`, { device }, 'cameraStore');
       const result = await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device }) as CameraDevice;
       
       // Update camera in list
@@ -575,7 +576,7 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
       return result;
       
     } catch (error) {
-      console.error(`Failed to get camera status for ${device}:`, error);
+      logger.error(`Failed to get camera status for ${device}`, error as Error, 'cameraStore');
       set({ 
         error: error instanceof Error ? error.message : 'Failed to get camera status' 
       });
@@ -598,13 +599,13 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
         throw new Error('WebSocket not connected');
       }
 
-      console.log(`Getting camera capabilities for ${device}`);
+      logger.info(`Getting camera capabilities for ${device}`, { device }, 'cameraStore');
       const result = await wsService.call(RPC_METHODS.GET_CAMERA_CAPABILITIES, { device });
       
       return result;
       
     } catch (error) {
-      console.error(`Failed to get camera capabilities for ${device}:`, error);
+      logger.error(`Failed to get camera capabilities for ${device}`, error as Error, 'cameraStore');
       set({ 
         error: error instanceof Error ? error.message : 'Failed to get camera capabilities'
       });
@@ -625,13 +626,13 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
         throw new Error('WebSocket not connected');
       }
 
-      console.log('Getting stream list');
+      logger.info('Getting stream list', undefined, 'cameraStore');
       const result = await wsService.call(RPC_METHODS.GET_STREAMS, {}) as StreamListResponse;
       set({ streams: result.streams });
       return result;
       
     } catch (error) {
-      console.error('Failed to get stream list:', error);
+      logger.error('Failed to get stream list', error as Error, 'cameraStore');
       set({ 
         error: error instanceof Error ? error.message : 'Failed to get stream list' 
       });
@@ -654,13 +655,13 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
         throw new Error('WebSocket not connected');
       }
 
-      console.log(`Starting streaming for ${device}`);
+      logger.info(`Starting streaming for ${device}`, { device }, 'cameraStore');
       const result = await wsService.call(RPC_METHODS.START_STREAMING, { device });
       
       return result;
       
     } catch (error) {
-      console.error(`Failed to start streaming for ${device}:`, error);
+      logger.error(`Failed to start streaming for ${device}`, error as Error, 'cameraStore');
       set({ 
         error: error instanceof Error ? error.message : 'Failed to start streaming'
       });
@@ -683,13 +684,13 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
         throw new Error('WebSocket not connected');
       }
 
-      console.log(`Stopping streaming for ${device}`);
+      logger.info(`Stopping streaming for ${device}`, { device }, 'cameraStore');
       const result = await wsService.call(RPC_METHODS.STOP_STREAMING, { device });
       
       return result;
       
     } catch (error) {
-      console.error(`Failed to stop streaming for ${device}:`, error);
+      logger.error(`Failed to stop streaming for ${device}`, error as Error, 'cameraStore');
       set({ 
         error: error instanceof Error ? error.message : 'Failed to stop streaming'
       });
@@ -712,13 +713,13 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
         throw new Error('WebSocket not connected');
       }
 
-      console.log(`Getting stream URL for ${device}`);
+      logger.info(`Getting stream URL for ${device}`, { device }, 'cameraStore');
       const result = await wsService.call(RPC_METHODS.GET_STREAM_URL, { device });
       
       return result;
       
     } catch (error) {
-      console.error(`Failed to get stream URL for ${device}:`, error);
+      logger.error(`Failed to get stream URL for ${device}`, error as Error, 'cameraStore');
       set({ 
         error: error instanceof Error ? error.message : 'Failed to get stream URL'
       });
@@ -741,13 +742,13 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
         throw new Error('WebSocket not connected');
       }
 
-      console.log(`Getting stream status for ${device}`);
+      logger.info(`Getting stream status for ${device}`, { device }, 'cameraStore');
       const result = await wsService.call(RPC_METHODS.GET_STREAM_STATUS, { device });
       
       return result;
       
     } catch (error) {
-      console.error(`Failed to get stream status for ${device}:`, error);
+      logger.error(`Failed to get stream status for ${device}`, error as Error, 'cameraStore');
       set({ 
         error: error instanceof Error ? error.message : 'Failed to get stream status'
       });
@@ -773,12 +774,12 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
       ...(format && { format: format as any })
     };
 
-    console.log(`Starting recording for camera ${device} with error recovery`);
+    logger.info(`Starting recording for camera ${device} with error recovery`, { device }, 'cameraStore');
     
     const result = await errorRecoveryService.executeWithRetry(
       async () => {
         const response = await wsService.call(RPC_METHODS.START_RECORDING, params as unknown as Record<string, unknown>) as RecordingSession;
-        console.log(`Recording started for camera ${device}`);
+        logger.info(`Recording started for camera ${device}`, { device }, 'cameraStore');
         return response;
       },
       'startRecording'

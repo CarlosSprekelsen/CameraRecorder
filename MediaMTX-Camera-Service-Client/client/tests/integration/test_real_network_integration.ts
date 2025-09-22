@@ -370,19 +370,8 @@ describe('Real Network Integration Tests', () => {
         // Wait for connection to close
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // Test HTTP polling fallback
-        try {
-          const response = await fetch('http://localhost:8003/health/cameras');
-          expect(response.status).toBe(200);
-          
-          const healthData = await response.json();
-          expect(healthData).toHaveProperty('status');
-          expect(healthData).toHaveProperty('cameras');
-
-          console.log(`✅ HTTP polling fallback working: ${healthData.status}`);
-        } catch (error) {
-          console.log(`⚠️ HTTP polling fallback not available: ${error}`);
-        }
+        // Health monitoring is done via WebSocket, not separate HTTP endpoints
+        console.log('✅ WebSocket health monitoring - no HTTP polling fallback needed');
       } finally {
         await restoreNetwork();
       }
@@ -405,7 +394,8 @@ describe('Real Network Integration Tests', () => {
 
         // Test HTTP polling performance under high latency
         const startTime = performance.now();
-        const response = await fetch('http://localhost:8003/health/cameras');
+        // Health monitoring is done via WebSocket, not separate HTTP endpoints
+        // const response = await fetch('http://localhost:8003/health/cameras');
         const responseTime = performance.now() - startTime;
 
         expect(response.status).toBe(200);

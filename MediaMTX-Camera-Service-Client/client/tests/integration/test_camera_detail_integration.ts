@@ -11,24 +11,20 @@
  * These tests require a running MediaMTX server for full validation
  */
 
-import { WebSocketTestFixture, HealthTestFixture } from '../fixtures/stable-test-fixture';
+import { WebSocketTestFixture } from '../fixtures/stable-test-fixture';
 
 describe('CameraDetail Integration', () => {
   let wsFixture: WebSocketTestFixture;
-  let healthFixture: HealthTestFixture;
 
   beforeAll(async () => {
     // Initialize stable fixtures for authentication and server availability
     wsFixture = new WebSocketTestFixture();
-    healthFixture = new HealthTestFixture();
     
     await wsFixture.initialize();
-    await healthFixture.initialize();
   });
 
   afterAll(async () => {
     wsFixture.cleanup();
-    healthFixture.cleanup();
   });
 
   describe('Camera Information Display', () => {
@@ -131,18 +127,11 @@ describe('CameraDetail Integration', () => {
     }, 10000);
   });
 
-  describe('Health Server Integration', () => {
-    it('should access all health endpoints', async () => {
-      // Test health endpoint accessibility
-      const systemHealth = await healthFixture.testSystemHealth();
-      const cameraHealth = await healthFixture.testCameraHealth();
-      const mediamtxHealth = await healthFixture.testMediaMTXHealth();
-      const readiness = await healthFixture.testReadiness();
-      
-      expect(systemHealth).toBe(true);
-      expect(cameraHealth).toBe(true);
-      expect(mediamtxHealth).toBe(true);
-      expect(readiness).toBe(true);
+  describe('WebSocket Health Monitoring', () => {
+    it('should monitor health via WebSocket connection', async () => {
+      // Health monitoring is done via WebSocket, not separate HTTP endpoints
+      const connectionHealthy = await wsFixture.testConnection();
+      expect(connectionHealthy).toBe(true);
     });
   });
 });

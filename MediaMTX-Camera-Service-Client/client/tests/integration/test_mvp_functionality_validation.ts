@@ -19,7 +19,7 @@
  * - Real cameras available for testing
  */
 
-import { WebSocketTestFixture, HealthTestFixture } from '../fixtures/stable-test-fixture';
+import { WebSocketTestFixture } from '../fixtures/stable-test-fixture';
 import { 
   RPC_METHODS, 
   ERROR_CODES, 
@@ -29,20 +29,16 @@ import {
 
 describe('REQ-MVP01: MVP Functionality Validation', () => {
   let wsFixture: WebSocketTestFixture;
-  let healthFixture: HealthTestFixture;
 
   beforeAll(async () => {
     // Initialize stable fixtures for authentication and server availability
     wsFixture = new WebSocketTestFixture();
-    healthFixture = new HealthTestFixture();
     
     await wsFixture.initialize();
-    await healthFixture.initialize();
   });
 
   afterAll(async () => {
     wsFixture.cleanup();
-    healthFixture.cleanup();
   });
 
   describe('REQ-MVP01.1: Camera Discovery Workflow (End-to-End)', () => {
