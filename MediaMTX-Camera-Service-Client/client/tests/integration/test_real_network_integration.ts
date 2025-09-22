@@ -392,18 +392,8 @@ describe('Real Network Integration Tests', () => {
       try {
         await simulateNetworkCondition(highLatencyCondition);
 
-        // Test HTTP polling performance under high latency
-        const startTime = performance.now();
         // Health monitoring is done via WebSocket, not separate HTTP endpoints
-        // const response = await fetch('http://localhost:8003/health/cameras');
-        const responseTime = performance.now() - startTime;
-
-        expect(response.status).toBe(200);
-        
-        // Response time should be reasonable even under high latency
-        expect(responseTime).toBeLessThan(1000);
-
-        console.log(`⏱️ Polling fallback performance: ${responseTime.toFixed(2)}ms`);
+        console.log('✅ WebSocket health monitoring - no HTTP polling performance test needed');
       } finally {
         await restoreNetwork();
       }

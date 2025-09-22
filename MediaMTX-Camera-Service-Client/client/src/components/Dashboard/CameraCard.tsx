@@ -1,4 +1,5 @@
 import React from 'react';
+import { logger, loggers } from '../../services/loggerService';
 import {
   Card,
   CardContent,
@@ -66,17 +67,17 @@ const CameraCard: React.FC<CameraCardProps> = ({ camera }) => {
     try {
       const result = await storeTakeSnapshot(camera.device);
       if (result?.status === 'completed') {
-        console.log('Snapshot taken successfully:', result);
+        logger.info('Snapshot taken successfully', { result }, 'cameraCard');
         const notification = notificationUtils.camera.snapshotTaken(camera.name);
         showSuccess(notification.title, notification.message);
       } else {
-        console.error('Snapshot failed:', result);
+        logger.error('Snapshot failed', { result }, 'cameraCard');
         const notification = notificationUtils.camera.snapshotFailed(camera.name, result?.error);
         showError(notification.title, notification.message);
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Snapshot failed';
-      console.error('Snapshot error:', errorMessage);
+      logger.error('Snapshot error', { errorMessage }, 'cameraCard');
       const notification = notificationUtils.camera.snapshotFailed(camera.name, errorMessage);
       showError(notification.title, notification.message);
     } finally {
@@ -92,29 +93,29 @@ const CameraCard: React.FC<CameraCardProps> = ({ camera }) => {
       if (isRecording) {
         const result = await storeStopRecording(camera.device);
         if (result?.status === 'STOPPED') {
-          console.log('Recording stopped successfully:', result);
+          logger.info('Recording stopped successfully', { result }, 'cameraCard');
           const notification = notificationUtils.camera.recordingStopped(camera.name);
           showSuccess(notification.title, notification.message);
         } else {
-          console.error('Stop recording failed:', result);
+          logger.error('Stop recording failed', { result }, 'cameraCard');
           const notification = notificationUtils.camera.recordingFailed(camera.name, result?.error);
           showError(notification.title, notification.message);
         }
       } else {
         const result = await storeStartRecording(camera.device);
         if (result?.status === 'STARTED') {
-          console.log('Recording started successfully:', result);
+          logger.info('Recording started successfully', { result }, 'cameraCard');
           const notification = notificationUtils.camera.recordingStarted(camera.name);
           showSuccess(notification.title, notification.message);
         } else {
-          console.error('Start recording failed:', result);
+          logger.error('Start recording failed', { result }, 'cameraCard');
           const notification = notificationUtils.camera.recordingFailed(camera.name, result?.error);
           showError(notification.title, notification.message);
         }
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Recording failed';
-      console.error('Recording error:', errorMessage);
+      logger.error('Recording error', { errorMessage }, 'cameraCard');
       const notification = notificationUtils.camera.recordingFailed(camera.name, errorMessage);
       showError(notification.title, notification.message);
     } finally {

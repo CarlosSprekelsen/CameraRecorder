@@ -9,6 +9,7 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import { logger, loggers } from '../../services/loggerService';
 
 /**
  * Connection health state interface
@@ -177,14 +178,14 @@ export const useHealthStore = create<HealthStore>()(
       // WebSocket-based health methods
       getSystemStatus: async () => {
         try {
-          const { websocketService } = await import('../../services/websocket');
-          const wsService = websocketService;
+          const { createWebSocketService } = await import('../../services/websocket');
+          const wsService = await createWebSocketService();
 
           if (!wsService.isConnected()) {
             throw new Error('WebSocket not connected');
           }
 
-          console.log('Getting system status via WebSocket');
+          logger.info('Getting system status via WebSocket', undefined, 'healthStore');
           const result = await wsService.call('get_status', {});
           
           // Update health based on system status
@@ -193,7 +194,7 @@ export const useHealthStore = create<HealthStore>()(
           
           return result;
         } catch (error) {
-          console.error('Failed to get system status:', error);
+          logger.error('Failed to get system status', error as Error, 'healthStore');
           set({ isHealthy: false });
           throw error;
         }
@@ -201,14 +202,14 @@ export const useHealthStore = create<HealthStore>()(
 
       getSystemMetrics: async () => {
         try {
-          const { websocketService } = await import('../../services/websocket');
-          const wsService = websocketService;
+          const { createWebSocketService } = await import('../../services/websocket');
+          const wsService = await createWebSocketService();
 
           if (!wsService.isConnected()) {
             throw new Error('WebSocket not connected');
           }
 
-          console.log('Getting system metrics via WebSocket');
+          logger.info('Getting system metrics via WebSocket', undefined, 'healthStore');
           const result = await wsService.call('get_metrics', {});
           
           // Update health score based on metrics
@@ -226,7 +227,7 @@ export const useHealthStore = create<HealthStore>()(
           
           return result;
         } catch (error) {
-          console.error('Failed to get system metrics:', error);
+          logger.error('Failed to get system metrics', error as Error, 'healthStore');
           set({ isHealthy: false });
           throw error;
         }
@@ -259,9 +260,9 @@ export const useHealthStore = create<HealthStore>()(
           // Add to health history
           get().addHealthRecord(healthScore, connectionQuality);
           
-          console.log('Health refreshed successfully', { status, metrics, healthScore, connectionQuality });
+          logger.info('Health refreshed successfully', { status, metrics, healthScore, connectionQuality }, 'healthStore');
         } catch (error) {
-          console.error('Failed to refresh health:', error);
+          logger.error('Failed to refresh health', error as Error, 'healthStore');
           set({ isHealthy: false, connectionQuality: 'unstable' });
           throw error;
         }

@@ -808,12 +808,12 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
 
     const params: StopRecordingParams = { device };
 
-    console.log(`Stopping recording for camera ${device} with error recovery`);
+    logger.info(`Stopping recording for camera ${device} with error recovery`, { device }, 'cameraStore');
     
     const result = await errorRecoveryService.executeWithRetry(
       async () => {
         const response = await wsService.call(RPC_METHODS.STOP_RECORDING, params as unknown as Record<string, unknown>) as RecordingSession;
-        console.log(`Recording stopped for camera ${device}`);
+        logger.info(`Recording stopped for camera ${device}`, { device }, 'cameraStore');
         return response;
       },
       'stopRecording'
@@ -856,7 +856,7 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
       throw new Error('Format must be either "jpg" or "png"');
     }
 
-          console.log(`Taking snapshot for camera ${device} with error recovery (format: ${format}, quality: ${quality})`);
+          logger.info(`Taking snapshot for camera ${device} with error recovery (format: ${format}, quality: ${quality})`, { device, format, quality }, 'cameraStore');
     
     const params: TakeSnapshotParams = {
       device,
@@ -868,7 +868,7 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
     const result = await errorRecoveryService.executeWithRetry(
       async () => {
         const response = await wsService.call(RPC_METHODS.TAKE_SNAPSHOT, params as unknown as Record<string, unknown>) as SnapshotResult;
-        console.log(`Snapshot taken for camera ${device}:`, response);
+        logger.info(`Snapshot taken for camera ${device}`, { device, response }, 'cameraStore');
         return response;
       },
       'takeSnapshot'
@@ -889,13 +889,13 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
         throw new Error('WebSocket not connected');
       }
 
-      console.log('Getting server information');
+      logger.info('Getting server information', undefined, 'cameraStore');
       const result = await wsService.call('get_server_info', {}) as ServerInfo;
       set({ serverInfo: result });
       return result;
       
     } catch (error) {
-      console.error('Failed to get server info:', error);
+      logger.error('Failed to get server info', error as Error, 'cameraStore');
       set({ 
         error: error instanceof Error ? error.message : 'Failed to get server information' 
       });
@@ -915,12 +915,12 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
         return false;
       }
 
-      console.log('Pinging server');
+      logger.info('Pinging server', undefined, 'cameraStore');
       const result = await wsService.call('ping', {});
       return result === 'pong';
       
     } catch (error) {
-      console.error('Server ping failed:', error);
+      logger.error('Server ping failed', error as Error, 'cameraStore');
       return false;
     }
   },
@@ -935,7 +935,7 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
   },
 
   updateCameraStatus: (device: string, status: CameraStatus) => {
-          console.log(`Camera status update: ${device} -> ${status}`);
+          logger.info(`Camera status update: ${device} -> ${status}`, { device, status }, 'cameraStore');
     set((state) => ({
       cameras: state.cameras.map(camera => 
         camera.device === device ? { ...camera, status } : camera
@@ -946,7 +946,7 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
   },
 
   addRecording: (device: string, recording: RecordingSession) => {
-          console.log(`Adding recording for camera ${device}`);
+          logger.info(`Adding recording for camera ${device}`, { device }, 'cameraStore');
     set((state) => {
       const newRecordings = new Map(state.activeRecordings);
       newRecordings.set(device, recording);
@@ -955,7 +955,7 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
   },
 
   removeRecording: (device: string) => {
-          console.log(`Removing recording for camera ${device}`);
+          logger.info(`Removing recording for camera ${device}`, { device }, 'cameraStore');
     set((state) => {
       const newRecordings = new Map(state.activeRecordings);
       newRecordings.delete(device);
@@ -976,7 +976,7 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
         throw new Error('WebSocket not connected');
       }
 
-      console.log('Getting recordings list');
+      logger.info('Getting recordings list', undefined, 'cameraStore');
       const result = await wsService.call(RPC_METHODS.LIST_RECORDINGS, (params || {}) as Record<string, unknown>) as FileListResponse;
       
       // Normalize file data
@@ -992,7 +992,7 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
       return normalized;
       
     } catch (error) {
-      console.error('Failed to get recordings:', error);
+      logger.error('Failed to get recordings', error as Error, 'cameraStore');
       set({ 
         error: error instanceof Error ? error.message : 'Failed to get recordings' 
       });
@@ -1012,7 +1012,7 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
         throw new Error('WebSocket not connected');
       }
 
-      console.log('📸 Getting snapshots list');
+      logger.info('Getting snapshots list', undefined, 'cameraStore');
       const result = await wsService.call(RPC_METHODS.LIST_SNAPSHOTS, (params || {}) as Record<string, unknown>) as FileListResponse;
       
       // Normalize file data
@@ -1028,7 +1028,7 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
       return normalized;
       
     } catch (error) {
-      console.error('❌ Failed to get snapshots:', error);
+      logger.error('Failed to get snapshots', error as Error, 'cameraStore');
       set({ 
         error: error instanceof Error ? error.message : 'Failed to get snapshots' 
       });
@@ -1038,7 +1038,7 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
 
   // Notification handling
   handleNotification: (notification: unknown) => {
-    console.log('📡 Handling notification:', notification);
+    logger.info('Handling notification', { notification }, 'cameraStore');
     
     // Type guard for notification structure
     if (notification && typeof notification === 'object' && 'method' in notification) {
@@ -1056,12 +1056,12 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
           if (notif.params && typeof notif.params === 'object' && 'device' in notif.params) {
             const params = notif.params as { device: string; session_id: string; status: RecordingStatus };
             // Handle recording status update
-            console.log('📹 Recording status update:', params);
+            logger.info('Recording status update', { params }, 'cameraStore');
           }
           break;
           
         default:
-          console.log('📡 Unknown notification method:', notif.method);
+          logger.info('Unknown notification method', { method: notif.method }, 'cameraStore');
       }
     }
     
@@ -1074,12 +1074,12 @@ export const useCameraStore = create<CameraStoreState>((set, get) => ({
   // Real-time update management
   enableRealTimeUpdates: () => {
     set({ realTimeUpdatesEnabled: true });
-    console.log('🔄 Camera store real-time updates enabled');
+    logger.info('Camera store real-time updates enabled', undefined, 'cameraStore');
   },
 
   disableRealTimeUpdates: () => {
     set({ realTimeUpdatesEnabled: false });
-    console.log('⏸️ Camera store real-time updates disabled');
+    logger.info('Camera store real-time updates disabled', undefined, 'cameraStore');
   },
 
   updateRecordingProgress: (device: string, progress: RecordingProgress) => {

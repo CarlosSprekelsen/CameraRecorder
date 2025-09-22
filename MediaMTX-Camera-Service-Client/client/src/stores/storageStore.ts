@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { logger, loggers } from '../services/loggerService';
 import { storageMonitorService } from '../services/storageMonitorService';
 import type {
   StorageInfo,
@@ -308,7 +309,7 @@ export const useStorageStore = create<StorageStore>((set, get) => ({
 
     // Initial load
     get().refreshStorageInfo().catch(error => {
-      console.error('Failed to initialize storage store:', error);
+      logger.error('Failed to initialize storage store', error as Error, 'storageStore');
     });
   },
 

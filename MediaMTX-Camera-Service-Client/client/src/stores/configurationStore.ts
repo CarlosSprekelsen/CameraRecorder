@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { logger, loggers } from '../services/loggerService';
 import { configurationManagerService } from '../services/configurationManagerService';
 import type { AppConfig, ValidationResult } from '../types/settings';
 
@@ -353,7 +354,7 @@ export const useConfigurationStore = create<ConfigurationStore>((set, get) => ({
 
     // Initial load
     get().loadConfiguration().catch(error => {
-      console.error('Failed to initialize configuration store:', error);
+      logger.error('Failed to initialize configuration store', error as Error, 'configurationStore');
     });
   },
 

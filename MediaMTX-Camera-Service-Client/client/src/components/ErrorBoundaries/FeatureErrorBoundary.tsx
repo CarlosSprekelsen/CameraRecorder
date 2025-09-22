@@ -106,11 +106,11 @@ class FeatureErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <Box sx={{ p: 2 }}>
+        <Box sx={{ p: 2 }} data-testid="error-boundary">
           <Paper elevation={2} sx={{ p: 3, textAlign: 'center' }}>
             <ErrorIcon sx={{ fontSize: 48, color: 'error.main', mb: 2 }} />
             
-            <Typography variant="h6" gutterBottom>
+            <Typography variant="h6" gutterBottom data-testid="error-message">
               {featureName} Error
             </Typography>
             
@@ -120,7 +120,7 @@ class FeatureErrorBoundary extends Component<Props, State> {
             </Typography>
 
             {retryCount > 0 && (
-              <Alert severity="info" sx={{ mb: 2 }}>
+              <Alert severity="info" sx={{ mb: 2 }} data-testid="retry-info">
                 Retry attempt {retryCount} of {this.maxRetries}
               </Alert>
             )}
@@ -132,6 +132,7 @@ class FeatureErrorBoundary extends Component<Props, State> {
                   startIcon={<RefreshIcon />}
                   onClick={this.handleRetry}
                   color="primary"
+                  data-testid="retry-button"
                 >
                   Try Again
                 </Button>
@@ -141,6 +142,7 @@ class FeatureErrorBoundary extends Component<Props, State> {
                 variant="outlined"
                 onClick={this.handleReload}
                 color="primary"
+                data-testid="reload-button"
               >
                 Reload Page
               </Button>
@@ -153,12 +155,13 @@ class FeatureErrorBoundary extends Component<Props, State> {
                   startIcon={<BugIcon />}
                   onClick={this.toggleDetails}
                   size="small"
+                  data-testid="details-button"
                 >
                   {showDetails ? 'Hide' : 'Show'} Error Details
                 </Button>
                 
                 <Collapse in={showDetails}>
-                  <Box sx={{ mt: 2, textAlign: 'left' }}>
+                  <Box sx={{ mt: 2, textAlign: 'left' }} data-testid="error-details">
                     <Typography variant="subtitle2" gutterBottom>
                       Error Details:
                     </Typography>

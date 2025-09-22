@@ -13,6 +13,7 @@
 
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
+import { logger, loggers } from '../services/loggerService';
 import type { FileItem, FileType } from '../types';
 import { RPC_METHODS } from '../types';
 import { createWebSocketService, type WebSocketService } from '../services/websocket';
@@ -489,7 +490,7 @@ export const useFileStore = create<FileStore>()(
             throw new Error('WebSocket not connected');
           }
 
-          console.log('Setting retention policy');
+          logger.info('Setting retention policy', undefined, 'fileStore');
           const result = await wsService.call(RPC_METHODS.SET_RETENTION_POLICY, {
             policy_type: policyType,
             max_age_days: maxAgeDays,
@@ -500,7 +501,7 @@ export const useFileStore = create<FileStore>()(
           return result;
           
         } catch (error) {
-          console.error('Failed to set retention policy:', error);
+          logger.error('Failed to set retention policy', error as Error, 'fileStore');
           set({ 
             error: error instanceof Error ? error.message : 'Failed to set retention policy'
           });
@@ -520,13 +521,13 @@ export const useFileStore = create<FileStore>()(
             throw new Error('WebSocket not connected');
           }
 
-          console.log('Cleaning up old files');
+          logger.info('Cleaning up old files', undefined, 'fileStore');
           const result = await wsService.call(RPC_METHODS.CLEANUP_OLD_FILES, {});
           
           return result;
           
         } catch (error) {
-          console.error('Failed to cleanup old files:', error);
+          logger.error('Failed to cleanup old files', error as Error, 'fileStore');
           set({ 
             error: error instanceof Error ? error.message : 'Failed to cleanup old files'
           });

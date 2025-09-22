@@ -138,12 +138,12 @@ class ServiceErrorBoundary extends Component<Props, State> {
       const canRetry = retryable && retryCount < this.maxRetries;
 
       return (
-        <Box sx={{ p: 2 }}>
+        <Box sx={{ p: 2 }} data-testid="error-boundary">
           <Paper elevation={1} sx={{ p: 3 }}>
             <Alert severity={severity} sx={{ mb: 2 }}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                 {this.getErrorIcon()}
-                <Typography variant="subtitle2">
+                <Typography variant="subtitle2" data-testid="error-message">
                   {serviceName} Service Error
                 </Typography>
                 {retryCount > 0 && (
@@ -151,6 +151,7 @@ class ServiceErrorBoundary extends Component<Props, State> {
                     label={`Attempt ${retryCount}/${this.maxRetries}`} 
                     size="small" 
                     color={severity === 'error' ? 'error' : 'warning'}
+                    data-testid="retry-info"
                   />
                 )}
               </Box>
@@ -169,6 +170,7 @@ class ServiceErrorBoundary extends Component<Props, State> {
                   onClick={this.handleRetry}
                   disabled={isRetrying}
                   color="primary"
+                  data-testid="retry-button"
                 >
                   {isRetrying ? 'Retrying...' : 'Try Again'}
                 </Button>
@@ -178,6 +180,7 @@ class ServiceErrorBoundary extends Component<Props, State> {
                 variant="outlined"
                 onClick={this.handleFallback}
                 color="secondary"
+                data-testid="fallback-button"
               >
                 Use Fallback
               </Button>
