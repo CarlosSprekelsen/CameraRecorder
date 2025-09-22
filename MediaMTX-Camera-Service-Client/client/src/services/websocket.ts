@@ -235,23 +235,8 @@ export class WebSocketService {
     // HTTP polling removed - Go server is WebSocket-only
   }
 
-  /**
-   * Initialize HTTP polling fallback service (REQ-NET01-003)
-   */
-  private initializeHTTPPollingFallback(): void {
-    // Extract HTTP base URL from WebSocket URL
-    const wsUrl = new URL(this.config.url);
-    const httpBaseUrl = `http://${wsUrl.hostname}:8003`; // Health server port
-    
-    const pollingConfig: HTTPPollingConfig = {
-      baseUrl: httpBaseUrl,
-      pollingInterval: 5000, // 5 seconds
-      timeout: 3000, // 3 seconds
-      maxRetries: 3,
-      retryDelay: 1000,
-    };
-    
-    this.httpPollingService = new HTTPPollingService(pollingConfig);
+  // HTTP polling fallback removed - Go server is WebSocket-only
+  // No HTTP endpoints exist in Go server architecture
     
     // Set up event handlers for polling service
     this.httpPollingService.onCameraListUpdate((cameras) => {

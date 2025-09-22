@@ -256,10 +256,10 @@ export const useFileStore = create<FileStore>()(
 
         try {
           // Construct download URL based on file type
-          // File downloads are served by the health server on port 8003
+          // File downloads are served by the Go server on port 8002
           const baseUrl = window.location.protocol === 'https:' 
-            ? 'https://localhost:8003' 
-            : 'http://localhost:8003';
+            ? 'https://localhost:8002' 
+            : 'http://localhost:8002';
           const downloadUrl = `${baseUrl}/files/${fileType}/${encodeURIComponent(filename)}`;
 
           // First check if file exists by making a HEAD request
