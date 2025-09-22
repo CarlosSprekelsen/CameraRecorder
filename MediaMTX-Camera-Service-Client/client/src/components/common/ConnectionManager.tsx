@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Box, Alert, Button, Typography, CircularProgress } from '@mui/material';
 import { useConnectionStore, useHealthStore } from '../../stores/connection';
-import ConnectionStatus from './ConnectionStatus';
+import ConnectionStatus from '../ConnectionStatus/ConnectionStatus';
 import { connectionService } from '../../services/connectionService';
 import { logger, loggers } from '../../services/loggerService';
 

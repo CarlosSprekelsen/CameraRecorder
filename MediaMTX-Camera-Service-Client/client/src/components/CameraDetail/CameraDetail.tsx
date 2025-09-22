@@ -123,7 +123,8 @@ const CameraDetail: React.FC = () => {
       const result = await storeStopRecording(deviceId);
       if (result) {
         console.log('Recording stopped:', result);
-        // TODO: Show success notification
+        const notification = notificationUtils.camera.recordingStopped(camera?.name || deviceId);
+        showSuccess(notification.title, notification.message);
       }
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : 'Failed to stop recording');
@@ -142,7 +143,7 @@ const CameraDetail: React.FC = () => {
       const updatedCamera = await storeGetCameraStatus(deviceId);
       if (updatedCamera) {
         console.log('Camera status refreshed:', updatedCamera);
-        // TODO: Show success notification
+        showSuccess('Camera Status Updated', 'Camera information has been refreshed successfully');
       }
     } catch (err) {
       setLocalError(err instanceof Error ? err.message : 'Failed to refresh camera status');
