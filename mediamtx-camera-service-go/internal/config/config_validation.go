@@ -326,7 +326,7 @@ func validateLogFilePath(fieldName, path string) error {
 
 // validateCodecConfig validates codec configuration.
 func validateCodecConfig(config *CodecConfig) error {
-	validProfiles := []string{"baseline", "main", "high"}
+	validProfiles := []string{"baseline", "main", "high", "high422", "high444"}
 	if !contains(validProfiles, config.VideoProfile) {
 		return &ValidationError{Field: "mediamtx.codec.video_profile", Message: fmt.Sprintf("video profile must be one of %v, got %s", validProfiles, config.VideoProfile)}
 	}
