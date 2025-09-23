@@ -32,11 +32,11 @@ mediamtx:
   process_termination_timeout: 10.0
   process_kill_timeout: 5.0
   
-  # Codec settings (actually used)
+  # Codec settings (actually used) - STANAG 4609 compliant
   codec:
-    video_profile: "baseline"
-    video_level: "3.1"
-    pixel_format: "yuv420p"
+    video_profile: "high422"   # STANAG 4609 compliant with 4:2:2 support
+    video_level: "4.0"         # Tactical system standard
+    pixel_format: "yuv422p"    # 4:2:2 for tactical systems
     bitrate: "2M"
     preset: "fast"
 
@@ -62,7 +62,7 @@ logging:
 
 recording:
   enabled: true
-  format: "mp4"
+  format: "fmp4"              # STANAG 4609 compliant (was "mp4")
   quality: "medium"
   segment_duration: 300
   max_segment_size: 104857600

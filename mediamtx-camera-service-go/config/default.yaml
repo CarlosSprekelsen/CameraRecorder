@@ -39,11 +39,11 @@ mediamtx:
     max_backoff_delay: 120.0          # 120 seconds for edge devices
     shutdown_timeout: 30.0            # 30 seconds for edge devices
   codec:
-    video_profile: "baseline"
-    video_level: "3.0"  # Reduced from 3.1 for efficiency
-    pixel_format: "yuv420p"
-    bitrate: "1M"  # Reduced from 2M for power efficiency
-    preset: "ultrafast"  # Changed from "fast" for efficiency
+    video_profile: "high422"   # STANAG 4609 compliant with 4:2:2 support (was "baseline")
+    video_level: "4.0"         # Tactical system standard (was "3.0")
+    pixel_format: "yuv422p"    # 4:2:2 for tactical systems (was "yuv420p")
+    bitrate: "2M"              # Increased for tactical quality (was "1M")
+    preset: "fast"             # Better quality for tactical use (was "ultrafast")
   stream_readiness:
     timeout: 60.0  # Increased from 30.0 for stability
     retry_attempts: 2  # Reduced from 3

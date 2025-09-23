@@ -720,12 +720,12 @@ func (cm *ConfigManager) setDefaults(v *viper.Viper) {
 	v.SetDefault("mediamtx.recordings_path", "/opt/camera-service/recordings")
 	v.SetDefault("mediamtx.snapshots_path", "/opt/camera-service/snapshots")
 
-	// MediaMTX codec defaults
-	v.SetDefault("mediamtx.codec.video_profile", "baseline")
-	v.SetDefault("mediamtx.codec.video_level", "3.0")
-	v.SetDefault("mediamtx.codec.pixel_format", "yuv420p")
-	v.SetDefault("mediamtx.codec.bitrate", "600k")
-	v.SetDefault("mediamtx.codec.preset", "ultrafast")
+	// MediaMTX codec defaults - STANAG 4609 compliant
+	v.SetDefault("mediamtx.codec.video_profile", "high422") // STANAG 4609 compliant with 4:2:2 support
+	v.SetDefault("mediamtx.codec.video_level", "4.0")       // Tactical system standard
+	v.SetDefault("mediamtx.codec.pixel_format", "yuv422p")  // 4:2:2 for tactical systems
+	v.SetDefault("mediamtx.codec.bitrate", "2M")            // Increased for tactical quality
+	v.SetDefault("mediamtx.codec.preset", "fast")           // Better quality for tactical use
 
 	// MediaMTX health monitoring defaults
 	v.SetDefault("mediamtx.health_check_interval", 30)
