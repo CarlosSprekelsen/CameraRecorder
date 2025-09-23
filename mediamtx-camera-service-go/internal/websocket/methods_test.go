@@ -1086,7 +1086,7 @@ func TestWebSocketMethods_GetStreamStatus_ReqMTX002_Success(t *testing.T) {
 	require.Nil(t, startStreamResponse.Error, "Stream start should succeed")
 
 	// Now check stream status
-	response := helper.TestMethod(t, "get_stream_status", map[string]interface{}{
+	response := helper.TestMethodWithEvents(t, "get_stream_status", map[string]interface{}{
 		"device": "camera0",
 	}, "viewer")
 
@@ -1204,7 +1204,7 @@ func TestWebSocketMethods_ListSnapshots_ReqMTX002_Success(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// === TEST AND VALIDATION ===
-	response := helper.TestMethod(t, "list_snapshots", map[string]interface{}{
+	response := helper.TestMethodWithEvents(t, "list_snapshots", map[string]interface{}{
 		"limit":  10,
 		"offset": 0,
 	}, "viewer")
@@ -1271,7 +1271,7 @@ func TestWebSocketMethods_DeleteRecording_ReqMTX002_Success(t *testing.T) {
 	require.Nil(t, stopRecordingResponse.Error, "Recording stop should succeed")
 
 	// Send delete_recording message
-	response := helper.TestMethod(t, "delete_recording", map[string]interface{}{
+	response := helper.TestMethodWithEvents(t, "delete_recording", map[string]interface{}{
 		"filename": recordingFilename,
 	}, "operator")
 
@@ -1328,7 +1328,7 @@ func TestWebSocketMethods_DeleteSnapshot_ReqMTX002_Success(t *testing.T) {
 	require.NotEmpty(t, snapshotFilename, "Should be able to extract filename from snapshot response")
 
 	// Send delete_snapshot message
-	response := helper.TestMethod(t, "delete_snapshot", map[string]interface{}{
+	response := helper.TestMethodWithEvents(t, "delete_snapshot", map[string]interface{}{
 		"filename": snapshotFilename,
 	}, "operator")
 
@@ -1350,7 +1350,7 @@ func TestWebSocketMethods_GetStorageInfo_ReqMTX004_Success(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// === TEST AND VALIDATION ===
-	response := helper.TestMethod(t, "get_storage_info", map[string]interface{}{}, "admin")
+	response := helper.TestMethodWithEvents(t, "get_storage_info", map[string]interface{}{}, "admin")
 
 	// === VALIDATION ===
 	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
@@ -1366,7 +1366,7 @@ func TestWebSocketMethods_SetRetentionPolicy_ReqMTX002_Success(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// === TEST AND VALIDATION ===
-	response := helper.TestMethod(t, "set_retention_policy", map[string]interface{}{
+	response := helper.TestMethodWithEvents(t, "set_retention_policy", map[string]interface{}{
 		"policy_type":  "age",
 		"max_age_days": 30,
 		"enabled":      true,
@@ -1386,7 +1386,7 @@ func TestWebSocketMethods_CleanupOldFiles_ReqMTX002_Success(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// === TEST AND VALIDATION ===
-	response := helper.TestMethod(t, "cleanup_old_files", map[string]interface{}{}, "admin")
+	response := helper.TestMethodWithEvents(t, "cleanup_old_files", map[string]interface{}{}, "admin")
 
 	// === VALIDATION ===
 	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
@@ -1406,7 +1406,7 @@ func TestWebSocketMethods_SubscribeEvents_ReqAPI003_Success(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// === TEST AND VALIDATION ===
-	response := helper.TestMethod(t, "subscribe_events", map[string]interface{}{
+	response := helper.TestMethodWithEvents(t, "subscribe_events", map[string]interface{}{
 		"topics": []string{"camera.connected", "recording.start"},
 		"filters": map[string]interface{}{
 			"device": "camera0",
@@ -1427,7 +1427,7 @@ func TestWebSocketMethods_UnsubscribeEvents_ReqAPI003_Success(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// === TEST AND VALIDATION ===
-	response := helper.TestMethod(t, "unsubscribe_events", map[string]interface{}{
+	response := helper.TestMethodWithEvents(t, "unsubscribe_events", map[string]interface{}{
 		"topics": []string{"camera.connected"},
 	}, "viewer")
 
@@ -1445,7 +1445,7 @@ func TestWebSocketMethods_GetSubscriptionStats_ReqAPI003_Success(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// === TEST AND VALIDATION ===
-	response := helper.TestMethod(t, "get_subscription_stats", map[string]interface{}{}, "viewer")
+	response := helper.TestMethodWithEvents(t, "get_subscription_stats", map[string]interface{}{}, "viewer")
 
 	// === VALIDATION ===
 	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
@@ -1465,7 +1465,7 @@ func TestWebSocketMethods_DiscoverExternalStreams_ReqMTX003_Success(t *testing.T
 	defer helper.Cleanup(t)
 
 	// === TEST AND VALIDATION ===
-	response := helper.TestMethod(t, "discover_external_streams", map[string]interface{}{
+	response := helper.TestMethodWithEvents(t, "discover_external_streams", map[string]interface{}{
 		"skydio_enabled":  true,
 		"generic_enabled": false,
 		"force_rescan":    false,
@@ -1486,7 +1486,7 @@ func TestWebSocketMethods_AddExternalStream_ReqMTX003_Success(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// === TEST AND VALIDATION ===
-	response := helper.TestMethod(t, "add_external_stream", map[string]interface{}{
+	response := helper.TestMethodWithEvents(t, "add_external_stream", map[string]interface{}{
 		"stream_url":  "rtsp://192.168.42.15:5554/subject",
 		"stream_name": "Test_UAV_15",
 		"stream_type": "skydio_stanag4609",
@@ -1506,7 +1506,7 @@ func TestWebSocketMethods_RemoveExternalStream_ReqMTX003_Success(t *testing.T) {
 	defer helper.Cleanup(t)
 
 	// === TEST AND VALIDATION ===
-	response := helper.TestMethod(t, "remove_external_stream", map[string]interface{}{
+	response := helper.TestMethodWithEvents(t, "remove_external_stream", map[string]interface{}{
 		"stream_name": "Test_UAV_15",
 	}, "operator")
 
