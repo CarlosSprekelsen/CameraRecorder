@@ -48,11 +48,14 @@ func TestSnapshotManager_New_ReqMTX001_Success(t *testing.T) {
 	assert.NotNil(t, snapshotManager.GetSnapshotSettings(), "Snapshot settings should be initialized")
 }
 
-// TestSnapshotManager_TakeSnapshot_ReqMTX002 tests snapshot capture with Progressive Readiness
-func TestSnapshotManager_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
+// TestSnapshotManager_TakeSnapshot_ReqMTX002_DataCreation tests actual data creation instead of accommodation
+func TestSnapshotManager_TakeSnapshot_ReqMTX002_DataCreation(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	// No sequential execution - Progressive Readiness enables parallelism
+	// Data-driven validation: Verify actual file creation and metadata
 	helper, _ := SetupMediaMTXTest(t)
+
+	// Create data validation helper
+	dataValidator := testutils.NewDataValidationHelper(t)
 
 	// Use Progressive Readiness pattern (this test needs controller for SubscribeToReadiness)
 	controllerInterface, ctx, cancel := helper.GetReadyController(t)
@@ -61,8 +64,9 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
 	controller := controllerInterface.(*controller)
 	snapshotManager := helper.GetSnapshotManager()
 
-	// Progressive Readiness: Attempt operation immediately (no waiting)
+	// Step 1: Setup test parameters
 	cameraID := "camera0" // Use standard identifier
+	snapshotPath := dataValidator.CreateTestSnapshotPath("data_creation_test")
 	options := &SnapshotOptions{
 		Format:     "jpg",
 		Quality:    85,
@@ -71,34 +75,53 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
 		AutoResize: true,
 	}
 
-	// Progressive Readiness: Attempt operation immediately (may use fallback)
-	response, err := snapshotManager.TakeSnapshot(ctx, cameraID, options)
-	if err == nil {
-		// Operation succeeded immediately (Progressive Readiness working)
-		t.Log("Snapshot taken immediately - Progressive Readiness working")
-	} else {
-		// Operation needs readiness - wait for event (no polling)
-		readinessChan := controller.SubscribeToReadiness()
-		select {
-		case <-readinessChan:
-			// Retry after readiness event
-			response, err = snapshotManager.TakeSnapshot(ctx, cameraID, options)
-			require.NoError(t, err, "Snapshot should work after readiness event")
-		case <-time.After(testutils.UniversalTimeoutVeryLong):
-			t.Fatal("Timeout waiting for readiness event")
-		}
-	}
+	// Step 2: Verify initial state - no snapshot file should exist
+	dataValidator.AssertFileNotExists(snapshotPath, "Snapshot creation initial state")
 
-	helper.AssertSnapshotResponse(t, response, err)
+	// Step 3: Execute snapshot creation with progressive readiness
+	result := testutils.TestProgressiveReadiness(t, func() (*TakeSnapshotResponse, error) {
+		return snapshotManager.TakeSnapshot(ctx, cameraID, options)
+	}, controller, "TakeSnapshot")
 
-	// Additional specific validations
+	// Step 4: Verify data was actually created
+	require.NoError(t, result.Error, "Snapshot creation must succeed")
+	require.NotNil(t, result.Result, "Snapshot response must not be nil")
+
+	response := result.Result
+	dataValidator.AssertFileExists(response.FilePath, 1024, "Snapshot file creation") // Min 1KB for image
+
+	// Step 5: Verify metadata
 	assert.Equal(t, cameraID, response.Device, "Response device should match camera ID")
 	assert.NotEmpty(t, response.Timestamp, "Response should include timestamp")
+	assert.NotEmpty(t, response.Filename, "Response should include snapshot filename")
+	assert.Equal(t, snapshotPath, response.FilePath, "Response path should match expected path")
 
-	// Verify snapshot is tracked
+	// Step 6: Verify retrievability
+	retrievedSnapshot, err := snapshotManager.GetSnapshotInfo(ctx, response.Filename)
+	require.NoError(t, err, "Snapshot should be retrievable by filename")
+	assert.Equal(t, response.Filename, retrievedSnapshot.Filename, "Retrieved snapshot filename should match")
+
+	// Step 7: Verify snapshot is tracked in listing
 	listResponse, listErr := snapshotManager.ListSnapshots(ctx, 10, 0)
-	helper.AssertStandardResponse(t, listResponse, listErr, "ListSnapshots")
+	require.NoError(t, listErr, "Snapshot listing should succeed")
 	assert.Greater(t, listResponse.Total, 0, "Should have at least one snapshot")
+
+	// Verify our snapshot is in the list
+	found := false
+	for _, snapshot := range listResponse.Snapshots {
+		if snapshot.Filename == response.Filename {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Created snapshot should be in listing")
+
+	// Step 8: Verify Progressive Readiness behavior
+	if result.UsedFallback {
+		t.Log("⚠️  PROGRESSIVE READINESS FALLBACK: Operation needed readiness event (acceptable)")
+	} else {
+		t.Log("✅ PROGRESSIVE READINESS SUCCESS: Operation succeeded immediately")
+	}
 }
 
 // TestSnapshotManager_GetSnapshotsList_ReqMTX002 tests snapshot listing with real server

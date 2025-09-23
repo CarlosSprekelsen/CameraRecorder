@@ -39,56 +39,104 @@ func TestNewRecordingManager_ReqMTX001(t *testing.T) {
 	require.NotNil(t, recordingManager, "Recording manager should be initialized")
 }
 
-// TestRecordingManager_StartRecording_ReqMTX002 tests recording session creation with Progressive Readiness
-func TestRecordingManager_StartRecording_ReqMTX002(t *testing.T) {
+// TestRecordingManager_CompleteLifecycle_ReqMTX002 tests complete recording lifecycle with data validation
+func TestRecordingManager_CompleteLifecycle_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	// No sequential execution - Progressive Readiness enables parallelism
-	helper, ctx := SetupMediaMTXTest(t)
-	_ = ctx // Suppress unused variable warning
+	// Complete lifecycle validation: Start → Verify Recording → Stop → Verify File
+	helper, _ := SetupMediaMTXTest(t)
+
+	// Create data validation helper
+	dataValidator := testutils.NewDataValidationHelper(t)
 
 	controller, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
 	defer controller.Stop(ctx)
 	recordingManager := helper.GetRecordingManager()
 
-	// Progressive Readiness: Attempt operation immediately (may use fallback)
+	// Step 1: Setup test parameters
 	cameraID := "camera0" // Use standard identifier
+	recordingPath := dataValidator.CreateTestRecordingPath("lifecycle_test")
 	options := &PathConf{
 		Record:       true,
 		RecordFormat: "fmp4",
 	}
 
-	response, err := recordingManager.StartRecording(ctx, cameraID, options)
-	if err == nil {
-		// Operation succeeded immediately (Progressive Readiness working)
-		t.Log("Recording started immediately - Progressive Readiness working")
-	} else {
-		// Operation needs readiness - wait for event (no polling)
-		readinessChan := controller.SubscribeToReadiness()
-		select {
-		case <-readinessChan:
-			// Retry after readiness event
-			response, err = recordingManager.StartRecording(ctx, cameraID, options)
-			require.NoError(t, err, "Recording should start after readiness event")
-		case <-time.After(testutils.UniversalTimeoutVeryLong):
-			t.Fatal("Timeout waiting for readiness event")
-		}
-	}
+	// Step 2: Verify initial state - no recording file should exist
+	dataValidator.AssertFileNotExists(recordingPath, "Recording lifecycle initial state")
 
-	helper.AssertRecordingResponse(t, response, err)
+	// Get initial recording count
+	initialRecordings, err := recordingManager.ListRecordings(ctx, 10, 0)
+	require.NoError(t, err, "Initial recording list should succeed")
+	initialCount := initialRecordings.Total
 
-	// Additional specific validations
-	assert.Equal(t, cameraID, response.Device, "Response device should match request")
-	assert.NotEmpty(t, response.StartTime, "Response should include start time")
-	assert.NotEmpty(t, response.Format, "Response should include format")
+	// Step 3: Start recording with progressive readiness
+	startResult := testutils.TestProgressiveReadiness(t, func() (*StartRecordingResponse, error) {
+		return recordingManager.StartRecording(ctx, cameraID, options)
+	}, controller, "StartRecording")
 
-	// Clean up
-	stopResponse, err := recordingManager.StopRecording(ctx, cameraID)
-	helper.AssertStandardResponse(t, stopResponse, err, "StopRecording")
+	// Step 4: Verify recording started successfully
+	require.NoError(t, startResult.Error, "Recording start must succeed")
+	require.NotNil(t, startResult.Result, "Recording response must not be nil")
 
-	// Validate stop response
+	session := startResult.Result
+	assert.Equal(t, cameraID, session.Device, "Recording device should match request")
+	assert.NotEmpty(t, session.StartTime, "Recording should include start time")
+	assert.NotEmpty(t, session.Format, "Recording should include format")
+	assert.Equal(t, "RECORDING", session.Status, "Recording should be in RECORDING status")
+
+	// Step 5: Verify recording is active (progressive validation)
+	time.Sleep(2 * time.Second) // Allow time for recording to start
+	// Construct expected recording file path
+	recordingFilePath := filepath.Join(helper.GetConfiguredRecordingPath(), session.Filename)
+	dataValidator.AssertFileExists(recordingFilePath, 0, "Recording file during recording") // File should exist during recording
+
+	// Step 6: Record for 5 seconds to ensure meaningful content
+	recordDuration := 5 * time.Second
+	time.Sleep(recordDuration)
+
+	// Step 7: Stop recording
+	stopResult := testutils.TestProgressiveReadiness(t, func() (*StopRecordingResponse, error) {
+		return recordingManager.StopRecording(ctx, cameraID)
+	}, controller, "StopRecording")
+
+	// Step 8: Verify recording stopped successfully
+	require.NoError(t, stopResult.Error, "Recording stop must succeed")
+	require.NotNil(t, stopResult.Result, "Stop response must not be nil")
+
+	stopResponse := stopResult.Result
 	assert.Equal(t, cameraID, stopResponse.Device, "Stop response device should match")
 	assert.Equal(t, "STOPPED", stopResponse.Status, "Stop response should indicate stopped")
+
+	// Step 9: Verify final state - recording file should persist with content
+	dataValidator.AssertFileExists(recordingFilePath, 10000, "Recording file final state") // Min 10KB for video content
+
+	// Step 10: Verify recording is tracked in listing
+	finalRecordings, err := recordingManager.ListRecordings(ctx, 10, 0)
+	require.NoError(t, err, "Final recording list should succeed")
+	assert.Equal(t, initialCount+1, finalRecordings.Total, "Should have one more recording")
+
+	// Verify our recording is in the list
+	found := false
+	for _, recording := range finalRecordings.Files {
+		if recording.Filename == session.Filename {
+			found = true
+			break
+		}
+	}
+	assert.True(t, found, "Created recording should be in listing")
+
+	// Step 11: Verify Progressive Readiness behavior
+	if startResult.UsedFallback {
+		t.Log("⚠️  PROGRESSIVE READINESS FALLBACK: Start operation needed readiness event (acceptable)")
+	} else {
+		t.Log("✅ PROGRESSIVE READINESS SUCCESS: Start operation succeeded immediately")
+	}
+
+	if stopResult.UsedFallback {
+		t.Log("⚠️  PROGRESSIVE READINESS FALLBACK: Stop operation needed readiness event (acceptable)")
+	} else {
+		t.Log("✅ PROGRESSIVE READINESS SUCCESS: Stop operation succeeded immediately")
+	}
 }
 
 // TestRecordingManager_StopRecording_ReqMTX002 tests recording session termination with real server
