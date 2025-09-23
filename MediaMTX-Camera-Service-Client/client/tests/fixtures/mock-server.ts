@@ -87,7 +87,7 @@ export const MOCK_RESPONSES = {
   [RPC_METHODS.TAKE_SNAPSHOT]: {
     device: '/dev/video0',
     filename: 'snapshot_2025-01-15_14-30-00.jpg',
-    status: 'completed',
+    status: 'COMPLETED',
     timestamp: '2025-01-15T14:30:00Z',
     file_size: 204800,
     file_path: '/opt/camera-service/snapshots/snapshot_2025-01-15_14-30-00.jpg'

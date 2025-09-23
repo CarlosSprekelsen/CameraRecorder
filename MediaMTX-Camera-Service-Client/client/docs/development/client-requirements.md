@@ -162,7 +162,7 @@ The client applications will provide camera control functionality by communicati
 - **F3.2.5:** Operator permissions SHALL be required to invoke `start_recording`, `stop_recording`, and `take_snapshot`
   - API Contract: Protected JSON-RPC methods SHALL require a valid JWT with role=operator.
   - Token Transport: The JWT SHALL be provided via JSON-RPC `authenticate` method prior to using protected methods.
-    - `authenticate` request: `{ jsonrpc: "2.0", method: "authenticate", params: { token: string } }`
+    - `authenticate` request: `{ jsonrpc: "2.0", method: "authenticate", params: { auth_token: string } }`
     - On success, the server SHALL associate the client connection with the authenticated user and role for the session.
   - Error Handling: Missing, invalid, or expired tokens SHALL result in JSON-RPC error with code -32004 (authentication required) and a meaningful message.
 - **F3.2.6:** The application SHALL handle token expiration by re-authenticating before retrying protected operations.
