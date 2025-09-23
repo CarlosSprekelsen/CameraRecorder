@@ -652,34 +652,60 @@ func (s *WebSocketServer) MethodDeleteRecording(params map[string]interface{}, c
 
 // MethodDeleteSnapshot implements the delete_snapshot method
 func (s *WebSocketServer) MethodDeleteSnapshot(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	return s.authenticatedMethodWrapper("delete_snapshot", func() (interface{}, error) {
+	// Centralized authentication check
+	if !client.Authenticated {
+		s.logger.WithFields(logging.Fields{
+			"client_id": client.ClientID,
+			"method":    "delete_snapshot",
+			"action":    "auth_required",
+			"component": "security_middleware",
+		}).Warn("Authentication required for method")
 
-		// Validate filename parameter
-		validationResult := s.validationHelper.ValidateFilenameParameter(params)
-		if !validationResult.Valid {
-			s.validationHelper.LogValidationWarnings(validationResult, "delete_snapshot", client.ClientID)
-			return nil, fmt.Errorf("validation failed: %s", "validation failed")
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error:   NewJsonRpcError(AUTHENTICATION_REQUIRED, "auth_required", "Authentication required", "Authenticate first"),
+		}, nil
+	}
+
+	// Validate filename parameter
+	validationResult := s.validationHelper.ValidateFilenameParameter(params)
+	if !validationResult.Valid {
+		s.validationHelper.LogValidationWarnings(validationResult, "delete_snapshot", client.ClientID)
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error:   NewJsonRpcError(INVALID_PARAMS, "invalid_params", "validation failed", "Provide valid filename parameter"),
+		}, nil
+	}
+
+	// Extract validated filename
+	filename := validationResult.Data["filename"].(string)
+
+	// Use MediaMTX controller to delete snapshot - thin delegation
+	err := s.mediaMTXController.DeleteSnapshot(context.Background(), filename)
+	if err != nil {
+		// Map specific errors to JSON-RPC error codes
+		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+			return &JsonRpcResponse{
+				JSONRPC: "2.0",
+				Error:   NewJsonRpcError(CAMERA_NOT_FOUND, "file_not_found", "Snapshot file not found", "Verify filename"),
+			}, nil
 		}
+		// For other errors, return internal error
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error:   NewJsonRpcError(INTERNAL_ERROR, "internal_error", fmt.Sprintf("error deleting snapshot: %v", err), "Retry or contact support if persistent"),
+		}, nil
+	}
 
-		// Extract validated filename
-		filename := validationResult.Data["filename"].(string)
-
-		// Use MediaMTX controller to delete snapshot - thin delegation
-		err := s.mediaMTXController.DeleteSnapshot(context.Background(), filename)
-		if err != nil {
-			if strings.Contains(strings.ToLower(err.Error()), "not found") {
-				return &JsonRpcResponse{JSONRPC: "2.0", Error: NewJsonRpcError(CAMERA_NOT_FOUND, "file_not_found", "Snapshot file not found", "Verify filename")}, nil
-			}
-			return nil, fmt.Errorf("error deleting snapshot: %v", err)
-		}
-
-		// Return success response
-		return map[string]interface{}{
+	// Return success response
+	return &JsonRpcResponse{
+		JSONRPC: "2.0",
+		Result: map[string]interface{}{
 			"filename": filename,
 			"deleted":  true,
 			"message":  "Snapshot file deleted successfully",
-		}, nil
-	})(params, client)
+		},
+	}, nil
 }
 
 func (s *WebSocketServer) MethodGetStorageInfo(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
@@ -907,22 +933,56 @@ func (s *WebSocketServer) MethodStopRecording(params map[string]interface{}, cli
 }
 
 func (s *WebSocketServer) MethodGetRecordingInfo(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+	// Centralized authentication check
+	if !client.Authenticated {
+		s.logger.WithFields(logging.Fields{
+			"client_id": client.ClientID,
+			"method":    "get_recording_info",
+			"action":    "auth_required",
+			"component": "security_middleware",
+		}).Warn("Authentication required for method")
 
-	return s.authenticatedMethodWrapper("get_recording_info", func() (interface{}, error) {
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error:   NewJsonRpcError(AUTHENTICATION_REQUIRED, "auth_required", "Authentication required", "Authenticate first"),
+		}, nil
+	}
 
-		// Validate filename parameter
-		validationResult := s.validationHelper.ValidateFilenameParameter(params)
-		if !validationResult.Valid {
-			s.validationHelper.LogValidationWarnings(validationResult, "get_recording_info", client.ClientID)
-			return nil, fmt.Errorf("validation failed: %s", "validation failed")
+	// Validate filename parameter
+	validationResult := s.validationHelper.ValidateFilenameParameter(params)
+	if !validationResult.Valid {
+		s.validationHelper.LogValidationWarnings(validationResult, "get_recording_info", client.ClientID)
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error:   NewJsonRpcError(INVALID_PARAMS, "invalid_params", "validation failed", "Provide valid filename parameter"),
+		}, nil
+	}
+
+	// Extract validated filename parameter
+	filename := validationResult.Data["filename"].(string)
+
+	// Pure delegation to Controller - returns API-ready GetRecordingInfoResponse
+	recordingInfo, err := s.mediaMTXController.GetRecordingInfo(context.Background(), filename)
+	if err != nil {
+		// Map specific errors to JSON-RPC error codes
+		if strings.Contains(strings.ToLower(err.Error()), "not found") {
+			return &JsonRpcResponse{
+				JSONRPC: "2.0",
+				Error:   NewJsonRpcError(CAMERA_NOT_FOUND, "file_not_found", "Recording file not found", "Verify filename"),
+			}, nil
 		}
+		// For other errors, return internal error
+		return &JsonRpcResponse{
+			JSONRPC: "2.0",
+			Error:   NewJsonRpcError(INTERNAL_ERROR, "internal_error", fmt.Sprintf("error getting recording info: %v", err), "Retry or contact support if persistent"),
+		}, nil
+	}
 
-		// Extract validated filename parameter
-		filename := validationResult.Data["filename"].(string)
-
-		// Pure delegation to Controller - returns API-ready GetRecordingInfoResponse
-		return s.mediaMTXController.GetRecordingInfo(context.Background(), filename)
-	})(params, client)
+	// Return success response
+	return &JsonRpcResponse{
+		JSONRPC: "2.0",
+		Result:  recordingInfo,
+	}, nil
 }
 
 // MethodGetSnapshotInfo implements the get_snapshot_info method

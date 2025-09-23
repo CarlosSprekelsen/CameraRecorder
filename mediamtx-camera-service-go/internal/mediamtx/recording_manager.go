@@ -371,12 +371,30 @@ func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename strin
 			recordingsPath = cfg.MediaMTX.RecordingsPath
 		}
 	}
-	filePath := filepath.Join(recordingsPath, filename)
 
-	// Get file stats
-	fileInfo, err := os.Stat(filePath)
+	// Get recording format from config to determine file extension
+	format := "fmp4" // Default format (STANAG 4609 compatible)
+	if rm.configIntegration != nil && rm.configIntegration.configManager != nil {
+		if cfg := rm.configIntegration.configManager.GetConfig(); cfg != nil && cfg.Recording.RecordFormat != "" {
+			format = cfg.Recording.RecordFormat
+		}
+	}
+
+	// Construct the actual file path with extension (MediaMTX adds extension based on RecordFormat)
+	var filePath string
+	var fileInfo os.FileInfo
+	var err error
+
+	// Try with extension first (MediaMTX creates files with extensions)
+	filePath = filepath.Join(recordingsPath, filename+"."+format)
+	fileInfo, err = os.Stat(filePath)
 	if err != nil {
-		return nil, fmt.Errorf("recording file not found: %v", err)
+		// If not found with extension, try without extension (fallback for edge cases)
+		filePath = filepath.Join(recordingsPath, filename)
+		fileInfo, err = os.Stat(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("recording file not found: %v", err)
+		}
 	}
 
 	// Extract device from filename pattern (camera0_timestamp.mp4)
@@ -387,11 +405,25 @@ func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename strin
 		}
 	}
 
-	// Extract format from filename extension
-	format := "mp4" // Default
-	if ext := filepath.Ext(filename); ext != "" {
-		format = strings.TrimPrefix(ext, ".")
-	}
+	// Extract format from filename extension, default from canonical config
+	fileFormat := func() string {
+		// Default extension derived from canonical record format
+		defaultExt := "mp4"
+		if rm.configIntegration != nil && rm.configIntegration.configManager != nil {
+			if cfg := rm.configIntegration.configManager.GetConfig(); cfg != nil {
+				switch strings.ToLower(cfg.Recording.RecordFormat) {
+				case "fmp4", "mp4":
+					defaultExt = "mp4"
+				case "mpegts", "ts":
+					defaultExt = "ts"
+				}
+			}
+		}
+		if ext := filepath.Ext(filename); ext != "" {
+			return strings.TrimPrefix(ext, ".")
+		}
+		return defaultExt
+	}()
 
 	// Extract video duration using MetadataManager
 	duration := float64(0) // Default fallback
@@ -417,7 +449,7 @@ func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename strin
 		FileSize:  fileInfo.Size(),
 		Duration:  duration,
 		CreatedAt: fileInfo.ModTime().Format(time.RFC3339),
-		Format:    format,
+		Format:    fileFormat,
 		Device:    device,
 	}
 
@@ -626,11 +658,24 @@ func (rm *RecordingManager) ListRecordings(ctx context.Context, limit, offset in
 			}
 		}
 
-		// Extract format from filename extension
-		format := "mp4" // Default
-		if parts := strings.Split(file.FileName, "."); len(parts) > 1 {
-			format = parts[len(parts)-1]
-		}
+		// Extract format from filename extension, default from canonical config
+		format := func() string {
+			defaultExt := "mp4"
+			if rm.configIntegration != nil && rm.configIntegration.configManager != nil {
+				if cfg := rm.configIntegration.configManager.GetConfig(); cfg != nil {
+					switch strings.ToLower(cfg.Recording.RecordFormat) {
+					case "fmp4", "mp4":
+						defaultExt = "mp4"
+					case "mpegts", "ts":
+						defaultExt = "ts"
+					}
+				}
+			}
+			if parts := strings.Split(file.FileName, "."); len(parts) > 1 {
+				return parts[len(parts)-1]
+			}
+			return defaultExt
+		}()
 
 		duration := float64(0)
 		if file.Duration != nil {
