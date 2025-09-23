@@ -80,7 +80,7 @@ func (rcm *rtspConnectionManager) ListConnections(ctx context.Context, page, ite
 
 	// Build query parameters
 	params := fmt.Sprintf("?page=%d&itemsPerPage=%d", page, itemsPerPage)
-	url := "/v3/rtspconns/list" + params
+	url := MediaMTXRTSPConnsList + params
 
 	// Make API call
 	data, err := rcm.client.Get(ctx, url)
@@ -109,7 +109,7 @@ func (rcm *rtspConnectionManager) ListConnections(ctx context.Context, page, ite
 func (rcm *rtspConnectionManager) GetConnection(ctx context.Context, id string) (*RTSPConnection, error) {
 	rcm.logger.WithField("id", id).Debug("Getting RTSP connection")
 
-	url := fmt.Sprintf("/v3/rtspconns/get/%s", id)
+	url := fmt.Sprintf(MediaMTXRTSPConnsGet, id)
 
 	// Make API call
 	data, err := rcm.client.Get(ctx, url)
@@ -138,7 +138,7 @@ func (rcm *rtspConnectionManager) ListSessions(ctx context.Context, page, itemsP
 
 	// Build query parameters
 	params := fmt.Sprintf("?page=%d&itemsPerPage=%d", page, itemsPerPage)
-	url := "/v3/rtspsessions/list" + params
+	url := MediaMTXRTSPSessionsList + params
 
 	// Make API call
 	data, err := rcm.client.Get(ctx, url)
@@ -167,7 +167,7 @@ func (rcm *rtspConnectionManager) ListSessions(ctx context.Context, page, itemsP
 func (rcm *rtspConnectionManager) GetSession(ctx context.Context, id string) (*RTSPConnectionSession, error) {
 	rcm.logger.WithField("id", id).Debug("Getting RTSP session")
 
-	url := fmt.Sprintf("/v3/rtspsessions/get/%s", id)
+	url := fmt.Sprintf(MediaMTXRTSPSessionsGet, id)
 
 	// Make API call
 	data, err := rcm.client.Get(ctx, url)
@@ -191,7 +191,7 @@ func (rcm *rtspConnectionManager) GetSession(ctx context.Context, id string) (*R
 func (rcm *rtspConnectionManager) KickSession(ctx context.Context, id string) error {
 	rcm.logger.WithField("id", id).Info("Kicking RTSP session")
 
-	url := fmt.Sprintf("/v3/rtspsessions/kick/%s", id)
+	url := fmt.Sprintf(MediaMTXRTSPSessionsKick, id)
 
 	// Make API call
 	_, err := rcm.client.Post(ctx, url, nil)

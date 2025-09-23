@@ -1378,7 +1378,7 @@ func TestController_Stop_ReqMTX001_GracefulShutdown(t *testing.T) {
 		// Create MediaMTX config from test config
 		config := &config.MediaMTXConfig{
 			BaseURL:                testConfig.BaseURL,
-			HealthCheckURL:         testConfig.BaseURL + "/v3/paths/list",
+			HealthCheckURL:         testConfig.BaseURL + MediaMTXPathsList,
 			Timeout:                testConfig.Timeout,
 			HealthCheckInterval:    5, // 5 seconds
 			HealthCheckTimeout:     testutils.UniversalTimeoutVeryLong,
@@ -1463,7 +1463,7 @@ func TestController_Stop_ReqMTX001_GracefulShutdown(t *testing.T) {
 		// Create MediaMTX config from test config
 		config := &config.MediaMTXConfig{
 			BaseURL:                testConfig.BaseURL,
-			HealthCheckURL:         testConfig.BaseURL + "/v3/paths/list",
+			HealthCheckURL:         testConfig.BaseURL + MediaMTXPathsList,
 			Timeout:                testConfig.Timeout,
 			HealthCheckInterval:    5, // 5 seconds
 			HealthCheckTimeout:     testutils.UniversalTimeoutVeryLong,
@@ -1506,7 +1506,7 @@ func TestController_Stop_ReqMTX001_GracefulShutdown(t *testing.T) {
 		// Create MediaMTX config from test config
 		config := &config.MediaMTXConfig{
 			BaseURL:                testConfig.BaseURL,
-			HealthCheckURL:         testConfig.BaseURL + "/v3/paths/list",
+			HealthCheckURL:         testConfig.BaseURL + MediaMTXPathsList,
 			Timeout:                testConfig.Timeout,
 			HealthCheckInterval:    5, // 5 seconds
 			HealthCheckTimeout:     testutils.UniversalTimeoutVeryLong,

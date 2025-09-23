@@ -1270,12 +1270,12 @@ func (sm *SnapshotManager) GetSnapshotInfo(ctx context.Context, filename string)
 
 	// Build API-ready response with rich metadata
 	response := &GetSnapshotInfoResponse{
-		Filename:   filename,
-		FileSize:   fileInfo.Size(),
-		CreatedAt:  fileInfo.ModTime().Format(time.RFC3339),
-		Format:     format,
-		Resolution: resolution,
-		Device:     device,
+		Filename:     filename,
+		FileSize:     fileInfo.Size(),
+		CreatedTime:  fileInfo.ModTime().Format(time.RFC3339), // API compliant field name
+		Format:       format,
+		Resolution:   resolution,
+		Device:       device,
 	}
 
 	sm.logger.WithFields(logging.Fields{

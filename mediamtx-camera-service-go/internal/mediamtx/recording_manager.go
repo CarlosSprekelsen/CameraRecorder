@@ -445,12 +445,12 @@ func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename strin
 
 	// Build API-ready response with rich metadata
 	response := &GetRecordingInfoResponse{
-		Filename:  filename,
-		FileSize:  fileInfo.Size(),
-		Duration:  duration,
-		CreatedAt: fileInfo.ModTime().Format(time.RFC3339),
-		Format:    fileFormat,
-		Device:    device,
+		Filename:    filename,
+		FileSize:    fileInfo.Size(),
+		Duration:    duration,
+		CreatedTime: fileInfo.ModTime().Format(time.RFC3339), // API compliant field name
+		Format:      fileFormat,
+		Device:      device,
 	}
 
 	rm.logger.WithFields(logging.Fields{
@@ -735,7 +735,7 @@ func (rm *RecordingManager) GetRecordingsList(ctx context.Context, limit, offset
 
 	// Call MediaMTX recordings API
 	queryParams := fmt.Sprintf("?page=%d&itemsPerPage=%d", offset/limit, limit)
-	data, err := rm.client.Get(ctx, "/v3/recordings/list"+queryParams)
+	data, err := rm.client.Get(ctx, MediaMTXRecordingsList+queryParams)
 	if err != nil {
 		rm.logger.WithError(err).Error("Failed to get recordings from MediaMTX API")
 

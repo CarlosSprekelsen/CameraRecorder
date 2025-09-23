@@ -212,7 +212,7 @@ func TestSnapshotManager_GetSnapshotInfo_ReqMTX002_Success(t *testing.T) {
 	assert.Equal(t, testFilename, fileMetadata.Filename)
 	// File size validation (handled by snapshot assertion helper)
 	// Metadata validations
-	assert.NotEmpty(t, fileMetadata.CreatedAt, "CreatedAt should not be empty")
+	assert.NotEmpty(t, fileMetadata.CreatedTime, "CreatedTime should not be empty")
 	assert.Equal(t, "camera0", fileMetadata.Device, "Device should be set")
 
 	// Test 2: Get snapshot info for non-existent file

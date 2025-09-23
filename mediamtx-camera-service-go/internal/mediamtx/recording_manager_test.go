@@ -337,7 +337,7 @@ func TestRecordingManager_APISchemaCompliance_ReqMTX001(t *testing.T) {
 	defer cancel()
 
 	// Test 1: Validate /v3/recordings/list response matches RecordingList schema
-	data, err := helper.GetClient().Get(ctx, "/v3/recordings/list?itemsPerPage=10&page=0")
+	data, err := helper.GetClient().Get(ctx, MediaMTXRecordingsList+"?itemsPerPage=10&page=0")
 	require.NoError(t, err, "MediaMTX /v3/recordings/list API should respond")
 
 	var recordingListResponse struct {
@@ -360,7 +360,7 @@ func TestRecordingManager_APISchemaCompliance_ReqMTX001(t *testing.T) {
 	assert.NotNil(t, recordingListResponse.Items, "items array required per swagger.json")
 
 	// Test 2: Validate /v3/paths/list response matches PathList schema
-	pathData, err := helper.GetClient().Get(ctx, "/v3/paths/list?itemsPerPage=10&page=0")
+	pathData, err := helper.GetClient().Get(ctx, MediaMTXPathsList+"?itemsPerPage=10&page=0")
 	require.NoError(t, err, "MediaMTX /v3/paths/list API should respond")
 
 	// Use PathList from api_types.go instead of inline struct
@@ -405,11 +405,11 @@ func TestRecordingManager_APIErrorHandling_ReqMTX004(t *testing.T) {
 
 	// Test 3: MediaMTX API endpoints should be available (this validates real integration)
 	// If MediaMTX API was broken, these calls would fail
-	recordingsData, err := helper.GetClient().Get(ctx, "/v3/recordings/list")
+	recordingsData, err := helper.GetClient().Get(ctx, MediaMTXRecordingsList)
 	require.NoError(t, err, "MediaMTX recordings API should be accessible")
 	require.NotNil(t, recordingsData, "Response data should not be nil")
 
-	pathData, err := helper.GetClient().Get(ctx, "/v3/paths/list")
+	pathData, err := helper.GetClient().Get(ctx, MediaMTXPathsList)
 	require.NoError(t, err, "MediaMTX paths API should be accessible")
 	require.NotNil(t, pathData, "Path data should not be nil")
 

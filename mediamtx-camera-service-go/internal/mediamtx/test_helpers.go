@@ -1186,7 +1186,7 @@ func (h *MediaMTXTestHelper) cleanupMediaMTXPaths(t *testing.T) {
 
 			// CRITICAL: Delete test paths to stop streaming processes and free camera devices
 			// This prevents "device busy" errors and resource leaks in subsequent tests
-			endpoint := fmt.Sprintf("/v3/config/paths/delete/%s", path.Name)
+			endpoint := FormatConfigPathsDelete(path.Name)
 			if deleteErr := h.client.Delete(ctx, endpoint); deleteErr != nil {
 				// If deletion fails, try to disable recording as fallback
 				t.Logf("Warning: Failed to delete test path %s: %v, trying to disable recording", path.Name, deleteErr)
@@ -1194,7 +1194,7 @@ func (h *MediaMTXTestHelper) cleanupMediaMTXPaths(t *testing.T) {
 					"record": false,
 				}
 				if configData, err := json.Marshal(disableRecordingConfig); err == nil {
-					patchEndpoint := fmt.Sprintf("/v3/config/paths/patch/%s", path.Name)
+					patchEndpoint := FormatConfigPathsPatch(path.Name)
 					if patchErr := h.client.Patch(ctx, patchEndpoint, configData); patchErr != nil {
 						t.Logf("Warning: Failed to disable recording on test path %s: %v", path.Name, patchErr)
 					} else {

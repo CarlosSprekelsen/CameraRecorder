@@ -104,12 +104,11 @@ type StartStreamingResponse struct {
 	StreamName     string `json:"stream_name"`      // Generated stream name
 	StreamURL      string `json:"stream_url"`       // Generated stream URL
 	Status         string `json:"status"`           // Stream status ("STARTED", "failed")
-	StartTime      string `json:"start_time"`       // Streaming start timestamp (ISO 8601)
+	StartTime      string `json:"start_time"`       // Streaming start timestamp (ISO 8601) - API compliant
 	AutoCloseAfter string `json:"auto_close_after"` // Auto-close timeout setting
 	FfmpegCommand  string `json:"ffmpeg_command"`   // FFmpeg command used
 	Format         string `json:"format"`           // Stream format ("rtsp")
 	Message        string `json:"message"`          // Success message
-	Timestamp      string `json:"timestamp"`        // Stream start timestamp (ISO 8601)
 }
 
 // StopStreamingResponse represents the response from stop_streaming method
@@ -117,12 +116,11 @@ type StopStreamingResponse struct {
 	Device          string `json:"device"`           // Camera device identifier
 	StreamName      string `json:"stream_name"`      // Stream name
 	Status          string `json:"status"`           // Operation status ("STOPPED")
-	StartTime       string `json:"start_time"`       // Streaming start timestamp (ISO 8601)
-	EndTime         string `json:"end_time"`         // Streaming end timestamp (ISO 8601)
+	StartTime       string `json:"start_time"`       // Streaming start timestamp (ISO 8601) - API compliant
+	EndTime         string `json:"end_time"`         // Streaming end timestamp (ISO 8601) - API compliant
 	Duration        int    `json:"duration"`         // Total streaming duration in seconds
 	StreamContinues bool   `json:"stream_continues"` // Whether stream continues for other consumers
 	Message         string `json:"message"`          // Success message
-	Timestamp       string `json:"timestamp"`        // Stream stop timestamp (ISO 8601)
 }
 
 // GetStreamURLResponse represents the response from get_stream_url method
@@ -188,22 +186,22 @@ type SnapshotFileInfo struct {
 
 // GetRecordingInfoResponse represents the response from get_recording_info method
 type GetRecordingInfoResponse struct {
-	Filename  string  `json:"filename"`   // Recording filename
-	FileSize  int64   `json:"file_size"`  // File size in bytes
-	Duration  float64 `json:"duration"`   // Recording duration in seconds
-	CreatedAt string  `json:"created_at"` // Creation timestamp (ISO 8601)
-	Format    string  `json:"format"`     // Recording format
-	Device    string  `json:"device"`     // Camera device identifier
+	Filename    string  `json:"filename"`     // Recording filename
+	FileSize    int64   `json:"file_size"`    // File size in bytes
+	Duration    float64 `json:"duration"`     // Recording duration in seconds
+	CreatedTime string  `json:"created_time"` // Creation timestamp (ISO 8601) - API compliant
+	Format      string  `json:"format"`       // Recording format
+	Device      string  `json:"device"`       // Camera device identifier
 }
 
 // GetSnapshotInfoResponse represents the response from get_snapshot_info method
 type GetSnapshotInfoResponse struct {
-	Filename   string `json:"filename"`   // Snapshot filename
-	FileSize   int64  `json:"file_size"`  // File size in bytes
-	CreatedAt  string `json:"created_at"` // Creation timestamp (ISO 8601)
-	Format     string `json:"format"`     // Image format
-	Resolution string `json:"resolution"` // Image resolution
-	Device     string `json:"device"`     // Camera device identifier
+	Filename    string `json:"filename"`     // Snapshot filename
+	FileSize    int64  `json:"file_size"`    // File size in bytes
+	CreatedTime string `json:"created_time"` // Creation timestamp (ISO 8601) - API compliant
+	Format      string `json:"format"`       // Image format
+	Resolution  string `json:"resolution"`   // Image resolution
+	Device      string `json:"device"`       // Camera device identifier
 }
 
 // DeleteRecordingResponse represents the response from delete_recording method
