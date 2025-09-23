@@ -273,13 +273,16 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 
 	// CRITICAL: Create directories BEFORE config validation (fixes permission issues)
 	dirManager := testutils.NewDirectoryManager(t)
-	dirManager.CreateDirectoriesFromFixture("config_test_minimal.yaml")
+	dirManager.CreateDirectoriesFromFixture("config_clean_minimal.yaml")
 
 	// Create config manager for centralized configuration using working validated fixture
-	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
+	// ⚠️  MANDATORY: Use ONLY config_clean_minimal.yaml for testing - SINGLE SOURCE OF TRUTH
+	// ❌ DO NOT USE: config_test_minimal.yaml (NOT FOR TESTING - production/other uses)
+	configManager := CreateConfigManagerWithFixture(t, "config_clean_minimal.yaml")
 
 	// Load configuration
-	configPath := "../../tests/fixtures/config_test_minimal.yaml"
+	// ⚠️  MANDATORY: Use ONLY config_clean_minimal.yaml for testing - SINGLE SOURCE OF TRUTH
+	configPath := "../../tests/fixtures/config_clean_minimal.yaml"
 	logger.Info("Loading test configuration", "config_path", configPath)
 	err := configManager.LoadConfig(configPath)
 	if err != nil {
@@ -574,7 +577,8 @@ func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
 	h.cameraMonitorOnce.Do(func() {
 		// Create real camera monitor with SAME configuration as controller (test fixture)
 		// This ensures configuration consistency between camera monitor and controller
-		configManager := CreateConfigManagerWithFixture(nil, "config_test_minimal.yaml")
+		// ⚠️  MANDATORY: Use ONLY config_clean_minimal.yaml for testing - SINGLE SOURCE OF TRUTH
+		configManager := CreateConfigManagerWithFixture(nil, "config_clean_minimal.yaml")
 		logger := logging.GetLogger("mediamtx.camera_monitor") // Component-specific logger
 
 		// Use real implementations for camera hardware
@@ -692,22 +696,62 @@ func (h *MediaMTXTestHelper) GetAvailableCameraDevice(ctx context.Context) (stri
 // This follows the architecture: External APIs use camera identifiers, not device paths
 // DEPRECATED: Use GetAvailableCameraIdentifierWithReadiness for Progressive Readiness compliance
 func (h *MediaMTXTestHelper) GetAvailableCameraIdentifier(ctx context.Context) (string, error) {
-	// Get available device path first
-	devicePath, err := h.GetAvailableCameraDevice(ctx)
+	// Use progressive readiness pattern - try immediately, fallback to event-driven waiting
+	// This makes camera discovery idempotent by handling the async nature properly
+
+	// Try to get controller - if it exists and is ready, use it
+	controller, err := h.GetController(&testing.T{})
 	if err != nil {
-		return "", err
-
+		return "", fmt.Errorf("failed to get controller: %w", err)
 	}
 
-	// Convert device path to camera identifier using PathManager abstraction
-	// /dev/video0 -> camera0
-	if strings.HasPrefix(devicePath, "/dev/video") {
-		deviceNum := strings.TrimPrefix(devicePath, "/dev/video")
-		return fmt.Sprintf("camera%s", deviceNum), nil
+	// Try camera list immediately (Progressive Readiness)
+	cameraList, err := controller.GetCameraList(ctx)
+	if err == nil && cameraList.Total > 0 {
+		// Success! Return immediately
+		return cameraList.Cameras[0].Device, nil
 	}
 
-	// For other device types, return as-is (external streams, etc.)
-	return devicePath, nil
+	// Fallback: Wait for camera discovery to complete
+	// This handles the async nature of camera discovery
+	maxAttempts := 10
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		time.Sleep(500 * time.Millisecond) // Wait for discovery
+
+		cameraList, err = controller.GetCameraList(ctx)
+		if err == nil && cameraList.Total > 0 {
+			// Success!
+			return cameraList.Cameras[0].Device, nil
+		}
+	}
+
+	return "", fmt.Errorf("no cameras discovered after %d attempts: %v", maxAttempts, err)
+}
+
+// GetAvailableCameraIdentifierFromController returns a camera identifier using the provided controller
+// This avoids the race condition by using the same controller instance that the test is already using
+func (h *MediaMTXTestHelper) GetAvailableCameraIdentifierFromController(ctx context.Context, controller MediaMTXController) (string, error) {
+	// Try camera list immediately (Progressive Readiness)
+	cameraList, err := controller.GetCameraList(ctx)
+	if err == nil && cameraList.Total > 0 {
+		// Success! Return immediately
+		return cameraList.Cameras[0].Device, nil
+	}
+
+	// Fallback: Wait for camera discovery to complete
+	// This handles the async nature of camera discovery
+	maxAttempts := 10
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		time.Sleep(500 * time.Millisecond) // Wait for discovery
+
+		cameraList, err = controller.GetCameraList(ctx)
+		if err == nil && cameraList.Total > 0 {
+			// Success!
+			return cameraList.Cameras[0].Device, nil
+		}
+	}
+
+	return "", fmt.Errorf("no cameras discovered after %d attempts: %v", maxAttempts, err)
 }
 
 // GetAvailableCameraIdentifierWithReadiness returns a camera identifier using Progressive Readiness pattern
@@ -841,6 +885,8 @@ func (h *MediaMTXTestHelper) GetReadyController(t *testing.T) (MediaMTXControlle
 
 // GetConfiguredSnapshotPath returns the snapshot path from the fixture configuration
 // This follows the architecture principle of using configured paths instead of hardcoded paths
+// ⚠️  MANDATORY: Uses config_clean_minimal.yaml fixture - SINGLE SOURCE OF TRUTH for testing
+// ❌ DO NOT USE: config_test_minimal.yaml (NOT FOR TESTING - production/other uses)
 func (h *MediaMTXTestHelper) GetConfiguredSnapshotPath() string {
 	configManager := h.GetConfigManager()
 	if configManager == nil {
@@ -864,6 +910,8 @@ func (h *MediaMTXTestHelper) GetConfiguredSnapshotPath() string {
 }
 
 // GetConfiguredRecordingPath returns the recording path from the fixture configuration
+// ⚠️  MANDATORY: Uses config_clean_minimal.yaml fixture - SINGLE SOURCE OF TRUTH for testing
+// ❌ DO NOT USE: config_test_minimal.yaml (NOT FOR TESTING - production/other uses)
 func (h *MediaMTXTestHelper) GetConfiguredRecordingPath() string {
 	configManager := h.GetConfigManager()
 	if configManager == nil {

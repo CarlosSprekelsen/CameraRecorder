@@ -1002,11 +1002,57 @@ func (sm *SnapshotManager) GetSnapshotsList(ctx context.Context, limit, offset i
 		}, nil
 	}
 
-	// Read directory entries
-	entries, err := os.ReadDir(snapshotsDir)
-	if err != nil {
-		sm.logger.WithError(err).WithField("directory", snapshotsDir).Error("Error reading snapshots directory")
-		return nil, fmt.Errorf("failed to read snapshots directory: %w", err)
+	// Check if we should scan device subdirectories (canonical configuration)
+	var entries []os.DirEntry
+	var err error
+
+	if sm.configManager != nil {
+		cfg := sm.configManager.GetConfig()
+		if cfg != nil && cfg.Snapshots.UseDeviceSubdirs {
+			// Scan device subdirectories when use_device_subdirs is enabled
+			sm.logger.WithField("directory", snapshotsDir).Debug("Scanning device subdirectories for snapshots")
+
+			// Read base directory to find device subdirectories
+			baseEntries, err := os.ReadDir(snapshotsDir)
+			if err != nil {
+				sm.logger.WithError(err).WithField("directory", snapshotsDir).Error("Error reading snapshots directory")
+				return nil, fmt.Errorf("failed to read snapshots directory: %w", err)
+			}
+
+			// Collect all files from device subdirectories
+			for _, baseEntry := range baseEntries {
+				if baseEntry.IsDir() {
+					// This is a device subdirectory (e.g., camera0, camera1)
+					deviceDir := filepath.Join(snapshotsDir, baseEntry.Name())
+					deviceEntries, err := os.ReadDir(deviceDir)
+					if err != nil {
+						sm.logger.WithError(err).WithField("device_dir", deviceDir).Warn("Error reading device subdirectory")
+						continue // Skip this device directory but continue with others
+					}
+
+					// Add device subdirectory files to our collection
+					entries = append(entries, deviceEntries...)
+				} else {
+					// File in base directory (legacy or non-subdirectory mode)
+					entries = append(entries, baseEntry)
+				}
+			}
+		} else {
+			// Standard directory scanning (no device subdirectories)
+			entries, err = os.ReadDir(snapshotsDir)
+			if err != nil {
+				sm.logger.WithError(err).WithField("directory", snapshotsDir).Error("Error reading snapshots directory")
+				return nil, fmt.Errorf("failed to read snapshots directory: %w", err)
+			}
+		}
+	} else {
+		// Fallback: standard directory scanning when config unavailable
+		sm.logger.WithField("directory", snapshotsDir).Warn("Config unavailable, using standard directory scanning")
+		entries, err = os.ReadDir(snapshotsDir)
+		if err != nil {
+			sm.logger.WithError(err).WithField("directory", snapshotsDir).Error("Error reading snapshots directory")
+			return nil, fmt.Errorf("failed to read snapshots directory: %w", err)
+		}
 	}
 
 	// Process files and extract metadata
@@ -1159,16 +1205,40 @@ func (sm *SnapshotManager) GetSnapshotInfo(ctx context.Context, filename string)
 		return nil, fmt.Errorf("snapshots path not configured")
 	}
 
-	// Construct full file path
+	// Try direct path first
 	filePath := filepath.Join(snapshotsDir, filename)
-
-	// Check if file exists
 	fileInfo, err := os.Stat(filePath)
-	if os.IsNotExist(err) {
-		return nil, fmt.Errorf("snapshot file not found: %s", filename)
-	}
+
+	// If direct path fails, search in subdirectories
 	if err != nil {
-		return nil, fmt.Errorf("error accessing file: %w", err)
+		sm.logger.WithFields(logging.Fields{
+			"filename":    filename,
+			"direct_path": filePath,
+			"error":       err,
+		}).Info("GetSnapshotInfo: Direct path failed, searching subdirectories")
+
+		// Search in device subdirectories
+		entries, err := os.ReadDir(snapshotsDir)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read snapshots directory: %w", err)
+		}
+
+		found := false
+		for _, entry := range entries {
+			if entry.IsDir() {
+				subDirPath := filepath.Join(snapshotsDir, entry.Name())
+				filePath = filepath.Join(subDirPath, filename)
+				if fileInfo, err = os.Stat(filePath); err == nil {
+					found = true
+					break
+				}
+			}
+		}
+
+		// If still not found
+		if !found {
+			return nil, fmt.Errorf("snapshot file not found: %s", filename)
+		}
 	}
 
 	// Check if it's a file (not a directory)
@@ -1228,8 +1298,13 @@ func (sm *SnapshotManager) DeleteSnapshotFile(ctx context.Context, filename stri
 		return fmt.Errorf("filename cannot be empty")
 	}
 
-	// Get snapshots directory path from configuration
+	// Get snapshots directory path from canonical configuration manager (preferred)
 	snapshotsDir := sm.config.SnapshotsPath
+	if sm.configManager != nil {
+		if cfg := sm.configManager.GetConfig(); cfg != nil && cfg.MediaMTX.SnapshotsPath != "" {
+			snapshotsDir = cfg.MediaMTX.SnapshotsPath
+		}
+	}
 	if snapshotsDir == "" {
 		return fmt.Errorf("snapshots path not configured")
 	}

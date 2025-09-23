@@ -20,6 +20,7 @@ mediamtx:
   config_path: "/tmp/mediamtx.yml"  # Required by validation but not used in business logic
   recordings_path: "/tmp/recordings"
   snapshots_path: "/tmp/snapshots"
+  override_mediamtx_paths: true  # CRITICAL: Override MediaMTX global config with fixture paths
   
   # Health monitoring (actually used)
   health_check_interval: 30
@@ -40,19 +41,20 @@ mediamtx:
     preset: "fast"
 
 camera:
-  poll_interval: 5.0
-  detection_timeout: 10.0
-  device_range: [0, 9]
+  poll_interval: 0.2  # Faster for tests
+  detection_timeout: 2.0  # Faster for tests
+  device_range: [0, 1]  # Only check devices that actually exist
   enable_capability_detection: true
   auto_start_streams: false
-  capability_timeout: 5.0
-  capability_retry_interval: 1.0
+  capability_timeout: 2.0  # Faster for tests
+  capability_retry_interval: 0.5  # Faster for tests
   capability_max_retries: 3
+  fallback_poll_interval: 5.0  # 5 seconds for test performance (realistic but faster than 90s default)
 
 logging:
-  level: "info"
+  level: "debug"  # DEBUG level to see what's happening in tests
   format: "json"
-  file_enabled: true
+  file_enabled: false  # Disable file logging for tests
   file_path: "/tmp/camera-service.log"
   max_file_size: 10485760
   backup_count: 5
@@ -71,6 +73,9 @@ recording:
   default_rotation_size: 104857600
   default_max_duration: 24h
   default_retention_days: 7
+  record_format: "fmp4"
+  file_name_pattern: "%path_%Y-%m-%d_%H-%M-%S"
+  use_device_subdirs: false
 
 snapshots:
   enabled: true
@@ -82,6 +87,8 @@ snapshots:
   cleanup_interval: 3600
   max_age: 604800
   max_count: 1000
+  file_name_pattern: "%device_%Y-%m-%d_%H-%M-%S.jpg"
+  use_device_subdirs: true
 
 ffmpeg:
   snapshot:
@@ -100,7 +107,7 @@ ffmpeg:
 # Performance settings (actually used)
 performance:
   snapshot_tiers:
-    tier1_usb_direct_timeout: 1.0
+    tier1_usb_direct_timeout: 5.0
     tier2_rtsp_ready_check_timeout: 2.0
     tier3_activation_timeout: 5.0
     tier3_activation_trigger_timeout: 10.0

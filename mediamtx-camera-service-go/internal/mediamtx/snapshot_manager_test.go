@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -48,14 +49,11 @@ func TestSnapshotManager_New_ReqMTX001_Success(t *testing.T) {
 	assert.NotNil(t, snapshotManager.GetSnapshotSettings(), "Snapshot settings should be initialized")
 }
 
-// TestSnapshotManager_TakeSnapshot_ReqMTX002_DataCreation tests actual data creation instead of accommodation
+// TestSnapshotManager_TakeSnapshot_ReqMTX002_DataCreation tests actual data creation using configured paths
 func TestSnapshotManager_TakeSnapshot_ReqMTX002_DataCreation(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	// Data-driven validation: Verify actual file creation and metadata
+	// Data-driven validation: Verify actual file creation and metadata in configured directories
 	helper, _ := SetupMediaMTXTest(t)
-
-	// Create data validation helper
-	dataValidator := testutils.NewDataValidationHelper(t)
 
 	// Use Progressive Readiness pattern (this test needs controller for SubscribeToReadiness)
 	controllerInterface, ctx, cancel := helper.GetReadyController(t)
@@ -64,9 +62,9 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_DataCreation(t *testing.T) {
 	controller := controllerInterface.(*controller)
 	snapshotManager := helper.GetSnapshotManager()
 
-	// Step 1: Setup test parameters
-	cameraID := "camera0" // Use standard identifier
-	snapshotPath := dataValidator.CreateTestSnapshotPath("data_creation_test")
+	// Step 1: Setup test parameters using REAL camera device
+	cameraID := "camera0"                                        // Use MediaMTX-compatible camera identifier
+	configuredSnapshotPath := helper.GetConfiguredSnapshotPath() // Use fixture-configured directory
 	options := &SnapshotOptions{
 		Format:     "jpg",
 		Quality:    85,
@@ -75,38 +73,45 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_DataCreation(t *testing.T) {
 		AutoResize: true,
 	}
 
-	// Step 2: Verify initial state - no snapshot file should exist
-	dataValidator.AssertFileNotExists(snapshotPath, "Snapshot creation initial state")
-
-	// Step 3: Execute snapshot creation with progressive readiness
+	// Step 2: Execute snapshot creation with progressive readiness
 	result := testutils.TestProgressiveReadiness(t, func() (*TakeSnapshotResponse, error) {
 		return snapshotManager.TakeSnapshot(ctx, cameraID, options)
 	}, controller, "TakeSnapshot")
 
-	// Step 4: Verify data was actually created
-	require.NoError(t, result.Error, "Snapshot creation must succeed")
+	// Step 3: Verify REAL functionality worked - cameras exist so this MUST succeed
+	require.NoError(t, result.Error, "Snapshot creation must succeed with real camera")
 	require.NotNil(t, result.Result, "Snapshot response must not be nil")
 
 	response := result.Result
-	dataValidator.AssertFileExists(response.FilePath, 1024, "Snapshot file creation") // Min 1KB for image
 
-	// Step 5: Verify metadata
+	// Verify REAL file was created by the actual operation
+	require.FileExists(t, response.FilePath, "Real snapshot file must exist after operation")
+
+	// Verify file was created in configured directory
+	assert.True(t, strings.HasPrefix(response.FilePath, configuredSnapshotPath),
+		"Snapshot file should be created in configured directory: %s", configuredSnapshotPath)
+
+	// Verify file has meaningful content (real image data)
+	fileInfo, err := os.Stat(response.FilePath)
+	require.NoError(t, err, "Should be able to stat real snapshot file")
+	assert.Greater(t, fileInfo.Size(), int64(1024), "Real snapshot file must have meaningful size (>1KB)")
+
+	// Verify metadata from real operation
 	assert.Equal(t, cameraID, response.Device, "Response device should match camera ID")
 	assert.NotEmpty(t, response.Timestamp, "Response should include timestamp")
 	assert.NotEmpty(t, response.Filename, "Response should include snapshot filename")
-	assert.Equal(t, snapshotPath, response.FilePath, "Response path should match expected path")
 
-	// Step 6: Verify retrievability
+	// Step 4: Verify retrievability of real file
 	retrievedSnapshot, err := snapshotManager.GetSnapshotInfo(ctx, response.Filename)
 	require.NoError(t, err, "Snapshot should be retrievable by filename")
 	assert.Equal(t, response.Filename, retrievedSnapshot.Filename, "Retrieved snapshot filename should match")
 
-	// Step 7: Verify snapshot is tracked in listing
+	// Step 5: Verify real file is tracked in listing
 	listResponse, listErr := snapshotManager.ListSnapshots(ctx, 10, 0)
 	require.NoError(t, listErr, "Snapshot listing should succeed")
 	assert.Greater(t, listResponse.Total, 0, "Should have at least one snapshot")
 
-	// Verify our snapshot is in the list
+	// Verify our real snapshot is in the list
 	found := false
 	for _, snapshot := range listResponse.Snapshots {
 		if snapshot.Filename == response.Filename {
@@ -114,9 +119,11 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_DataCreation(t *testing.T) {
 			break
 		}
 	}
-	assert.True(t, found, "Created snapshot should be in listing")
+	assert.True(t, found, "Real created snapshot should be in listing")
 
-	// Step 8: Verify Progressive Readiness behavior
+	t.Log("✅ REAL TEST SUCCESS: Snapshot creation succeeded with real camera and file")
+
+	// Step 4: Verify Progressive Readiness behavior
 	if result.UsedFallback {
 		t.Log("⚠️  PROGRESSIVE READINESS FALLBACK: Operation needed readiness event (acceptable)")
 	} else {

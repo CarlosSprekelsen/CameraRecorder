@@ -319,11 +319,8 @@ func (rm *RecordingManager) executeStartRecording(ctx context.Context, cameraID 
 		format = options.RecordFormat
 	}
 
-	// Generate expected filename based on MediaMTX pattern
+	// Generate API filename (base name, no extension) per API documentation
 	filename := fmt.Sprintf("%s_%s", cameraID, time.Now().Format("2006-01-02_15-04-05"))
-	if format == "fmp4" {
-		filename += ".mp4"
-	}
 
 	response := &StartRecordingResponse{
 		Device:    cameraID,
@@ -367,7 +364,13 @@ func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename strin
 	rm.logger.WithField("filename", filename).Debug("Getting API-ready recording info")
 
 	// Get basic file metadata first
+	// Use canonical configured recordings path (ConfigurationManager overrides default)
 	recordingsPath := rm.config.RecordingsPath
+	if rm.configIntegration != nil && rm.configIntegration.configManager != nil {
+		if cfg := rm.configIntegration.configManager.GetConfig(); cfg != nil && cfg.MediaMTX.RecordingsPath != "" {
+			recordingsPath = cfg.MediaMTX.RecordingsPath
+		}
+	}
 	filePath := filepath.Join(recordingsPath, filename)
 
 	// Get file stats
@@ -541,8 +544,8 @@ func (rm *RecordingManager) StopRecording(ctx context.Context, cameraID string) 
 	// Cancel any auto-stop timer after getting the info
 	rm.timerManager.DeleteTimer(cameraID)
 
-	// Generate expected filename based on MediaMTX recording pattern
-	filename := fmt.Sprintf("%s_%s.mp4", cameraID, startTime.Format("2006-01-02_15-04-05"))
+	// Generate API filename (base name, no extension) per API documentation
+	filename := fmt.Sprintf("%s_%s", cameraID, startTime.Format("2006-01-02_15-04-05"))
 
 	// Get actual file size using MetadataManager
 	fileSize := int64(1024) // Default fallback

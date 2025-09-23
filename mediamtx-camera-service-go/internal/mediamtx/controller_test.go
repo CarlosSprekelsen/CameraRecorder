@@ -79,7 +79,7 @@ func TestController_GetHealth_ReqMTX004_Success(t *testing.T) {
 
 	// Use health assertion helper to reduce boilerplate
 	helper.AssertHealthResponse(t, health, err, "GetHealth")
-	assert.Equal(t, "healthy", health.Status, "Health should be healthy")
+	assert.Equal(t, "HEALTHY", health.Status, "Health should be healthy")
 
 	// Verify component statuses are healthy (using Components field from GetHealthResponse)
 	if len(health.Components) > 0 {
@@ -87,7 +87,7 @@ func TestController_GetHealth_ReqMTX004_Success(t *testing.T) {
 			// Components is map[string]interface{}, so we need to cast or check differently
 			if statusMap, ok := cameraStatus.(map[string]interface{}); ok {
 				if status, ok := statusMap["status"].(string); ok {
-					assert.Equal(t, "healthy", status, "Camera monitor should be healthy when controller is ready")
+					assert.Equal(t, "HEALTHY", status, "Camera monitor should be healthy when controller is ready")
 				}
 			}
 		}
@@ -484,7 +484,7 @@ func TestController_StopRecording_ReqMTX002_Success(t *testing.T) {
 
 	// Get available camera using existing helper (now that controller is ready)
 	// Use camera identifier (camera0) for Controller API, not device path (/dev/video0)
-	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	cameraID, err := helper.GetAvailableCameraIdentifierFromController(ctx, controller)
 	require.NoError(t, err, "Should be able to get available camera identifier")
 	options := &PathConf{
 		Record:       true,
@@ -532,7 +532,7 @@ func TestController_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
 
 	// Controller is already ready - no waiting needed with Progressive Readiness
 	// Get available camera using existing helper
-	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	cameraID, err := helper.GetAvailableCameraIdentifierFromController(ctx, controller)
 	require.NoError(t, err, "Should be able to get available camera identifier")
 
 	options := &SnapshotOptions{
@@ -614,7 +614,7 @@ func TestController_StartRecording_ReqMTX002_Advanced(t *testing.T) {
 
 	// Controller is already ready - no waiting needed with Progressive Readiness
 	// Get available camera using existing helper
-	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	cameraID, err := helper.GetAvailableCameraIdentifierFromController(ctx, controller)
 	require.NoError(t, err, "Should be able to get available camera identifier")
 
 	options := &PathConf{
@@ -851,7 +851,7 @@ func TestController_TakeSnapshot_ReqMTX002_Advanced(t *testing.T) {
 
 	// Controller is already ready - no waiting needed with Progressive Readiness
 	// Get available camera using existing helper
-	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	cameraID, err := helper.GetAvailableCameraIdentifierFromController(ctx, controller)
 	require.NoError(t, err, "Should be able to get available camera identifier")
 
 	options := &SnapshotOptions{

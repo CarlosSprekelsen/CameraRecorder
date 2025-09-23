@@ -460,6 +460,9 @@ func TestWebSocketMethods_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
 		timestamp, ok := result["timestamp"].(string)
 		require.True(t, ok, "timestamp must be string")
 		assert.NotEmpty(t, timestamp, "timestamp cannot be empty")
+		// Strict ISO-8601 (RFC3339) timestamp validation
+		_, err := time.Parse(time.RFC3339, timestamp)
+		assert.NoError(t, err, "timestamp must be RFC3339/ISO-8601")
 
 		// ✅ VALIDATE OPTIONAL FIELDS (if present)
 		if fileSize, exists := result["file_size"]; exists {
@@ -468,8 +471,9 @@ func TestWebSocketMethods_TakeSnapshot_ReqMTX002_Success(t *testing.T) {
 		}
 
 		if filePath, exists := result["file_path"]; exists {
-			_, ok := filePath.(string)
+			p, ok := filePath.(string)
 			assert.True(t, ok, "file_path must be string if present")
+			require.FileExists(t, p, "Snapshot file must exist on disk")
 		}
 	}
 }
@@ -508,6 +512,8 @@ func TestWebSocketMethods_StartRecording_ReqMTX002_Success(t *testing.T) {
 	filename, ok := result["filename"].(string)
 	require.True(t, ok, "filename must be string")
 	assert.NotEmpty(t, filename, "filename cannot be empty")
+	// API doc implies base name (extension appears in download URLs). Enforce base-name (no extension)
+	assert.NotContains(t, filename, ".", "recording filename should be base name without extension per API doc")
 
 	status, ok := result["status"].(string)
 	require.True(t, ok, "status must be string")
@@ -584,13 +590,21 @@ func TestWebSocketMethods_StopRecording_ReqMTX002_Success(t *testing.T) {
 
 		// ✅ VALIDATE OPTIONAL FIELDS (if present)
 		if startTime, exists := result["start_time"]; exists {
-			_, ok := startTime.(string)
+			ts, ok := startTime.(string)
 			assert.True(t, ok, "start_time must be string if present")
+			if ok {
+				_, err := time.Parse(time.RFC3339, ts)
+				assert.NoError(t, err, "start_time must be RFC3339/ISO-8601")
+			}
 		}
 
 		if endTime, exists := result["end_time"]; exists {
-			_, ok := endTime.(string)
+			ts, ok := endTime.(string)
 			assert.True(t, ok, "end_time must be string if present")
+			if ok {
+				_, err := time.Parse(time.RFC3339, ts)
+				assert.NoError(t, err, "end_time must be RFC3339/ISO-8601")
+			}
 		}
 
 		if duration, exists := result["duration"]; exists {
@@ -1139,9 +1153,9 @@ func TestWebSocketMethods_ListRecordings_ReqMTX002_Success(t *testing.T) {
 		"offset": 0,
 	}, "viewer")
 
-	// ✅ ENFORCE SUCCESS ONLY - Test fails if error returned
-	require.Nil(t, response.Error, "list_recordings must succeed for Success test")
-	require.NotNil(t, response.Result, "Success response must have result")
+	// ✅ ENFORCE SUCCESS ONLY - API doc: empty set returns success with empty result
+	require.Nil(t, response.Error, "list_recordings must return success even when empty (no INTERNAL_ERROR)")
+	require.NotNil(t, response.Result, "Success response must have result with files/total/limit/offset")
 
 	// ✅ VALIDATE JSON-RPC PROTOCOL
 	assert.Equal(t, constants.JSONRPC_VERSION, response.JSONRPC, "Must be JSON-RPC 2.0")
@@ -1156,6 +1170,10 @@ func TestWebSocketMethods_ListRecordings_ReqMTX002_Success(t *testing.T) {
 	assert.Contains(t, result, "total", "Must have total field")
 	assert.Contains(t, result, "limit", "Must have limit field")
 	assert.Contains(t, result, "offset", "Must have offset field")
+	// Enforce only documented keys in result
+	for k := range result {
+		assert.Contains(t, []string{"files", "total", "limit", "offset"}, k, "Undocumented field in list_recordings result: %s", k)
+	}
 
 	// ✅ VALIDATE FIELD TYPES
 	files, ok := result["files"].([]interface{})
@@ -1213,21 +1231,15 @@ func TestWebSocketMethods_ListSnapshots_ReqMTX002_Success(t *testing.T) {
 	// === VALIDATION ===
 	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
 	assert.NotNil(t, response.ID, "Response should have ID")
-
-	// Handle business logic: "no snapshots found" is a valid response
-	if response.Error != nil && response.Error.Message == "Internal server error" {
-		// Check if it's the expected "no snapshots found" case
-		if dataMap, ok := response.Error.Data.(map[string]interface{}); ok {
-			if details, ok := dataMap["details"].(string); ok && strings.Contains(details, "no snapshots found") {
-				// This is expected when no snapshots exist - test passes
-				return
-			}
+	// API compliance: list must return result object; if server returns INTERNAL_ERROR for empty set, keep failure to expose bug
+	require.Nil(t, response.Error, "list_snapshots must return result even when empty per API doc")
+	require.NotNil(t, response.Result, "Response should have result (files/total/limit/offset)")
+	// Enforce only documented keys in result
+	if res, ok := response.Result.(map[string]interface{}); ok {
+		for k := range res {
+			assert.Contains(t, []string{"files", "total", "limit", "offset"}, k, "Undocumented field in list_snapshots result: %s", k)
 		}
 	}
-
-	// If we get here, expect normal success response
-	assert.Nil(t, response.Error, "Response should not have error")
-	assert.NotNil(t, response.Result, "Response should have result")
 }
 
 // TestWebSocketMethods_DeleteRecording tests delete_recording method
@@ -1271,18 +1283,19 @@ func TestWebSocketMethods_DeleteRecording_ReqMTX002_Success(t *testing.T) {
 		t.Logf("No result in response")
 	}
 
-	// If we couldn't extract the filename, use a default
-	if recordingFilename == "" {
-		recordingFilename = "test_recording.mp4"
-	}
+	// If we couldn't extract the filename, fail early (must validate functionality)
+	require.NotEmpty(t, recordingFilename, "start_recording must return a filename to validate delete_recording functionality")
 
 	t.Logf("Using recording filename: %s", recordingFilename)
 
 	// Stop the recording to create the file
-	stopRecordingResponse := helper.TestMethod(t, "stop_recording", map[string]interface{}{
+	stopRecordingResponse := helper.TestMethodWithEvents(t, "stop_recording", map[string]interface{}{
 		"device": "camera0",
 	}, "operator")
 	require.Nil(t, stopRecordingResponse.Error, "Recording stop should succeed")
+
+	// Optionally validate via list_recordings that the file is materialized before deleting
+	_ = helper.TestMethodWithEvents(t, "list_recordings", map[string]interface{}{"limit": 50, "offset": 0}, "operator")
 
 	// Send delete_recording message
 	response := helper.TestMethodWithEvents(t, "delete_recording", map[string]interface{}{
@@ -1292,20 +1305,8 @@ func TestWebSocketMethods_DeleteRecording_ReqMTX002_Success(t *testing.T) {
 	// === VALIDATION ===
 	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
 	assert.NotNil(t, response.ID, "Response should have ID")
-	
-	// Handle business logic: "recording file not found" is a valid response
-	if response.Error != nil && response.Error.Message == "Internal server error" {
-		// Check if it's the expected "recording file not found" case
-		if dataMap, ok := response.Error.Data.(map[string]interface{}); ok {
-			if details, ok := dataMap["details"].(string); ok && strings.Contains(details, "recording file not found") {
-				// This is expected when recording file doesn't exist on disk - test passes
-				return
-			}
-		}
-	}
-	
-	// If we get here, expect normal success response
-	assert.Nil(t, response.Error, "Response should not have error")
+	// Functionality validation: delete_recording should succeed if we created the file
+	assert.Nil(t, response.Error, "delete_recording should succeed after creating a recording")
 	assert.NotNil(t, response.Result, "Response should have result")
 }
 
@@ -1354,6 +1355,9 @@ func TestWebSocketMethods_DeleteSnapshot_ReqMTX002_Success(t *testing.T) {
 	// If we couldn't extract the filename, the test should fail
 	require.NotEmpty(t, snapshotFilename, "Should be able to extract filename from snapshot response")
 
+	// Optionally validate via list_snapshots before deleting (ensures materialization)
+	_ = helper.TestMethodWithEvents(t, "list_snapshots", map[string]interface{}{"limit": 10, "offset": 0}, "operator")
+
 	// Send delete_snapshot message
 	response := helper.TestMethodWithEvents(t, "delete_snapshot", map[string]interface{}{
 		"filename": snapshotFilename,
@@ -1362,8 +1366,26 @@ func TestWebSocketMethods_DeleteSnapshot_ReqMTX002_Success(t *testing.T) {
 	// === VALIDATION ===
 	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
 	assert.NotNil(t, response.ID, "Response should have ID")
-	assert.Nil(t, response.Error, "Response should not have error")
+	// Functionality validation: delete_snapshot must succeed after we created it
+	assert.Nil(t, response.Error, "delete_snapshot should succeed after creating a snapshot")
 	assert.NotNil(t, response.Result, "Response should have result")
+}
+
+// Negative tests: deleting non-existent snapshot should return documented error
+func TestWebSocketMethods_DeleteSnapshot_ReqMTX002_Error_NotFound(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	response := helper.TestMethodWithEvents(t, "delete_snapshot", map[string]interface{}{
+		"filename": "__non_existent_snapshot__.jpg",
+	}, "operator")
+
+	assert.Equal(t, "2.0", response.JSONRPC)
+	assert.NotNil(t, response.ID)
+	require.NotNil(t, response.Error, "Should return JSON-RPC error for missing snapshot file")
+	// Expect a service-specific error code, not generic internal error
+	// Accept either documented service code or mapped domain code; not INTERNAL_ERROR
+	assert.NotEqual(t, INTERNAL_ERROR, response.Error.Code, "Missing file must not be INTERNAL_ERROR; use documented service code")
 }
 
 // ============================================================================
@@ -1604,40 +1626,46 @@ func TestWebSocketMethods_GetRecordingInfo_ReqMTX002_Success(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// === TEST AND VALIDATION ===
-	// Create a recording first, then get info about it
-	helper.TestMethod(t, "start_recording", map[string]interface{}{
-		"device": "camera0",
-	}, "operator")
+	// Create a recording and capture filename
+	start := helper.TestMethodWithEvents(t, "start_recording", map[string]interface{}{"device": "camera0"}, "operator")
+	require.Nil(t, start.Error, "start_recording should succeed")
+	require.NotNil(t, start.Result, "start_recording result required")
+	var recName string
+	if m, ok := start.Result.(map[string]interface{}); ok {
+		if fn, ok2 := m["filename"].(string); ok2 {
+			recName = fn
+		}
+	}
+	require.NotEmpty(t, recName, "Must extract recording filename")
+	stop := helper.TestMethodWithEvents(t, "stop_recording", map[string]interface{}{"device": "camera0"}, "operator")
+	require.Nil(t, stop.Error, "stop_recording should succeed")
 
-	// Stop the recording to create the file
-	helper.TestMethod(t, "stop_recording", map[string]interface{}{
-		"device": "camera0",
-	}, "operator")
-
-	// Now get recording info about a test file
+	// Now get recording info for the created file
 	response := helper.TestMethodWithEvents(t, "get_recording_info", map[string]interface{}{
-		"filename": "test_recording.mp4",
+		"filename": recName,
 	}, "viewer")
 
 	// === VALIDATION ===
 	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
 	assert.NotNil(t, response.ID, "Response should have ID")
+	require.Nil(t, response.Error, "Response should not have error")
+	require.NotNil(t, response.Result, "Response should have result")
 
-	// Handle business logic: "recording file not found" is a valid response
-	if response.Error != nil && response.Error.Message == "Internal server error" {
-		// Check if it's the expected "recording file not found" case
-		if dataMap, ok := response.Error.Data.(map[string]interface{}); ok {
-			if details, ok := dataMap["details"].(string); ok && strings.Contains(details, "recording file not found") {
-				// This is expected when no recordings exist - test passes
-				return
-			}
-		}
+	res, ok := response.Result.(map[string]interface{})
+	require.True(t, ok, "Result must be object")
+	assert.Contains(t, res, "filename")
+	assert.Contains(t, res, "file_size")
+	assert.Contains(t, res, "created_time")
+	// No undocumented fields
+	for k := range res {
+		assert.Contains(t, []string{"filename", "file_size", "created_time"}, k, "Undocumented field in get_recording_info: %s", k)
 	}
-
-	// If we get here, expect normal success response
-	assert.Nil(t, response.Error, "Response should not have error")
-	assert.NotNil(t, response.Result, "Response should have result")
+	if ct, ok := res["created_time"].(string); ok {
+		_, err := time.Parse(time.RFC3339, ct)
+		assert.NoError(t, err, "created_time must be RFC3339/ISO-8601")
+	} else {
+		t.Fatalf("created_time must be string")
+	}
 }
 
 // TestWebSocketMethods_GetSnapshotInfo tests get_snapshot_info method
@@ -1646,35 +1674,46 @@ func TestWebSocketMethods_GetSnapshotInfo_ReqMTX002_Success(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)
 	defer helper.Cleanup(t)
 
-	// === TEST AND VALIDATION ===
-	// Create a snapshot first, then get info about it
-	helper.TestMethod(t, "take_snapshot", map[string]interface{}{
-		"device": "camera0",
-	}, "operator")
+	// Precondition: take a snapshot and extract filename from file_path
+	take := helper.TestMethodWithEvents(t, "take_snapshot", map[string]interface{}{"device": "camera0"}, "operator")
+	require.Nil(t, take.Error, "Snapshot creation should succeed")
+	require.NotNil(t, take.Result, "Snapshot result required")
 
-	// Now get snapshot info about a test file
+	var snapName string
+	if m, ok := take.Result.(map[string]interface{}); ok {
+		if fp, ok2 := m["file_path"].(string); ok2 {
+			snapName = filepath.Base(fp)
+		}
+	}
+	require.NotEmpty(t, snapName, "Must extract snapshot filename")
+
+	// Now get snapshot info for the created file
 	response := helper.TestMethodWithEvents(t, "get_snapshot_info", map[string]interface{}{
-		"filename": "test_snapshot.jpg",
+		"filename": snapName,
 	}, "viewer")
 
 	// === VALIDATION ===
 	assert.Equal(t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
 	assert.NotNil(t, response.ID, "Response should have ID")
+	require.Nil(t, response.Error, "Response should not have error")
+	require.NotNil(t, response.Result, "Response should have result")
 
-	// Handle business logic: "snapshot file not found" is a valid response
-	if response.Error != nil && response.Error.Message == "Internal server error" {
-		// Check if it's the expected "snapshot file not found" case
-		if dataMap, ok := response.Error.Data.(map[string]interface{}); ok {
-			if details, ok := dataMap["details"].(string); ok && strings.Contains(details, "snapshot file not found") {
-				// This is expected when no snapshots exist - test passes
-				return
-			}
-		}
+	res, ok := response.Result.(map[string]interface{})
+	require.True(t, ok, "Result must be object")
+	// Exact documented fields
+	assert.Contains(t, res, "filename")
+	assert.Contains(t, res, "file_size")
+	assert.Contains(t, res, "created_time")
+	assert.Contains(t, res, "device")
+	// No undocumented fields
+	for k := range res {
+		assert.Contains(t, []string{"filename", "file_size", "created_time", "device"}, k, "Undocumented field in get_snapshot_info: %s", k)
 	}
-
-	// If we get here, expect normal success response
-	assert.Nil(t, response.Error, "Response should not have error")
-	assert.NotNil(t, response.Result, "Response should have result")
+	// RFC3339
+	ct, ok := res["created_time"].(string)
+	require.True(t, ok, "created_time must be string")
+	_, err := time.Parse(time.RFC3339, ct)
+	assert.NoError(t, err, "created_time must be RFC3339/ISO-8601")
 }
 
 // TestWebSocketMethods_GetStreams tests get_streams method

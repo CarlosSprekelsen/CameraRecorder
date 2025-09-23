@@ -257,6 +257,11 @@ func (h *WebSocketTestHelper) GetMediaMTXController(t *testing.T) mediamtx.Media
 func (h *WebSocketTestHelper) StartServer(t *testing.T) *WebSocketServer {
 	server := h.GetServer(t)
 
+	// Idempotent start: if already running, return existing instance
+	if server.IsRunning() {
+		return server
+	}
+
 	// Ensure port is allocated with race-free listener
 	_ = h.GetFreePortReliably()
 
@@ -278,8 +283,8 @@ func getTestConfigPathForSetup() string {
 
 	for {
 		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			// Found project root, look for WebSocket test config
-			configPath := filepath.Join(dir, "tests", "fixtures", "config_websocket_test.yaml")
+			// Found project root, use SINGLE SOURCE OF TRUTH fixture for tests
+			configPath := filepath.Join(dir, "tests", "fixtures", "config_clean_minimal.yaml")
 			if _, err := os.Stat(configPath); err == nil {
 				return configPath
 			}

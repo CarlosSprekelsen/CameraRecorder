@@ -635,6 +635,9 @@ func (s *WebSocketServer) MethodDeleteRecording(params map[string]interface{}, c
 		// Use MediaMTX controller to delete recording - thin delegation
 		err := s.mediaMTXController.DeleteRecording(context.Background(), filename)
 		if err != nil {
+			if strings.Contains(strings.ToLower(err.Error()), "not found") {
+				return &JsonRpcResponse{JSONRPC: "2.0", Error: NewJsonRpcError(CAMERA_NOT_FOUND, "file_not_found", "Recording file not found", "Verify filename")}, nil
+			}
 			return nil, fmt.Errorf("error deleting recording: %v", err)
 		}
 
@@ -664,6 +667,9 @@ func (s *WebSocketServer) MethodDeleteSnapshot(params map[string]interface{}, cl
 		// Use MediaMTX controller to delete snapshot - thin delegation
 		err := s.mediaMTXController.DeleteSnapshot(context.Background(), filename)
 		if err != nil {
+			if strings.Contains(strings.ToLower(err.Error()), "not found") {
+				return &JsonRpcResponse{JSONRPC: "2.0", Error: NewJsonRpcError(CAMERA_NOT_FOUND, "file_not_found", "Snapshot file not found", "Verify filename")}, nil
+			}
 			return nil, fmt.Errorf("error deleting snapshot: %v", err)
 		}
 
@@ -747,7 +753,13 @@ func (s *WebSocketServer) MethodListSnapshots(params map[string]interface{}, cli
 
 		// Check if no snapshots found
 		if fileList.Total == 0 {
-			return nil, fmt.Errorf("no snapshots found")
+			// API doc: return success with empty result object, not an error
+			return map[string]interface{}{
+				"files":  []map[string]interface{}{},
+				"total":  0,
+				"limit":  limit,
+				"offset": offset,
+			}, nil
 		}
 
 		// Convert SnapshotFileInfo to map for JSON response

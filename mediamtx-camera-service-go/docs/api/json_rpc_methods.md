@@ -855,6 +855,16 @@ List available recording files with metadata and pagination support.
 
 **Implementation:** Scans recordings directory, provides file metadata, and supports pagination for large file collections.
 
+Note (Empty Set Semantics):
+- When no recording files exist, this method MUST return a successful JSON-RPC response with an empty result object, not an error.
+- Required structure for empty sets:
+  {
+    "jsonrpc": "2.0",
+    "result": { "files": [], "total": 0, "limit": <int>, "offset": <int> },
+    "id": <id>
+  }
+- Errors (e.g., directory inaccessible) MUST use documented JSON-RPC error codes with structured data.
+
 **Example:**
 
 ```json
@@ -1253,6 +1263,16 @@ List available snapshot files with metadata and pagination support.
 **Status:** ✅ Implemented
 
 **Implementation:** Scans snapshots directory, provides file metadata, and supports pagination for large file collections.
+
+Note (Empty Set Semantics):
+- When no snapshot files exist, this method MUST return a successful JSON-RPC response with an empty result object, not an error.
+- Required structure for empty sets:
+  {
+    "jsonrpc": "2.0",
+    "result": { "files": [], "total": 0, "limit": <int>, "offset": <int> },
+    "id": <id>
+  }
+- Errors (e.g., directory inaccessible) MUST use documented JSON-RPC error codes with structured data.
 
 **Example:**
 
