@@ -567,8 +567,8 @@ func NewWebSocketServer(
 
 // Start starts the WebSocket server
 func (s *WebSocketServer) Start() error {
-	// Check current running state without modifying it
-	if atomic.LoadInt32(&s.running) == 1 {
+	// Idempotency: set running flag atomically to prevent double start races
+	if !atomic.CompareAndSwapInt32(&s.running, 0, 1) {
 		s.logger.Warn("WebSocket server is already running")
 		return fmt.Errorf("WebSocket server is already running")
 	}
@@ -595,8 +595,6 @@ func (s *WebSocketServer) Start() error {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
-		// Set running flag AFTER server successfully starts listening
-		atomic.StoreInt32(&s.running, 1)
 
 		if err := s.server.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			s.logger.WithError(err).Error("WebSocket server failed")
@@ -620,8 +618,8 @@ func (s *WebSocketServer) Start() error {
 
 // StartWithListener starts the server using an existing listener (for race-free testing)
 func (s *WebSocketServer) StartWithListener(listener net.Listener) error {
-	// Check current running state without modifying it
-	if atomic.LoadInt32(&s.running) == 1 {
+	// Idempotency: set running flag atomically to prevent double start races
+	if !atomic.CompareAndSwapInt32(&s.running, 0, 1) {
 		s.logger.Warn("WebSocket server is already running")
 		return fmt.Errorf("WebSocket server is already running")
 	}
@@ -646,8 +644,6 @@ func (s *WebSocketServer) StartWithListener(listener net.Listener) error {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
-		// Set running flag AFTER server successfully starts listening
-		atomic.StoreInt32(&s.running, 1)
 
 		if err := s.server.Serve(listener); err != nil && err != http.ErrServerClosed {
 			s.logger.WithError(err).Error("WebSocket server failed")
@@ -670,7 +666,7 @@ func (s *WebSocketServer) StartWithListener(listener net.Listener) error {
 func (s *WebSocketServer) Stop(ctx context.Context) error {
 	if atomic.LoadInt32(&s.running) == 0 {
 		s.logger.Warn("WebSocket server is not running")
-		return nil
+		return fmt.Errorf("WebSocket server is not running")
 	}
 
 	s.logger.Info("Stopping WebSocket server")
@@ -703,7 +699,8 @@ func (s *WebSocketServer) Stop(ctx context.Context) error {
 		// Clean shutdown
 	case <-ctx.Done():
 		s.logger.Warn("WebSocket server shutdown timeout, forcing stop")
-		return ctx.Err()
+		// Reflect state accurately; server may still be up
+		return fmt.Errorf("shutdown timeout")
 	}
 
 	atomic.StoreInt32(&s.running, 0)
