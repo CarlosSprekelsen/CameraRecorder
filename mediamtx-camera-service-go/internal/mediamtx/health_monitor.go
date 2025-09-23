@@ -440,14 +440,14 @@ func (h *SimpleHealthMonitor) GetHealthAPI(ctx context.Context, startTime time.T
 
 	// Build components map with operational states as per API documentation
 	components := map[string]interface{}{
-		"websocket_server": "running", // WebSocket server is operational
-		"camera_monitor":   "running", // Camera monitor is operational
+		"websocket_server": "RUNNING", // WebSocket server is operational
+		"camera_monitor":   "RUNNING", // Camera monitor is operational
 		"mediamtx": func() string {
 			// Convert MediaMTX health status to operational state
 			if h.IsHealthy() {
-				return "running"
+				return "RUNNING"
 			}
-			return "error"
+			return "ERROR"
 		}(),
 	}
 
@@ -548,10 +548,10 @@ func (h *SimpleHealthMonitor) determineSystemStatus(ctx context.Context) string 
 
 	// Determine overall status
 	if criticalIssues > 0 {
-		return "unhealthy"
+		return "UNHEALTHY"
 	} else if warningIssues > 0 {
-		return "degraded"
+		return "DEGRADED"
 	} else {
-		return "healthy"
+		return "HEALTHY"
 	}
 }

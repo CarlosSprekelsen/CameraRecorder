@@ -301,7 +301,7 @@ func TestWebSocketTypes_ServerConfig(t *testing.T) {
 	assert.Equal(t, 8002, config.Port, "Port should be set")
 	assert.Equal(t, "/ws", config.WebSocketPath, "WebSocket path should be set")
 	assert.Equal(t, 1000, config.MaxConnections, "Max connections should be set")
-	assert.Equal(t, 5*time.Second, config.ReadTimeout, "Read timeout should be set")
+	assert.Equal(t, testutils.UniversalTimeoutVeryLong, config.ReadTimeout, "Read timeout should be set")
 	assert.Equal(t, 1*time.Second, config.WriteTimeout, "Write timeout should be set")
 	assert.Equal(t, 30*time.Second, config.PingInterval, "Ping interval should be set")
 	assert.Equal(t, 60*time.Second, config.PongWait, "Pong wait should be set")

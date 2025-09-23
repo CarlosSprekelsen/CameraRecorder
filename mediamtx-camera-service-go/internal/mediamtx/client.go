@@ -239,7 +239,7 @@ func parsePathListResponse(data []byte) ([]*Path, error) {
 	// Handle empty response
 	// Use comprehensive response validation
 	if err := validateMediaMTXResponse(data, "PathList"); err != nil {
-		return nil, NewMediaMTXErrorWithOp(0, "response validation failed", err.Error(), "parse_path_list")
+		return nil, NewMediaMTXErrorWithOp(0, err.Error(), "", "parse_path_list")
 	}
 
 	var response PathList
@@ -260,7 +260,7 @@ func parsePathListResponse(data []byte) ([]*Path, error) {
 func parsePathConfListResponse(data []byte) ([]*PathConf, error) {
 	// Use comprehensive response validation
 	if err := validateMediaMTXResponse(data, "PathList"); err != nil {
-		return nil, NewMediaMTXErrorWithOp(0, "response validation failed", err.Error(), "parse_path_conf_list")
+		return nil, NewMediaMTXErrorWithOp(0, err.Error(), "", "parse_path_conf_list")
 	}
 
 	var response PathConfList

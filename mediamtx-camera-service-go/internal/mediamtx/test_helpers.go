@@ -1645,7 +1645,7 @@ func NewJSONScenarioRegistry() *JSONScenarioRegistry {
 			Name:        "empty_json",
 			JSONData:    []byte(""),
 			ExpectError: true,
-			ErrorMsg:    "response validation failed",
+			ErrorMsg:    "empty response body",
 			Description: "Empty JSON should be rejected",
 		},
 		{
@@ -1659,14 +1659,14 @@ func NewJSONScenarioRegistry() *JSONScenarioRegistry {
 			Name:        "malformed_json",
 			JSONData:    []byte(`{"invalid": json}`),
 			ExpectError: true,
-			ErrorMsg:    "failed to parse",
+			ErrorMsg:    "invalid JSON response",
 			Description: "Malformed JSON should be handled gracefully",
 		},
 		{
 			Name:        "incomplete_json",
 			JSONData:    []byte(`{"incomplete":`),
 			ExpectError: true,
-			ErrorMsg:    "failed to parse",
+			ErrorMsg:    "invalid JSON response",
 			Description: "Incomplete JSON should be handled gracefully",
 		},
 		{
@@ -1749,7 +1749,7 @@ func (r *JSONScenarioRegistry) addPathListScenarios(baseline []JSONMalformationT
 			Name:        "json_with_invalid_types",
 			JSONData:    []byte(`{"items": "not_an_array", "pageCount": "not_a_number", "itemCount": "not_a_number"}`),
 			ExpectError: true,
-			ErrorMsg:    "failed to parse",
+			ErrorMsg:    "items field must be an array",
 			Description: "JSON with invalid types should be rejected due to parsing errors",
 		},
 		{

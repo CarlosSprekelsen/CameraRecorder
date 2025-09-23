@@ -492,7 +492,7 @@ func TestHealthMonitor_GetHealthAPI_ReqMTX004(t *testing.T) {
 
 	// Validate API-ready response format per JSON-RPC documentation
 	assert.NotEmpty(t, response.Status, "Response should include overall status")
-	assert.Contains(t, []string{"healthy", "degraded", "unhealthy"}, response.Status, "Status should be valid")
+	assert.Contains(t, []string{"HEALTHY", "DEGRADED", "UNHEALTHY"}, response.Status, "Status should be valid")
 	assert.NotEmpty(t, response.Uptime, "Response should include uptime")
 	assert.NotEmpty(t, response.Version, "Response should include version")
 	assert.NotNil(t, response.Components, "Response should include components map")
@@ -502,7 +502,7 @@ func TestHealthMonitor_GetHealthAPI_ReqMTX004(t *testing.T) {
 
 	// Validate components structure
 	if mediaStatus, exists := response.Components["mediamtx"]; exists {
-		assert.Contains(t, []string{"healthy", "degraded", "unhealthy"}, mediaStatus, "MediaMTX status should be valid")
+		assert.Contains(t, []string{"HEALTHY", "DEGRADED", "UNHEALTHY", "RUNNING", "STOPPED", "ERROR", "STARTING", "STOPPING"}, mediaStatus, "MediaMTX status should be valid")
 	}
 
 	// Validate timestamp format (should be ISO 8601)
