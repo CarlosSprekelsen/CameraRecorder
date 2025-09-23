@@ -522,8 +522,8 @@ func NewWebSocketServer(
 
 		// WebSocket upgrader configuration
 		upgrader: websocket.Upgrader{
-			ReadBufferSize:  1024,
-			WriteBufferSize: 1024,
+			ReadBufferSize:  cfg.Server.ReadBufferSize,
+			WriteBufferSize: cfg.Server.WriteBufferSize,
 			CheckOrigin: func(r *http.Request) bool {
 				return validateCORSOrigin(r, cfg, logger)
 			},
@@ -741,13 +741,13 @@ func (s *WebSocketServer) closeAllClientConnections() {
 			defer wg.Done()
 
 			// Set close deadline
-			if err := client.Conn.SetWriteDeadline(time.Now().Add(5 * time.Second)); err != nil {
+			if err := client.Conn.SetWriteDeadline(time.Now().Add(s.config.ClientCleanupTimeout)); err != nil {
 				s.logger.WithError(err).WithField("client_id", client.ClientID).Warn("Failed to set write deadline for close message")
 			}
 
 			// Send close message
 			closeMsg := websocket.FormatCloseMessage(websocket.CloseGoingAway, "server shutdown")
-			if err := client.Conn.WriteControl(websocket.CloseMessage, closeMsg, time.Now().Add(5*time.Second)); err != nil {
+			if err := client.Conn.WriteControl(websocket.CloseMessage, closeMsg, time.Now().Add(s.config.ClientCleanupTimeout)); err != nil {
 				s.logger.WithError(err).WithField("client_id", client.ClientID).Warn("Failed to send close message")
 			}
 

@@ -953,12 +953,12 @@ func (sm *SnapshotManager) ListSnapshots(ctx context.Context, limit, offset int)
 		}
 
 		snapshots[i] = SnapshotFileInfo{
-			Device:     device,
-			Filename:   file.FileName,
-			FileSize:   file.FileSize,
-			CreatedAt:  file.CreatedAt.Format(time.RFC3339),
-			Format:     format,
-			Resolution: "1920x1080", // TODO: Extract resolution from FFmpeg-captured images only (V4L2 has no EXIF)
+			Device:       device,
+			Filename:     file.FileName,
+			FileSize:     file.FileSize,
+			ModifiedTime: file.CreatedAt.Format(time.RFC3339), // API compliant field name
+			Format:       format,
+			Resolution:   "1920x1080", // TODO: Extract resolution from FFmpeg-captured images only (V4L2 has no EXIF)
 			// INVESTIGATION: V4L2 direct capture (Tier 0) produces raw frames without EXIF metadata
 			// Only FFmpeg captures (Tier 1+) can have extractable metadata via ffprobe
 			// SOLUTION: Check capture_method in metadata, if "ffmpeg", parse ffprobe JSON for resolution

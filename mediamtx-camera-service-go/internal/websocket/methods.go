@@ -61,9 +61,11 @@ func (s *WebSocketServer) methodWrapper(methodName string, handler func() (inter
 				"error":     err.Error(),
 			}).Error(fmt.Sprintf("%s method failed", methodName))
 
+			// Enhanced error translation based on error content
+			jsonRpcError := s.translateErrorToJsonRpc(err, methodName)
 			return &JsonRpcResponse{
 				JSONRPC: "2.0",
-				Error:   NewJsonRpcError(INTERNAL_ERROR, "method_failed", fmt.Sprintf("%s: %v", methodName, err), "Retry or contact support if persistent"),
+				Error:   jsonRpcError,
 			}, nil
 		}
 
@@ -589,10 +591,9 @@ func (s *WebSocketServer) MethodGetStreams(params map[string]interface{}, client
 // MethodListRecordings implements the list_recordings method
 func (s *WebSocketServer) MethodListRecordings(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	return s.authenticatedMethodWrapper("list_recordings", func() (interface{}, error) {
-
-		// Basic parameter validation and extraction
-		limit := 50 // Default limit
-		offset := 0 // Default offset
+		// Extract parameters WITHOUT defaults
+		limit := 0  // No default!
+		offset := 0 // No default!
 
 		if limitParam, exists := params["limit"]; exists {
 			if limitVal, ok := limitParam.(float64); ok {
@@ -606,7 +607,7 @@ func (s *WebSocketServer) MethodListRecordings(params map[string]interface{}, cl
 			}
 		}
 
-		// Delegate to MediaMTX controller - returns API-ready ListRecordingsResponse
+		// Pure delegation - RecordingManager handles defaults
 		fileList, err := s.mediaMTXController.ListRecordings(context.Background(), limit, offset)
 		if err != nil {
 			return nil, fmt.Errorf("error getting recordings list: %v", err)
@@ -794,7 +795,7 @@ func (s *WebSocketServer) MethodListSnapshots(params map[string]interface{}, cli
 			fileData := map[string]interface{}{
 				"filename":      file.Filename,
 				"file_size":     file.FileSize,
-				"modified_time": file.CreatedAt, // ISO 8601 formatted timestamp
+				"modified_time": file.ModifiedTime, // API compliant field name
 				"download_url":  file.DownloadURL,
 			}
 
@@ -1352,4 +1353,30 @@ func (s *WebSocketServer) MethodSetDiscoveryInterval(params map[string]interface
 		// Pure delegation to Controller - returns API-ready SetDiscoveryIntervalResponse
 		return s.mediaMTXController.SetDiscoveryInterval(int(interval))
 	})(params, client)
+}
+
+// translateErrorToJsonRpc converts business logic errors to appropriate JSON-RPC errors
+func (s *WebSocketServer) translateErrorToJsonRpc(err error, methodName string) *JsonRpcError {
+	errMsg := err.Error()
+
+	// Check for specific error patterns from Phase 1 enhanced error messages
+	if strings.Contains(errMsg, "status 404") {
+		// MediaMTX path not found
+		return NewJsonRpcError(CAMERA_NOT_FOUND, "RECORDINGS_NOT_FOUND",
+			"No recordings found", "Check if recordings exist")
+	}
+	if strings.Contains(errMsg, "status 503") || strings.Contains(errMsg, "failed to connect") {
+		// MediaMTX service unavailable
+		return NewJsonRpcError(MEDIAMTX_UNAVAILABLE, "SERVICE_UNAVAILABLE",
+			"MediaMTX service is not responding", "Try again later")
+	}
+	if strings.Contains(errMsg, "status 403") {
+		// Permission denied
+		return NewJsonRpcError(INSUFFICIENT_PERMISSIONS, "ACCESS_DENIED",
+			"Access to recordings denied", "Check permissions")
+	}
+
+	// Generic error fallback
+	return NewJsonRpcError(INTERNAL_ERROR, "METHOD_ERROR",
+		fmt.Sprintf("%s: %v", methodName, err), "Contact support if issue persists")
 }

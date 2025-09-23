@@ -158,13 +158,13 @@ type ListRecordingsResponse struct {
 
 // RecordingFileInfo represents recording file information for API responses
 type RecordingFileInfo struct {
-	Device      string  `json:"device"`       // Camera device identifier
-	Filename    string  `json:"filename"`     // Recording filename
-	FileSize    int64   `json:"file_size"`    // File size in bytes
-	Duration    float64 `json:"duration"`     // Recording duration in seconds
-	CreatedAt   string  `json:"created_at"`   // Creation timestamp (ISO 8601)
-	Format      string  `json:"format"`       // Recording format
-	DownloadURL string  `json:"download_url"` // Download URL for the file
+	Device       string  `json:"device"`        // Camera device identifier
+	Filename     string  `json:"filename"`      // Recording filename
+	FileSize     int64   `json:"file_size"`     // File size in bytes
+	Duration     float64 `json:"duration"`      // Recording duration in seconds
+	ModifiedTime string  `json:"modified_time"` // File modification timestamp (ISO 8601) - API compliant
+	Format       string  `json:"format"`        // Recording format
+	DownloadURL  string  `json:"download_url"`  // Download URL for the file
 }
 
 // ListSnapshotsResponse represents the response from list_snapshots method
@@ -177,13 +177,13 @@ type ListSnapshotsResponse struct {
 
 // SnapshotFileInfo represents snapshot file information for API responses
 type SnapshotFileInfo struct {
-	Device      string `json:"device"`       // Camera device identifier
-	Filename    string `json:"filename"`     // Snapshot filename
-	FileSize    int64  `json:"file_size"`    // File size in bytes
-	CreatedAt   string `json:"created_at"`   // Creation timestamp (ISO 8601)
-	Format      string `json:"format"`       // Image format
-	Resolution  string `json:"resolution"`   // Image resolution
-	DownloadURL string `json:"download_url"` // Download URL for the file
+	Device       string `json:"device"`        // Camera device identifier
+	Filename     string `json:"filename"`      // Snapshot filename
+	FileSize     int64  `json:"file_size"`     // File size in bytes
+	ModifiedTime string `json:"modified_time"` // File modification timestamp (ISO 8601) - API compliant
+	Format       string `json:"format"`        // Image format
+	Resolution   string `json:"resolution"`    // Image resolution
+	DownloadURL  string `json:"download_url"`  // Download URL for the file
 }
 
 // GetRecordingInfoResponse represents the response from get_recording_info method

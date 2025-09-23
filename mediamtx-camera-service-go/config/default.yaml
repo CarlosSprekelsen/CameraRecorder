@@ -88,6 +88,9 @@ recording:
   file_name_pattern: "%path_%Y-%m-%d_%H-%M-%S"
   use_device_subdirs: true  # Creates /recordings/camera0/, /recordings/camera1/, etc.
   record_format: "fmp4"  # STANAG 4609 compliant format
+  # Pagination configuration
+  default_page_size: 50
+  max_page_size: 100
 
 snapshots:
   enabled: true

@@ -621,6 +621,29 @@ func (rm *RecordingManager) StopRecording(ctx context.Context, cameraID string) 
 
 // ListRecordings returns API-ready recording list response
 func (rm *RecordingManager) ListRecordings(ctx context.Context, limit, offset int) (*ListRecordingsResponse, error) {
+	// Apply business rules using configuration
+	defaultLimit := 50 // fallback
+	maxLimit := 100    // fallback
+
+	if rm.recordingConfig != nil {
+		if rm.recordingConfig.DefaultPageSize > 0 {
+			defaultLimit = rm.recordingConfig.DefaultPageSize
+		}
+		if rm.recordingConfig.MaxPageSize > 0 {
+			maxLimit = rm.recordingConfig.MaxPageSize
+		}
+	}
+
+	if limit <= 0 {
+		limit = defaultLimit
+	}
+	if limit > maxLimit {
+		limit = maxLimit
+	}
+	if offset < 0 {
+		offset = 0
+	}
+
 	rm.logger.WithFields(logging.Fields{
 		"limit":  limit,
 		"offset": offset,
@@ -683,13 +706,13 @@ func (rm *RecordingManager) ListRecordings(ctx context.Context, limit, offset in
 		}
 
 		recordings[i] = RecordingFileInfo{
-			Device:      device,
-			Filename:    file.FileName,
-			FileSize:    file.FileSize,
-			Duration:    duration,
-			CreatedAt:   file.CreatedAt.Format(time.RFC3339),
-			Format:      format,
-			DownloadURL: fmt.Sprintf("/files/recordings/%s", file.FileName),
+			Device:       device,
+			Filename:     file.FileName,
+			FileSize:     file.FileSize,
+			Duration:     duration,
+			ModifiedTime: file.CreatedAt.Format(time.RFC3339), // API compliant field name
+			Format:       format,
+			DownloadURL:  fmt.Sprintf("/files/recordings/%s", file.FileName),
 		}
 	}
 
@@ -715,7 +738,12 @@ func (rm *RecordingManager) GetRecordingsList(ctx context.Context, limit, offset
 	data, err := rm.client.Get(ctx, "/v3/recordings/list"+queryParams)
 	if err != nil {
 		rm.logger.WithError(err).Error("Failed to get recordings from MediaMTX API")
-		return nil, fmt.Errorf("failed to get recordings from MediaMTX: %w", err)
+
+		// Check if it's a MediaMTXError to preserve status code
+		if mtxErr, ok := err.(*MediaMTXError); ok {
+			return nil, fmt.Errorf("MediaMTX API error (status %d): %s", mtxErr.Code, mtxErr.Message)
+		}
+		return nil, fmt.Errorf("failed to connect to MediaMTX API: %w", err)
 	}
 
 	// Parse MediaMTX RecordingList response
@@ -794,6 +822,10 @@ func (rm *RecordingManager) CleanupOldRecordings(ctx context.Context, maxAge tim
 	// Get recordings list
 	recordings, err := rm.GetRecordingsList(ctx, 10000, 0) // Get up to 10000 recordings for comprehensive cleanup
 	if err != nil {
+		// Check if it's a MediaMTXError to preserve status code
+		if mtxErr, ok := err.(*MediaMTXError); ok {
+			return 0, 0, fmt.Errorf("MediaMTX API error (status %d): %s", mtxErr.Code, mtxErr.Message)
+		}
 		return 0, 0, fmt.Errorf("failed to get recordings list: %w", err)
 	}
 

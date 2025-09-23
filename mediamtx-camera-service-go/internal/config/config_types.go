@@ -341,7 +341,11 @@ type RecordingConfig struct {
 	RecordFormat     string `mapstructure:"record_format"`      // e.g., "fmp4" for STANAG 4609
 
 	// Resource management configuration for RTSP keepalive processes
-	MaxRestartCount int           `mapstructure:"max_restart_count"` // default 3
+	MaxRestartCount int `mapstructure:"max_restart_count"` // default 3
+
+	// Pagination configuration
+	DefaultPageSize int           `mapstructure:"default_page_size"` // Default: 50
+	MaxPageSize     int           `mapstructure:"max_page_size"`     // Default: 100
 	ProcessTimeout  time.Duration `mapstructure:"process_timeout"`   // default 5s
 }
 
