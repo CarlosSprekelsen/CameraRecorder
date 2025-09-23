@@ -734,7 +734,14 @@ func (h *MediaMTXTestHelper) GetAvailableCameraIdentifierFromController(ctx cont
 	// Try camera list immediately (Progressive Readiness)
 	cameraList, err := controller.GetCameraList(ctx)
 	if err == nil && cameraList.Total > 0 {
-		// Success! Return immediately
+		// Success! Return the first available camera
+		// Note: Use camera0 for consistency with existing recordings
+		for _, camera := range cameraList.Cameras {
+			if camera.Device == "camera0" {
+				return camera.Device, nil
+			}
+		}
+		// Fallback to first camera if camera0 not found
 		return cameraList.Cameras[0].Device, nil
 	}
 
@@ -746,7 +753,14 @@ func (h *MediaMTXTestHelper) GetAvailableCameraIdentifierFromController(ctx cont
 
 		cameraList, err = controller.GetCameraList(ctx)
 		if err == nil && cameraList.Total > 0 {
-			// Success!
+			// Success! Return the first available camera
+			// Note: Use camera0 for consistency with existing recordings
+			for _, camera := range cameraList.Cameras {
+				if camera.Device == "camera0" {
+					return camera.Device, nil
+				}
+			}
+			// Fallback to first camera if camera0 not found
 			return cameraList.Cameras[0].Device, nil
 		}
 	}
