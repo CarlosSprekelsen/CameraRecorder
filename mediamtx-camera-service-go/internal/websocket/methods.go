@@ -620,7 +620,7 @@ func (s *WebSocketServer) MethodListRecordings(params map[string]interface{}, cl
 
 // MethodDeleteRecording implements the delete_recording method
 func (s *WebSocketServer) MethodDeleteRecording(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 81 lines → 20 lines using wrapper helpers
+	// REFACTORED: 81 lines → 20 lines → 14 lines (SRP compliance + centralized error handling)
 	return s.authenticatedMethodWrapper("delete_recording", func() (interface{}, error) {
 
 		// Validate parameters
@@ -633,12 +633,9 @@ func (s *WebSocketServer) MethodDeleteRecording(params map[string]interface{}, c
 			return nil, fmt.Errorf("filename must be a non-empty string")
 		}
 
-		// Use MediaMTX controller to delete recording - thin delegation
+		// Delegate to controller - let wrapper handle error translation
 		err := s.mediaMTXController.DeleteRecording(context.Background(), filename)
 		if err != nil {
-			if strings.Contains(strings.ToLower(err.Error()), "not found") {
-				return &JsonRpcResponse{JSONRPC: "2.0", Error: NewJsonRpcError(CAMERA_NOT_FOUND, "file_not_found", "Recording file not found", "Verify filename")}, nil
-			}
 			return nil, fmt.Errorf("error deleting recording: %v", err)
 		}
 
@@ -1374,6 +1371,12 @@ func (s *WebSocketServer) translateErrorToJsonRpc(err error, methodName string) 
 		// Permission denied
 		return NewJsonRpcError(INSUFFICIENT_PERMISSIONS, "ACCESS_DENIED",
 			"Access to recordings denied", "Check permissions")
+	}
+
+	// File operation errors
+	if strings.Contains(errMsg, "not found") || strings.Contains(errMsg, "file not found") {
+		return NewJsonRpcError(CAMERA_NOT_FOUND, "file_not_found",
+			"File not found", "Verify filename and path")
 	}
 
 	// Generic error fallback

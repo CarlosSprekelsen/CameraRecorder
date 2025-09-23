@@ -314,7 +314,7 @@ func (rm *RecordingManager) executeStartRecording(ctx context.Context, cameraID 
 	})
 
 	// Build API-ready response with rich recording metadata
-	format := "fmp4" // Default format from config
+	format := rm.getRecordFormat() // Use configured format (STANAG 4609 compliant)
 	if options != nil && options.RecordFormat != "" {
 		format = options.RecordFormat
 	}
@@ -373,7 +373,7 @@ func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename strin
 	}
 
 	// Get recording format from config to determine file extension
-	format := "fmp4" // Default format (STANAG 4609 compatible)
+	format := rm.getRecordFormat() // Use configured format (STANAG 4609 compliant)
 	if rm.configIntegration != nil && rm.configIntegration.configManager != nil {
 		if cfg := rm.configIntegration.configManager.GetConfig(); cfg != nil && cfg.Recording.RecordFormat != "" {
 			format = cfg.Recording.RecordFormat
@@ -903,8 +903,14 @@ func generateRandomString(length int) string {
 func (rm *RecordingManager) getRecordFormat() string {
 	recordingConfig, err := rm.configIntegration.GetRecordingConfig()
 	if err != nil {
-		rm.logger.WithError(err).Warn("Failed to get recording config, using default format")
-		return "fmp4" // fallback to fmp4 as per STANAG decision
+		rm.logger.WithError(err).Warn("Failed to get recording config, using fallback format")
+		// Fallback to default STANAG 4609 format if config unavailable
+		if rm.configIntegration != nil && rm.configIntegration.configManager != nil {
+			if cfg := rm.configIntegration.configManager.GetConfig(); cfg != nil && cfg.Recording.RecordFormat != "" {
+				return cfg.Recording.RecordFormat
+			}
+		}
+		return "fmp4" // Final fallback to STANAG 4609 format
 	}
 	return recordingConfig.Format
 }

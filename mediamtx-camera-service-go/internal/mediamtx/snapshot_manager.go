@@ -924,7 +924,7 @@ func (sm *SnapshotManager) ListSnapshots(ctx context.Context, limit, offset int)
 	snapshots := make([]SnapshotFileInfo, len(fileList.Files))
 	for i, file := range fileList.Files {
 		// Extract device and timestamp from filename using configured pattern
-		var device string = "camera0" // Default
+		var device string = "camera0" // Default device name
 
 		if sm.configManager != nil {
 			cfg := sm.configManager.GetConfig()
@@ -1246,8 +1246,8 @@ func (sm *SnapshotManager) GetSnapshotInfo(ctx context.Context, filename string)
 		return nil, fmt.Errorf("path is not a file: %s", filename)
 	}
 
-	// Extract device from filename pattern (camera0_timestamp.jpg)
-	device := "camera0" // Default
+	// Extract device from filename pattern (camera0_timestamp.{format})
+	device := "camera0" // Default device name
 	if parts := strings.Split(filename, "_"); len(parts) > 0 {
 		if strings.HasPrefix(parts[0], "camera") {
 			device = parts[0]
@@ -1270,12 +1270,12 @@ func (sm *SnapshotManager) GetSnapshotInfo(ctx context.Context, filename string)
 
 	// Build API-ready response with rich metadata
 	response := &GetSnapshotInfoResponse{
-		Filename:     filename,
-		FileSize:     fileInfo.Size(),
-		CreatedTime:  fileInfo.ModTime().Format(time.RFC3339), // API compliant field name
-		Format:       format,
-		Resolution:   resolution,
-		Device:       device,
+		Filename:    filename,
+		FileSize:    fileInfo.Size(),
+		CreatedTime: fileInfo.ModTime().Format(time.RFC3339), // API compliant field name
+		Format:      format,
+		Resolution:  resolution,
+		Device:      device,
 	}
 
 	sm.logger.WithFields(logging.Fields{
