@@ -867,7 +867,7 @@ func (pm *pathManager) GetCameraStatus(ctx context.Context, device string) (*Get
 	// Get camera from camera monitor
 	cameraDevice, exists := pm.cameraMonitor.GetDevice(devicePath)
 	if !exists {
-		return nil, fmt.Errorf("camera device not found: %s", device)
+		return nil, fmt.Errorf("camera not found: %s", device)
 	}
 
 	// Build response with abstraction layer
@@ -911,7 +911,7 @@ func (pm *pathManager) GetCameraCapabilities(ctx context.Context, device string)
 	// Get camera from camera monitor
 	cameraDevice, exists := pm.cameraMonitor.GetDevice(devicePath)
 	if !exists {
-		return nil, fmt.Errorf("camera device not found: %s", device)
+		return nil, fmt.Errorf("camera not found: %s", device)
 	}
 
 	// Extract ALL formats from camera module (no more single format extraction)

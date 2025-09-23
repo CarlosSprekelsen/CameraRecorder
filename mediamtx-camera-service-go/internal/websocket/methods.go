@@ -398,61 +398,24 @@ func (s *WebSocketServer) MethodGetCameraList(params map[string]interface{}, cli
 }
 
 func (s *WebSocketServer) MethodGetCameraStatus(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// Centralized authentication check
-	if !client.Authenticated {
-		s.logger.WithFields(logging.Fields{
-			"client_id": client.ClientID,
-			"method":    "get_camera_status",
-			"action":    "auth_required",
-			"component": "security_middleware",
-		}).Warn("Authentication required for method")
-
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error:   NewJsonRpcError(AUTHENTICATION_REQUIRED, "auth_required", "Authentication required", "Authenticate first"),
-		}, nil
-	}
-
-	// Extract device parameter
-	cameraID, ok := params["device"].(string)
-	if !ok || cameraID == "" {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error:   NewJsonRpcError(INVALID_PARAMS, "invalid_params", "device parameter is required", "Provide valid device parameter"),
-		}, nil
-	}
-
-	// Validate device parameter using centralized validation
-	validation := s.validationHelper.ValidateDeviceParameter(map[string]interface{}{"device": cameraID})
-	if !validation.Valid {
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error:   NewJsonRpcError(INVALID_PARAMS, "invalid_params", fmt.Sprintf("invalid device parameter: %v", validation.Errors), "Provide valid device parameter"),
-		}, nil
-	}
-
-	// Delegate to MediaMTX controller - returns API-ready CameraStatusResponse
-	cameraStatusResponse, err := s.mediaMTXController.GetCameraStatus(context.Background(), cameraID)
-	if err != nil {
-		// ✅ FIX 1: Map camera-specific errors to proper API error codes
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "not available") {
-			return &JsonRpcResponse{
-				JSONRPC: "2.0",
-				Error:   NewJsonRpcError(CAMERA_NOT_FOUND, "camera_not_found", "Camera not found or disconnected", "Check camera identifier"),
-			}, nil
+	// REFACTORED: 56 lines → 15 lines (SRP compliance + centralized error handling)
+	return s.authenticatedMethodWrapper("get_camera_status", func() (interface{}, error) {
+		// Validate device parameter using centralized validation
+		validationResult := s.validationHelper.ValidateDeviceParameter(params)
+		if !validationResult.Valid {
+			s.validationHelper.LogValidationWarnings(validationResult, "get_camera_status", client.ClientID)
+			return nil, fmt.Errorf("validation failed: %v", validationResult.Errors)
 		}
-		// For other errors, return internal error
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error:   NewJsonRpcError(INTERNAL_ERROR, "internal_error", fmt.Sprintf("camera '%s' error: %v", cameraID, err), "Retry or contact support if persistent"),
-		}, nil
-	}
 
-	// Return Controller's API-ready response directly - thin delegation
-	return &JsonRpcResponse{
-		JSONRPC: "2.0",
-		Result:  cameraStatusResponse,
-	}, nil
+		// Extract device parameter
+		cameraID, ok := params["device"].(string)
+		if !ok || cameraID == "" {
+			return nil, fmt.Errorf("device parameter is required")
+		}
+
+		// Delegate to controller - let wrapper handle error translation
+		return s.mediaMTXController.GetCameraStatus(context.Background(), cameraID)
+	})(params, client)
 }
 
 // MethodGetMetrics implements the get_metrics method
@@ -1373,8 +1336,14 @@ func (s *WebSocketServer) translateErrorToJsonRpc(err error, methodName string) 
 			"Access to recordings denied", "Check permissions")
 	}
 
+	// Camera-specific errors
+	if strings.Contains(errMsg, "not found") || strings.Contains(errMsg, "not available") || strings.Contains(errMsg, "camera device not found") {
+		return NewJsonRpcError(CAMERA_NOT_FOUND, "camera_not_found",
+			"Camera not found or disconnected", "Check camera identifier")
+	}
+
 	// File operation errors
-	if strings.Contains(errMsg, "not found") || strings.Contains(errMsg, "file not found") {
+	if strings.Contains(errMsg, "file not found") {
 		return NewJsonRpcError(CAMERA_NOT_FOUND, "file_not_found",
 			"File not found", "Verify filename and path")
 	}

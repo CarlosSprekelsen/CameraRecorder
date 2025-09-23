@@ -1242,7 +1242,7 @@ func (c *controller) GetCameraStatus(ctx context.Context, device string) (*GetCa
 	response, err := c.pathManager.GetCameraStatus(ctx, device)
 	if err != nil {
 		c.logger.WithFields(logging.Fields{"device": device}).WithError(err).Error("Failed to get camera status from path manager")
-		return nil, fmt.Errorf("camera device not found: %s", device)
+		return nil, fmt.Errorf("camera not found: %s", device)
 	}
 
 	c.logger.WithFields(logging.Fields{

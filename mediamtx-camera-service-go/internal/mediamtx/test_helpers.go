@@ -909,6 +909,63 @@ func (h *MediaMTXTestHelper) GetConfiguredSnapshotPath() string {
 	return config.MediaMTX.SnapshotsPath
 }
 
+// GetRecordingConfig returns the recording configuration from the fixture
+// ⚠️  MANDATORY: Uses config_clean_minimal.yaml fixture - SINGLE SOURCE OF TRUTH for testing
+func (h *MediaMTXTestHelper) GetRecordingConfig() *configpkg.RecordingConfig {
+	configManager := h.GetConfigManager()
+	if configManager == nil {
+		return nil
+	}
+
+	config := configManager.GetConfig()
+	if config == nil {
+		return nil
+	}
+
+	return &config.Recording
+}
+
+// GetConfiguredRecordingFilename generates a filename using the configuration pattern
+// This ensures tests use the same naming pattern as the actual implementation
+func (h *MediaMTXTestHelper) GetConfiguredRecordingFilename(cameraID string) string {
+	recordingConfig := h.GetRecordingConfig()
+	if recordingConfig == nil {
+		// Fallback to simple pattern if config not available
+		return fmt.Sprintf("%s_%s", cameraID, time.Now().Format("2006-01-02_15-04-05"))
+	}
+
+	// Use the configured file name pattern (WITHOUT extension - MediaMTX adds it)
+	// Pattern: "%path_%Y-%m-%d_%H-%M-%S" from config
+	pattern := recordingConfig.FileNamePattern
+	if pattern == "" {
+		// Fallback pattern if not configured
+		pattern = "%path_%Y-%m-%d_%H-%M-%S"
+	}
+
+	// Replace %path with cameraID
+	filename := strings.ReplaceAll(pattern, "%path", cameraID)
+
+	// Replace time placeholders
+	now := time.Now()
+	filename = strings.ReplaceAll(filename, "%Y", now.Format("2006"))
+	filename = strings.ReplaceAll(filename, "%m", now.Format("01"))
+	filename = strings.ReplaceAll(filename, "%d", now.Format("02"))
+	filename = strings.ReplaceAll(filename, "%H", now.Format("15"))
+	filename = strings.ReplaceAll(filename, "%M", now.Format("04"))
+	filename = strings.ReplaceAll(filename, "%S", now.Format("05"))
+
+	return filename
+}
+
+// GetConfiguredRecordingFormat returns the recording format from configuration
+func (h *MediaMTXTestHelper) GetConfiguredRecordingFormat() string {
+	recordingConfig := h.GetRecordingConfig()
+	if recordingConfig == nil {
+		return "fmp4" // Default fallback
+	}
+	return recordingConfig.RecordFormat
+}
+
 // GetConfiguredRecordingPath returns the recording path from the fixture configuration
 // ⚠️  MANDATORY: Uses config_clean_minimal.yaml fixture - SINGLE SOURCE OF TRUTH for testing
 // ❌ DO NOT USE: config_test_minimal.yaml (NOT FOR TESTING - production/other uses)

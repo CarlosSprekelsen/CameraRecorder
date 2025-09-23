@@ -125,16 +125,18 @@ func TestPathStateTransitions_Recording(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
 	helper, _ := SetupMediaMTXTest(t)
 
+	// Use Progressive Readiness pattern - get ready controller first
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
+
 	pathManager := helper.GetPathManager()
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, pathManager)
 	require.NotNil(t, recordingManager)
 
-	// This test uses managers directly - get context from helper instead
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
-
-	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	// Use the ready controller to get camera identifier (Progressive Readiness pattern)
+	cameraID, err := helper.GetAvailableCameraIdentifierFromController(ctx, controller)
 	require.NoError(t, err, "Should get camera identifier with real hardware")
 
 	t.Run("Path_State_Transitions_During_Recording", func(t *testing.T) {
@@ -262,8 +264,8 @@ func TestConcurrentRecordingOperations(t *testing.T) {
 	// PROGRESSIVE READINESS: No waiting - controller handles requests immediately after Start()
 	// Operations will return appropriate errors if components aren't ready yet
 
-	// Get available camera using existing helper (exact same pattern)
-	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	// Get available camera using ready controller (Progressive Readiness pattern)
+	cameraID, err := helper.GetAvailableCameraIdentifierFromController(ctx, controller)
 	require.NoError(t, err, "Should be able to get available camera identifier")
 
 	t.Run("Concurrent_Start_Recording_Operations", func(t *testing.T) {

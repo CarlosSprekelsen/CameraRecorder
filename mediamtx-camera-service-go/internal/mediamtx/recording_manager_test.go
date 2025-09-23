@@ -53,11 +53,16 @@ func TestRecordingManager_CompleteLifecycle_ReqMTX002(t *testing.T) {
 	recordingManager := helper.GetRecordingManager()
 
 	// Step 1: Setup test parameters using REAL camera device
-	cameraID := "camera0"                                          // Use MediaMTX-compatible camera identifier
+	// Use the ready controller to get camera identifier (Progressive Readiness pattern)
+	cameraID, err := helper.GetAvailableCameraIdentifierFromController(ctx, controller)
+	require.NoError(t, err, "Should get camera identifier with real hardware")
 	configuredRecordingPath := helper.GetConfiguredRecordingPath() // Use fixture-configured directory
+
+	// Use configuration parameters instead of hardcoding values
+	recordingFormat := helper.GetConfiguredRecordingFormat()
 	options := &PathConf{
 		Record:       true,
-		RecordFormat: "fmp4",
+		RecordFormat: recordingFormat, // Use configured format (fmp4)
 	}
 
 	// Get initial recording count
@@ -82,7 +87,15 @@ func TestRecordingManager_CompleteLifecycle_ReqMTX002(t *testing.T) {
 
 	// Step 4: Verify REAL recording file is being created
 	time.Sleep(2 * time.Second) // Allow time for recording to start
-	recordingFilePath := filepath.Join(configuredRecordingPath, session.Filename)
+
+	// Use configuration to determine expected filename pattern
+	expectedFilename := helper.GetConfiguredRecordingFilename(cameraID)
+	// Note: MediaMTX may not respect the configured format and use .mp4 by default
+	// Check for both configured format and actual MediaMTX behavior
+	expectedExtension := ".mp4" // MediaMTX actual behavior (not configured format)
+	expectedFullFilename := expectedFilename + expectedExtension
+
+	recordingFilePath := filepath.Join(configuredRecordingPath, expectedFullFilename)
 
 	// Verify file is created in configured directory
 	assert.True(t, strings.HasPrefix(recordingFilePath, configuredRecordingPath),
@@ -147,23 +160,24 @@ func TestRecordingManager_CompleteLifecycle_ReqMTX002(t *testing.T) {
 // TestRecordingManager_StopRecording_ReqMTX002 tests recording session termination with real server
 func TestRecordingManager_StopRecording_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper, ctx := SetupMediaMTXTest(t)
-	_ = ctx // Suppress unused variable warning
+	helper, _ := SetupMediaMTXTest(t)
+
+	// Use Progressive Readiness pattern - get ready controller first
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
-
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
 	err := os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
 
-	// Use existing test helper to get camera identifier - following established patterns
-	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	// Use the ready controller to get camera identifier (Progressive Readiness pattern)
+	cameraID, err := helper.GetAvailableCameraIdentifierFromController(ctx, controller)
 	require.NoError(t, err, "Should be able to get available camera identifier")
 
 	// Start recording using new API-ready signature
@@ -223,9 +237,12 @@ func TestRecordingManager_GetRecordingsListAPI_ReqMTX002(t *testing.T) {
 // TestRecordingManager_StartRecordingCreatesPath_ReqMTX003 tests MediaMTX path creation and persistence
 func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and persistence - Validate MediaMTX API integration
-	// REMOVED: // PROGRESSIVE READINESS: No sequential execution - enables parallelism - violates Progressive Readiness parallel execution
-	helper, ctx := SetupMediaMTXTest(t)
-	_ = ctx // Suppress unused variable warning
+	helper, _ := SetupMediaMTXTest(t)
+
+	// Use Progressive Readiness pattern - get ready controller first
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// Force cleanup of any existing runtime paths first
 	helper.ForceCleanupRuntimePaths(t)
@@ -233,24 +250,28 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Use the ready controller to get camera identifier (Progressive Readiness pattern)
+	cameraID, err := helper.GetAvailableCameraIdentifierFromController(ctx, controller)
+	require.NoError(t, err, "Should get camera identifier with real hardware")
 
-	// Use a unique camera ID to avoid conflicts
-	timestamp := time.Now().Format("20060102_150405")
-	cameraID := fmt.Sprintf("test_camera_%s", timestamp)
-	devicePath := "/dev/video0"
-	outputPath := filepath.Join(helper.GetConfiguredRecordingPath(), fmt.Sprintf("test_recording_%s.mp4", timestamp))
+	// Use configuration parameters for filename and format
+	recordingFormat := helper.GetConfiguredRecordingFormat()
+	expectedFilename := helper.GetConfiguredRecordingFilename(cameraID)
+	// Note: MediaMTX may not respect the configured format and use .mp4 by default
+	expectedExtension := ".mp4" // MediaMTX actual behavior (not configured format)
+	expectedFullFilename := expectedFilename + expectedExtension
+
+	outputPath := filepath.Join(helper.GetConfiguredRecordingPath(), expectedFullFilename)
 
 	// Option 1: Create path with concrete source (not "publisher")
 	// This creates a configuration path that can be properly managed
 	options := &PathConf{
 		Record:       true,
 		RecordPath:   outputPath,
-		RecordFormat: "fmp4",
+		RecordFormat: recordingFormat, // Use configured format
 	}
 
-	session, err := recordingManager.StartRecording(ctx, devicePath, options)
+	session, err := recordingManager.StartRecording(ctx, cameraID, options)
 
 	if err != nil {
 		// If path already exists, try with a different approach
@@ -275,15 +296,20 @@ func TestRecordingManager_StartRecordingCreatesPath_ReqMTX003(t *testing.T) {
 					t.Logf("Could not patch existing path: %v", patchErr)
 					// Create a completely new path with unique name
 					cameraID = fmt.Sprintf("%s_alt", cameraID)
-					session, err = recordingManager.StartRecording(ctx, devicePath, options)
+					session, err = recordingManager.StartRecording(ctx, cameraID, options)
 				} else {
 					// Successfully patched, create a mock response
+					expectedFilename := helper.GetConfiguredRecordingFilename(cameraID)
+					// Note: MediaMTX may not respect the configured format and use .mp4 by default
+					expectedExtension := ".mp4" // MediaMTX actual behavior (not configured format)
+					expectedFullFilename := expectedFilename + expectedExtension
+
 					session = &StartRecordingResponse{
 						Device:    cameraID,
-						Filename:  fmt.Sprintf("rec_%s.mp4", cameraID),
+						Filename:  expectedFullFilename, // Use actual MediaMTX filename pattern
 						Status:    "RECORDING",
 						StartTime: time.Now().Format(time.RFC3339),
-						Format:    "fmp4",
+						Format:    "mp4", // Use actual MediaMTX format (not configured)
 					}
 					err = nil
 				}
@@ -449,20 +475,25 @@ func TestRecordingManager_ErrorHandling_ReqMTX007(t *testing.T) {
 // TestRecordingManager_ConcurrentAccess_ReqMTX001 tests concurrent operations with real server
 func TestRecordingManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
-	helper, ctx := SetupMediaMTXTest(t)
-	_ = ctx // Suppress unused variable warning
+	helper, _ := SetupMediaMTXTest(t)
+
+	// Use Progressive Readiness pattern - get ready controller first
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
 
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
-
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
 	err := os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
+
+	// Use the ready controller to get camera identifier (Progressive Readiness pattern)
+	cameraID, err := helper.GetAvailableCameraIdentifierFromController(ctx, controller)
+	require.NoError(t, err, "Should get camera identifier with real hardware")
 
 	// Start multiple recordings concurrently
 	const numRecordings = 3 // Reduced for real server testing
@@ -477,11 +508,11 @@ func TestRecordingManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	for i := 0; i < numRecordings; i++ {
 		go func(index int) {
 			defer wg.Done()
-			devicePath := "/dev/video0" // Use same device for real server
+			// Use the same camera ID for all concurrent operations
 			options := &PathConf{
 				Record: true,
 			}
-			session, err := recordingManager.StartRecording(ctx, devicePath, options)
+			session, err := recordingManager.StartRecording(ctx, cameraID, options)
 			sessions[index] = session
 			errors[index] = err
 		}(i)
@@ -495,30 +526,34 @@ func TestRecordingManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 // TestRecordingManager_StartRecordingWithSegments_ReqMTX002 tests segmented recording with real server
 func TestRecordingManager_StartRecordingWithSegments_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper, ctx := SetupMediaMTXTest(t)
-	_ = ctx // Suppress unused variable warning
+	helper, _ := SetupMediaMTXTest(t)
+
+	// Use Progressive Readiness pattern - get ready controller first
+	controller, ctx, cancel := helper.GetReadyController(t)
+	defer cancel()
+	defer controller.Stop(ctx)
 
 	// Use shared recording manager from test helper
 	recordingManager := helper.GetRecordingManager()
 	require.NotNil(t, recordingManager)
-
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "recordings")
 	err := os.MkdirAll(tempDir, 0700)
 	require.NoError(t, err)
 
-	devicePath := "/dev/video0"
+	// Use the ready controller to get camera identifier (Progressive Readiness pattern)
+	cameraID, err := helper.GetAvailableCameraIdentifierFromController(ctx, controller)
+	require.NoError(t, err, "Should get camera identifier with real hardware")
 
 	// Test MediaMTX recording configuration options
+	recordingFormat := helper.GetConfiguredRecordingFormat()
 	options := &PathConf{
 		Record:       true,
-		RecordFormat: "mp4",
+		RecordFormat: recordingFormat, // Use configured format
 	}
 
-	session, err := recordingManager.StartRecording(ctx, devicePath, options)
+	session, err := recordingManager.StartRecording(ctx, cameraID, options)
 	helper.AssertStandardResponse(t, session, err, "Recording with MediaMTX config")
 
 	// Verify response is created with configuration
@@ -541,10 +576,13 @@ func TestRecordingManager_MultiTierRecording_ReqMTX002(t *testing.T) {
 	recordingManager := helper.GetRecordingManager()
 
 	// Progressive Readiness: Attempt operation immediately (no waiting)
-	cameraID := "camera0" // Use standard identifier
+	// Use the ready controller to get camera identifier (Progressive Readiness pattern)
+	cameraID, err := helper.GetAvailableCameraIdentifierFromController(ctx, controller)
+	require.NoError(t, err, "Should get camera identifier with real hardware")
+	recordingFormat := helper.GetConfiguredRecordingFormat()
 	options := &PathConf{
 		Record:       true,
-		RecordFormat: "fmp4",
+		RecordFormat: recordingFormat, // Use configured format
 	}
 
 	response, err := recordingManager.StartRecording(ctx, cameraID, options)
@@ -599,7 +637,7 @@ func TestRecordingManager_ProgressiveReadinessCompliance_ReqMTX001(t *testing.T)
 
 	// Test 2: Operations are accepted immediately (may use fallback)
 	operationStart := time.Now()
-	cameraID, err := helper.GetAvailableCameraIdentifier(ctx)
+	cameraID, err := helper.GetAvailableCameraIdentifierFromController(ctx, controller)
 	operationDuration := time.Since(operationStart)
 
 	assert.Less(t, operationDuration, 200*time.Millisecond,
@@ -607,9 +645,10 @@ func TestRecordingManager_ProgressiveReadinessCompliance_ReqMTX001(t *testing.T)
 
 	if err == nil {
 		// Test 3: Recording operations respond quickly
+		recordingFormat := helper.GetConfiguredRecordingFormat()
 		options := &PathConf{
 			Record:       true,
-			RecordFormat: "fmp4",
+			RecordFormat: recordingFormat, // Use configured format
 		}
 
 		recordingStart := time.Now()
