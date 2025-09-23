@@ -683,7 +683,9 @@ func (sm *streamManager) GetStreamStatus(ctx context.Context, cameraID string) (
 
 	response := &GetStreamStatusResponse{
 		Device:       cameraID,
+		StreamName:   cameraID + "_video_stream", // Generate stream name
 		Status:       status,
+		Ready:        stream.Ready, // Use actual readiness status
 		StreamURL:    sm.GenerateStreamURL(cameraID),
 		Viewers:      len(stream.Readers),
 		BytesSent:    stream.BytesSent,

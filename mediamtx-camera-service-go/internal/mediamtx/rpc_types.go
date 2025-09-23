@@ -138,8 +138,10 @@ type GetStreamURLResponse struct {
 // GetStreamStatusResponse represents the response from get_stream_status method
 type GetStreamStatusResponse struct {
 	Device       string `json:"device"`        // Camera device identifier
+	StreamName   string `json:"stream_name"`   // Generated stream name
 	StreamURL    string `json:"stream_url"`    // Stream URL
 	Status       string `json:"status"`        // Stream status ("active", "inactive")
+	Ready        bool   `json:"ready"`         // Stream readiness status
 	Viewers      int    `json:"viewers"`       // Current viewer count
 	StartTime    string `json:"start_time"`    // Stream start time (ISO 8601)
 	LastActivity string `json:"last_activity"` // Last activity time (ISO 8601)
