@@ -1,16 +1,14 @@
-# JSON-RPC API Reference - Go Implementation
+# JSON-RPC API Reference
 
 **Version:** 2.0  
 **Date:** 2025-01-15  
-**Status:** Go Implementation API Reference  
-**Related Epic/Story:** Go Implementation API Compatibility
+**Status:** Camera Service API Reference  
 
 ## API Versioning Strategy
 
 ### Version Compatibility
 
-- **Current Version**: 2.0
-- **Backward Compatibility**: All 1.x clients supported
+- **Current Version**: 1.0
 - **Deprecation Policy**: 12-month notice for breaking changes
 - **Migration Path**: Clear upgrade guides for major versions
 
@@ -42,7 +40,7 @@ ws://localhost:8002/ws
 
 ## Authentication & Authorization
 
-**CRITICAL SECURITY UPDATE**: All API methods now require authentication and proper role-based authorization.
+**CRITICAL SECURITY NOTE**: All API methods require authentication and proper role-based authorization.
 
 ### Authentication Methods
 
@@ -856,6 +854,7 @@ List available recording files with metadata and pagination support.
 **Implementation:** Scans recordings directory, provides file metadata, and supports pagination for large file collections.
 
 Note (Empty Set Semantics):
+
 - When no recording files exist, this method MUST return a successful JSON-RPC response with an empty result object, not an error.
 - Required structure for empty sets:
   {
@@ -1232,6 +1231,7 @@ All error responses follow a consistent JSON-RPC 2.0 error format with standardi
 - **-32007**: Insufficient storage space
 - **-32008**: Camera capability not supported
 - **-32009**: Stream not found or not active
+- **-32010**: File not found or inaccessible
 
 ### Enhanced Recording Management Error Codes
 
@@ -1265,6 +1265,7 @@ List available snapshot files with metadata and pagination support.
 **Implementation:** Scans snapshots directory, provides file metadata, and supports pagination for large file collections.
 
 Note (Empty Set Semantics):
+
 - When no snapshot files exist, this method MUST return a successful JSON-RPC response with an empty result object, not an error.
 - Required structure for empty sets:
   {

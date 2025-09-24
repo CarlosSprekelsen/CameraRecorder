@@ -1056,7 +1056,8 @@ func (pm *pathManager) GetDevicePathForCamera(cameraID string) (string, bool) {
 // GetCameraForDevicePath gets the camera identifier for a USB device path
 // This is the reverse abstraction: /dev/video0 -> camera0
 func (pm *pathManager) GetCameraForDevicePath(devicePath string) (string, bool) {
-	cameraID := pm.GetPathNameForDevice(devicePath)
+	// Extract camera ID directly from device path to avoid circular dependency
+	cameraID := pm.extractCameraIDFromDevicePath(devicePath)
 
 	// Check if device actually exists via camera monitor
 	if pm.cameraMonitor != nil {
@@ -1066,6 +1067,24 @@ func (pm *pathManager) GetCameraForDevicePath(devicePath string) (string, bool) 
 
 	// Fallback: return converted identifier without validation
 	return cameraID, true
+}
+
+// extractCameraIDFromDevicePath extracts camera ID from device path without circular dependency
+func (pm *pathManager) extractCameraIDFromDevicePath(devicePath string) string {
+	// Centralized naming policy: /dev/videoN -> cameraN; otherwise last path segment
+	if strings.HasPrefix(devicePath, "/dev/video") {
+		// Extract number from /dev/videoN -> cameraN
+		number := strings.TrimPrefix(devicePath, "/dev/video")
+		return "camera" + number
+	}
+
+	// For other paths, use the last segment
+	parts := strings.Split(devicePath, "/")
+	if len(parts) > 0 {
+		return parts[len(parts)-1]
+	}
+
+	return devicePath
 }
 
 // GetMetrics returns the current path manager metrics

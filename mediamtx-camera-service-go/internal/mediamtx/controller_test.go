@@ -1400,7 +1400,8 @@ func TestController_Stop_ReqMTX001_GracefulShutdown(t *testing.T) {
 			HealthFailureThreshold: 3,
 		}
 		configManager := helper.GetConfigManager()
-		ff := NewFFmpegManager(mediaMTXConfig, logger).(*ffmpegManager)
+		cfgAll := configManager.GetConfig()
+		ff := NewFFmpegManager(&cfgAll.MediaMTX, logger).(*ffmpegManager)
 		ff.SetDependencies(configManager, helper.GetCameraMonitor())
 		configIntegration := NewConfigIntegration(configManager, ff, logger)
 		monitor := NewHealthMonitor(client, config, configIntegration, logger)
@@ -1430,7 +1431,8 @@ func TestController_Stop_ReqMTX001_GracefulShutdown(t *testing.T) {
 		cameraMonitor := helper.GetCameraMonitor()
 		configManager := helper.GetConfigManager()
 		logger := helper.GetLogger()
-		ff := NewFFmpegManager(mediaMTXConfig, logger).(*ffmpegManager)
+		cfgAll := configManager.GetConfig()
+		ff := NewFFmpegManager(&cfgAll.MediaMTX, logger).(*ffmpegManager)
 		ff.SetDependencies(configManager, helper.GetCameraMonitor())
 		configIntegration := NewConfigIntegration(configManager, ff, logger)
 		pathIntegration := NewPathIntegration(pathManager, cameraMonitor, configIntegration, logger)

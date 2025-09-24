@@ -648,7 +648,7 @@ func (s *WebSocketServer) MethodDeleteSnapshot(params map[string]interface{}, cl
 		if strings.Contains(strings.ToLower(err.Error()), "not found") {
 			return &JsonRpcResponse{
 				JSONRPC: "2.0",
-				Error:   NewJsonRpcError(CAMERA_NOT_FOUND, "file_not_found", "Snapshot file not found", "Verify filename"),
+				Error:   NewJsonRpcError(FILE_NOT_FOUND, "file_not_found", "File not found or inaccessible", "Verify filename"),
 			}, nil
 		}
 		// For other errors, return internal error
@@ -929,7 +929,7 @@ func (s *WebSocketServer) MethodGetRecordingInfo(params map[string]interface{}, 
 		if strings.Contains(strings.ToLower(err.Error()), "not found") {
 			return &JsonRpcResponse{
 				JSONRPC: "2.0",
-				Error:   NewJsonRpcError(CAMERA_NOT_FOUND, "file_not_found", "Recording file not found", "Verify filename"),
+				Error:   NewJsonRpcError(FILE_NOT_FOUND, "file_not_found", "File not found or inaccessible", "Verify filename"),
 			}, nil
 		}
 		// For other errors, return internal error
@@ -1344,8 +1344,8 @@ func (s *WebSocketServer) translateErrorToJsonRpc(err error, methodName string) 
 
 	// File operation errors
 	if strings.Contains(errMsg, "file not found") {
-		return NewJsonRpcError(CAMERA_NOT_FOUND, "file_not_found",
-			"File not found", "Verify filename and path")
+		return NewJsonRpcError(FILE_NOT_FOUND, "file_not_found",
+			"File not found or inaccessible", "Verify filename and path")
 	}
 
 	// Generic error fallback

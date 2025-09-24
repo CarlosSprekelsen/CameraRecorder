@@ -16,19 +16,20 @@ func TestRTSPKeepaliveReader_NewRTSPKeepaliveReader(t *testing.T) {
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
-	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	cfg := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfg.MediaMTX, helper.GetLogger()).(*ffmpegManager)
 	ff.SetDependencies(configManager, helper.GetCameraMonitor())
 	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
-	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	_, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
 
 	// Create keepalive reader
-	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
+	reader := NewRTSPKeepaliveReader(&cfg.MediaMTX, logger)
 
 	// Verify initialization
 	require.NotNil(t, reader)
-	assert.Equal(t, mediaMTXConfig, reader.config)
+	assert.Equal(t, &cfg.MediaMTX, reader.config)
 	assert.Equal(t, logger, reader.logger)
 	assert.Equal(t, 0, reader.GetActiveCount())
 }
@@ -40,15 +41,16 @@ func TestRTSPKeepaliveReader_StartKeepalive(t *testing.T) {
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
-	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	cfg := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfg.MediaMTX, helper.GetLogger()).(*ffmpegManager)
 	ff.SetDependencies(configManager, helper.GetCameraMonitor())
 	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
-	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	_, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
 
 	// Create keepalive reader
-	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
+	reader := NewRTSPKeepaliveReader(&cfg.MediaMTX, logger)
 
 	// Test starting keepalive for a path
 	pathName := "test_camera"
@@ -72,15 +74,16 @@ func TestRTSPKeepaliveReader_StopKeepalive(t *testing.T) {
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
-	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	cfg := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfg.MediaMTX, helper.GetLogger()).(*ffmpegManager)
 	ff.SetDependencies(configManager, helper.GetCameraMonitor())
 	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
-	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	_, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
 
 	// Create keepalive reader
-	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
+	reader := NewRTSPKeepaliveReader(&cfg.MediaMTX, logger)
 
 	// Test stopping a non-existent keepalive
 	err = reader.StopKeepalive("non_existent_path")
@@ -108,15 +111,16 @@ func TestRTSPKeepaliveReader_StopAll(t *testing.T) {
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
-	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	cfg := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfg.MediaMTX, helper.GetLogger()).(*ffmpegManager)
 	ff.SetDependencies(configManager, helper.GetCameraMonitor())
 	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
-	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	_, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
 
 	// Create keepalive reader
-	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
+	reader := NewRTSPKeepaliveReader(&cfg.MediaMTX, logger)
 
 	// Start multiple keepalives
 	reader.StartKeepalive(ctx, "camera1")
@@ -147,12 +151,12 @@ func TestRTSPKeepaliveReader_IsActive(t *testing.T) {
 	ff := NewFFmpegManager(&cfg.MediaMTX, helper.GetLogger()).(*ffmpegManager)
 	ff.SetDependencies(configManager, helper.GetCameraMonitor())
 	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
-	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	_, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
 
 	// Create keepalive reader
-	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
+	reader := NewRTSPKeepaliveReader(&cfg.MediaMTX, logger)
 
 	// Test inactive path
 	assert.False(t, reader.IsActive("inactive_path"), "Inactive path should return false")
@@ -182,12 +186,12 @@ func TestRTSPKeepaliveReader_GetActiveCount(t *testing.T) {
 	ff := NewFFmpegManager(&cfg.MediaMTX, helper.GetLogger()).(*ffmpegManager)
 	ff.SetDependencies(configManager, helper.GetCameraMonitor())
 	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
-	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	_, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
 
 	// Create keepalive reader
-	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
+	reader := NewRTSPKeepaliveReader(&cfg.MediaMTX, logger)
 
 	// Test initial count
 	assert.Equal(t, 0, reader.GetActiveCount(), "Initial count should be 0")
@@ -234,16 +238,16 @@ func TestRTSPKeepaliveReader_EnvironmentVariables(t *testing.T) {
 	ff := NewFFmpegManager(&cfg.MediaMTX, helper.GetLogger()).(*ffmpegManager)
 	ff.SetDependencies(configManager, helper.GetCameraMonitor())
 	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
-	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	_, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
 
 	// Create keepalive reader
-	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
+	reader := NewRTSPKeepaliveReader(&cfg.MediaMTX, logger)
 
 	// Verify it was created successfully
 	require.NotNil(t, reader)
-	assert.Equal(t, mediaMTXConfig, reader.config)
+	assert.Equal(t, &cfg.MediaMTX, reader.config)
 }
 
 func TestRTSPKeepaliveReader_ConcurrentOperations(t *testing.T) {
@@ -257,12 +261,12 @@ func TestRTSPKeepaliveReader_ConcurrentOperations(t *testing.T) {
 	ff := NewFFmpegManager(&cfg.MediaMTX, helper.GetLogger()).(*ffmpegManager)
 	ff.SetDependencies(configManager, helper.GetCameraMonitor())
 	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
-	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
+	_, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
 
 	// Create keepalive reader
-	reader := NewRTSPKeepaliveReader(mediaMTXConfig, logger)
+	reader := NewRTSPKeepaliveReader(&cfg.MediaMTX, logger)
 
 	// Test concurrent start/stop operations
 	pathName := "concurrent_test"

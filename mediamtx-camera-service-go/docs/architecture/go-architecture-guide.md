@@ -83,7 +83,8 @@ end note
 
 - **Path Reuse:** Single MediaMTX path ("camera0") handles both streaming AND recording simultaneously
 - **File Management:** Recording filenames are independent of path names (configured via recordPath)
-- **Pattern Support:** MediaMTX handles timestamp patterns in filenames (e.g., camera0_%Y-%m-%d_%H-%M-%S.mp4)
+- **Pattern Support:** MediaMTX handles timestamp patterns in filenames (e.g., camera0_%Y-%m-%d_%H-%M-%S)
+- **File extension:** MediaMTX handles automaticaly file extensions by `record_format`
 
 ```plantuml
 @startuml ExposedInterface
@@ -217,7 +218,7 @@ end note
 
 ### 3.2 Deletion Architecture
 
-Recording deletion uses **direct filesystem operations** following the same pattern as snapshot deletion:
+Recording deletion and snapshot deletion use **direct filesystem operations**
 
 ```plantuml
 @startuml DeletionArchitecture
@@ -245,12 +246,16 @@ WS --> C: JSON-RPC Response
 == Error Handling ==
 alt File not found
   FS --> RM: os.IsNotExist(err)
-  RM --> CTRL: "recording file not found"
+  RM --> CTRL: "file not found: filename"
+  CTRL --> WS: "error deleting recording: file not found: filename"
+  WS --> C: JSON-RPC -32010 "File not found or inaccessible"
 end
 
 alt Permission denied
   FS --> RM: Permission error
-  RM --> CTRL: "failed to delete recording file"
+  RM --> CTRL: "error deleting recording file: permission denied"
+  CTRL --> WS: "error deleting recording: error deleting recording file: permission denied"
+  WS --> C: JSON-RPC -32603 "Internal server error"
 end
 
 @enduml
@@ -262,18 +267,11 @@ end
 
 **Implementation Requirements:**
 
-1. **Use canonical configuration** for recordings path (`rm.config.RecordingsPath`)
-2. **Direct filesystem operations** using `os.Remove()`
+1. **Use canonical configuration** for recordings path
+2. **Direct filesystem operations**`
 3. **No MediaMTX API calls** for deletion
 4. **Consistent error handling** with proper validation
 5. **No hardcoded paths** or magic numbers
-
-**Implementation Pattern:**
-
-- **Input**: `camera0_2025-01-15_14-30-00.mp4`
-- **Path Resolution**: `filepath.Join(recordingsPath, filename)`
-- **File Operation**: `os.Remove(filePath)`
-- **MediaMTX Impact**: None - files are independent
 
 ---
 
@@ -335,7 +333,7 @@ end note
 
 - Camera operations coordination
 - Stream lifecycle management
-- API abstraction (camera0 ↔ /dev/video0)
+- API abstraction (camera0 ↔ /dev/video0 for v4l deices, cameraN ↔ rtsp:// for external STANAG 4609 sources)
 - Recording orchestration (delegate to RecordingManager)
 - Path reuse optimization
 - **Mapping Rule:** External identifiers (`camera0`) map to **discovered devices only**; no synthetic indices
@@ -536,7 +534,7 @@ package "Controller Abstraction" #lightgreen {
     note right of MAP
     camera0 ↔ /dev/video0
     camera1 ↔ /dev/video1
-    camera2 ↔ /dev/video2
+    camera2 ↔ rtsp://extrnal_ip:port/stream
     end note
 }
 
@@ -722,7 +720,7 @@ M -> DM : update state (debounced)
 M --> C : OnChange(camera list delta)
 C -> C : cameraX ↔ /dev/videoN mapping updates
 
-== Fallback ==
+'== Fallback ==
 M -> M : Periodic reconcile (slow) if events unavailable
 M -> DM : correct drift
 M --> C : delta if changed
@@ -784,8 +782,8 @@ stop
 ### 4.4 Recording Flow
 
 ```plantuml
-@startuml RecordingFlowCorrected
-title Recording Flow - CORRECTED
+@startuml RecordingFlow
+title Recording Flow
 
 participant "RecordingManager" as RM
 participant "ConfigIntegration" as CI
@@ -1151,7 +1149,7 @@ FF --> MTX: RTSP stream\nrtsp://127.0.0.1:8554/camera0
 MTX --> FILE: Records stream to file
 MTX --> CLIENTS: Distributes stream
 
-note over FF
+note top of FF
 FFmpeg does NOT write to file!
 FFmpeg ONLY streams to MediaMTX
 MediaMTX handles file writing

@@ -976,7 +976,8 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_MultiTier_Tiers2And3(t *testing.
 
 	// Create config manager using test fixture
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	cfgAll := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfgAll.MediaMTX, helper.GetLogger()).(*ffmpegManager)
 	ff.SetDependencies(configManager, helper.GetCameraMonitor())
 	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
@@ -1080,7 +1081,8 @@ func TestSnapshotManager_TakeSnapshot_ReqCAM001_Tier0_V4L2Direct_RealHardware(t 
 
 	// Create config manager using test fixture
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	cfgAll := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfgAll.MediaMTX, helper.GetLogger()).(*ffmpegManager)
 	ff.SetDependencies(configManager, helper.GetCameraMonitor())
 	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
@@ -1099,7 +1101,7 @@ func TestSnapshotManager_TakeSnapshot_ReqCAM001_Tier0_V4L2Direct_RealHardware(t 
 	// Note: ffmpegManager is not exported, so we can't cast to it
 	// The SetDependencies method is not available in the interface
 	// This is a limitation of the current design
-	streamManager := NewStreamManager(helper.GetClient(), helper.GetPathManager(), mediaMTXConfig, recordingConfig, configIntegration, helper.GetLogger())
+	streamManager := NewStreamManager(helper.GetClient(), helper.GetPathManager(), mediaMTXConfig, recordingConfig, configIntegration, ffmpegManager, helper.GetLogger())
 	client := helper.GetClient()
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, helper.GetLogger())
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, helper.GetLogger())

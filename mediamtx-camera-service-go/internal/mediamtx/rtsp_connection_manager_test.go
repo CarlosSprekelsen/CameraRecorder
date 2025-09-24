@@ -96,7 +96,8 @@ func TestRTSPConnectionManager_ListSessions_ReqMTX002(t *testing.T) {
 	// Create RTSP connection manager
 	// Use standardized config from helper
 	configManager := helper.GetConfigManager()
-	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	cfgAll := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfgAll.MediaMTX, helper.GetLogger()).(*ffmpegManager)
 	ff.SetDependencies(configManager, helper.GetCameraMonitor())
 	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
@@ -129,7 +130,8 @@ func TestRTSPConnectionManager_GetConnectionHealth_ReqMTX004(t *testing.T) {
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
 
 	// Create configuration integration to get MediaMTX config
-	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	cfgAll := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfgAll.MediaMTX, helper.GetLogger()).(*ffmpegManager)
 	ff.SetDependencies(configManager, helper.GetCameraMonitor())
 	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
@@ -164,7 +166,8 @@ func TestRTSPConnectionManager_GetConnectionMetrics_ReqMTX004(t *testing.T) {
 	// Create RTSP connection manager
 	// Use standardized config from helper
 	configManager := helper.GetConfigManager()
-	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	cfgAll := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfgAll.MediaMTX, helper.GetLogger()).(*ffmpegManager)
 	ff.SetDependencies(configManager, helper.GetCameraMonitor())
 	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
@@ -206,7 +209,8 @@ func TestRTSPConnectionManager_Configuration_ReqMTX003(t *testing.T) {
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
 
 	// Create configuration integration to get MediaMTX config
-	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	cfgAll := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfgAll.MediaMTX, helper.GetLogger()).(*ffmpegManager)
 	ff.SetDependencies(configManager, helper.GetCameraMonitor())
 	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
@@ -253,7 +257,8 @@ func TestRTSPConnectionManager_ErrorHandling_ReqMTX004(t *testing.T) {
 	// Create RTSP connection manager
 	// Use standardized config from helper
 	configManager := helper.GetConfigManager()
-	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	cfgAll := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfgAll.MediaMTX, helper.GetLogger()).(*ffmpegManager)
 	ff.SetDependencies(configManager, helper.GetCameraMonitor())
 	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
@@ -291,7 +296,8 @@ func TestRTSPConnectionManager_Performance_ReqMTX002(t *testing.T) {
 	// Create RTSP connection manager
 	// Use standardized config from helper
 	configManager := helper.GetConfigManager()
-	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	cfgAll := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfgAll.MediaMTX, helper.GetLogger()).(*ffmpegManager)
 	ff.SetDependencies(configManager, helper.GetCameraMonitor())
 	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()

@@ -44,6 +44,7 @@ const (
 	API_INSUFFICIENT_STORAGE     = -32007
 	API_CAPABILITY_NOT_SUPPORTED = -32008
 	API_STREAM_NOT_FOUND         = -32009
+	API_FILE_NOT_FOUND           = -32010
 
 	// Enhanced Recording Management Error Codes
 	ERROR_CAMERA_NOT_FOUND         = -1000
@@ -178,6 +179,7 @@ var APIErrorMessages = map[int]string{
 	API_INSUFFICIENT_STORAGE:       "Insufficient storage space",
 	API_CAPABILITY_NOT_SUPPORTED:   "Camera capability not supported",
 	API_STREAM_NOT_FOUND:           "Stream not found or not active",
+	API_FILE_NOT_FOUND:             "File not found or inaccessible",
 	ERROR_CAMERA_NOT_FOUND:         "Camera not found",
 	ERROR_CAMERA_NOT_AVAILABLE:     "Camera not available",
 	ERROR_RECORDING_IN_PROGRESS:    "Recording in progress",

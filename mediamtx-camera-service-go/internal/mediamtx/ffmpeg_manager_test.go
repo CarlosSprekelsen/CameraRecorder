@@ -34,13 +34,10 @@ func TestNewFFmpegManager_ReqMTX001(t *testing.T) {
 	}
 	logger := helper.GetLogger()
 
-	ffmpegManager := NewFFmpegManager(config, logger)
+	configManager := helper.GetConfigManager()
+	ffmpegManager := NewFFmpegManager(config, logger).(*ffmpegManager)
+	ffmpegManager.SetDependencies(configManager, helper.GetCameraMonitor())
 	require.NotNil(t, ffmpegManager)
-
-	// Set dependencies for the manager
-	// Note: ffmpegManager is not exported, so we can't cast to it
-	// The SetDependencies method is not available in the interface
-	// This is a limitation of the current design
 }
 
 // TestFFmpegManager_SnapshotOnly_ReqMTX002 tests FFmpeg snapshot functionality only
@@ -53,13 +50,10 @@ func TestFFmpegManager_SnapshotOnly_ReqMTX002(t *testing.T) {
 	}
 	logger := helper.GetLogger()
 
-	ffmpegManager := NewFFmpegManager(config, logger)
+	configManager := helper.GetConfigManager()
+	ffmpegManager := NewFFmpegManager(config, logger).(*ffmpegManager)
+	ffmpegManager.SetDependencies(configManager, helper.GetCameraMonitor())
 	require.NotNil(t, ffmpegManager)
-
-	// Set dependencies for the manager
-	// Note: ffmpegManager is not exported, so we can't cast to it
-	// The SetDependencies method is not available in the interface
-	// This is a limitation of the current design
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_snapshots")
@@ -92,13 +86,10 @@ func TestFFmpegManager_StartProcess_ReqMTX002(t *testing.T) {
 	}
 	logger := helper.GetLogger()
 
-	ffmpegManager := NewFFmpegManager(config, logger)
+	configManager := helper.GetConfigManager()
+	ffmpegManager := NewFFmpegManager(config, logger).(*ffmpegManager)
+	ffmpegManager.SetDependencies(configManager, helper.GetCameraMonitor())
 	require.NotNil(t, ffmpegManager)
-
-	// Set dependencies for the manager
-	// Note: ffmpegManager is not exported, so we can't cast to it
-	// The SetDependencies method is not available in the interface
-	// This is a limitation of the current design
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_processes")
@@ -132,13 +123,10 @@ func TestFFmpegManager_StopProcess_ReqMTX002(t *testing.T) {
 	}
 	logger := helper.GetLogger()
 
-	ffmpegManager := NewFFmpegManager(config, logger)
+	configManager := helper.GetConfigManager()
+	ffmpegManager := NewFFmpegManager(config, logger).(*ffmpegManager)
+	ffmpegManager.SetDependencies(configManager, helper.GetCameraMonitor())
 	require.NotNil(t, ffmpegManager)
-
-	// Set dependencies for the manager
-	// Note: ffmpegManager is not exported, so we can't cast to it
-	// The SetDependencies method is not available in the interface
-	// This is a limitation of the current design
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_stop")
@@ -184,13 +172,10 @@ func TestFFmpegManager_IsProcessRunning_ReqMTX002(t *testing.T) {
 	}
 	logger := helper.GetLogger()
 
-	ffmpegManager := NewFFmpegManager(config, logger)
+	configManager := helper.GetConfigManager()
+	ffmpegManager := NewFFmpegManager(config, logger).(*ffmpegManager)
+	ffmpegManager.SetDependencies(configManager, helper.GetCameraMonitor())
 	require.NotNil(t, ffmpegManager)
-
-	// Set dependencies for the manager
-	// Note: ffmpegManager is not exported, so we can't cast to it
-	// The SetDependencies method is not available in the interface
-	// This is a limitation of the current design
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_running")
@@ -241,13 +226,10 @@ func TestFFmpegManager_BuildCommand_ReqMTX002(t *testing.T) {
 	}
 	logger := helper.GetLogger()
 
-	ffmpegManager := NewFFmpegManager(config, logger)
+	configManager := helper.GetConfigManager()
+	ffmpegManager := NewFFmpegManager(config, logger).(*ffmpegManager)
+	ffmpegManager.SetDependencies(configManager, helper.GetCameraMonitor())
 	require.NotNil(t, ffmpegManager)
-
-	// Set dependencies for the manager
-	// Note: ffmpegManager is not exported, so we can't cast to it
-	// The SetDependencies method is not available in the interface
-	// This is a limitation of the current design
 
 	// Test command building
 	args := []string{"-i", "/dev/video0", "-c:v", "libx264", "output.mp4"}
@@ -272,13 +254,10 @@ func TestFFmpegManager_ErrorHandling_ReqMTX007(t *testing.T) {
 	}
 	logger := helper.GetLogger()
 
-	ffmpegManager := NewFFmpegManager(config, logger)
+	configManager := helper.GetConfigManager()
+	ffmpegManager := NewFFmpegManager(config, logger).(*ffmpegManager)
+	ffmpegManager.SetDependencies(configManager, helper.GetCameraMonitor())
 	require.NotNil(t, ffmpegManager)
-
-	// Set dependencies for the manager
-	// Note: ffmpegManager is not exported, so we can't cast to it
-	// The SetDependencies method is not available in the interface
-	// This is a limitation of the current design
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_errors")
@@ -313,13 +292,10 @@ func TestFFmpegManager_ConcurrentAccess_ReqMTX001(t *testing.T) {
 	}
 	logger := helper.GetLogger()
 
-	ffmpegManager := NewFFmpegManager(config, logger)
+	configManager := helper.GetConfigManager()
+	ffmpegManager := NewFFmpegManager(config, logger).(*ffmpegManager)
+	ffmpegManager.SetDependencies(configManager, helper.GetCameraMonitor())
 	require.NotNil(t, ffmpegManager)
-
-	// Set dependencies for the manager
-	// Note: ffmpegManager is not exported, so we can't cast to it
-	// The SetDependencies method is not available in the interface
-	// This is a limitation of the current design
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_concurrent")
@@ -373,13 +349,10 @@ func TestFFmpegManager_PerformanceMetrics_ReqMTX002(t *testing.T) {
 	}
 	logger := helper.GetLogger()
 
-	ffmpegManager := NewFFmpegManager(config, logger)
+	configManager := helper.GetConfigManager()
+	ffmpegManager := NewFFmpegManager(config, logger).(*ffmpegManager)
+	ffmpegManager.SetDependencies(configManager, helper.GetCameraMonitor())
 	require.NotNil(t, ffmpegManager)
-
-	// Set dependencies for the manager
-	// Note: ffmpegManager is not exported, so we can't cast to it
-	// The SetDependencies method is not available in the interface
-	// This is a limitation of the current design
 
 	// Create temporary output directory
 	tempDir := filepath.Join(helper.GetConfig().TestDataDir, "ffmpeg_metrics")
