@@ -176,19 +176,6 @@ func GetRecordingFilePath(cfg *config.MediaMTXConfig, recordingCfg *config.Recor
 	return filepath.Join(basePath, filename)
 }
 
-// (Deprecated) BuildFFmpegCommand removed. Use BuildFFmpegCommandWithResolver instead.
-
-// BuildFFmpegCommandWithResolver builds a proper FFmpeg command with dynamic pixel format detection
-// This version uses CameraFormatResolver to detect optimal pixel format for the camera
-// DEPRECATED: Use FFmpegManager.BuildRunOnDemandCommand instead
-func BuildFFmpegCommandWithResolver(devicePath, streamName string, cfg *config.MediaMTXConfig, formatResolver *CameraFormatResolver) string {
-	// This function is deprecated - use FFmpegManager.BuildRunOnDemandCommand instead
-	// Keeping for backward compatibility only
-	return fmt.Sprintf(
-		"ffmpeg -f v4l2 -i %s -c:v libx264 -preset %s -f rtsp rtsp://%s:%d/%s",
-		devicePath, cfg.Codec.Preset, cfg.Host, cfg.RTSPPort, streamName)
-}
-
 // ParseSnapshotFilename parses a snapshot filename using the configured pattern
 // This is the inverse of expandSnapshotPattern
 func ParseSnapshotFilename(filename, pattern string) (device string, timestamp time.Time, err error) {

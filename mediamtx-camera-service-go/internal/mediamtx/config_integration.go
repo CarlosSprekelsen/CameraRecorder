@@ -345,44 +345,6 @@ func (ci *ConfigIntegration) GetCleanupLimits() (maxAge time.Duration, maxCount 
 	return maxAge, maxCount, maxSize, nil
 }
 
-// (Deprecated) BuildRecordingPathConf removed. Use BuildRecordingPathConfWithResolver instead.
-
-// BuildRecordingPathConfWithResolver creates a comprehensive PathConf for recording operations with dynamic format detection
-func (ci *ConfigIntegration) BuildRecordingPathConfWithResolver(devicePath, pathName string, formatResolver *CameraFormatResolver) (*PathConf, error) {
-	cfg := ci.configManager.GetConfig()
-	if cfg == nil {
-		return nil, fmt.Errorf("failed to get config: config is nil")
-	}
-
-	// Build recording path pattern using existing utility
-	recordPath := GenerateRecordingPath(&cfg.MediaMTX, &cfg.Recording)
-
-	// Use FFmpegManager to build command with dynamic format detection
-	runOnDemand := buildPathCommandWithFFmpegManager(devicePath, pathName, &cfg.MediaMTX, ci.configManager, ci.logger)
-
-	pathConf := &PathConf{
-		// Source configuration
-		Source:         devicePath,
-		SourceOnDemand: true,
-
-		// On-demand configuration with dynamic format detection
-		RunOnDemand:             runOnDemand,
-		RunOnDemandRestart:      true,
-		RunOnDemandStartTimeout: cfg.MediaMTX.RunOnDemandStartTimeout,
-		RunOnDemandCloseAfter:   "0s", // Never auto-close recording paths
-
-		// Recording configuration
-		Record:                cfg.Recording.Enabled,
-		RecordFormat:          cfg.Recording.RecordFormat,
-		RecordPath:            recordPath,
-		RecordPartDuration:    cfg.MediaMTX.RecordPartDuration,
-		RecordSegmentDuration: cfg.MediaMTX.RecordSegmentDuration,
-		RecordDeleteAfter:     cfg.MediaMTX.RecordDeleteAfter,
-	}
-
-	return pathConf, nil
-}
-
 // BuildSourceURL builds the appropriate source URL based on configuration and path type
 func (ci *ConfigIntegration) BuildSourceURL(pathName string, pathSource *PathSource) (string, error) {
 	cfg := ci.configManager.GetConfig()
@@ -408,7 +370,7 @@ func (ci *ConfigIntegration) BuildSourceURL(pathName string, pathSource *PathSou
 
 // BuildPathConf creates a comprehensive PathConf for general path operations
 // This variant accepts a formatResolver to enable dynamic pixel format selection
-func (ci *ConfigIntegration) BuildPathConf(pathName string, pathSource *PathSource, enableRecording bool, formatResolver *CameraFormatResolver) (*PathConf, error) {
+func (ci *ConfigIntegration) BuildPathConf(pathName string, pathSource *PathSource, enableRecording bool) (*PathConf, error) {
 	cfg := ci.configManager.GetConfig()
 	if cfg == nil {
 		return nil, fmt.Errorf("failed to get config: config is nil")
@@ -464,8 +426,8 @@ func buildPathCommandWithFFmpegManager(devicePath, pathName string, cfg *config.
 	ff.SetDependencies(configManager, nil) // No camera monitor in this context
 	runOnDemand, err := ff.BuildRunOnDemandCommand(devicePath, pathName)
 	if err != nil {
-		// Fallback to basic command if FFmpegManager fails
-		runOnDemand = fmt.Sprintf("ffmpeg -f v4l2 -i %s -c:v libx264 -preset %s -f rtsp rtsp://%s:%d/%s",
+		// Return a basic fallback command if FFmpegManager fails
+		return fmt.Sprintf("ffmpeg -f v4l2 -i %s -c:v libx264 -preset %s -f rtsp rtsp://%s:%d/%s",
 			devicePath, cfg.Codec.Preset, cfg.Host, cfg.RTSPPort, pathName)
 	}
 	return runOnDemand

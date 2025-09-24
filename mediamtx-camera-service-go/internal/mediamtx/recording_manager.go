@@ -74,8 +74,6 @@ type RecordingManager struct {
 	// Error metrics collector
 	errorMetricsCollector *ErrorMetricsCollector
 
-	// Camera format resolver for dynamic pixel format detection
-	formatResolver *CameraFormatResolver
 
 	// Resource management
 	running       int32 // Atomic flag for running state
@@ -133,14 +131,7 @@ type RecordingResourceStats struct {
 }
 
 // NewRecordingManager creates a new MediaMTX-based recording manager
-// (Deprecated) NewRecordingManager removed. Use NewRecordingManagerWithFormatResolver instead.
-
-// NewRecordingManagerWithFormatResolver creates a new MediaMTX-based recording manager with dynamic format detection
-func NewRecordingManagerWithFormatResolver(client MediaMTXClient, pathManager PathManager, streamManager StreamManager, ffmpegManager FFmpegManager, config *config.MediaMTXConfig, recordingConfig *config.RecordingConfig, configIntegration *ConfigIntegration, formatResolver *CameraFormatResolver, logger *logging.Logger) *RecordingManager {
-	// Use centralized configuration - no need to create component-specific defaults
-	// All recording configuration comes from the centralized config system
-	// Recording settings are derived from the centralized MediaMTXConfig
-
+func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamManager StreamManager, ffmpegManager FFmpegManager, config *config.MediaMTXConfig, recordingConfig *config.RecordingConfig, configIntegration *ConfigIntegration, logger *logging.Logger) *RecordingManager {
 	rm := &RecordingManager{
 		client:            client,
 		config:            config,
@@ -159,8 +150,6 @@ func NewRecordingManagerWithFormatResolver(client MediaMTXClient, pathManager Pa
 		errorRecoveryManager: NewErrorRecoveryManager(logger),
 		// Error metrics collector
 		errorMetricsCollector: NewErrorMetricsCollector(logger),
-		// Camera format resolver for dynamic pixel format detection
-		formatResolver: formatResolver,
 		// Resource management
 		running:       0, // Initially not running
 		resourceStats: &RecordingResourceStats{},
@@ -174,6 +163,7 @@ func NewRecordingManagerWithFormatResolver(client MediaMTXClient, pathManager Pa
 
 	return rm
 }
+
 
 // StartRecording starts recording and returns API-ready response with rich metadata
 func (rm *RecordingManager) StartRecording(ctx context.Context, cameraID string, options *PathConf) (*StartRecordingResponse, error) {
@@ -233,7 +223,7 @@ func (rm *RecordingManager) executeStartRecording(ctx context.Context, cameraID 
 
 		// Use format resolver if available for dynamic pixel format detection
         // Always use resolver-based configuration; resolver may be nil safely
-        pathOptions, err = rm.configIntegration.BuildRecordingPathConfWithResolver(devicePath, pathName, rm.formatResolver)
+        pathOptions, err = rm.configIntegration.BuildRecordingPathConf(devicePath, pathName)
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to build recording path configuration: %w", err)

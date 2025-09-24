@@ -268,14 +268,7 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 	streamManager := NewStreamManager(client, pathManager, mediaMTXConfig, recordingConfig, configIntegration, logger)
 
 	// Create recording manager (using existing client and pathManager)
-	// Wire CameraFormatResolver using the available cameraMonitor
-	var formatResolver *CameraFormatResolver
-	if cameraMonitor != nil {
-		formatResolver = NewCameraFormatResolver(cameraMonitor, logger)
-	} else {
-		formatResolver = NewCameraFormatResolver(nil, logger)
-	}
-	recordingManager := NewRecordingManagerWithFormatResolver(client, pathManager, streamManager, ffmpegManager, mediaMTXConfig, recordingConfig, configIntegration, formatResolver, logger)
+	recordingManager := NewRecordingManager(client, pathManager, streamManager, ffmpegManager, mediaMTXConfig, recordingConfig, configIntegration, logger)
 
 	// Create snapshot manager with configuration integration
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)
@@ -747,12 +740,7 @@ func (c *controller) CreatePath(ctx context.Context, path *Path) error {
 	}
 
 	// Build comprehensive path configuration using centralized config
-	// Provide format resolver to BuildPathConf
-	var resolver *CameraFormatResolver
-	if c.cameraMonitor != nil {
-		resolver = NewCameraFormatResolver(c.cameraMonitor, c.logger)
-	}
-	options, err := c.configIntegration.BuildPathConf(path.Name, path.Source, false, resolver)
+	options, err := c.configIntegration.BuildPathConf(path.Name, path.Source, false)
 	if err != nil {
 		return fmt.Errorf("failed to build path configuration: %w", err)
 	}

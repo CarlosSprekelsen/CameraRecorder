@@ -159,11 +159,7 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 			if cmd, err := ff.BuildRunOnDemandCommand(devicePath, name); err == nil {
 				source = cmd
 			} else {
-				// Fallback to basic command if FFmpegManager fails
-				source = fmt.Sprintf(
-					"ffmpeg -f v4l2 -i %s -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp rtsp://localhost:8554/%s",
-					devicePath, name,
-				)
+				return fmt.Errorf("failed to build FFmpeg command for device %s", devicePath)
 			}
 			opts.RunOnDemand = source
 			opts.RunOnDemandRestart = true

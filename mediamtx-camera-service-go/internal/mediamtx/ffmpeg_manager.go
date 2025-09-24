@@ -604,7 +604,6 @@ func (fm *ffmpegManager) GetFileInfo(ctx context.Context, path string) (int64, t
 	return info.Size(), info.ModTime(), nil
 }
 
-// buildSnapshotCommand builds an FFmpeg command for snapshot
 // BuildSnapshotCommand builds a snapshot command using camera capability detection (no hardcoding)
 func (fm *ffmpegManager) BuildSnapshotCommand(device, outputPath string, format string) ([]string, error) {
 	// Determine pixel format using camera monitor

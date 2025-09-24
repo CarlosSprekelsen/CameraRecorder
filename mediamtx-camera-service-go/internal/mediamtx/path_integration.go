@@ -140,12 +140,8 @@ func (pi *PathIntegration) CreatePathForCamera(ctx context.Context, device strin
 		Type: "rtspSource",
 		ID:   device,
 	}
-    // Provide format resolver from camera monitor
-    var resolver *CameraFormatResolver
-    if pi.cameraMonitor != nil {
-        resolver = NewCameraFormatResolver(pi.cameraMonitor, pi.logger)
-    }
-    options, err := pi.configIntegration.BuildPathConf(pathName, pathSource, false, resolver)
+    // Build path configuration
+    options, err := pi.configIntegration.BuildPathConf(pathName, pathSource, false)
 	if err != nil {
 		return fmt.Errorf("failed to build path configuration: %w", err)
 	}
