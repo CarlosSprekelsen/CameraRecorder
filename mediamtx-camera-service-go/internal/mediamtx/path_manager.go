@@ -71,8 +71,8 @@ type pathManager struct {
 // GetPathNameForDevice returns the canonical path/camera identifier for a given device path
 // Centralized naming policy: /dev/videoN -> cameraN; otherwise last path segment
 func (pm *pathManager) GetPathNameForDevice(devicePath string) string {
-    cameraID, _ := pm.GetCameraForDevicePath(devicePath)
-    return cameraID
+	cameraID, _ := pm.GetCameraForDevicePath(devicePath)
+	return cameraID
 }
 
 // PathManagerMetrics tracks path operation metrics
@@ -160,12 +160,12 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 		// Check if this is for a camera device
 		devicePath := GetDevicePathFromCameraIdentifier(name)
 		if devicePath != "" && strings.HasPrefix(devicePath, "/dev/video") {
-            // Create an on-demand FFmpeg command for the camera
-            // ARCHITECTURE: PathManager must not build commands; expect caller to provide
-            return fmt.Errorf(
-                "RunOnDemand not provided for camera 'publisher': path=%s device=%s. PathManager does not build FFmpeg commands. Use ConfigIntegration.BuildPathConf to supply PathConf.RunOnDemand",
-                name, devicePath,
-            )
+			// Create an on-demand FFmpeg command for the camera
+			// ARCHITECTURE: PathManager must not build commands; expect caller to provide
+			return fmt.Errorf(
+				"RunOnDemand not provided for camera 'publisher': path=%s device=%s. PathManager does not build FFmpeg commands. Use ConfigIntegration.BuildPathConf to supply PathConf.RunOnDemand",
+				name, devicePath,
+			)
 			opts.RunOnDemand = source
 			opts.RunOnDemandRestart = true
 			opts.RunOnDemandStartTimeout = pm.config.RunOnDemandStartTimeout
@@ -176,12 +176,12 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 			// For non-camera paths, use a redirect or leave empty
 			// Empty source with runOnDemand allows dynamic publisher connection
 			source = ""
-            if opts.RunOnDemand == "" {
-                return fmt.Errorf(
-                    "RunOnDemand missing for 'publisher' source: path=%s source=%s. Provide PathConf.RunOnDemand via ConfigIntegration",
-                    name, source,
-                )
-            }
+			if opts.RunOnDemand == "" {
+				return fmt.Errorf(
+					"RunOnDemand missing for 'publisher' source: path=%s source=%s. Provide PathConf.RunOnDemand via ConfigIntegration",
+					name, source,
+				)
+			}
 		}
 	}
 
@@ -1033,9 +1033,9 @@ func (pm *pathManager) GetCameraForPath(pathName string) (string, bool) {
 		return pathName, false
 	}
 
-    // Return camera identifier using centralized naming
-    cameraID := pm.GetPathNameForDevice(devicePath)
-    return cameraID, true
+	// Return camera identifier using centralized naming
+	cameraID := pm.GetPathNameForDevice(devicePath)
+	return cameraID, true
 }
 
 // GetDevicePathForCamera gets the actual USB device path for a camera identifier
@@ -1056,7 +1056,7 @@ func (pm *pathManager) GetDevicePathForCamera(cameraID string) (string, bool) {
 // GetCameraForDevicePath gets the camera identifier for a USB device path
 // This is the reverse abstraction: /dev/video0 -> camera0
 func (pm *pathManager) GetCameraForDevicePath(devicePath string) (string, bool) {
-    cameraID := pm.GetPathNameForDevice(devicePath)
+	cameraID := pm.GetPathNameForDevice(devicePath)
 
 	// Check if device actually exists via camera monitor
 	if pm.cameraMonitor != nil {

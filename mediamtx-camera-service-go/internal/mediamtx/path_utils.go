@@ -99,15 +99,15 @@ func GenerateRecordingPath(cfg *config.MediaMTXConfig, recordingCfg *config.Reco
 // Unlike recordings, snapshots are created directly by FFmpeg, not MediaMTX
 func GenerateSnapshotPath(cfg *config.MediaMTXConfig, snapshotCfg *config.SnapshotConfig, devicePath string) string {
 	basePath := cfg.SnapshotsPath
-    // Derive device name from device path conservatively; PathManager is runtime authority
-    deviceName := func() string {
-        parts := strings.Split(devicePath, "/")
-        last := parts[len(parts)-1]
-        if strings.HasPrefix(last, "video") {
-            return fmt.Sprintf("camera%s", last[5:])
-        }
-        return last
-    }()
+	// Derive device name from device path conservatively; PathManager is runtime authority
+	deviceName := func() string {
+		parts := strings.Split(devicePath, "/")
+		last := parts[len(parts)-1]
+		if strings.HasPrefix(last, "video") {
+			return fmt.Sprintf("camera%s", last[5:])
+		}
+		return last
+	}()
 
 	// Create device subdirectory if configured
 	if snapshotCfg.UseDeviceSubdirs {
