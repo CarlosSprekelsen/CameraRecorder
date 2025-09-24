@@ -96,7 +96,9 @@ func TestRTSPConnectionManager_ListSessions_ReqMTX002(t *testing.T) {
 	// Create RTSP connection manager
 	// Use standardized config from helper
 	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	// Use standardized logger from helper
@@ -127,7 +129,9 @@ func TestRTSPConnectionManager_GetConnectionHealth_ReqMTX004(t *testing.T) {
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
 
 	// Create configuration integration to get MediaMTX config
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 
@@ -160,7 +164,9 @@ func TestRTSPConnectionManager_GetConnectionMetrics_ReqMTX004(t *testing.T) {
 	// Create RTSP connection manager
 	// Use standardized config from helper
 	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	// Use standardized logger from helper
@@ -200,7 +206,9 @@ func TestRTSPConnectionManager_Configuration_ReqMTX003(t *testing.T) {
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
 
 	// Create configuration integration to get MediaMTX config
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should be able to get MediaMTX config from fixture")
 
@@ -245,7 +253,9 @@ func TestRTSPConnectionManager_ErrorHandling_ReqMTX004(t *testing.T) {
 	// Create RTSP connection manager
 	// Use standardized config from helper
 	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	// Use standardized logger from helper
@@ -281,7 +291,9 @@ func TestRTSPConnectionManager_Performance_ReqMTX002(t *testing.T) {
 	// Create RTSP connection manager
 	// Use standardized config from helper
 	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	// Use standardized logger from helper

@@ -181,8 +181,11 @@ func TestConfigIntegration_GetVersionInfo(t *testing.T) {
 	configManager := config.CreateConfigManager()
 	logger := helper.GetLogger()
 
-	// Create config integration
-	ci := NewConfigIntegration(configManager, logger)
+    // Create config integration
+    cfgAll := configManager.GetConfig()
+    ff := NewFFmpegManager(&cfgAll.MediaMTX, logger).(*ffmpegManager)
+	ff.SetDependencies(configManager, nil)
+	ci := NewConfigIntegration(configManager, ff, logger)
 	require.NotNil(t, ci, "ConfigIntegration should not be nil")
 
 	// Get version info

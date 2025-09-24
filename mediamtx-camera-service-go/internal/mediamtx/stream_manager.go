@@ -119,9 +119,6 @@ type streamManager struct {
 	useCaseConfigs    map[StreamUseCase]UseCaseConfig
 	keepaliveReader   *RTSPKeepaliveReader
 
-	// FFmpeg command caching for performance - using sync.Map for lock-free reads
-	ffmpegCommands sync.Map // device path -> cached FFmpeg command
-
 	// Enhanced stream tracking with metadata
 	streamMetadata sync.Map // cameraID -> *StreamMetadata
 }
@@ -163,7 +160,6 @@ func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *co
 		logger:            logger,
 		useCaseConfigs:    useCaseConfigs,
 		keepaliveReader:   NewRTSPKeepaliveReader(config, logger), // ADD THIS
-		// ffmpegCommands: sync.Map is zero-initialized, no need to initialize
 	}
 }
 

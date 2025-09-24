@@ -1080,7 +1080,9 @@ func TestSnapshotManager_TakeSnapshot_ReqCAM001_Tier0_V4L2Direct_RealHardware(t 
 
 	// Create config manager using test fixture
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should be able to get MediaMTX config from fixture")
 

@@ -40,8 +40,11 @@ func TestNewHealthMonitor_ReqMTX004(t *testing.T) {
 	logger := logging.CreateTestLogger(t, nil)
 	// Use test fixture logging level instead of hardcoded logrus
 
-	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, logger)
+    configManager := helper.GetConfigManager()
+    cfgAll := configManager.GetConfig()
+    ff := NewFFmpegManager(&cfgAll.MediaMTX, logger).(*ffmpegManager)
+	ff.SetDependencies(configManager, nil)
+	configIntegration := NewConfigIntegration(configManager, ff, logger)
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
 	assert.True(t, healthMonitor.IsHealthy(), "Should be healthy initially")
@@ -63,8 +66,11 @@ func TestHealthMonitor_StartStop_ReqMTX004(t *testing.T) {
 	logger := logging.CreateTestLogger(t, nil)
 	// Use test fixture logging level instead of hardcoded logrus
 
-	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, logger)
+    configManager := helper.GetConfigManager()
+    cfgAll := configManager.GetConfig()
+    ff := NewFFmpegManager(&cfgAll.MediaMTX, logger).(*ffmpegManager)
+	ff.SetDependencies(configManager, nil)
+	configIntegration := NewConfigIntegration(configManager, ff, logger)
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor)
 
@@ -97,7 +103,9 @@ func TestHealthMonitor_GetStatus_ReqMTX004(t *testing.T) {
 	// Use test fixture logging level instead of hardcoded logrus
 
 	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, logger)
+	ff := NewFFmpegManager(&cfg.MediaMTX, logger).(*ffmpegManager)
+	ff.SetDependencies(configManager, nil)
+	configIntegration := NewConfigIntegration(configManager, ff, logger)
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor)
 
@@ -136,7 +144,9 @@ func TestHealthMonitor_GetMetrics_ReqMTX004(t *testing.T) {
 	// Use test fixture logging level instead of hardcoded logrus
 
 	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, logger)
+	ff := NewFFmpegManager(&cfg.MediaMTX, logger).(*ffmpegManager)
+	ff.SetDependencies(configManager, nil)
+	configIntegration := NewConfigIntegration(configManager, ff, logger)
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor)
 
@@ -177,7 +187,9 @@ func TestHealthMonitor_RecordSuccess_ReqMTX004(t *testing.T) {
 	// Use test fixture logging level instead of hardcoded logrus
 
 	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, logger)
+	ff := NewFFmpegManager(&cfg.MediaMTX, logger).(*ffmpegManager)
+	ff.SetDependencies(configManager, nil)
+	configIntegration := NewConfigIntegration(configManager, ff, logger)
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor)
 
@@ -211,7 +223,9 @@ func TestHealthMonitor_RecordFailure_ReqMTX004(t *testing.T) {
 	// Use test fixture logging level instead of hardcoded logrus
 
 	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, logger)
+	ff := NewFFmpegManager(&cfg.MediaMTX, logger).(*ffmpegManager)
+	ff.SetDependencies(configManager, nil)
+	configIntegration := NewConfigIntegration(configManager, ff, logger)
 	healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 	require.NotNil(t, healthMonitor)
 
@@ -269,7 +283,9 @@ func TestHealthMonitor_Configuration_ReqMTX004(t *testing.T) {
 			// Use test fixture logging level instead of hardcoded logrus
 
 			configManager := helper.GetConfigManager()
-			configIntegration := NewConfigIntegration(configManager, logger)
+			ff := NewFFmpegManager(&cfg.MediaMTX, logger).(*ffmpegManager)
+			ff.SetDependencies(configManager, nil)
+			configIntegration := NewConfigIntegration(configManager, ff, logger)
 			healthMonitor := NewHealthMonitor(helper.GetClient(), config, configIntegration, logger)
 			require.NotNil(t, healthMonitor, "Health monitor should be created")
 
@@ -296,7 +312,9 @@ func TestHealthMonitor_DebounceMechanism_ReqMTX004(t *testing.T) {
 	logger := helper.GetLogger()
 
 	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, logger)
+	ff := NewFFmpegManager(&cfg.MediaMTX, logger).(*ffmpegManager)
+	ff.SetDependencies(configManager, nil)
+	configIntegration := NewConfigIntegration(configManager, ff, logger)
 	healthMonitor := NewHealthMonitor(client, config, configIntegration, logger)
 	require.NotNil(t, healthMonitor, "Health monitor should not be nil")
 

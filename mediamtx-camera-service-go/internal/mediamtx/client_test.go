@@ -27,7 +27,10 @@ func TestClient_New_ReqMTX001_Success(t *testing.T) {
 
 	// Use MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	cfg := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfg.MediaMTX, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
@@ -300,7 +303,10 @@ func TestClient_Close_ReqMTX001_Success(t *testing.T) {
 
 	// Use MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	cfg := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfg.MediaMTX, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()

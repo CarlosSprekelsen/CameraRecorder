@@ -190,7 +190,10 @@ func TestConfigIntegration_GetRecordingConfig_ReqMTX001_Success(t *testing.T) {
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	cfg := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfg.MediaMTX, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 
 	// Test GetRecordingConfig
 	recordingConfig, err := configIntegration.GetRecordingConfig()
@@ -205,7 +208,10 @@ func TestConfigIntegration_GetSnapshotConfig_ReqMTX001_Success(t *testing.T) {
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	cfg := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfg.MediaMTX, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 
 	// Test GetSnapshotConfig
 	snapshotConfig, err := configIntegration.GetSnapshotConfig()
@@ -220,7 +226,10 @@ func TestConfigIntegration_GetFFmpegConfig_ReqMTX001_Success(t *testing.T) {
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	cfg := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfg.MediaMTX, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 
 	// Test GetFFmpegConfig
 	ffmpegConfig, err := configIntegration.GetFFmpegConfig()
@@ -235,7 +244,10 @@ func TestConfigIntegration_GetCameraConfig_ReqMTX001_Success(t *testing.T) {
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	cfg := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfg.MediaMTX, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 
 	// Test GetCameraConfig
 	cameraConfig, err := configIntegration.GetCameraConfig()
@@ -250,7 +262,10 @@ func TestConfigIntegration_GetPerformanceConfig_ReqMTX001_Success(t *testing.T) 
 
 	// Use existing pattern from snapshot manager tests
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	cfg := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfg.MediaMTX, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 
 	// Test GetPerformanceConfig
 	performanceConfig, err := configIntegration.GetPerformanceConfig()
@@ -1385,7 +1400,9 @@ func TestController_Stop_ReqMTX001_GracefulShutdown(t *testing.T) {
 			HealthFailureThreshold: 3,
 		}
 		configManager := helper.GetConfigManager()
-		configIntegration := NewConfigIntegration(configManager, logger)
+		ff := NewFFmpegManager(mediaMTXConfig, logger).(*ffmpegManager)
+		ff.SetDependencies(configManager, helper.GetCameraMonitor())
+		configIntegration := NewConfigIntegration(configManager, ff, logger)
 		monitor := NewHealthMonitor(client, config, configIntegration, logger)
 
 		// Start components
@@ -1413,7 +1430,9 @@ func TestController_Stop_ReqMTX001_GracefulShutdown(t *testing.T) {
 		cameraMonitor := helper.GetCameraMonitor()
 		configManager := helper.GetConfigManager()
 		logger := helper.GetLogger()
-		configIntegration := NewConfigIntegration(configManager, logger)
+		ff := NewFFmpegManager(mediaMTXConfig, logger).(*ffmpegManager)
+		ff.SetDependencies(configManager, helper.GetCameraMonitor())
+		configIntegration := NewConfigIntegration(configManager, ff, logger)
 		pathIntegration := NewPathIntegration(pathManager, cameraMonitor, configIntegration, logger)
 
 		// Start components
@@ -1470,7 +1489,10 @@ func TestController_Stop_ReqMTX001_GracefulShutdown(t *testing.T) {
 			HealthFailureThreshold: 3,
 		}
 		configManager := helper.GetConfigManager()
-		configIntegration := NewConfigIntegration(configManager, logger)
+		cfgAll := configManager.GetConfig()
+		ff := NewFFmpegManager(&cfgAll.MediaMTX, logger).(*ffmpegManager)
+		ff.SetDependencies(configManager, helper.GetCameraMonitor())
+		configIntegration := NewConfigIntegration(configManager, ff, logger)
 		monitor := NewHealthMonitor(client, config, configIntegration, logger)
 
 		// Start with cancellable context
@@ -1513,7 +1535,10 @@ func TestController_Stop_ReqMTX001_GracefulShutdown(t *testing.T) {
 			HealthFailureThreshold: 3,
 		}
 		configManager := helper.GetConfigManager()
-		configIntegration := NewConfigIntegration(configManager, logger)
+		cfgAll := configManager.GetConfig()
+		ff := NewFFmpegManager(&cfgAll.MediaMTX, logger).(*ffmpegManager)
+		ff.SetDependencies(configManager, helper.GetCameraMonitor())
+		configIntegration := NewConfigIntegration(configManager, ff, logger)
 		monitor := NewHealthMonitor(client, config, configIntegration, logger)
 
 		// Start components

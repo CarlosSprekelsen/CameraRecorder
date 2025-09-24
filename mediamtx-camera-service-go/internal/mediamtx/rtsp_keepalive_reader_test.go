@@ -16,7 +16,9 @@ func TestRTSPKeepaliveReader_NewRTSPKeepaliveReader(t *testing.T) {
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
@@ -38,7 +40,9 @@ func TestRTSPKeepaliveReader_StartKeepalive(t *testing.T) {
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
@@ -68,7 +72,9 @@ func TestRTSPKeepaliveReader_StopKeepalive(t *testing.T) {
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
@@ -102,7 +108,9 @@ func TestRTSPKeepaliveReader_StopAll(t *testing.T) {
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
@@ -135,7 +143,10 @@ func TestRTSPKeepaliveReader_IsActive(t *testing.T) {
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	cfg := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfg.MediaMTX, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
@@ -167,7 +178,10 @@ func TestRTSPKeepaliveReader_GetActiveCount(t *testing.T) {
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	cfg := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfg.MediaMTX, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
@@ -216,7 +230,10 @@ func TestRTSPKeepaliveReader_EnvironmentVariables(t *testing.T) {
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	cfg := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfg.MediaMTX, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
@@ -236,7 +253,10 @@ func TestRTSPKeepaliveReader_ConcurrentOperations(t *testing.T) {
 
 	// Get MediaMTX config from fixture via ConfigIntegration
 	configManager := helper.GetConfigManager()
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	cfg := configManager.GetConfig()
+	ff := NewFFmpegManager(&cfg.MediaMTX, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	logger := helper.GetLogger()
