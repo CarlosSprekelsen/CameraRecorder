@@ -153,14 +153,9 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 		// Check if this is for a camera device
 		devicePath := GetDevicePathFromCameraIdentifier(name)
 		if devicePath != "" && strings.HasPrefix(devicePath, "/dev/video") {
-			// Create an on-demand FFmpeg command for the camera using FFmpegManager
-			ff := NewFFmpegManager(pm.config, pm.logger).(*ffmpegManager)
-			ff.SetDependencies(nil, pm.cameraMonitor)
-			if cmd, err := ff.BuildRunOnDemandCommand(devicePath, name); err == nil {
-				source = cmd
-			} else {
-				return fmt.Errorf("failed to build FFmpeg command for device %s", devicePath)
-			}
+			// Create an on-demand FFmpeg command for the camera
+			// ARCHITECTURE: PathManager must not build commands; expect caller to provide
+			return fmt.Errorf("invalid source 'publisher': PathManager requires RunOnDemand to be pre-built by ConfigIntegration")
 			opts.RunOnDemand = source
 			opts.RunOnDemandRestart = true
 			opts.RunOnDemandStartTimeout = pm.config.RunOnDemandStartTimeout
@@ -172,17 +167,7 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 			// Empty source with runOnDemand allows dynamic publisher connection
 			source = ""
 			if opts.RunOnDemand == "" {
-				// Generate proper FFmpeg command using centralized configuration
-				pathName := GetMediaMTXPathName(devicePath)
-				// Use resolver-based FFmpeg command for consistency
-				// Use FFmpegManager to build the runOnDemand command
-				ff := NewFFmpegManager(pm.config, pm.logger).(*ffmpegManager)
-				ff.SetDependencies(nil, pm.cameraMonitor)
-				runCmd, _ := ff.BuildRunOnDemandCommand(devicePath, pathName)
-				opts.RunOnDemand = runCmd
-				opts.RunOnDemandRestart = true
-				opts.RunOnDemandStartTimeout = pm.config.RunOnDemandStartTimeout
-				opts.RunOnDemandCloseAfter = pm.config.RunOnDemandCloseAfter
+				return fmt.Errorf("missing RunOnDemand for non-camera publisher; must be provided by ConfigIntegration")
 			}
 		}
 	}

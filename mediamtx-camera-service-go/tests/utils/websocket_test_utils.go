@@ -19,6 +19,7 @@ package testutils
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -169,9 +170,15 @@ func GetSharedTestServer(t *testing.T, cfg *config.Config, tempDir string) *webs
 // NewTestClient creates a test WebSocket client connection
 func NewTestClient(t *testing.T, server *websocket.WebSocketServer) *gorilla.Conn {
 	// REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
-
-	// Use the existing test helper
-	return websocket.NewTestClient(t, server)
+	// Start server if needed and connect directly
+	if !server.IsRunning() {
+		err := server.Start()
+		require.NoError(t, err, "Failed to start test server")
+	}
+	url := fmt.Sprintf("ws://localhost:%d/ws", server.GetConfig().Port)
+	conn, _, err := gorilla.DefaultDialer.Dial(url, nil)
+	require.NoError(t, err, "Failed to connect to test server")
+	return conn
 }
 
 // CreateTestMessage creates a test JSON-RPC message
@@ -218,8 +225,9 @@ func WaitForServerReady(t *testing.T, server *websocket.WebSocketServer, timeout
 
 // CleanupTestClient closes a test client connection
 func CleanupTestClient(t *testing.T, conn *gorilla.Conn) {
-	// Use the existing test helper
-	websocket.CleanupTestClient(t, conn)
+	if conn != nil {
+		_ = conn.Close()
+	}
 }
 
 // CleanupSharedTestServer stops the shared test server

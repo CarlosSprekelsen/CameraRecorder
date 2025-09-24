@@ -401,29 +401,8 @@ func (sm *streamManager) validateDevicePath(devicePath string) error {
 // SIMPLIFIED: All use cases return the same stable path name (camera0, camera1, etc.)
 // This aligns with MediaMTX architecture where one path handles streaming AND recording
 func (sm *streamManager) GenerateStreamName(cameraID string, useCase StreamUseCase) string {
-	// Use cameraID directly as stream name (no conversion ping-pong!)
+	// Centralized naming: passthrough cameraID
 	return cameraID
-}
-
-// buildFFmpegCommand builds FFmpeg command for camera stream with caching
-func (sm *streamManager) buildFFmpegCommand(devicePath, streamName string) string {
-	// Check cache first - lock-free read with sync.Map
-	if cachedCommand, exists := sm.ffmpegCommands.Load(devicePath); exists {
-		sm.logger.WithField("device_path", devicePath).Debug("Using cached FFmpeg command")
-		return cachedCommand.(string)
-	}
-
-	// Build new command via injected FFmpegManager
-	if built, err := sm.ffmpegManager.BuildRunOnDemandCommand(devicePath, streamName); err == nil {
-		command := built
-		sm.ffmpegCommands.Store(devicePath, command)
-		sm.logger.WithField("device_path", devicePath).Debug("Built and cached new FFmpeg command")
-		return command
-	}
-
-	// If we reach here, FFmpegManager failed
-	sm.logger.WithField("device_path", devicePath).Error("FFmpegManager failed to build command")
-	return ""
 }
 
 // CreateStream creates a new stream with automatic USB device handling
@@ -445,10 +424,8 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 
 	// Check if source is a USB device path (starts with /dev/video)
 	if strings.HasPrefix(source, "/dev/video") {
-		// Create FFmpeg command for USB device publishing using FFmpegManager
-		ffUSB := NewFFmpegManager(sm.config, sm.logger).(*ffmpegManager)
-		ffUSB.SetDependencies(sm.configIntegration.configManager, nil)
-		ffmpegCommand, err := ffUSB.BuildRunOnDemandCommand(source, name)
+		// Create FFmpeg command for USB device publishing using injected FFmpegManager
+		ffmpegCommand, err := sm.ffmpegManager.BuildRunOnDemandCommand(source, name)
 		if err != nil {
 			return nil, fmt.Errorf("failed to build FFmpeg command: %w", err)
 		}
@@ -1030,9 +1007,12 @@ func (sm *streamManager) getRecordingOutputPath(cameraID, outputPath string) str
 		// No extension - MediaMTX adds it based on recordFormat
 		return filepath.Join(dir, "%path_%Y-%m-%d_%H-%M-%S")
 	}
-	// MediaMTX requires %path in recordPath - single % not double %%
-	// No extension - MediaMTX adds it based on recordFormat
-	return "/opt/recordings/%path_%Y-%m-%d_%H-%M-%S"
+	// Use centralized configuration for default recordings path
+	cfg := sm.configIntegration.configManager.GetConfig()
+	if cfg != nil && cfg.MediaMTX.RecordingsPath != "" {
+		return filepath.Join(cfg.MediaMTX.RecordingsPath, "%path_%Y-%m-%d_%H-%M-%S")
+	}
+	return "%path_%Y-%m-%d_%H-%M-%S"
 }
 
 // Helper method to check device type and determine if keepalive is needed
