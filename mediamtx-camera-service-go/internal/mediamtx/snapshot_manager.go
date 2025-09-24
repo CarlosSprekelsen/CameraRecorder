@@ -110,7 +110,8 @@ func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, cameraID string, op
 	}
 
 	// Generate snapshot path using device path for file naming
-	snapshotPath := GenerateSnapshotPath(sm.config, &sm.configManager.GetConfig().Snapshots, devicePath)
+    // Use PathManager naming policy for device subdir and filenames
+    snapshotPath := GenerateSnapshotPath(sm.config, &sm.configManager.GetConfig().Snapshots, devicePath)
 
 	sm.logger.WithFields(logging.Fields{
 		"cameraID":   cameraID,

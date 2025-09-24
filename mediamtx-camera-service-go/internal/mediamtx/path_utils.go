@@ -36,23 +36,17 @@ import (
 // This function ensures that both StreamManager and RecordingManager
 // use the same path names, enabling path reuse as documented in the
 // MediaMTX Swagger API specification.
+// DEPRECATED: GetMediaMTXPathName moved to PathManager naming policy. Use PathManager.GetPathNameForDevice.
 func GetMediaMTXPathName(devicePath string) string {
-	if devicePath == "" {
-		return ""
-	}
-
-	// Extract device name from path
-	parts := strings.Split(devicePath, "/")
-	deviceName := parts[len(parts)-1]
-
-	// Convert V4L2 device names to camera identifiers
-	if strings.HasPrefix(deviceName, "video") {
-		deviceNum := deviceName[5:] // Remove "video" prefix
-		return fmt.Sprintf("camera%s", deviceNum)
-	}
-
-	// For non-V4L2 devices, use the device name as-is
-	return deviceName
+    if devicePath == "" {
+        return ""
+    }
+    parts := strings.Split(devicePath, "/")
+    last := parts[len(parts)-1]
+    if strings.HasPrefix(last, "video") {
+        return fmt.Sprintf("camera%s", last[5:])
+    }
+    return last
 }
 
 // ValidatePathName validates that a path name conforms to MediaMTX requirements
@@ -116,7 +110,7 @@ func GenerateRecordingPath(cfg *config.MediaMTXConfig, recordingCfg *config.Reco
 // Unlike recordings, snapshots are created directly by FFmpeg, not MediaMTX
 func GenerateSnapshotPath(cfg *config.MediaMTXConfig, snapshotCfg *config.SnapshotConfig, devicePath string) string {
 	basePath := cfg.SnapshotsPath
-	deviceName := GetMediaMTXPathName(devicePath) // e.g., "camera0"
+    deviceName := GetMediaMTXPathName(devicePath) // e.g., "camera0" (PathManager is runtime authority)
 
 	// Create device subdirectory if configured
 	if snapshotCfg.UseDeviceSubdirs {

@@ -68,6 +68,13 @@ type pathManager struct {
 	metrics *PathManagerMetrics
 }
 
+// GetPathNameForDevice returns the canonical path/camera identifier for a given device path
+// Centralized naming policy: /dev/videoN -> cameraN; otherwise last path segment
+func (pm *pathManager) GetPathNameForDevice(devicePath string) string {
+    cameraID, _ := pm.GetCameraForDevicePath(devicePath)
+    return cameraID
+}
+
 // PathManagerMetrics tracks path operation metrics
 type PathManagerMetrics struct {
 	PathReadyLatencyMs  int64 `json:"path_ready_latency_ms"` // Histogram of path ready latency
@@ -1020,9 +1027,9 @@ func (pm *pathManager) GetCameraForPath(pathName string) (string, bool) {
 		return pathName, false
 	}
 
-	// Return camera identifier using abstraction layer
-	cameraID := GetMediaMTXPathName(devicePath)
-	return cameraID, true
+    // Return camera identifier using centralized naming
+    cameraID := pm.GetPathNameForDevice(devicePath)
+    return cameraID, true
 }
 
 // GetDevicePathForCamera gets the actual USB device path for a camera identifier
@@ -1043,7 +1050,7 @@ func (pm *pathManager) GetDevicePathForCamera(cameraID string) (string, bool) {
 // GetCameraForDevicePath gets the camera identifier for a USB device path
 // This is the reverse abstraction: /dev/video0 -> camera0
 func (pm *pathManager) GetCameraForDevicePath(devicePath string) (string, bool) {
-	cameraID := GetMediaMTXPathName(devicePath)
+    cameraID := pm.GetPathNameForDevice(devicePath)
 
 	// Check if device actually exists via camera monitor
 	if pm.cameraMonitor != nil {
