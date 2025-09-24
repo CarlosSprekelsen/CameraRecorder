@@ -917,6 +917,12 @@ func (m *HybridCameraMonitor) selectOptimalPixelFormat(devicePath, outputFormat 
 	return fallback, nil
 }
 
+// SelectOptimalPixelFormat exposes optimal pixel format selection for external callers.
+// It delegates to the internal selectOptimalPixelFormat implementation.
+func (m *HybridCameraMonitor) SelectOptimalPixelFormat(devicePath, outputFormat string) (string, error) {
+	return m.selectOptimalPixelFormat(devicePath, outputFormat)
+}
+
 // getFallbackPixelFormat provides a safe fallback when capability detection fails
 func (m *HybridCameraMonitor) getFallbackPixelFormat(outputFormat string) string {
 	switch strings.ToLower(outputFormat) {

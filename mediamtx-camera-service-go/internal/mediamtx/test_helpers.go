@@ -530,7 +530,9 @@ func (h *MediaMTXTestHelper) GetStreamManager() StreamManager {
 func (h *MediaMTXTestHelper) GetFFmpegManager() FFmpegManager {
 	h.ffmpegManagerOnce.Do(func() {
 		// Use centralized MediaMTX config
-		h.ffmpegManager = NewFFmpegManager(h.mediaMTXConfig, h.logger)
+		ff := NewFFmpegManager(h.mediaMTXConfig, h.logger).(*ffmpegManager)
+		ff.SetDependencies(h.configManager, h.GetCameraMonitor())
+		h.ffmpegManager = ff
 	})
 	return h.ffmpegManager
 }

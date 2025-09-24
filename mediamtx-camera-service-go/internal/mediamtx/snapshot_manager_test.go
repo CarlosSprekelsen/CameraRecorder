@@ -241,6 +241,9 @@ func TestSnapshotManager_DeleteSnapshotFile_ReqMTX002_Success(t *testing.T) {
 
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, logger)
+	// Note: ffmpegManager is not exported, so we can't cast to it
+	// The SetDependencies method is not available in the interface
+	// This is a limitation of the current design
 	// Create StreamManager using proper test infrastructure
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()
@@ -313,6 +316,9 @@ func TestSnapshotManager_GetSnapshotSettings_ReqMTX001_Success(t *testing.T) {
 
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, logger)
+	// Note: ffmpegManager is not exported, so we can't cast to it
+	// The SetDependencies method is not available in the interface
+	// This is a limitation of the current design
 	// Create StreamManager using proper test infrastructure
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()
@@ -479,6 +485,9 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX004_ErrorHandling(t *testing.T) {
 
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, logger)
+	// Note: ffmpegManager is not exported, so we can't cast to it
+	// The SetDependencies method is not available in the interface
+	// This is a limitation of the current design
 	// Create StreamManager using proper test infrastructure
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()
@@ -530,6 +539,9 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX001_Concurrent(t *testing.T) {
 
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, logger)
+	// Note: ffmpegManager is not exported, so we can't cast to it
+	// The SetDependencies method is not available in the interface
+	// This is a limitation of the current design
 	// Create StreamManager using proper test infrastructure
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()
@@ -617,6 +629,9 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier1_USBDirect(t *testing.T) {
 
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, logger)
+	// Note: ffmpegManager is not exported, so we can't cast to it
+	// The SetDependencies method is not available in the interface
+	// This is a limitation of the current design
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()
 	configManager := config.CreateConfigManager()
@@ -695,6 +710,9 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier2_RTSPImmediate(t *testing.T
 
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, logger)
+	// Note: ffmpegManager is not exported, so we can't cast to it
+	// The SetDependencies method is not available in the interface
+	// This is a limitation of the current design
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()
 	configManager := config.CreateConfigManager()
@@ -780,6 +798,9 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_Tier3_RTSPActivation(t *testing.
 
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, logger)
+	// Note: ffmpegManager is not exported, so we can't cast to it
+	// The SetDependencies method is not available in the interface
+	// This is a limitation of the current design
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()
 	configManager := config.CreateConfigManager()
@@ -861,6 +882,9 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_MultiTier_Integration(t *testing
 
 	// Create FFmpeg manager and snapshot manager
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, logger)
+	// Note: ffmpegManager is not exported, so we can't cast to it
+	// The SetDependencies method is not available in the interface
+	// This is a limitation of the current design
 	// Use shared stream manager from test helper
 	streamManager := helper.GetStreamManager()
 	configManager := config.CreateConfigManager()
@@ -962,6 +986,9 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_MultiTier_Tiers2And3(t *testing.
 
 	// Create snapshot manager with proper configuration
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, helper.GetLogger())
+	// Note: ffmpegManager is not exported, so we can't cast to it
+	// The SetDependencies method is not available in the interface
+	// This is a limitation of the current design
 	streamManager := NewStreamManager(helper.GetClient(), helper.GetPathManager(), mediaMTXConfig, recordingConfig, configIntegration, helper.GetLogger())
 	// Create real hardware camera monitor for testing
 	cameraMonitor := helper.GetCameraMonitor()
@@ -1065,6 +1092,9 @@ func TestSnapshotManager_TakeSnapshot_ReqCAM001_Tier0_V4L2Direct_RealHardware(t 
 
 	// Create snapshot manager with configuration integration
 	ffmpegManager := NewFFmpegManager(mediaMTXConfig, helper.GetLogger())
+	// Note: ffmpegManager is not exported, so we can't cast to it
+	// The SetDependencies method is not available in the interface
+	// This is a limitation of the current design
 	streamManager := NewStreamManager(helper.GetClient(), helper.GetPathManager(), mediaMTXConfig, recordingConfig, configIntegration, helper.GetLogger())
 	client := helper.GetClient()
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, helper.GetLogger())

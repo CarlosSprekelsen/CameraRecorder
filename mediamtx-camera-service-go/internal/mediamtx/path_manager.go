@@ -153,11 +153,18 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 		// Check if this is for a camera device
 		devicePath := GetDevicePathFromCameraIdentifier(name)
 		if devicePath != "" && strings.HasPrefix(devicePath, "/dev/video") {
-			// Create an on-demand FFmpeg command for the camera
-			source = fmt.Sprintf(
-				"ffmpeg -f v4l2 -i %s -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp rtsp://localhost:8554/%s",
-				devicePath, name,
-			)
+			// Create an on-demand FFmpeg command for the camera using FFmpegManager
+			ff := NewFFmpegManager(pm.config, pm.logger).(*ffmpegManager)
+			ff.SetDependencies(nil, pm.cameraMonitor)
+			if cmd, err := ff.BuildRunOnDemandCommand(devicePath, name); err == nil {
+				source = cmd
+			} else {
+				// Fallback to basic command if FFmpegManager fails
+				source = fmt.Sprintf(
+					"ffmpeg -f v4l2 -i %s -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp rtsp://localhost:8554/%s",
+					devicePath, name,
+				)
+			}
 			opts.RunOnDemand = source
 			opts.RunOnDemandRestart = true
 			opts.RunOnDemandStartTimeout = pm.config.RunOnDemandStartTimeout
@@ -171,12 +178,12 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 			if opts.RunOnDemand == "" {
 				// Generate proper FFmpeg command using centralized configuration
 				pathName := GetMediaMTXPathName(devicePath)
-                // Use resolver-based FFmpeg command for consistency
-                var resolver *CameraFormatResolver
-                if pm.cameraMonitor != nil {
-                    resolver = NewCameraFormatResolver(pm.cameraMonitor, pm.logger)
-                }
-                opts.RunOnDemand = BuildFFmpegCommandWithResolver(devicePath, pathName, pm.config, resolver)
+				// Use resolver-based FFmpeg command for consistency
+				// Use FFmpegManager to build the runOnDemand command
+				ff := NewFFmpegManager(pm.config, pm.logger).(*ffmpegManager)
+				ff.SetDependencies(nil, pm.cameraMonitor)
+				runCmd, _ := ff.BuildRunOnDemandCommand(devicePath, pathName)
+				opts.RunOnDemand = runCmd
 				opts.RunOnDemandRestart = true
 				opts.RunOnDemandStartTimeout = pm.config.RunOnDemandStartTimeout
 				opts.RunOnDemandCloseAfter = pm.config.RunOnDemandCloseAfter

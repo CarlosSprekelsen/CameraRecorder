@@ -26,14 +26,17 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // ffmpegManager represents the MediaMTX FFmpeg manager
 type ffmpegManager struct {
-	config *config.MediaMTXConfig
-	logger *logging.Logger
+	config        *config.MediaMTXConfig
+	logger        *logging.Logger
+	cameraMonitor camera.CameraMonitor
+	configManager *config.ConfigManager
 
 	// Process tracking
 	processes map[int]*FFmpegProcess
@@ -87,10 +90,18 @@ func NewFFmpegManager(config *config.MediaMTXConfig, logger *logging.Logger) FFm
 	return &ffmpegManager{
 		config:             config,
 		logger:             logger,
+		cameraMonitor:      nil,
+		configManager:      nil,
 		processes:          make(map[int]*FFmpegProcess),
 		performanceMetrics: make(map[string]*PerformanceMetrics),
 		cleanupActions:     make(map[int][]string),
 	}
+}
+
+// SetDependencies wires optional dependencies after construction
+func (fm *ffmpegManager) SetDependencies(configManager *config.ConfigManager, cameraMonitor camera.CameraMonitor) {
+	fm.configManager = configManager
+	fm.cameraMonitor = cameraMonitor
 }
 
 // StartProcess starts an FFmpeg process
@@ -341,8 +352,13 @@ func (fm *ffmpegManager) TakeSnapshot(ctx context.Context, device, outputPath st
 		fm.recordPerformanceMetrics(operationType, duration, nil)
 	}()
 
-	// Build FFmpeg command for snapshot
-	command := fm.buildSnapshotCommand(device, outputPath)
+	// Determine format from canonical config
+	cfg := fm.configManager.GetConfig()
+	snapFormat := "jpeg"
+	if cfg != nil && cfg.Snapshots.Format != "" {
+		snapFormat = cfg.Snapshots.Format
+	}
+	command, _ := fm.BuildSnapshotCommand(device, outputPath, snapFormat)
 
 	// Create output directory if it doesn't exist
 	outputDir := filepath.Dir(outputPath)
@@ -589,23 +605,89 @@ func (fm *ffmpegManager) GetFileInfo(ctx context.Context, path string) (int64, t
 }
 
 // buildSnapshotCommand builds an FFmpeg command for snapshot
-func (fm *ffmpegManager) buildSnapshotCommand(device, outputPath string) []string {
-	command := []string{"ffmpeg"}
+// BuildSnapshotCommand builds a snapshot command using camera capability detection (no hardcoding)
+func (fm *ffmpegManager) BuildSnapshotCommand(device, outputPath string, format string) ([]string, error) {
+	// Determine pixel format using camera monitor
+	var pixFmt string
+	var err error
+	if fm.cameraMonitor != nil && strings.HasPrefix(device, "/dev/video") {
+		// Use public wrapper on HybridCameraMonitor when available
+		if selector, ok := fm.cameraMonitor.(interface {
+			SelectOptimalPixelFormat(string, string) (string, error)
+		}); ok {
+			pixFmt, err = selector.SelectOptimalPixelFormat(device, format)
+		}
+		if err != nil {
+			fm.logger.WithError(err).WithField("device", device).Warn("Failed to select optimal pixel format; proceeding without explicit pix_fmt")
+		}
+	}
 
-	// Input device
-	command = append(command, "-f", "v4l2")
-	command = append(command, "-i", device)
+	// Assemble arguments strictly from config and detected format
+	args := []string{"-f", "v4l2", "-i", device, "-vframes", "1"}
+	switch strings.ToLower(format) {
+	case "jpg", "jpeg":
+		args = append(args, "-c:v", "mjpeg")
+		// quality from config
+		q := 2
+		if q <= 0 {
+			q = 2
+		}
+		args = append(args, "-q:v", strconv.Itoa(q))
+	case "png":
+		args = append(args, "-c:v", "png")
+		args = append(args, "-compression_level", strconv.Itoa(6))
+	default:
+		args = append(args, "-c:v", "mjpeg")
+		q := 2
+		if q <= 0 {
+			q = 2
+		}
+		args = append(args, "-q:v", strconv.Itoa(q))
+	}
+	if pixFmt != "" {
+		args = append(args, "-pix_fmt", strings.ToLower(pixFmt))
+	}
+	if fm.configManager != nil {
+		if c := fm.configManager.GetConfig(); c != nil && c.Snapshots.MaxWidth > 0 && c.Snapshots.MaxHeight > 0 {
+			scale := fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=decrease", c.Snapshots.MaxWidth, c.Snapshots.MaxHeight)
+			args = append(args, "-vf", scale)
+		}
+	}
+	args = append(args, "-y", outputPath)
+	return fm.BuildCommand(args...), nil
+}
 
-	// Video frames
-	command = append(command, "-vframes", "1")
+// BuildRunOnDemandCommand builds the runOnDemand ffmpeg command using camera capability detection
+func (fm *ffmpegManager) BuildRunOnDemandCommand(devicePath, streamName string) (string, error) {
+	// Select pixel format for h264 pipeline
+	var pixFmt string
+	var err error
+	if fm.cameraMonitor != nil && strings.HasPrefix(devicePath, "/dev/video") {
+		if selector, ok := fm.cameraMonitor.(interface {
+			SelectOptimalPixelFormat(string, string) (string, error)
+		}); ok {
+			pixFmt, err = selector.SelectOptimalPixelFormat(devicePath, "h264")
+		}
+		if err != nil {
+			fm.logger.WithError(err).WithField("device", devicePath).Warn("Failed to select optimal pixel format; using config pixel_format")
+			pixFmt = fm.config.Codec.PixelFormat
+		}
+	} else {
+		pixFmt = fm.config.Codec.PixelFormat
+	}
 
-	// Overwrite output file without asking (prevents hanging on interactive prompt)
-	command = append(command, "-y")
-
-	// Output path
-	command = append(command, outputPath)
-
-	return command
+	// Build full command strictly from config
+	args := []string{"-f", "v4l2", "-i", devicePath,
+		"-c:v", "libx264",
+		"-profile:v", fm.config.Codec.VideoProfile,
+		"-level", fm.config.Codec.VideoLevel,
+		"-pix_fmt", pixFmt,
+		"-preset", fm.config.Codec.Preset,
+		"-b:v", fm.config.Codec.Bitrate,
+		"-f", "rtsp", fmt.Sprintf("rtsp://%s:%d/%s", fm.config.Host, fm.config.RTSPPort, streamName),
+	}
+	cmd := fm.BuildCommand(args...)
+	return strings.Join(cmd, " "), nil
 }
 
 // monitorProcess monitors an FFmpeg process

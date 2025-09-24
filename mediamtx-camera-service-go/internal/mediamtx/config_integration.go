@@ -357,8 +357,8 @@ func (ci *ConfigIntegration) BuildRecordingPathConfWithResolver(devicePath, path
 	// Build recording path pattern using existing utility
 	recordPath := GenerateRecordingPath(&cfg.MediaMTX, &cfg.Recording)
 
-	// Use the FFmpeg command builder with format resolver (always prefer resolver)
-	runOnDemand := BuildFFmpegCommandWithResolver(devicePath, pathName, &cfg.MediaMTX, formatResolver)
+	// Use FFmpegManager to build command with dynamic format detection
+	runOnDemand := buildPathCommandWithFFmpegManager(devicePath, pathName, &cfg.MediaMTX, ci.configManager, ci.logger)
 
 	pathConf := &PathConf{
 		// Source configuration
@@ -431,8 +431,8 @@ func (ci *ConfigIntegration) BuildPathConf(pathName string, pathSource *PathSour
 		SourceOnDemandStartTimeout: cfg.MediaMTX.RunOnDemandStartTimeout,
 		SourceOnDemandCloseAfter:   cfg.MediaMTX.RunOnDemandCloseAfter,
 
-		// FFmpeg command configuration (resolver-based)
-		RunOnDemand:        BuildFFmpegCommandWithResolver(devicePath, pathName, &cfg.MediaMTX, formatResolver),
+		// FFmpeg command configuration using FFmpegManager
+		RunOnDemand:        buildPathCommandWithFFmpegManager(devicePath, pathName, &cfg.MediaMTX, ci.configManager, ci.logger),
 		RunOnDemandRestart: true,
 	}
 
@@ -456,4 +456,17 @@ func (ci *ConfigIntegration) WatchConfigChanges(controller MediaMTXController) e
 	// Configuration watching would need to be implemented through the existing config system
 	ci.logger.Debug("Configuration change watcher not implemented (requires ConfigManager enhancement)")
 	return nil
+}
+
+// buildPathCommandWithFFmpegManager builds FFmpeg command using FFmpegManager with fallback
+func buildPathCommandWithFFmpegManager(devicePath, pathName string, cfg *config.MediaMTXConfig, configManager *config.ConfigManager, logger *logging.Logger) string {
+	ff := NewFFmpegManager(cfg, logger).(*ffmpegManager)
+	ff.SetDependencies(configManager, nil) // No camera monitor in this context
+	runOnDemand, err := ff.BuildRunOnDemandCommand(devicePath, pathName)
+	if err != nil {
+		// Fallback to basic command if FFmpegManager fails
+		runOnDemand = fmt.Sprintf("ffmpeg -f v4l2 -i %s -c:v libx264 -preset %s -f rtsp rtsp://%s:%d/%s",
+			devicePath, cfg.Codec.Preset, cfg.Host, cfg.RTSPPort, pathName)
+	}
+	return runOnDemand
 }

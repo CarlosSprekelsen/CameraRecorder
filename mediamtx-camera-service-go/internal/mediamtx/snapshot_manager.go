@@ -404,8 +404,8 @@ func (sm *SnapshotManager) captureSnapshotDirect(ctx context.Context, devicePath
 		"tier":        1,
 	}).Info("Tier 1: Attempting USB direct capture")
 
-	// Use existing FFmpeg manager for direct capture
-	command := sm.buildAdvancedSnapshotCommand(devicePath, snapshotPath, nil)
+	// Use FFmpegManager for capability-aware snapshot command
+	command, _ := sm.ffmpegManager.BuildSnapshotCommand(devicePath, snapshotPath, sm.snapshotSettings.Format)
 
 	// Create output directory if it doesn't exist
 	outputDir := filepath.Dir(snapshotPath)
@@ -846,44 +846,7 @@ func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.
 }
 
 // buildAdvancedSnapshotCommand builds an advanced FFmpeg command for snapshots
-func (sm *SnapshotManager) buildAdvancedSnapshotCommand(device, outputPath string, options *SnapshotOptions) []string {
-	command := []string{"ffmpeg"}
-
-	// Input device
-	command = append(command, "-f", "v4l2")
-	command = append(command, "-i", device)
-
-	// Video frames (take only one frame)
-	command = append(command, "-vframes", "1")
-
-	// Video codec based on format
-	switch sm.snapshotSettings.Format {
-	case "jpg", "jpeg":
-		command = append(command, "-c:v", "mjpeg")
-		command = append(command, "-q:v", strconv.Itoa(sm.snapshotSettings.Quality))
-	case "png":
-		command = append(command, "-c:v", "png")
-		command = append(command, "-compression_level", strconv.Itoa(sm.snapshotSettings.Compression))
-	default:
-		command = append(command, "-c:v", "mjpeg")
-		command = append(command, "-q:v", strconv.Itoa(sm.snapshotSettings.Quality))
-	}
-
-	// Resize if needed
-	if sm.snapshotSettings.AutoResize {
-		scaleFilter := fmt.Sprintf("scale=%d:%d:force_original_aspect_ratio=decrease",
-			sm.snapshotSettings.MaxWidth, sm.snapshotSettings.MaxHeight)
-		command = append(command, "-vf", scaleFilter)
-	}
-
-	// Overwrite output file without asking (prevents hanging on interactive prompt)
-	command = append(command, "-y")
-
-	// Output path
-	command = append(command, outputPath)
-
-	return command
-}
+// buildAdvancedSnapshotCommand removed; FFmpegManager.BuildSnapshotCommand is the single source of truth.
 
 // deleteSnapshotFile deletes a snapshot file
 func (sm *SnapshotManager) deleteSnapshotFile(filePath string) error {

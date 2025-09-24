@@ -409,16 +409,30 @@ func (sm *streamManager) buildFFmpegCommand(devicePath, streamName string) strin
 	}
 
 	// Build new command
-	command := fmt.Sprintf(
-		"ffmpeg -f v4l2 -i %s -c:v libx264 -preset ultrafast -tune zerolatency "+
-			"-f rtsp rtsp://%s:%d/%s",
-		devicePath, sm.config.Host, sm.config.RTSPPort, streamName)
+	// Build runOnDemand command via FFmpegManager to avoid duplication
+	ff := NewFFmpegManager(sm.config, sm.logger).(*ffmpegManager)
+	ff.SetDependencies(sm.configIntegration.configManager, nil)
+	if built, err := ff.BuildRunOnDemandCommand(devicePath, streamName); err == nil {
+		command := built
+		sm.ffmpegCommands.Store(devicePath, command)
+		sm.logger.WithField("device_path", devicePath).Debug("Built and cached new FFmpeg command")
+		return command
+	}
 
-	// Cache the command - lock-free write with sync.Map
-	sm.ffmpegCommands.Store(devicePath, command)
+	// Fallback: use FFmpegManager with minimal config if previous attempt failed
+	ffFallback := NewFFmpegManager(sm.config, sm.logger).(*ffmpegManager)
+	ffFallback.SetDependencies(sm.configIntegration.configManager, nil)
+	if fallbackCmd, err := ffFallback.BuildRunOnDemandCommand(devicePath, streamName); err == nil {
+		sm.ffmpegCommands.Store(devicePath, fallbackCmd)
+		sm.logger.WithField("device_path", devicePath).Warn("FFmpegManager build failed; using fallback command")
+		return fallbackCmd
+	}
 
-	sm.logger.WithField("device_path", devicePath).Debug("Built and cached new FFmpeg command")
-	return command
+	// Final fallback: minimal hardcoded command (should never reach here)
+	finalFallback := fmt.Sprintf("ffmpeg -f v4l2 -i %s -c:v libx264 -preset %s -tune zerolatency -f rtsp rtsp://%s:%d/%s", devicePath, sm.config.Codec.Preset, sm.config.Host, sm.config.RTSPPort, streamName)
+	sm.ffmpegCommands.Store(devicePath, finalFallback)
+	sm.logger.WithField("device_path", devicePath).Warn("All FFmpegManager attempts failed; using minimal fallback")
+	return finalFallback
 }
 
 // CreateStream creates a new stream with automatic USB device handling
@@ -440,11 +454,17 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 
 	// Check if source is a USB device path (starts with /dev/video)
 	if strings.HasPrefix(source, "/dev/video") {
-		// Create FFmpeg command for USB device publishing (like Python implementation)
-		ffmpegCommand := fmt.Sprintf(
-			"ffmpeg -f v4l2 -i %s -c:v libx264 -profile:v baseline -level 3.0 "+
-				"-pix_fmt yuv420p -preset ultrafast -b:v 600k -f rtsp rtsp://%s:%d/%s",
-			source, sm.config.Host, sm.config.RTSPPort, name)
+		// Create FFmpeg command for USB device publishing using FFmpegManager
+		ffUSB := NewFFmpegManager(sm.config, sm.logger).(*ffmpegManager)
+		ffUSB.SetDependencies(sm.configIntegration.configManager, nil)
+		ffmpegCommand, err := ffUSB.BuildRunOnDemandCommand(source, name)
+		if err != nil {
+			// Fallback to basic command if FFmpegManager fails
+			ffmpegCommand = fmt.Sprintf(
+				"ffmpeg -f v4l2 -i %s -c:v libx264 -profile:v baseline -level 3.0 "+
+					"-pix_fmt yuv420p -preset ultrafast -b:v 600k -f rtsp rtsp://%s:%d/%s",
+				source, sm.config.Host, sm.config.RTSPPort, name)
+		}
 
 		// Create path configuration for USB device
 		pathConfig := &PathConf{
@@ -456,7 +476,7 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 		}
 
 		// Use PathManager for proper architectural integration and validation
-		err := sm.pathManager.CreatePath(ctx, name, source, pathConfig)
+		err = sm.pathManager.CreatePath(ctx, name, source, pathConfig)
 		if err != nil {
 			// Check if this is a "path exists" error (idempotent success)
 			errorMsg := err.Error()

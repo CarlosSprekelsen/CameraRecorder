@@ -560,6 +560,10 @@ type FFmpegManager interface {
 	// Snapshot operations only
 	TakeSnapshot(ctx context.Context, device, outputPath string) error
 
+	// Centralized builders (single source of truth)
+	BuildRunOnDemandCommand(devicePath, streamName string) (string, error)
+	BuildSnapshotCommand(device, outputPath string, format string) ([]string, error)
+
 	// File management
 	RotateFile(ctx context.Context, oldPath, newPath string) error
 	GetFileInfo(ctx context.Context, path string) (int64, time.Time, error)
