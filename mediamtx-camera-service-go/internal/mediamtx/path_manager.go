@@ -166,12 +166,6 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 				"RunOnDemand not provided for camera 'publisher': path=%s device=%s. PathManager does not build FFmpeg commands. Use ConfigIntegration.BuildPathConf to supply PathConf.RunOnDemand",
 				name, devicePath,
 			)
-			opts.RunOnDemand = source
-			opts.RunOnDemandRestart = true
-			opts.RunOnDemandStartTimeout = pm.config.RunOnDemandStartTimeout
-			opts.RunOnDemandCloseAfter = pm.config.RunOnDemandCloseAfter
-			// Clear source since we're using runOnDemand
-			source = ""
 		} else {
 			// For non-camera paths, use a redirect or leave empty
 			// Empty source with runOnDemand allows dynamic publisher connection

@@ -345,15 +345,6 @@ func determineStatus(ready bool) string {
 	return "PENDING"
 }
 
-// parsePathResponse parses a single path response (runtime status)
-func parsePathResponse(data []byte) (*Path, error) {
-	var path Path
-	if err := json.Unmarshal(data, &path); err != nil {
-		return nil, NewMediaMTXErrorWithOp(0, "failed to parse path response", err.Error(), "parse_path")
-	}
-	return &path, nil
-}
-
 // parseMetricsResponse parses the metrics response
 func parseMetricsResponse(data []byte) (*Metrics, error) {
 	var metrics Metrics
@@ -367,13 +358,6 @@ func parseMetricsResponse(data []byte) (*Metrics, error) {
 type createStreamRequest struct {
 	Name   string `json:"name"`
 	Source string `json:"source"`
-}
-
-// createPathRequest represents a path creation request
-type createPathRequest struct {
-	Name   string                 `json:"name"`
-	Source string                 `json:"source"`
-	Config map[string]interface{} `json:"config,omitempty"`
 }
 
 // marshalCreateStreamRequest marshals a stream creation request

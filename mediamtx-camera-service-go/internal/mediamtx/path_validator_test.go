@@ -95,7 +95,7 @@ func TestPathValidatorCaching(t *testing.T) {
 	}
 
 	// Results should be different (re-validated)
-	if result1.ValidatedAt == result3.ValidatedAt {
+	if result1.ValidatedAt.Equal(result3.ValidatedAt) {
 		t.Error("Expected re-validated result, but got same validation time")
 	}
 }

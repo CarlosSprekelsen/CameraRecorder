@@ -127,6 +127,10 @@ const (
 	UniversalTestFileSize    = 10 // Default test file size
 	UniversalTestBackupCount = 3  // Default backup count for tests
 
+	// File Size Validation Constants - Universal across all modules
+	UniversalMinRecordingFileSize = 10000 // 10KB minimum for recordings (meaningful content)
+	UniversalMinSnapshotFileSize  = 1000  // 1KB minimum for snapshots (meaningful content)
+
 	// Test Load Generation Constants
 	UniversalTestStringLength = 10000 // Length for very long test strings
 

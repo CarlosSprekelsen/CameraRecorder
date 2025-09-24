@@ -43,97 +43,34 @@ func TestNewRecordingManager_ReqMTX001(t *testing.T) {
 func TestRecordingManager_CompleteLifecycle_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// Complete lifecycle validation: Start → Verify Recording → Stop → Verify File
-	helper, _ := SetupMediaMTXTest(t)
+	helper, ctx := SetupMediaMTXTest(t)
 
-	// Use configured paths like existing tests
-
+	// Get ready controller with Progressive Readiness
 	controller, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
 	defer controller.Stop(ctx)
+
+	// Get camera ID (one line instead of 5)
+	cameraID := helper.MustGetCameraID(t, ctx, controller)
+
+	// Get initial recording count for validation
 	recordingManager := helper.GetRecordingManager()
-
-	// Step 1: Setup test parameters using REAL camera device
-	// Use the ready controller to get camera identifier (Progressive Readiness pattern)
-	cameraID, err := helper.GetAvailableCameraIdentifierFromController(ctx, controller)
-	require.NoError(t, err, "Should get camera identifier with real hardware")
-	configuredRecordingPath := helper.GetConfiguredRecordingPath() // Use fixture-configured directory
-
-	// Use configuration parameters instead of hardcoding values
-	recordingFormat := helper.GetConfiguredRecordingFormat()
-	options := &PathConf{
-		Record:       true,
-		RecordFormat: recordingFormat, // Use configured format (fmp4)
-	}
-
-	// Get initial recording count
 	initialRecordings, err := recordingManager.ListRecordings(ctx, 10, 0)
 	require.NoError(t, err, "Initial recording list should succeed")
 	initialCount := initialRecordings.Total
 
-	// Step 2: Start REAL recording - let the actual code generate the file
-	startResult := testutils.TestProgressiveReadiness(t, func() (*StartRecordingResponse, error) {
-		return recordingManager.StartRecording(ctx, cameraID, options)
-	}, controller, "StartRecording")
+	// Complete recording lifecycle (replaces 80+ lines of setup, start, stop, validation)
+	session := helper.MustStartAndStopRecording(t, ctx, controller, cameraID, testutils.UniversalTimeoutMedium)
 
-	// Step 3: Verify REAL functionality worked - cameras exist so this MUST succeed
-	require.NoError(t, startResult.Error, "Recording start must succeed with real camera")
-	require.NotNil(t, startResult.Result, "Recording response must not be nil")
+	// Test-specific business logic assertions only
+	assert.Equal(t, helper.GetConfiguredRecordingFormat(), session.Format, "Recording format should match configuration")
 
-	session := startResult.Result
-	assert.Equal(t, cameraID, session.Device, "Recording device should match request")
-	assert.NotEmpty(t, session.StartTime, "Recording should include start time")
-	assert.NotEmpty(t, session.Format, "Recording should include format")
-	assert.Equal(t, "RECORDING", session.Status, "Recording should be in RECORDING status")
-
-	// Step 4: Verify REAL recording file is being created
-	time.Sleep(testutils.UniversalTimeoutMedium) // Allow time for recording to start using universal constant
-
-	// Use universal path builder - handles both recordings AND snapshots with same pattern
-	expectedFilename := helper.GetConfiguredRecordingFilename(cameraID)
-	recordingConfig := helper.GetRecordingConfig()
-
-	recordingFilePath := testutils.BuildMediaMTXFilePath(
-		configuredRecordingPath, // base path
-		cameraID,                // camera ID for subdirectories
-		expectedFilename,        // filename without extension
-		recordingConfig != nil && recordingConfig.UseDeviceSubdirs, // use subdirs flag
-		helper.GetConfiguredRecordingFormat(),                      // format (fmp4 for STANAG 4609)
-	)
-
-	// Verify file is created in configured directory
-	assert.True(t, strings.HasPrefix(recordingFilePath, configuredRecordingPath),
-		"Recording file should be in configured directory: %s", configuredRecordingPath)
-
-	// Step 5: Record for a short duration to ensure meaningful content
-	time.Sleep(testutils.UniversalRetryDelay) // Use universal constant instead of hardcoded value
-
-	// Step 6: Stop REAL recording
-	stopResult := testutils.TestProgressiveReadiness(t, func() (*StopRecordingResponse, error) {
-		return recordingManager.StopRecording(ctx, cameraID)
-	}, controller, "StopRecording")
-
-	// Step 7: Verify recording stopped successfully
-	require.NoError(t, stopResult.Error, "Recording stop must succeed")
-	require.NotNil(t, stopResult.Result, "Stop response must not be nil")
-
-	stopResponse := stopResult.Result
-	assert.Equal(t, cameraID, stopResponse.Device, "Stop response device should match")
-	assert.Equal(t, "STOPPED", stopResponse.Status, "Stop response should indicate stopped")
-
-	// Step 8: Verify REAL file was created with meaningful content
-	require.FileExists(t, recordingFilePath, "Real recording file must exist after operation")
-
-	// Verify file has meaningful content (real video data)
-	fileInfo, err := os.Stat(recordingFilePath)
-	require.NoError(t, err, "Should be able to stat real recording file")
-	assert.Greater(t, fileInfo.Size(), int64(10000), "Real recording file must have meaningful size (>10KB)")
-
-	// Step 9: Verify real recording is tracked in listing
+	// Verify recording count increased
 	finalRecordings, err := recordingManager.ListRecordings(ctx, 10, 0)
 	require.NoError(t, err, "Final recording list should succeed")
 	assert.Equal(t, initialCount+1, finalRecordings.Total, "Should have one more recording")
 
-	// Verify our real recording is in the list
+	// Verify our recording is in the list
 	found := false
 	for _, recording := range finalRecordings.Files {
 		if recording.Filename == session.Filename {
@@ -141,22 +78,9 @@ func TestRecordingManager_CompleteLifecycle_ReqMTX002(t *testing.T) {
 			break
 		}
 	}
-	assert.True(t, found, "Real created recording should be in listing")
+	assert.True(t, found, "Created recording should be in listing")
 
-	// Step 10: Verify Progressive Readiness behavior
-	if startResult.UsedFallback {
-		t.Log("⚠️  PROGRESSIVE READINESS FALLBACK: Start operation needed readiness event (acceptable)")
-	} else {
-		t.Log("✅ PROGRESSIVE READINESS SUCCESS: Start operation succeeded immediately")
-	}
-
-	if stopResult.UsedFallback {
-		t.Log("⚠️  PROGRESSIVE READINESS FALLBACK: Stop operation needed readiness event (acceptable)")
-	} else {
-		t.Log("✅ PROGRESSIVE READINESS SUCCESS: Stop operation succeeded immediately")
-	}
-
-	t.Log("✅ REAL TEST SUCCESS: Recording lifecycle succeeded with real camera and file")
+	t.Logf("✅ Complete recording lifecycle validated successfully")
 }
 
 // TestRecordingManager_StopRecording_ReqMTX002 tests recording session termination with real server

@@ -2056,3 +2056,101 @@ func (h *MediaMTXTestHelper) SubscribeToReadiness() <-chan struct{} {
 func (edh *EventDrivenTestHelper) SubscribeToReadiness() <-chan struct{} {
 	return edh.controller.SubscribeToReadiness()
 }
+
+// ============================================================================
+// SIMPLIFIED TEST HELPERS - Complete Lifecycle Methods
+// ============================================================================
+// These methods encapsulate common test patterns to eliminate bloated test code
+// and preserve Progressive Readiness pattern while simplifying test logic.
+
+// MustGetCameraID gets camera ID with proper error handling - eliminates boilerplate
+func (h *MediaMTXTestHelper) MustGetCameraID(t *testing.T, ctx context.Context, controller MediaMTXController) string {
+	cameraID, err := h.GetAvailableCameraIdentifierFromController(ctx, controller)
+	require.NoError(t, err, "Must have available camera for test")
+	return cameraID
+}
+
+// MustStartAndStopRecording performs complete recording lifecycle in one call
+// Encapsulates Progressive Readiness pattern and file validation
+func (h *MediaMTXTestHelper) MustStartAndStopRecording(t *testing.T, ctx context.Context, controller MediaMTXController, cameraID string, duration time.Duration) *StartRecordingResponse {
+	recordingManager := h.GetRecordingManager()
+
+	// Start recording with Progressive Readiness (using existing testutils)
+	startResult := testutils.TestProgressiveReadiness(t, func() (*StartRecordingResponse, error) {
+		options := &PathConf{
+			Record:       true,
+			RecordFormat: h.GetConfiguredRecordingFormat(), // Use existing helper method
+		}
+		return recordingManager.StartRecording(ctx, cameraID, options)
+	}, controller, "StartRecording")
+
+	require.NoError(t, startResult.Error, "Recording must start with Progressive Readiness")
+	require.NotNil(t, startResult.Result, "Recording response must not be nil")
+
+	session := startResult.Result
+
+	// Log Progressive Readiness behavior
+	if startResult.UsedFallback {
+		t.Log("⚠️  PROGRESSIVE READINESS FALLBACK: Start needed readiness event")
+	} else {
+		t.Log("✅ PROGRESSIVE READINESS: Start succeeded immediately")
+	}
+
+	// Validate session properties
+	assert.Equal(t, cameraID, session.Device, "Recording device should match request")
+	assert.NotEmpty(t, session.StartTime, "Recording should include start time")
+	assert.Equal(t, "RECORDING", session.Status, "Recording should be in RECORDING status")
+
+	// Wait for recording duration using universal constant
+	t.Logf("Recording for %v...", duration)
+	time.Sleep(duration)
+
+	// Stop recording with Progressive Readiness
+	stopResult := testutils.TestProgressiveReadiness(t, func() (*StopRecordingResponse, error) {
+		return recordingManager.StopRecording(ctx, cameraID)
+	}, controller, "StopRecording")
+
+	require.NoError(t, stopResult.Error, "Recording must stop with Progressive Readiness")
+	require.NotNil(t, stopResult.Result, "Stop recording response must not be nil")
+
+	// Log Progressive Readiness behavior for stop
+	if stopResult.UsedFallback {
+		t.Log("⚠️  PROGRESSIVE READINESS FALLBACK: Stop needed readiness event")
+	} else {
+		t.Log("✅ PROGRESSIVE READINESS: Stop succeeded immediately")
+	}
+
+	// Validate file creation using existing helper
+	h.AssertRecordingResponse(t, session, nil)
+
+	return session
+}
+
+// MustTakeSnapshot performs complete snapshot capture in one call
+// Encapsulates Progressive Readiness pattern and file validation
+func (h *MediaMTXTestHelper) MustTakeSnapshot(t *testing.T, ctx context.Context, controller MediaMTXController, cameraID string) *TakeSnapshotResponse {
+	snapshotManager := h.GetSnapshotManager()
+
+	// Take snapshot with Progressive Readiness (using existing testutils)
+	result := testutils.TestProgressiveReadiness(t, func() (*TakeSnapshotResponse, error) {
+		options := &SnapshotOptions{} // Use default options
+		return snapshotManager.TakeSnapshot(ctx, cameraID, options)
+	}, controller, "TakeSnapshot")
+
+	require.NoError(t, result.Error, "Snapshot must succeed with Progressive Readiness")
+	require.NotNil(t, result.Result, "Snapshot response must not be nil")
+
+	snapshot := result.Result
+
+	// Log Progressive Readiness behavior
+	if result.UsedFallback {
+		t.Log("⚠️  PROGRESSIVE READINESS FALLBACK: Snapshot needed readiness event")
+	} else {
+		t.Log("✅ PROGRESSIVE READINESS: Snapshot succeeded immediately")
+	}
+
+	// Validate file creation using existing helper
+	h.AssertSnapshotResponse(t, snapshot, nil)
+
+	return snapshot
+}

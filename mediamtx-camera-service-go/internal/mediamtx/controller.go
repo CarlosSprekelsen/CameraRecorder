@@ -627,7 +627,8 @@ func (c *controller) SetRetentionPolicy(ctx context.Context, enabled bool, polic
 	maxSize := ""
 
 	// Update policy-specific parameters
-	if policyType == "age" {
+	switch policyType {
+	case "age":
 		if maxAgeDays, ok := params["max_age_days"].(float64); ok {
 			cfg.RetentionPolicy.MaxAgeDays = int(maxAgeDays)
 			maxAge = fmt.Sprintf("%d days", int(maxAgeDays))
@@ -635,7 +636,7 @@ func (c *controller) SetRetentionPolicy(ctx context.Context, enabled bool, polic
 			cfg.RetentionPolicy.MaxAgeDays = maxAgeDays
 			maxAge = fmt.Sprintf("%d days", maxAgeDays)
 		}
-	} else if policyType == "size" {
+	case "size":
 		if maxSizeGB, ok := params["max_size_gb"].(float64); ok {
 			cfg.RetentionPolicy.MaxSizeGB = int(maxSizeGB)
 			maxSize = fmt.Sprintf("%d GB", int(maxSizeGB))

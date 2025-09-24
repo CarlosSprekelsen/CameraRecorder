@@ -4,7 +4,6 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 )
 
 // SecurityConfigProvider defines the interface for accessing security configuration
@@ -190,7 +189,7 @@ func (ca *ConfigAdapter) CreateAuditLoggerConfig() map[string]interface{} {
 		"max_file_size":          ca.GetMaxLogFileSize(),
 		"max_file_age":           30 * 24 * time.Hour, // 30 days
 		"rotation_interval":      1 * time.Hour,
-		"buffer_size":            testutils.UniversalBufferSize,
+		"buffer_size":            1000, // Default buffer size
 		"enable_file_logging":    ca.IsFileLoggingEnabled(),
 		"enable_console_logging": ca.IsConsoleLoggingEnabled(),
 		"log_level":              ca.GetLogLevel(),
