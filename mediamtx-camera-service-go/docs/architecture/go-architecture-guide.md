@@ -784,69 +784,53 @@ stop
 ### 4.4 Recording Flow
 
 ```plantuml
-@startuml RecordingFlow
-title Recording Flow - Stream and File Management
+@startuml RecordingFlowCorrected
+title Recording Flow - CORRECTED
 
-participant "Client" as C
-participant "WebSocket Server" as WS
-participant "MediaMTX Controller" as MC
-participant "Recording Manager" as RM
-participant "Stream Manager" as SM
-participant "Path Manager" as PM
-participant "MediaMTX Server" as MS
+participant "RecordingManager" as RM
+participant "ConfigIntegration" as CI
+participant "FFmpegManager" as FM
+participant "HybridCameraMonitor" as HCM
+participant "PathManager" as PM
+participant "MediaMTX API" as API
 
 == Recording Initiation ==
-C -> WS : start_recording(camera0, options)
-WS -> MC : StartRecording(camera0, options)
-MC -> RM : StartRecording(camera0, options)
+RM -> RM: StartRecording(cameraID, options)
+RM -> CI: BuildPathConf(pathName, pathSource, enableRecording=true)
 
-== Stateless Recording Setup ==
-RM -> RM : Validate camera0 → /dev/video0 mapping
-RM -> MS : PATCH /v3/config/paths/patch/camera0 { "record": true }
-
-note over RM, MS
-  Recording Config:
-  record: true
-  recordPath: "/opt/recordings/camera0_%Y-%m-%d_%H-%M-%S"
-  recordFormat: "fmp4" (STANAG 4609 compatible)
-  recordSegmentDuration: "3600s"
+note over CI
+ConfigIntegration already has
+FFmpegManager injected in constructor
+Does NOT create it
 end note
 
-== RTSP Keepalive & Timer Setup ==
-RM -> RM : Start RTSP keepalive (if on-demand source)
-RM -> RM : Set auto-stop timer (if duration_s specified)
+CI -> FM: BuildRunOnDemandCommand(devicePath, pathName)
+FM -> HCM: SelectOptimalPixelFormat(devicePath, "h264")
+HCM --> FM: optimalPixelFormat OR error
 
-note over RM
-  Timer Management:
-  - timers[device] → *time.Timer
-  - Auto-stop after duration_s
-  - Cleanup on manual stop
-end note
+alt Format detected
+    FM -> FM: Build with detected format
+else Detection failed
+    FM -> FM: Use config.Codec.PixelFormat
+end
 
-== Stream Activation (On-Demand) ==
-note over MS
-  On first access to path:
-  1. MediaMTX starts FFmpeg via runOnDemand
-  2. FFmpeg captures from /dev/video0
-  3. FFmpeg streams to rtsp://127.0.0.1:8554/camera0
-  4. MediaMTX records stream to file
-end note
+FM --> CI: runOnDemandCommand string
+CI -> CI: Build PathConf with recording settings
+CI --> RM: PathConf{runOnDemand, record: true, ...}
 
-MS -> MS : Start FFmpeg process (on-demand)
-MS -> MS : Begin recording to file
+== Path Creation ==
+RM -> PM: CreatePath(ctx, pathName, devicePath, pathOptions)
+PM -> API: POST /v3/config/paths/add/{name}
+API --> PM: Success
+PM --> RM: Path created
 
-== Response ==
-RM --> MC : Recording started (no session state)
-MC --> WS : RecordingResponse
-WS --> C : Recording started
+== Recording Activation ==
+RM -> API: PATCH /v3/config/paths/patch/{name} {"record": true}
+API --> RM: Recording enabled
+RM -> RM: Start RTSP keepalive
+RM -> RM: Set timer (if duration)
 
-== Simultaneous Operations ==
-note over MS
-  Single path "camera0" now provides:
-  • Live streaming at rtsp://localhost:8554/camera0
-  • File recording to /opt/recordings/camera0_2024-01-15_14-30-00.mp4
-  • Both operate simultaneously on the same path
-end note
+RM --> RM: Return StartRecordingResponse
 
 @enduml
 ```
@@ -957,7 +941,200 @@ note over F: Process terminated\nResources freed
 - **Automatic cleanup** - processes terminate after configured idle time
 - **Recording exception** - recording processes never auto-terminate
 
-### 4.7 FFmpeg Stream Direction Clarification
+### 4.7 Command Building and Camera Capability Architecture
+
+**Component Initialization Order (Critical):**
+
+1. ConfigManager (loads YAML)
+2. HybridCameraMonitor (device discovery, capability detection)
+3. FFmpegManager(config, cameraMonitor) - created ONCE
+4. ConfigIntegration(configManager, ffmpegManager) - receives FFmpegManager
+5. PathManager
+6. RecordingManager(configIntegration, ffmpegManager, pathManager)
+7. SnapshotManager(configIntegration, ffmpegManager, pathManager)
+
+**Command Building Flow:**
+
+**Recording:**
+```
+RecordingManager 
+  → ConfigIntegration (has FFmpegManager injected)
+    → FFmpegManager.BuildRunOnDemandCommand()
+      → HybridCameraMonitor.SelectOptimalPixelFormat(devicePath, "h264")
+        → Returns: MJPEG (modern HD camera) or YUYV (old USB camera)
+      → Builds: "ffmpeg -f v4l2 -input_format <detected> -i /dev/video0..."
+```
+
+**Snapshot:**
+```
+SnapshotManager
+  → FFmpegManager.BuildSnapshotCommand()
+    → HybridCameraMonitor.SelectOptimalPixelFormat(devicePath, "jpeg")
+      → Returns: MJPEG (if supported) or fallback
+    → Builds: ["ffmpeg", "-f", "v4l2", "-input_format", "<detected>", ...]
+```
+
+**Capability Query:**
+```
+Client
+  → Controller.GetCameraCapabilities(camera0)
+    → PathManager.GetCameraCapabilities(camera0)
+      → PathManager converts camera0 → /dev/video0
+        → HybridCameraMonitor.GetDevice(/dev/video0)
+          → Returns: CameraDevice with Formats[]
+      → Extracts: pixel formats, resolutions, frame rates
+    → Returns: GetCameraCapabilitiesResponse
+```
+
+**Key Principles:**
+- FFmpegManager created ONCE by Controller with camera monitor
+- Injected into all managers that need it
+- ConfigIntegration receives FFmpegManager (NEVER creates)
+- HybridCameraMonitor is single source for capability detection
+- No hardcoded pixel formats anywhere
+- Config fallbacks when detection fails
+- Zero command building outside FFmpegManager
+
+**CRITICAL: ConfigIntegration Constructor**
+
+ConfigIntegration receives FFmpegManager at creation:
+
+```go
+func NewConfigIntegration(
+    configManager *config.ConfigManager,
+    ffmpegManager FFmpegManager,  // INJECTED
+    logger *logging.Logger,
+) *ConfigIntegration {
+    return &ConfigIntegration{
+        configManager: configManager,
+        ffmpegManager: ffmpegManager,  // STORED
+        logger:        logger,
+    }
+}
+```
+
+When building path config:
+```go
+func (ci *ConfigIntegration) BuildPathConf(...) (*PathConf, error) {
+    // Use injected FFmpegManager
+    runOnDemand, err := ci.ffmpegManager.BuildRunOnDemandCommand(devicePath, pathName)
+    // ... build PathConf
+}
+```
+
+**NO function creates FFmpegManager internally. Controller creates it ONCE and injects everywhere.**
+
+```plantuml
+@startuml ComponentDependencies
+title MediaMTX Component Dependencies - Corrected
+
+package "Controller Layer" {
+    [MediaMTXController] as CTRL
+}
+
+package "Command Building" {
+    [FFmpegManager] as FM
+    [HybridCameraMonitor] as HCM
+}
+
+package "Configuration" {
+    [ConfigIntegration] as CI
+    [ConfigManager] as CFG
+}
+
+package "Operations" {
+    [RecordingManager] as RM
+    [SnapshotManager] as SM
+    [PathManager] as PM
+}
+
+' Initialization order
+CTRL ..> CFG : 1. creates
+CTRL ..> HCM : 2. creates
+CTRL ..> FM : 3. creates(config, monitor)
+CTRL ..> CI : 4. creates(configMgr, ffmpegMgr)
+CTRL ..> PM : 5. creates
+CTRL ..> RM : 6. creates(configInteg, ffmpegMgr, pathMgr)
+CTRL ..> SM : 7. creates(configInteg, ffmpegMgr, pathMgr)
+
+' Runtime dependencies
+FM --> HCM : uses for format detection
+CI --> FM : receives & delegates to
+RM --> CI : uses for path config
+RM --> FM : uses for commands
+SM --> FM : uses for commands
+RM --> PM : uses for path ops
+SM --> PM : uses for path ops
+
+note right of CTRL
+Initialization Sequence:
+1. ConfigManager (load YAML)
+2. HybridCameraMonitor (device discovery)
+3. FFmpegManager(config, monitor)
+4. ConfigIntegration(configMgr, ffmpegMgr)
+5. PathManager
+6. RecordingManager(CI, FM, PM)
+7. SnapshotManager(CI, FM, PM)
+
+CRITICAL: FFmpegManager created ONCE
+end note
+
+note bottom of FM
+FFmpegManager:
+- Created by Controller
+- Injected everywhere needed
+- Uses HybridCameraMonitor
+- BuildRunOnDemandCommand()
+- BuildSnapshotCommand()
+end note
+
+@enduml
+```
+
+### 4.8 Camera Capability Integration
+
+**HybridCameraMonitor Responsibilities:**
+
+1. **Device Discovery** - Detects /dev/video* devices via udev/fsnotify
+2. **Capability Detection** - Queries V4L2 for supported formats/resolutions/FPS
+3. **Format Selection** - Provides optimal pixel format based on purpose
+4. **Device Mapping** - Maintains camera0 ↔ /dev/video0 relationships
+
+**Capability Detection Architecture:**
+
+- **Automatic Detection:** On device discovery, query v4l2-ctl for capabilities
+- **Format Storage:** CameraDevice.Formats[] contains all supported formats
+- **Dynamic Selection:** SelectOptimalPixelFormat() chooses best format for operation
+- **Fallback Strategy:** Use config defaults when detection fails
+
+**Integration Points:**
+
+| Component | Uses HybridCameraMonitor For |
+|-----------|------------------------------|
+| FFmpegManager | SelectOptimalPixelFormat() for command building |
+| PathManager | GetDevice() for capability queries |
+| Controller | Device discovery events, status queries |
+| SnapshotManager | (via FFmpegManager) format detection |
+| RecordingManager | (via FFmpegManager) format detection |
+
+**Camera Capability API Flow:**
+
+The `get_camera_capabilities` JSON-RPC method provides clients with real-time camera capabilities:
+
+1. Client requests capabilities for camera0
+2. Controller delegates to PathManager
+3. PathManager converts camera0 → /dev/video0
+4. PathManager queries HybridCameraMonitor.GetDevice()
+5. Extracts formats, resolutions, frame rates
+6. Returns structured response to client
+
+This enables clients to:
+- Display supported formats to users
+- Validate recording/snapshot parameters
+- Adapt UI based on camera capabilities
+- Handle camera-specific limitations
+
+### 4.9 FFmpeg Stream Direction Clarification
 
 ```plantuml
 @startuml FFmpegDirection
