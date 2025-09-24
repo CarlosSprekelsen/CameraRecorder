@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -311,6 +312,41 @@ func (dvh *DataValidationHelper) CreateTestSnapshotPath(filename string) string 
 // CreateTestRecordingPath creates a test recording file path
 func (dvh *DataValidationHelper) CreateTestRecordingPath(filename string) string {
 	return filepath.Join(dvh.tempDir, fmt.Sprintf("test_recording_%s.mp4", filename))
+}
+
+// BuildMediaMTXFilePath builds a complete file path for ANY MediaMTX operation (recording, snapshot, etc.)
+// This eliminates hardcoded path construction across all modules and unifies the pattern
+func BuildMediaMTXFilePath(basePath, cameraID, filename string, useSubdirs bool, format string) string {
+	// Handle file extension - MediaMTX handles this automatically, but for testing we need to predict it
+	ext := format
+	if ext == "" {
+		// No default - let MediaMTX handle it (it adds extensions automatically)
+		ext = ""
+	} else {
+		if !strings.HasPrefix(ext, ".") {
+			ext = "." + ext
+		}
+		// Add extension to filename if not present
+		if !strings.HasSuffix(filename, ext) {
+			filename = filename + ext
+		}
+	}
+
+	// Handle subdirectories based on configuration (SAME PATTERN for all MediaMTX operations)
+	if useSubdirs {
+		return filepath.Join(basePath, cameraID, filename)
+	}
+	return filepath.Join(basePath, filename)
+}
+
+// BuildRecordingFilePath is a convenience wrapper for recordings
+func BuildRecordingFilePath(basePath, cameraID, filename string, useSubdirs bool, format string) string {
+	return BuildMediaMTXFilePath(basePath, cameraID, filename, useSubdirs, format)
+}
+
+// BuildSnapshotFilePath is a convenience wrapper for snapshots
+func BuildSnapshotFilePath(basePath, cameraID, filename string, useSubdirs bool, format string) string {
+	return BuildMediaMTXFilePath(basePath, cameraID, filename, useSubdirs, format)
 }
 
 // WaitForFileCreation waits for a file to be created with timeout

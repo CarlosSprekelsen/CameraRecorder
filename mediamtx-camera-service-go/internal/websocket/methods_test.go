@@ -808,6 +808,43 @@ func TestWebSocketMethods_Authenticate_ReqSEC001_ErrorHandling_UnauthenticatedAc
 	}
 }
 
+// TestWebSocketMethods_Ping_NoAuthenticationRequired tests that ping method works without authentication
+// This test validates the API contract change where ping is no longer password protected
+func TestWebSocketMethods_Ping_NoAuthenticationRequired(t *testing.T) {
+	helper := NewWebSocketTestHelper(t, nil)
+	defer helper.Cleanup(t)
+
+	// Use proven MediaMTX pattern - EXACT same pattern as working MediaMTX tests
+	controller := createMediaMTXControllerUsingProvenPattern(t)
+
+	server := helper.GetServer(t)
+	server.SetMediaMTXController(controller)
+	_ = helper.StartServer(t) // Server is started, we use the original server instance
+
+	// Connect client WITHOUT authentication
+	conn := helper.NewTestClient(t, server)
+	defer helper.CleanupTestClient(t, conn)
+
+	// Test that ping works without authentication (per updated API documentation)
+	message := CreateTestMessage("ping", map[string]interface{}{})
+	response := SendTestMessage(t, conn, message)
+
+	// ✅ VALIDATE JSON-RPC PROTOCOL
+	assert.Equal(t, constants.JSONRPC_VERSION, response.JSONRPC, "Must be JSON-RPC 2.0")
+	assert.NotNil(t, response.ID, "Must have request ID")
+
+	// ✅ CRITICAL: ping should work without authentication per API documentation
+	// If this fails, it means the implementation hasn't been updated to match the API contract
+	require.Nil(t, response.Error, "ping should work without authentication per API documentation")
+	require.NotNil(t, response.Result, "ping should return result")
+	assert.Equal(t, "pong", response.Result, "ping should return 'pong' result")
+
+	// ✅ VALIDATE API CONTRACT per docs/api/json_rpc_methods.md
+	// The API documentation states: "Authentication: Not required"
+	// "Purpose: Connectivity + envelope sanity check before authenticate"
+	t.Log("✅ ping method correctly works without authentication per API contract")
+}
+
 // TestWebSocketMethods_SequentialRequests tests sequential request handling
 func TestWebSocketMethods_ProcessMessage_ReqAPI002_SequentialRequests(t *testing.T) {
 	helper := NewWebSocketTestHelper(t, nil)

@@ -168,8 +168,8 @@ func (s *WebSocketServer) getSystemReadinessResponse() map[string]interface{} {
 
 // checkMethodPermissions checks if a client has permission to access a specific method
 func (s *WebSocketServer) checkMethodPermissions(client *ClientConnection, methodName string) error {
-	// Skip permission check for authentication method
-	if methodName == "authenticate" {
+	// Skip permission check for authentication and ping methods
+	if methodName == "authenticate" || methodName == "ping" {
 		return nil
 	}
 
@@ -1097,7 +1097,8 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 
 	// Security extensions: Authentication check (Phase 1 enhancement) - FIRST GATE
 	// Authentication must happen before any other checks, including readiness
-	if request.Method != "authenticate" {
+	// ping method is the only exception - it works without authentication per API spec
+	if request.Method != "authenticate" && request.Method != "ping" {
 		if !client.Authenticated {
 			s.logger.WithFields(logging.Fields{
 				"client_id": client.ClientID,
@@ -1123,8 +1124,8 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 	}).Debug("Progressive Readiness: Attempting operation with potential fallback")
 
 	// Security extensions: Permission check (Phase 1 enhancement)
-	// Skip permission check for authenticate method
-	if request.Method != "authenticate" {
+	// Skip permission check for authenticate and ping methods
+	if request.Method != "authenticate" && request.Method != "ping" {
 		s.logger.WithFields(logging.Fields{
 			"client_id": client.ClientID,
 			"method":    request.Method,

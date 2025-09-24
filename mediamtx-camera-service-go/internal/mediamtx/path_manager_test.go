@@ -52,7 +52,7 @@ func TestPathManager_CreatePath_ReqMTX003(t *testing.T) {
 		}
 	}()
 
-	err := pathManager.CreatePath(ctx, testPathName, "publisher", nil)
+	err := pathManager.CreatePath(ctx, testPathName, "rtsp://test", nil)
 	require.NoError(t, err, "Path creation should succeed")
 
 	// Verify path was created
@@ -73,7 +73,7 @@ func TestPathManager_DeletePath_ReqMTX003(t *testing.T) {
 	testPathName := "test_delete_path_" + time.Now().Format("20060102_150405")
 
 	// Create a path first
-	err := pathManager.CreatePath(ctx, testPathName, "publisher", nil)
+	err := pathManager.CreatePath(ctx, testPathName, "rtsp://test", nil)
 	require.NoError(t, err, "Path creation should succeed")
 
 	// Verify path exists
@@ -102,7 +102,7 @@ func TestPathManager_GetPath_ReqMTX003(t *testing.T) {
 	testPathName := "test_get_path_" + time.Now().Format("20060102_150405")
 
 	// Create a path first
-	err := pathManager.CreatePath(ctx, testPathName, "publisher", nil)
+	err := pathManager.CreatePath(ctx, testPathName, "rtsp://test", nil)
 	require.NoError(t, err, "Path creation should succeed")
 
 	// Get the path
@@ -146,7 +146,7 @@ func TestPathManager_ValidatePath_ReqMTX003(t *testing.T) {
 	testPathName := "test_validate_path_" + time.Now().Format("20060102_150405")
 
 	// Create a path first
-	err := pathManager.CreatePath(ctx, testPathName, "publisher", nil)
+	err := pathManager.CreatePath(ctx, testPathName, "rtsp://test", nil)
 	require.NoError(t, err, "Path creation should succeed")
 
 	// Validate the path
@@ -169,7 +169,7 @@ func TestPathManager_ErrorHandling_ReqMTX001(t *testing.T) {
 	require.NotNil(t, pathManager)
 
 	// Test invalid path name
-	err := pathManager.CreatePath(ctx, "", "publisher", nil)
+	err := pathManager.CreatePath(ctx, "", "rtsp://test", nil)
 	require.Error(t, err, "Empty path name should cause error")
 
 	// Test getting non-existent path

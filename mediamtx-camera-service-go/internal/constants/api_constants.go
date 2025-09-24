@@ -35,16 +35,21 @@ const (
 	JSONRPC_INTERNAL_ERROR   = -32603
 
 	// Service-Specific Error Codes (API Documentation)
-	API_AUTHENTICATION_REQUIRED  = -32001
-	API_RATE_LIMIT_EXCEEDED      = -32002
-	API_INSUFFICIENT_PERMISSIONS = -32003
-	API_CAMERA_NOT_FOUND         = -32004
-	API_RECORDING_IN_PROGRESS    = -32005
-	API_MEDIAMTX_UNAVAILABLE     = -32006
-	API_INSUFFICIENT_STORAGE     = -32007
-	API_CAPABILITY_NOT_SUPPORTED = -32008
-	API_STREAM_NOT_FOUND         = -32009
-	API_FILE_NOT_FOUND           = -32010
+	API_AUTHENTICATION_REQUIRED = -32001 // Auth Failed (invalid/expired token)
+	API_PERMISSION_DENIED       = -32002 // Permission Denied (role lacks permission)
+	API_INVALID_STATE           = -32020 // Invalid State (operation not allowed in current state)
+	API_UNSUPPORTED             = -32030 // Unsupported (feature/capability not available)
+	API_RATE_LIMIT_EXCEEDED     = -32040 // Rate Limited (too many requests)
+	API_DEPENDENCY_FAILED       = -32050 // Dependency Failed (MediaMTX/FFmpeg error)
+	API_NOT_FOUND               = -32010 // Not Found (recording/file/camera not found)
+
+	// Legacy constants for backward compatibility (deprecated)
+	API_INSUFFICIENT_PERMISSIONS = API_PERMISSION_DENIED
+	API_CAMERA_NOT_FOUND         = API_NOT_FOUND
+	API_RECORDING_IN_PROGRESS    = API_INVALID_STATE
+	API_MEDIAMTX_UNAVAILABLE     = API_DEPENDENCY_FAILED
+	API_STREAM_NOT_FOUND         = API_NOT_FOUND
+	API_FILE_NOT_FOUND           = API_NOT_FOUND
 
 	// Enhanced Recording Management Error Codes
 	ERROR_CAMERA_NOT_FOUND         = -1000
@@ -108,13 +113,13 @@ const (
 	RECORDING_STATUS_FAILED    = "FAILED"
 
 	// Streaming Status Values (standardized to UPPERCASE)
-	STREAMING_STATUS_STARTED   = "STARTED"
-	STREAMING_STATUS_STOPPED   = "STOPPED"
-	STREAMING_STATUS_FAILED    = "FAILED"
-	STREAMING_STATUS_ACTIVE    = "ACTIVE"
-	STREAMING_STATUS_INACTIVE  = "INACTIVE"
-	STREAMING_STATUS_STARTING  = "STARTING"
-	STREAMING_STATUS_STOPPING  = "STOPPING"
+	STREAMING_STATUS_STARTED  = "STARTED"
+	STREAMING_STATUS_STOPPED  = "STOPPED"
+	STREAMING_STATUS_FAILED   = "FAILED"
+	STREAMING_STATUS_ACTIVE   = "ACTIVE"
+	STREAMING_STATUS_INACTIVE = "INACTIVE"
+	STREAMING_STATUS_STARTING = "STARTING"
+	STREAMING_STATUS_STOPPING = "STOPPING"
 
 	// System Status Values (standardized to UPPERCASE)
 	SYSTEM_STATUS_HEALTHY   = "HEALTHY"
@@ -166,20 +171,19 @@ const (
 // Standard error messages that match the API documentation exactly.
 
 var APIErrorMessages = map[int]string{
-	JSONRPC_INVALID_REQUEST:        "Invalid Request",
-	JSONRPC_METHOD_NOT_FOUND:       "Method not found",
-	JSONRPC_INVALID_PARAMS:         "Invalid parameters",
-	JSONRPC_INTERNAL_ERROR:         "Internal server error",
-	API_AUTHENTICATION_REQUIRED:    "Authentication failed or token expired",
-	API_RATE_LIMIT_EXCEEDED:        "Rate limit exceeded",
-	API_INSUFFICIENT_PERMISSIONS:   "Insufficient permissions",
-	API_CAMERA_NOT_FOUND:           "Camera not found or disconnected",
-	API_RECORDING_IN_PROGRESS:      "Recording already in progress",
-	API_MEDIAMTX_UNAVAILABLE:       "MediaMTX service unavailable",
-	API_INSUFFICIENT_STORAGE:       "Insufficient storage space",
-	API_CAPABILITY_NOT_SUPPORTED:   "Camera capability not supported",
-	API_STREAM_NOT_FOUND:           "Stream not found or not active",
-	API_FILE_NOT_FOUND:             "File not found or inaccessible",
+	JSONRPC_INVALID_REQUEST:     "Invalid Request",
+	JSONRPC_METHOD_NOT_FOUND:    "Method not found",
+	JSONRPC_INVALID_PARAMS:      "Invalid parameters",
+	JSONRPC_INTERNAL_ERROR:      "Internal server error",
+	API_AUTHENTICATION_REQUIRED: "Authentication failed or token expired",
+	API_PERMISSION_DENIED:       "Permission denied",
+	API_INVALID_STATE:           "Invalid state",
+	API_UNSUPPORTED:             "Unsupported",
+	API_RATE_LIMIT_EXCEEDED:     "Rate limited",
+	API_DEPENDENCY_FAILED:       "Dependency failed",
+	API_NOT_FOUND:               "Not found",
+
+	// Enhanced Recording Management Error Codes
 	ERROR_CAMERA_NOT_FOUND:         "Camera not found",
 	ERROR_CAMERA_NOT_AVAILABLE:     "Camera not available",
 	ERROR_RECORDING_IN_PROGRESS:    "Recording in progress",

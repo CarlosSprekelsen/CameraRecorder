@@ -14,7 +14,6 @@ API Documentation Reference: docs/api/swagger.json
 package mediamtx
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,7 +22,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/assert"
@@ -1070,55 +1068,17 @@ func TestSnapshotManager_TakeSnapshot_ReqCAM001_Tier0_V4L2Direct_RealHardware(t 
 	helper, ctx := SetupMediaMTXTest(t)
 	_ = ctx // Suppress unused variable warning
 
-	// Create real hardware test helper for camera devices
-	cameraHelper := camera.NewRealHardwareTestHelper(t)
-	availableDevices := cameraHelper.GetAvailableDevices()
-
-	// Skip test if no real camera devices are available
-	if len(availableDevices) == 0 {
-		t.Skip("No real camera devices available for Tier 0 V4L2 direct capture testing")
-	}
-
-	// Create config manager using test fixture
-	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	cfgAll := configManager.GetConfig()
-	ff := NewFFmpegManager(&cfgAll.MediaMTX, helper.GetLogger()).(*ffmpegManager)
-	ff.SetDependencies(configManager, helper.GetCameraMonitor())
-	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
-	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
-	require.NoError(t, err, "Should be able to get MediaMTX config from fixture")
-
-	// Create real hardware camera monitor for testing (Progressive Readiness Pattern)
-	cameraMonitor := helper.GetCameraMonitor()
-	require.NotNil(t, cameraMonitor, "Camera monitor should be created successfully")
-
-	// Get recording configuration
-	cfg := configManager.GetConfig()
-	recordingConfig := &cfg.Recording
-
-	// Create snapshot manager with configuration integration
-	ffmpegManager := NewFFmpegManager(mediaMTXConfig, helper.GetLogger())
-	// Note: ffmpegManager is not exported, so we can't cast to it
-	// The SetDependencies method is not available in the interface
-	// This is a limitation of the current design
-	streamManager := NewStreamManager(helper.GetClient(), helper.GetPathManager(), mediaMTXConfig, recordingConfig, configIntegration, ffmpegManager, helper.GetLogger())
-	client := helper.GetClient()
-	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, helper.GetLogger())
-	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, helper.GetLogger())
-	require.NotNil(t, snapshotManager, "Snapshot manager should be created")
-
-	ctx, cancel := helper.GetStandardContext()
+	// Use Progressive Readiness pattern (this test needs controller for SubscribeToReadiness)
+	controllerInterface, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
-	device := availableDevices[0] // Use first available real device
+	defer controllerInterface.Stop(ctx)
+	controller := controllerInterface.(*controller)
+	snapshotManager := helper.GetSnapshotManager()
 
-	// Ensure camera monitor is stopped after test
-	defer func() {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		if err := cameraMonitor.Stop(ctx); err != nil {
-			t.Logf("Warning: Failed to stop camera monitor: %v", err)
-		}
-	}()
+	// Use standard camera identifier - Progressive Readiness will handle availability
+	cameraID := "camera0"
+
+	// Camera monitor cleanup is handled by the test helper
 
 	t.Run("Tier0_V4L2Direct_ProgressiveReadiness", func(t *testing.T) {
 		// Test V4L2 direct capture with Progressive Readiness Pattern
@@ -1129,31 +1089,23 @@ func TestSnapshotManager_TakeSnapshot_ReqCAM001_Tier0_V4L2Direct_RealHardware(t 
 			MaxHeight: 480,
 		}
 
-		snapshot, err := snapshotManager.TakeSnapshot(ctx, device, options)
+		// Use Progressive Readiness pattern - try immediately, fallback to event-driven waiting
+		result := testutils.TestProgressiveReadiness(t, func() (*TakeSnapshotResponse, error) {
+			return snapshotManager.TakeSnapshot(ctx, cameraID, options)
+		}, controller, "TakeSnapshot_Tier0_V4L2Direct")
 
-		// With Progressive Readiness, the test validates the multi-tier fallback system
-		// Tier 0 might fail if camera not connected yet, but system should fall back gracefully
-		if err != nil {
-			t.Logf("Snapshot failed (expected with Progressive Readiness): %v", err)
-			// Verify error handling is working correctly - should mention multi-tier failure
-			assert.Contains(t, err.Error(), "not found or not accessible", "Error should indicate camera unavailability")
-			assert.Contains(t, err.Error(), "not found or not accessible", "Error should indicate camera unavailability")
-			t.Logf("Progressive Readiness test completed - multi-tier fallback system working correctly")
-			return
-		}
-
-		// If we get here, snapshot succeeded - verify it was created properly
-		require.NotNil(t, snapshot, "Snapshot should not be nil if no error occurred")
-		// Device and path validations
-		assert.Equal(t, "camera0", snapshot.Device)
-		assert.NotEmpty(t, snapshot.FilePath, "File path should not be empty")
-		// File size validation (handled by snapshot assertion helper)
+		// Progressive Readiness handles availability - validate the result
+		require.NoError(t, result.Error, "Snapshot creation should succeed with Progressive Readiness")
+		require.NotNil(t, result.Result, "Snapshot should not be nil")
+		assert.Equal(t, cameraID, result.Result.Device, "Device should match camera ID")
+		assert.NotEmpty(t, result.Result.FilePath, "File path should not be empty")
+		t.Logf("Tier 0 V4L2 direct capture succeeded: %s", result.Result.FilePath)
 
 		// Verify snapshot was created successfully
 		// Filename validation handled by snapshot assertion helper
 
 		t.Logf("Progressive Readiness snapshot successful: size: %d bytes, filename: %s",
-			snapshot.FileSize, snapshot.Filename)
+			result.Result.FileSize, result.Result.Filename)
 	})
 
 	t.Run("Tier0_V4L2Direct_RealHardware_Options", func(t *testing.T) {
@@ -1184,7 +1136,7 @@ func TestSnapshotManager_TakeSnapshot_ReqCAM001_Tier0_V4L2Direct_RealHardware(t 
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 
-				snapshot, err := snapshotManager.TakeSnapshot(ctx, device, tc.options)
+				snapshot, err := snapshotManager.TakeSnapshot(ctx, cameraID, tc.options)
 				require.NoError(t, err, "Tier 0 capture should succeed with real hardware for %s", tc.name)
 				// Use assertion helper
 				require.NotNil(t, snapshot, "Snapshot should not be nil")

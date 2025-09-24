@@ -298,17 +298,21 @@ func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, ver
 }
 
 // MethodPing implements the ping method
+// Authentication: Not required (per API documentation)
+// Purpose: Connectivity + envelope sanity check before authenticate
 func (s *WebSocketServer) MethodPing(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// Uses wrapper helpers for consistent method execution
-	return s.authenticatedMethodWrapper("ping", func() (interface{}, error) {
-		// Record performance metrics
-		startTime := time.Now()
-		duration := time.Since(startTime).Seconds()
-		s.recordRequest("ping", duration)
+	// Record performance metrics
+	startTime := time.Now()
+	duration := time.Since(startTime).Seconds()
+	s.recordRequest("ping", duration)
 
-		// Return "pong" as specified in API documentation
-		return "pong", nil
-	})(params, client)
+	// Return "pong" as specified in API documentation
+	// No authentication required - this is the only method that works without auth
+	return &JsonRpcResponse{
+		JSONRPC: "2.0",
+		Result:  "pong",
+		ID:      nil, // Will be set by the server from the original request
+	}, nil
 }
 
 // MethodAuthenticate implements the authenticate method

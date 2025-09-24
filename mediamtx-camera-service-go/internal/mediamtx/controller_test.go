@@ -1399,11 +1399,8 @@ func TestController_Stop_ReqMTX001_GracefulShutdown(t *testing.T) {
 			HealthCheckTimeout:     testutils.UniversalTimeoutVeryLong,
 			HealthFailureThreshold: 3,
 		}
-		configManager := helper.GetConfigManager()
-		cfgAll := configManager.GetConfig()
-		ff := NewFFmpegManager(&cfgAll.MediaMTX, logger).(*ffmpegManager)
-		ff.SetDependencies(configManager, helper.GetCameraMonitor())
-		configIntegration := NewConfigIntegration(configManager, ff, logger)
+		// Use ConfigIntegration from test helper (already properly initialized with FFmpegManager)
+		configIntegration := helper.GetConfigIntegration()
 		monitor := NewHealthMonitor(client, config, configIntegration, logger)
 
 		// Start components
@@ -1490,11 +1487,8 @@ func TestController_Stop_ReqMTX001_GracefulShutdown(t *testing.T) {
 			HealthCheckTimeout:     testutils.UniversalTimeoutVeryLong,
 			HealthFailureThreshold: 3,
 		}
-		configManager := helper.GetConfigManager()
-		cfgAll := configManager.GetConfig()
-		ff := NewFFmpegManager(&cfgAll.MediaMTX, logger).(*ffmpegManager)
-		ff.SetDependencies(configManager, helper.GetCameraMonitor())
-		configIntegration := NewConfigIntegration(configManager, ff, logger)
+		// Use ConfigIntegration from test helper (already properly initialized with FFmpegManager)
+		configIntegration := helper.GetConfigIntegration()
 		monitor := NewHealthMonitor(client, config, configIntegration, logger)
 
 		// Start with cancellable context
@@ -1536,11 +1530,8 @@ func TestController_Stop_ReqMTX001_GracefulShutdown(t *testing.T) {
 			HealthCheckTimeout:     testutils.UniversalTimeoutVeryLong,
 			HealthFailureThreshold: 3,
 		}
-		configManager := helper.GetConfigManager()
-		cfgAll := configManager.GetConfig()
-		ff := NewFFmpegManager(&cfgAll.MediaMTX, logger).(*ffmpegManager)
-		ff.SetDependencies(configManager, helper.GetCameraMonitor())
-		configIntegration := NewConfigIntegration(configManager, ff, logger)
+		// Use ConfigIntegration from test helper (already properly initialized with FFmpegManager)
+		configIntegration := helper.GetConfigIntegration()
 		monitor := NewHealthMonitor(client, config, configIntegration, logger)
 
 		// Start components

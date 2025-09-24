@@ -1,0 +1,1637 @@
+{
+    "openrpc": "1.2.6",
+    "info": {
+      "title": "MediaMTX Camera Service API",
+      "version": "1.0.0",
+      "description": "OpenRPC specification for the MediaMTX Camera Service JSON\u2011RPC 2.0 API over WebSocket.",
+      "license": {
+        "name": "Proprietary"
+      }
+    },
+    "servers": [
+      {
+        "name": "WebSocket",
+        "url": "ws://localhost:8002/ws",
+        "summary": "Primary JSON\u2011RPC 2.0 endpoint over WebSocket"
+      }
+    ],
+    "components": {
+      "schemas": {
+        "DeviceId": {
+          "type": "string",
+          "description": "Logical camera id (e.g., 'camera0')."
+        },
+        "IsoTimestamp": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "Pagination": {
+          "type": "object",
+          "properties": {
+            "limit": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1000,
+              "default": 50
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            }
+          }
+        },
+        "Streams": {
+          "type": "object",
+          "properties": {
+            "rtsp": {
+              "type": "string",
+              "description": "rtsp://<host>:8554/camera0"
+            },
+            "hls": {
+              "type": "string",
+              "description": "https://<host>/hls/camera0.m3u8"
+            }
+          },
+          "additionalProperties": false
+        },
+        "Camera": {
+          "type": "object",
+          "properties": {
+            "device": {
+              "$ref": "#/components/schemas/DeviceId"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "CONNECTED",
+                "DISCONNECTED",
+                "ERROR"
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "resolution": {
+              "type": "string"
+            },
+            "fps": {
+              "type": "integer"
+            },
+            "streams": {
+              "$ref": "#/components/schemas/Streams"
+            }
+          },
+          "required": [
+            "device",
+            "status"
+          ]
+        },
+        "CameraListResult": {
+          "type": "object",
+          "properties": {
+            "cameras": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/Camera"
+              }
+            },
+            "total": {
+              "type": "integer"
+            },
+            "connected": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "cameras",
+            "total",
+            "connected"
+          ]
+        },
+        "CameraCapabilities": {
+          "type": "object",
+          "properties": {
+            "device": {
+              "$ref": "#/components/schemas/DeviceId"
+            },
+            "formats": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "resolutions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "fps_options": {
+              "type": "array",
+              "items": {
+                "type": "integer"
+              }
+            },
+            "validation_status": {
+              "type": "string",
+              "enum": [
+                "NONE",
+                "DISCONNECTED",
+                "CONFIRMED"
+              ]
+            }
+          },
+          "required": [
+            "device"
+          ]
+        },
+        "SnapshotInfo": {
+          "type": "object",
+          "properties": {
+            "device": {
+              "$ref": "#/components/schemas/DeviceId"
+            },
+            "filename": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "SUCCESS",
+                "FAILED"
+              ]
+            },
+            "timestamp": {
+              "$ref": "#/components/schemas/IsoTimestamp"
+            },
+            "file_size": {
+              "type": "integer"
+            },
+            "file_path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "device",
+            "filename",
+            "status",
+            "timestamp"
+          ]
+        },
+        "RecordingStart": {
+          "type": "object",
+          "properties": {
+            "device": {
+              "$ref": "#/components/schemas/DeviceId"
+            },
+            "filename": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "RECORDING",
+                "STARTING",
+                "STOPPING",
+                "PAUSED",
+                "ERROR",
+                "FAILED"
+              ]
+            },
+            "start_time": {
+              "$ref": "#/components/schemas/IsoTimestamp"
+            },
+            "format": {
+              "type": "string",
+              "enum": [
+                "fmp4",
+                "mp4",
+                "mkv"
+              ]
+            }
+          },
+          "required": [
+            "device",
+            "status",
+            "start_time"
+          ]
+        },
+        "RecordingStop": {
+          "type": "object",
+          "properties": {
+            "device": {
+              "$ref": "#/components/schemas/DeviceId"
+            },
+            "filename": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "STOPPED",
+                "FAILED"
+              ]
+            },
+            "start_time": {
+              "$ref": "#/components/schemas/IsoTimestamp"
+            },
+            "end_time": {
+              "$ref": "#/components/schemas/IsoTimestamp"
+            },
+            "duration": {
+              "type": "integer"
+            },
+            "file_size": {
+              "type": "integer"
+            },
+            "format": {
+              "type": "string",
+              "enum": [
+                "fmp4",
+                "mp4",
+                "mkv"
+              ]
+            }
+          },
+          "required": [
+            "device",
+            "status",
+            "end_time"
+          ]
+        },
+        "RecordingFile": {
+          "type": "object",
+          "properties": {
+            "filename": {
+              "type": "string",
+              "description": "Without extension unless noted"
+            },
+            "file_size": {
+              "type": "integer"
+            },
+            "modified_time": {
+              "$ref": "#/components/schemas/IsoTimestamp"
+            },
+            "download_url": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "filename"
+          ]
+        },
+        "ListFilesResult": {
+          "type": "object",
+          "properties": {
+            "files": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/RecordingFile"
+              }
+            },
+            "total": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "offset": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "files",
+            "total",
+            "limit",
+            "offset"
+          ]
+        },
+        "StreamStart": {
+          "type": "object",
+          "properties": {
+            "device": {
+              "$ref": "#/components/schemas/DeviceId"
+            },
+            "stream_name": {
+              "type": "string"
+            },
+            "stream_url": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "STARTED",
+                "FAILED"
+              ]
+            },
+            "start_time": {
+              "$ref": "#/components/schemas/IsoTimestamp"
+            },
+            "auto_close_after": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "device",
+            "status",
+            "start_time",
+            "stream_url"
+          ]
+        },
+        "StreamStop": {
+          "type": "object",
+          "properties": {
+            "device": {
+              "$ref": "#/components/schemas/DeviceId"
+            },
+            "stream_name": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "STOPPED",
+                "FAILED"
+              ]
+            },
+            "start_time": {
+              "$ref": "#/components/schemas/IsoTimestamp"
+            },
+            "end_time": {
+              "$ref": "#/components/schemas/IsoTimestamp"
+            },
+            "duration": {
+              "type": "integer"
+            },
+            "stream_continues": {
+              "type": "boolean"
+            }
+          },
+          "required": [
+            "device",
+            "status",
+            "end_time"
+          ]
+        },
+        "StreamStatus": {
+          "type": "object",
+          "properties": {
+            "device": {
+              "$ref": "#/components/schemas/DeviceId"
+            },
+            "stream_name": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "INACTIVE",
+                "ERROR",
+                "STARTING",
+                "STOPPING"
+              ]
+            },
+            "ready": {
+              "type": "boolean"
+            },
+            "metrics": {
+              "type": "object",
+              "properties": {
+                "bytes_sent": {
+                  "type": "integer"
+                },
+                "frames_sent": {
+                  "type": "integer"
+                },
+                "bitrate": {
+                  "type": "integer"
+                },
+                "fps": {
+                  "type": "integer"
+                }
+              }
+            },
+            "start_time": {
+              "$ref": "#/components/schemas/IsoTimestamp"
+            }
+          },
+          "required": [
+            "device",
+            "status"
+          ]
+        },
+        "AuthResult": {
+          "type": "object",
+          "properties": {
+            "authenticated": {
+              "type": "boolean"
+            },
+            "role": {
+              "type": "string",
+              "enum": [
+                "admin",
+                "operator",
+                "viewer"
+              ]
+            },
+            "permissions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "expires_at": {
+              "$ref": "#/components/schemas/IsoTimestamp"
+            },
+            "session_id": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "authenticated",
+            "role",
+            "session_id"
+          ]
+        },
+        "ServerInfo": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            },
+            "build_date": {
+              "type": "string"
+            },
+            "go_version": {
+              "type": "string"
+            },
+            "architecture": {
+              "type": "string"
+            },
+            "capabilities": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "supported_formats": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "max_cameras": {
+              "type": "integer"
+            }
+          }
+        },
+        "StorageInfo": {
+          "type": "object",
+          "properties": {
+            "total_space": {
+              "type": "integer"
+            },
+            "used_space": {
+              "type": "integer"
+            },
+            "available_space": {
+              "type": "integer"
+            },
+            "usage_percentage": {
+              "type": "number"
+            },
+            "recordings_size": {
+              "type": "integer"
+            },
+            "snapshots_size": {
+              "type": "integer"
+            },
+            "low_space_warning": {
+              "type": "boolean"
+            }
+          }
+        },
+        "StatusResult": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "HEALTHY",
+                "DEGRADED",
+                "UNHEALTHY"
+              ]
+            },
+            "uptime": {
+              "type": "number"
+            },
+            "version": {
+              "type": "string"
+            },
+            "components": {
+              "type": "object",
+              "properties": {
+                "websocket_server": {
+                  "type": "string"
+                },
+                "camera_monitor": {
+                  "type": "string"
+                },
+                "mediamtx": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "required": [
+            "status"
+          ]
+        },
+        "ExternalStream": {
+          "type": "object",
+          "properties": {
+            "url": {
+              "type": "string"
+            },
+            "type": {
+              "type": "string"
+            },
+            "name": {
+              "type": "string"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "DISCOVERED",
+                "ERROR"
+              ]
+            },
+            "discovered_at": {
+              "$ref": "#/components/schemas/IsoTimestamp"
+            },
+            "last_seen": {
+              "$ref": "#/components/schemas/IsoTimestamp"
+            },
+            "capabilities": {
+              "type": "object"
+            }
+          }
+        }
+      },
+      "errors": [
+        {
+          "code": -32600,
+          "message": "Invalid Request"
+        },
+        {
+          "code": -32601,
+          "message": "Method Not Found"
+        },
+        {
+          "code": -32602,
+          "message": "Invalid Params"
+        },
+        {
+          "code": -32603,
+          "message": "Internal Error"
+        },
+        {
+          "code": -32001,
+          "message": "Auth Failed"
+        },
+        {
+          "code": -32002,
+          "message": "Permission Denied"
+        },
+        {
+          "code": -32010,
+          "message": "Not Found"
+        },
+        {
+          "code": -32020,
+          "message": "Invalid State"
+        },
+        {
+          "code": -32030,
+          "message": "Unsupported"
+        },
+        {
+          "code": -32040,
+          "message": "Rate Limited"
+        },
+        {
+          "code": -32050,
+          "message": "Dependency Failed"
+        }
+      ]
+    },
+    "methods": [
+      {
+        "name": "ping",
+        "summary": "Connectivity check; returns 'pong'.",
+        "params": [],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "string",
+            "enum": [
+              "pong"
+            ]
+          }
+        }
+      },
+      {
+        "name": "authenticate",
+        "summary": "Authenticate using JWT or API key; establishes session on the socket.",
+        "params": [
+          {
+            "name": "auth_token",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "$ref": "#/components/schemas/AuthResult"
+          }
+        }
+      },
+      {
+        "name": "get_camera_list",
+        "summary": "List discovered cameras with status and stream URLs.",
+        "params": [],
+        "result": {
+          "name": "result",
+          "schema": {
+            "$ref": "#/components/schemas/CameraListResult"
+          }
+        }
+      },
+      {
+        "name": "get_camera_status",
+        "summary": "Get status for a specific camera.",
+        "params": [
+          {
+            "name": "device",
+            "schema": {
+              "$ref": "#/components/schemas/DeviceId"
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "$ref": "#/components/schemas/Camera"
+          }
+        }
+      },
+      {
+        "name": "get_camera_capabilities",
+        "summary": "Get capability set for a camera.",
+        "params": [
+          {
+            "name": "device",
+            "schema": {
+              "$ref": "#/components/schemas/DeviceId"
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "$ref": "#/components/schemas/CameraCapabilities"
+          }
+        }
+      },
+      {
+        "name": "take_snapshot",
+        "summary": "Capture a snapshot from the specified camera.",
+        "params": [
+          {
+            "name": "device",
+            "schema": {
+              "$ref": "#/components/schemas/DeviceId"
+            }
+          },
+          {
+            "name": "filename",
+            "schema": {
+              "type": "string",
+              "nullable": true
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "$ref": "#/components/schemas/SnapshotInfo"
+          }
+        }
+      },
+      {
+        "name": "start_recording",
+        "summary": "Start recording video from a camera.",
+        "params": [
+          {
+            "name": "device",
+            "schema": {
+              "$ref": "#/components/schemas/DeviceId"
+            }
+          },
+          {
+            "name": "duration",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "format",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "fmp4",
+                "mp4",
+                "mkv"
+              ],
+              "nullable": true
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "$ref": "#/components/schemas/RecordingStart"
+          }
+        }
+      },
+      {
+        "name": "stop_recording",
+        "summary": "Stop active recording for a camera.",
+        "params": [
+          {
+            "name": "device",
+            "schema": {
+              "$ref": "#/components/schemas/DeviceId"
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "$ref": "#/components/schemas/RecordingStop"
+          }
+        }
+      },
+      {
+        "name": "list_recordings",
+        "summary": "List recording files (paginated).",
+        "params": [
+          {
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "$ref": "#/components/schemas/ListFilesResult"
+          }
+        }
+      },
+      {
+        "name": "list_snapshots",
+        "summary": "List snapshot files (paginated).",
+        "params": [
+          {
+            "name": "limit",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            }
+          },
+          {
+            "name": "offset",
+            "schema": {
+              "type": "integer",
+              "default": 0
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "$ref": "#/components/schemas/ListFilesResult"
+          }
+        }
+      },
+      {
+        "name": "get_recording_info",
+        "summary": "Get metadata for a recording file.",
+        "params": [
+          {
+            "name": "filename",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "filename": {
+                "type": "string"
+              },
+              "file_size": {
+                "type": "integer"
+              },
+              "duration": {
+                "type": "integer"
+              },
+              "created_time": {
+                "$ref": "#/components/schemas/IsoTimestamp"
+              },
+              "download_url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "filename"
+            ]
+          }
+        }
+      },
+      {
+        "name": "get_snapshot_info",
+        "summary": "Get metadata for a snapshot file.",
+        "params": [
+          {
+            "name": "filename",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "filename": {
+                "type": "string"
+              },
+              "file_size": {
+                "type": "integer"
+              },
+              "created_time": {
+                "$ref": "#/components/schemas/IsoTimestamp"
+              },
+              "download_url": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "filename"
+            ]
+          }
+        }
+      },
+      {
+        "name": "delete_recording",
+        "summary": "Delete a recording file.",
+        "params": [
+          {
+            "name": "filename",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "filename": {
+                "type": "string"
+              },
+              "deleted": {
+                "type": "boolean"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "filename",
+              "deleted"
+            ]
+          }
+        }
+      },
+      {
+        "name": "delete_snapshot",
+        "summary": "Delete a snapshot file.",
+        "params": [
+          {
+            "name": "filename",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "filename": {
+                "type": "string"
+              },
+              "deleted": {
+                "type": "boolean"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "filename",
+              "deleted"
+            ]
+          }
+        }
+      },
+      {
+        "name": "start_streaming",
+        "summary": "Start a live streaming session for a camera.",
+        "params": [
+          {
+            "name": "device",
+            "schema": {
+              "$ref": "#/components/schemas/DeviceId"
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "$ref": "#/components/schemas/StreamStart"
+          }
+        }
+      },
+      {
+        "name": "stop_streaming",
+        "summary": "Stop the streaming session for a camera.",
+        "params": [
+          {
+            "name": "device",
+            "schema": {
+              "$ref": "#/components/schemas/DeviceId"
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "$ref": "#/components/schemas/StreamStop"
+          }
+        }
+      },
+      {
+        "name": "get_stream_url",
+        "summary": "Get the stream URL for a camera (without starting a new stream).",
+        "params": [
+          {
+            "name": "device",
+            "schema": {
+              "$ref": "#/components/schemas/DeviceId"
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "device": {
+                "$ref": "#/components/schemas/DeviceId"
+              },
+              "stream_name": {
+                "type": "string"
+              },
+              "stream_url": {
+                "type": "string"
+              },
+              "available": {
+                "type": "boolean"
+              },
+              "active_consumers": {
+                "type": "integer"
+              },
+              "stream_status": {
+                "type": "string",
+                "enum": [
+                  "READY",
+                  "NOT_READY",
+                  "ERROR"
+                ]
+              }
+            },
+            "required": [
+              "device",
+              "stream_url",
+              "available"
+            ]
+          }
+        }
+      },
+      {
+        "name": "get_stream_status",
+        "summary": "Get detailed status for a camera stream.",
+        "params": [
+          {
+            "name": "device",
+            "schema": {
+              "$ref": "#/components/schemas/DeviceId"
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "$ref": "#/components/schemas/StreamStatus"
+          }
+        }
+      },
+      {
+        "name": "get_streams",
+        "summary": "List active streams from MediaMTX.",
+        "params": [],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "source": {
+                  "type": "string"
+                },
+                "ready": {
+                  "type": "boolean"
+                },
+                "readers": {
+                  "type": "integer"
+                },
+                "bytes_sent": {
+                  "type": "integer"
+                }
+              },
+              "required": [
+                "name",
+                "ready"
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "get_metrics",
+        "summary": "Get system and camera metrics.",
+        "params": [],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "timestamp": {
+                "$ref": "#/components/schemas/IsoTimestamp"
+              },
+              "system_metrics": {
+                "type": "object"
+              },
+              "camera_metrics": {
+                "type": "object"
+              },
+              "recording_metrics": {
+                "type": "object"
+              },
+              "stream_metrics": {
+                "type": "object"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "get_status",
+        "summary": "Get overall system health and component states.",
+        "params": [],
+        "result": {
+          "name": "result",
+          "schema": {
+            "$ref": "#/components/schemas/StatusResult"
+          }
+        }
+      },
+      {
+        "name": "get_server_info",
+        "summary": "Get server configuration, capabilities and limits.",
+        "params": [],
+        "result": {
+          "name": "result",
+          "schema": {
+            "$ref": "#/components/schemas/ServerInfo"
+          }
+        }
+      },
+      {
+        "name": "get_storage_info",
+        "summary": "Get storage usage and space statistics.",
+        "params": [],
+        "result": {
+          "name": "result",
+          "schema": {
+            "$ref": "#/components/schemas/StorageInfo"
+          }
+        }
+      },
+      {
+        "name": "set_retention_policy",
+        "summary": "Configure retention policy for automatic cleanup.",
+        "params": [
+          {
+            "name": "policy_type",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "age",
+                "size",
+                "manual"
+              ]
+            }
+          },
+          {
+            "name": "max_age_days",
+            "schema": {
+              "type": "integer",
+              "nullable": true
+            }
+          },
+          {
+            "name": "max_size_gb",
+            "schema": {
+              "type": "number",
+              "nullable": true
+            }
+          },
+          {
+            "name": "enabled",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "policy_type": {
+                "type": "string"
+              },
+              "max_age_days": {
+                "type": "integer"
+              },
+              "max_size_gb": {
+                "type": "number"
+              },
+              "enabled": {
+                "type": "boolean"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "policy_type",
+              "enabled"
+            ]
+          }
+        }
+      },
+      {
+        "name": "cleanup_old_files",
+        "summary": "Trigger cleanup of old files per retention policy.",
+        "params": [],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "cleanup_executed": {
+                "type": "boolean"
+              },
+              "files_deleted": {
+                "type": "integer"
+              },
+              "space_freed": {
+                "type": "integer"
+              },
+              "message": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "cleanup_executed"
+            ]
+          }
+        }
+      },
+      {
+        "name": "subscribe_events",
+        "summary": "Subscribe to server events by topics with optional filters.",
+        "params": [
+          {
+            "name": "topics",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          {
+            "name": "filters",
+            "schema": {
+              "type": "object",
+              "nullable": true
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "subscribed": {
+                "type": "boolean"
+              },
+              "topics": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "filters": {
+                "type": "object"
+              }
+            },
+            "required": [
+              "subscribed",
+              "topics"
+            ]
+          }
+        }
+      },
+      {
+        "name": "unsubscribe_events",
+        "summary": "Unsubscribe from topics (or all if not provided).",
+        "params": [
+          {
+            "name": "topics",
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "nullable": true
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "unsubscribed": {
+                "type": "boolean"
+              },
+              "topics": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            },
+            "required": [
+              "unsubscribed"
+            ]
+          }
+        }
+      },
+      {
+        "name": "get_subscription_stats",
+        "summary": "Get event subscription statistics (global and client).",
+        "params": [],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "global_stats": {
+                "type": "object"
+              },
+              "client_topics": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "client_id": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "discover_external_streams",
+        "summary": "Discover external RTSP streams (e.g., UAVs).",
+        "params": [
+          {
+            "name": "skydio_enabled",
+            "schema": {
+              "type": "boolean",
+              "default": true,
+              "nullable": true
+            }
+          },
+          {
+            "name": "generic_enabled",
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "nullable": true
+            }
+          },
+          {
+            "name": "force_rescan",
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "nullable": true
+            }
+          },
+          {
+            "name": "include_offline",
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "nullable": true
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "discovered_streams": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ExternalStream"
+                }
+              },
+              "skydio_streams": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ExternalStream"
+                }
+              },
+              "generic_streams": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ExternalStream"
+                }
+              },
+              "scan_timestamp": {
+                "$ref": "#/components/schemas/IsoTimestamp"
+              },
+              "total_found": {
+                "type": "integer"
+              },
+              "discovery_options": {
+                "type": "object"
+              },
+              "scan_duration": {
+                "type": "string"
+              },
+              "errors": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "add_external_stream",
+        "summary": "Register an external RTSP stream for monitoring.",
+        "params": [
+          {
+            "name": "stream_url",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stream_name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "stream_type",
+            "schema": {
+              "type": "string",
+              "default": "generic_rtsp",
+              "nullable": true
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "stream_url": {
+                "type": "string"
+              },
+              "stream_name": {
+                "type": "string"
+              },
+              "stream_type": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "ADDED",
+                  "ERROR"
+                ]
+              },
+              "timestamp": {
+                "$ref": "#/components/schemas/IsoTimestamp"
+              }
+            },
+            "required": [
+              "stream_url",
+              "stream_name",
+              "status"
+            ]
+          }
+        }
+      },
+      {
+        "name": "remove_external_stream",
+        "summary": "Remove a previously added external RTSP stream.",
+        "params": [
+          {
+            "name": "stream_url",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "stream_url": {
+                "type": "string"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "REMOVED",
+                  "ERROR"
+                ]
+              },
+              "timestamp": {
+                "$ref": "#/components/schemas/IsoTimestamp"
+              }
+            },
+            "required": [
+              "stream_url",
+              "status"
+            ]
+          }
+        }
+      },
+      {
+        "name": "get_external_streams",
+        "summary": "List all discovered/managed external streams.",
+        "params": [],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "external_streams": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ExternalStream"
+                }
+              },
+              "skydio_streams": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ExternalStream"
+                }
+              },
+              "generic_streams": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ExternalStream"
+                }
+              },
+              "total_count": {
+                "type": "integer"
+              },
+              "timestamp": {
+                "$ref": "#/components/schemas/IsoTimestamp"
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "set_discovery_interval",
+        "summary": "Set automatic discovery scan interval (seconds).",
+        "params": [
+          {
+            "name": "scan_interval",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "object",
+            "properties": {
+              "scan_interval": {
+                "type": "integer"
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "UPDATED",
+                  "ERROR"
+                ]
+              },
+              "message": {
+                "type": "string"
+              },
+              "timestamp": {
+                "$ref": "#/components/schemas/IsoTimestamp"
+              }
+            },
+            "required": [
+              "scan_interval",
+              "status"
+            ]
+          }
+        }
+      }
+    ]
+  }

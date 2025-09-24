@@ -95,11 +95,8 @@ func TestRTSPConnectionManager_ListSessions_ReqMTX002(t *testing.T) {
 
 	// Create RTSP connection manager
 	// Use standardized config from helper
-	configManager := helper.GetConfigManager()
-	cfgAll := configManager.GetConfig()
-	ff := NewFFmpegManager(&cfgAll.MediaMTX, helper.GetLogger()).(*ffmpegManager)
-	ff.SetDependencies(configManager, helper.GetCameraMonitor())
-	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
+	// Use ConfigIntegration from test helper (already properly initialized with FFmpegManager)
+	configIntegration := helper.GetConfigIntegration()
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	// Use standardized logger from helper
@@ -165,11 +162,8 @@ func TestRTSPConnectionManager_GetConnectionMetrics_ReqMTX004(t *testing.T) {
 
 	// Create RTSP connection manager
 	// Use standardized config from helper
-	configManager := helper.GetConfigManager()
-	cfgAll := configManager.GetConfig()
-	ff := NewFFmpegManager(&cfgAll.MediaMTX, helper.GetLogger()).(*ffmpegManager)
-	ff.SetDependencies(configManager, helper.GetCameraMonitor())
-	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
+	// Use ConfigIntegration from test helper (already properly initialized with FFmpegManager)
+	configIntegration := helper.GetConfigIntegration()
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	// Use standardized logger from helper
@@ -256,11 +250,8 @@ func TestRTSPConnectionManager_ErrorHandling_ReqMTX004(t *testing.T) {
 
 	// Create RTSP connection manager
 	// Use standardized config from helper
-	configManager := helper.GetConfigManager()
-	cfgAll := configManager.GetConfig()
-	ff := NewFFmpegManager(&cfgAll.MediaMTX, helper.GetLogger()).(*ffmpegManager)
-	ff.SetDependencies(configManager, helper.GetCameraMonitor())
-	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
+	// Use ConfigIntegration from test helper (already properly initialized with FFmpegManager)
+	configIntegration := helper.GetConfigIntegration()
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	// Use standardized logger from helper
@@ -295,11 +286,8 @@ func TestRTSPConnectionManager_Performance_ReqMTX002(t *testing.T) {
 
 	// Create RTSP connection manager
 	// Use standardized config from helper
-	configManager := helper.GetConfigManager()
-	cfgAll := configManager.GetConfig()
-	ff := NewFFmpegManager(&cfgAll.MediaMTX, helper.GetLogger()).(*ffmpegManager)
-	ff.SetDependencies(configManager, helper.GetCameraMonitor())
-	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
+	// Use ConfigIntegration from test helper (already properly initialized with FFmpegManager)
+	configIntegration := helper.GetConfigIntegration()
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should get MediaMTX config from integration")
 	// Use standardized logger from helper

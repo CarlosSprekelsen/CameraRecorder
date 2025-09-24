@@ -1015,6 +1015,11 @@ func (h *MediaMTXTestHelper) GetConfigManager() *configpkg.ConfigManager {
 	return h.configManager
 }
 
+// GetConfigIntegration returns the centralized ConfigIntegration instance
+func (h *MediaMTXTestHelper) GetConfigIntegration() *ConfigIntegration {
+	return h.configIntegration
+}
+
 // GetRTSPConnectionManager returns a shared RTSP connection manager instance
 func (h *MediaMTXTestHelper) GetRTSPConnectionManager() RTSPConnectionManager {
 	if h.rtspConnectionManager == nil {

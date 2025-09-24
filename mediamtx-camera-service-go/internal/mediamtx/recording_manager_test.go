@@ -86,24 +86,26 @@ func TestRecordingManager_CompleteLifecycle_ReqMTX002(t *testing.T) {
 	assert.Equal(t, "RECORDING", session.Status, "Recording should be in RECORDING status")
 
 	// Step 4: Verify REAL recording file is being created
-	time.Sleep(2 * time.Second) // Allow time for recording to start
+	time.Sleep(testutils.UniversalTimeoutMedium) // Allow time for recording to start using universal constant
 
-	// Use configuration to determine expected filename pattern
+	// Use universal path builder - handles both recordings AND snapshots with same pattern
 	expectedFilename := helper.GetConfiguredRecordingFilename(cameraID)
-	// Note: MediaMTX may not respect the configured format and use .mp4 by default
-	// Check for both configured format and actual MediaMTX behavior
-	expectedExtension := ".mp4" // MediaMTX actual behavior (not configured format)
-	expectedFullFilename := expectedFilename + expectedExtension
+	recordingConfig := helper.GetRecordingConfig()
 
-	recordingFilePath := filepath.Join(configuredRecordingPath, expectedFullFilename)
+	recordingFilePath := testutils.BuildMediaMTXFilePath(
+		configuredRecordingPath, // base path
+		cameraID,                // camera ID for subdirectories
+		expectedFilename,        // filename without extension
+		recordingConfig != nil && recordingConfig.UseDeviceSubdirs, // use subdirs flag
+		helper.GetConfiguredRecordingFormat(),                      // format (fmp4 for STANAG 4609)
+	)
 
 	// Verify file is created in configured directory
 	assert.True(t, strings.HasPrefix(recordingFilePath, configuredRecordingPath),
 		"Recording file should be in configured directory: %s", configuredRecordingPath)
 
-	// Step 5: Record for 5 seconds to ensure meaningful content
-	recordDuration := 5 * time.Second
-	time.Sleep(recordDuration)
+	// Step 5: Record for a short duration to ensure meaningful content
+	time.Sleep(testutils.UniversalRetryDelay) // Use universal constant instead of hardcoded value
 
 	// Step 6: Stop REAL recording
 	stopResult := testutils.TestProgressiveReadiness(t, func() (*StopRecordingResponse, error) {
