@@ -171,7 +171,12 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 			if opts.RunOnDemand == "" {
 				// Generate proper FFmpeg command using centralized configuration
 				pathName := GetMediaMTXPathName(devicePath)
-				opts.RunOnDemand = BuildFFmpegCommand(devicePath, pathName, pm.config)
+                // Use resolver-based FFmpeg command for consistency
+                var resolver *CameraFormatResolver
+                if pm.cameraMonitor != nil {
+                    resolver = NewCameraFormatResolver(pm.cameraMonitor, pm.logger)
+                }
+                opts.RunOnDemand = BuildFFmpegCommandWithResolver(devicePath, pathName, pm.config, resolver)
 				opts.RunOnDemandRestart = true
 				opts.RunOnDemandStartTimeout = pm.config.RunOnDemandStartTimeout
 				opts.RunOnDemandCloseAfter = pm.config.RunOnDemandCloseAfter

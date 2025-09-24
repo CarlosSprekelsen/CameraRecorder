@@ -176,24 +176,42 @@ func GetRecordingFilePath(cfg *config.MediaMTXConfig, recordingCfg *config.Recor
 	return filepath.Join(basePath, filename)
 }
 
-// BuildFFmpegCommand builds a proper FFmpeg command based on device type and configuration
-// This centralizes FFmpeg command generation to prevent hardcoded echo commands
-func BuildFFmpegCommand(devicePath, streamName string, cfg *config.MediaMTXConfig) string {
+// (Deprecated) BuildFFmpegCommand removed. Use BuildFFmpegCommandWithResolver instead.
+
+// BuildFFmpegCommandWithResolver builds a proper FFmpeg command with dynamic pixel format detection
+// This version uses CameraFormatResolver to detect optimal pixel format for the camera
+func BuildFFmpegCommandWithResolver(devicePath, streamName string, cfg *config.MediaMTXConfig, formatResolver *CameraFormatResolver) string {
 	// Detect device type
 	if strings.HasPrefix(devicePath, "/dev/video") {
-		// V4L2 device - build comprehensive FFmpeg command using codec config
+		// V4L2 device - get optimal pixel format from camera capabilities
+		var pixelFormat string
+		if formatResolver != nil {
+			// Try to get optimal format from camera capabilities
+			optimalFormat, err := formatResolver.GetOptimalFormatForDeviceWithFallback(devicePath, cfg.Codec.PixelFormat)
+			if err != nil {
+				// Log warning but continue with fallback
+				pixelFormat = cfg.Codec.PixelFormat
+			} else {
+				pixelFormat = optimalFormat
+			}
+		} else {
+			// Fallback to configured format if no resolver provided
+			pixelFormat = cfg.Codec.PixelFormat
+		}
+
+		// Build FFmpeg command with detected format
 		return fmt.Sprintf(
 			"ffmpeg -f v4l2 -i %s -c:v libx264 -profile:v %s -level %s "+
 				"-pix_fmt %s -preset %s -b:v %s -f rtsp rtsp://%s:%d/%s",
 			devicePath,
 			cfg.Codec.VideoProfile,
 			cfg.Codec.VideoLevel,
-			cfg.Codec.PixelFormat,
+			pixelFormat, // Dynamic format from camera capabilities
 			cfg.Codec.Preset,
 			cfg.Codec.Bitrate,
 			cfg.Host, cfg.RTSPPort, streamName)
 	} else if strings.HasPrefix(devicePath, "rtsp://") {
-		// External RTSP source - use relay/proxy command
+		// External RTSP source - use relay/proxy command (no format detection needed)
 		return fmt.Sprintf(
 			"ffmpeg -i %s -c copy -f rtsp rtsp://%s:%d/%s",
 			devicePath, cfg.Host, cfg.RTSPPort, streamName)

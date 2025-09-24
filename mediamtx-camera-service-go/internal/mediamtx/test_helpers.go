@@ -547,7 +547,12 @@ func (h *MediaMTXTestHelper) GetRecordingManager() *RecordingManager {
 		cfg := h.configManager.GetConfig()
 		recordingConfig := &cfg.Recording
 
-		h.recordingManager = NewRecordingManager(h.client, pathManager, streamManager, ffmpegManager, h.mediaMTXConfig, recordingConfig, h.configIntegration, h.logger)
+		var resolver *CameraFormatResolver
+		cameraMonitor := h.GetCameraMonitor()
+		if cameraMonitor != nil {
+			resolver = NewCameraFormatResolver(cameraMonitor, h.logger)
+		}
+		h.recordingManager = NewRecordingManagerWithFormatResolver(h.client, pathManager, streamManager, ffmpegManager, h.mediaMTXConfig, recordingConfig, h.configIntegration, resolver, h.logger)
 	})
 	return h.recordingManager
 }
