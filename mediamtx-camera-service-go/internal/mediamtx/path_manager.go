@@ -160,9 +160,12 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 		// Check if this is for a camera device
 		devicePath := GetDevicePathFromCameraIdentifier(name)
 		if devicePath != "" && strings.HasPrefix(devicePath, "/dev/video") {
-			// Create an on-demand FFmpeg command for the camera
-			// ARCHITECTURE: PathManager must not build commands; expect caller to provide
-			return fmt.Errorf("invalid source 'publisher': PathManager requires RunOnDemand to be pre-built by ConfigIntegration")
+            // Create an on-demand FFmpeg command for the camera
+            // ARCHITECTURE: PathManager must not build commands; expect caller to provide
+            return fmt.Errorf(
+                "RunOnDemand not provided for camera 'publisher': path=%s device=%s. PathManager does not build FFmpeg commands. Use ConfigIntegration.BuildPathConf to supply PathConf.RunOnDemand",
+                name, devicePath,
+            )
 			opts.RunOnDemand = source
 			opts.RunOnDemandRestart = true
 			opts.RunOnDemandStartTimeout = pm.config.RunOnDemandStartTimeout
@@ -173,9 +176,12 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 			// For non-camera paths, use a redirect or leave empty
 			// Empty source with runOnDemand allows dynamic publisher connection
 			source = ""
-			if opts.RunOnDemand == "" {
-				return fmt.Errorf("missing RunOnDemand for non-camera publisher; must be provided by ConfigIntegration")
-			}
+            if opts.RunOnDemand == "" {
+                return fmt.Errorf(
+                    "RunOnDemand missing for 'publisher' source: path=%s source=%s. Provide PathConf.RunOnDemand via ConfigIntegration",
+                    name, source,
+                )
+            }
 		}
 	}
 
