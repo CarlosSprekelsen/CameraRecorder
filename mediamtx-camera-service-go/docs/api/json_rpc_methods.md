@@ -15,7 +15,7 @@
 ### Version Indicators
 
 - **API Version**: Included in response metadata
-- **Deprecation Warnings**: Notified via response headers
+- **Deprecation Warnings**: Notified via metadata or notifications
 - **Breaking Changes**: Documented in changelog
 - **Feature Flags**: Optional features can be enabled/disabled
 
@@ -27,6 +27,15 @@
 4. **Migration Support**: Tools and guides provided  
 
 This document describes all available JSON-RPC 2.0 methods provided by the MediaMTX Camera Service Go implementation. The API maintains 100% compatibility with the Python implementation while providing Go-specific examples and performance improvements.
+
+## JSON-RPC 2.0 Compliance (Authoritative)
+
+* **Protocol:** JSON-RPC 2.0 over WebSocket.
+* **Envelope:** Every message MUST include `"jsonrpc":"2.0"`, and EITHER `"result"` OR `"error"`, plus `"id"` for calls that expect a response.
+* **Notifications:** Supported (requests **without** `"id"`). No response will be sent.
+* **Batch:** **Not supported.** If a batch is received, return `-32600 Invalid Request`.
+* **IDs:** MAY be string or number; MUST be echoed unchanged in the response.
+* **Errors:** Use JSON-RPC standard codes plus the **vendor range `-32000..-32099`** defined in this spec (see Error Catalog).
 
 ---
 
@@ -40,7 +49,7 @@ ws://localhost:8002/ws
 
 ## Authentication & Authorization
 
-**CRITICAL SECURITY NOTE**: All API methods require authentication and proper role-based authorization.
+**CRITICAL SECURITY NOTE**: Most API methods require authentication and proper role-based authorization. The `ping` method is the only exception for connectivity testing.
 
 ### Authentication Methods
 
@@ -55,9 +64,44 @@ ws://localhost:8002/ws
 
 ### Authentication Flow
 
-1. Call `authenticate` method with your token to establish session
-2. Include `auth_token` parameter in subsequent requests
-3. Server validates token and checks role permissions for each method
+**Session Authentication (WebSocket):**
+Call `authenticate` once after opening the WebSocket. If it succeeds, the **connection becomes authenticated** for its lifetime. **Do not** include tokens in subsequent method calls on the same socket. If the socket reconnects, authenticate again.
+
+**Identifier Policy (External Contract):**
+
+* Clients MUST see **only** logical camera IDs: `"camera0"`, `"camera1"`, …
+* Linux device paths like `"/dev/video0"` are **internal** and MUST NOT appear in public responses.
+* When needed for admin/debug, expose internal paths under `debug.internal_device_path` **only** when `role=admin` and `debug=true`.
+
+**Streams Object Contract:**
+
+* `rtsp`: e.g., `"rtsp://<host>:8554/camera0"`
+* `hls`: e.g., `"https://<host>/hls/camera0.m3u8"`
+* `webrtc`: **(reserved)** will be added once the signaling API is published.
+
+**Pagination (Standard):**
+
+* `limit` (default **50**, max **1000**)
+* `offset` (default **0**)
+* **Sort order:** unless stated otherwise, lists are sorted by `created_at` **desc**.
+* Empty sets MUST return `"result": { "items": [], "total": 0 }`.
+
+## Permissions Matrix
+
+| Method               | Viewer | Operator | Admin |
+| -------------------- | :----: | :------: | :---: |
+| `ping`               |    ✅   |     ✅    |   ✅   |
+| `authenticate`       |    ✅   |     ✅    |   ✅   |
+| `get_camera_list`    |    ✅   |     ✅    |   ✅   |
+| `get_camera_status`  |    ✅   |     ✅    |   ✅   |
+| `take_snapshot`      |    ❌   |     ✅    |   ✅   |
+| `start_recording`    |    ❌   |     ✅    |   ✅   |
+| `stop_recording`     |    ❌   |     ✅    |   ✅   |
+| `list_recordings`    |    ✅   |     ✅    |   ✅   |
+| `delete_recording`   |    ❌   |     ❌    |   ✅   |
+| `subscribe_events`   |    ✅   |     ✅    |   ✅   |
+| `unsubscribe_events` |    ✅   |     ✅    |   ✅   |
+| `get_server_info`    |    ✅   |     ✅    |   ✅   |
 
 ### authenticate
 
@@ -146,7 +190,8 @@ Performance measured from request receipt to response transmission at service le
 
 Health check method that returns "pong".
 
-**Authentication:** Required (viewer role)
+**Authentication:** **Not required**
+**Purpose:** Connectivity + envelope sanity check **before** `authenticate`.
 
 **Parameters:** None
 
@@ -206,15 +251,14 @@ Get list of all discovered cameras with their current status.
   "result": {
     "cameras": [
       {
-        "device": "/dev/video0",
+        "device": "camera0",
         "status": "CONNECTED", 
         "name": "Camera 0",
         "resolution": "1920x1080",
         "fps": 30,
         "streams": {
           "rtsp": "rtsp://localhost:8554/camera0",
-          "webrtc": "http://localhost:8889/camera0/webrtc",
-          "hls": "http://localhost:8888/camera0"
+          "hls": "https://localhost/hls/camera0.m3u8"
         }
       }
     ],
@@ -281,8 +325,7 @@ Get status for a specific camera device.
     "fps": 30,
     "streams": {
       "rtsp": "rtsp://localhost:8554/camera0",
-      "webrtc": "webrtc://localhost:8002/camera0",
-      "hls": "http://localhost:8002/hls/camera0.m3u8"
+      "hls": "https://localhost/hls/camera0.m3u8"
     },
     "metrics": {
       "bytes_sent": 12345678,
@@ -371,9 +414,9 @@ Get detailed capabilities and supported formats for a specific camera device.
 {
   "jsonrpc": "2.0",
   "error": {
-    "code": -32004,
-    "message": "Camera not found or disconnected",
-    "data": "Camera 'camera0' not found"
+    "code": -32010,
+    "message": "Camera not found",
+    "data": { "resource": "camera", "id": "camera0" }
   },
   "id": 4
 }
@@ -420,7 +463,7 @@ Capture a snapshot from the specified camera.
   "result": {
     "device": "camera0",
     "filename": "snapshot_001.jpg",
-    "status": "COMPLETED",
+    "status": "SUCCESS",
     "timestamp": "2025-01-15T14:30:00Z",
     "file_size": 204800,
     "file_path": "/opt/camera-service/snapshots/snapshot_001.jpg"
@@ -821,12 +864,9 @@ Get detailed status information for a specific camera stream.
 {
   "jsonrpc": "2.0",
   "error": {
-    "code": -32009,
-    "message": "Stream not found or not active",
-    "data": {
-      "reason": "No active stream found for device 'camera0'",
-      "suggestion": "Start streaming first using start_streaming method"
-    }
+    "code": -32010,
+    "message": "Stream not found",
+    "data": { "resource": "stream", "id": "camera0" }
   },
   "id": 23
 }
@@ -844,8 +884,8 @@ List available recording files with metadata and pagination support.
 
 **Parameters:**
 
-- limit: number - Maximum number of files to return (optional)
-- offset: number - Number of files to skip for pagination (optional)
+- limit: number - Maximum number of files to return (optional, default: 50, max: 1000)
+- offset: number - Number of files to skip for pagination (optional, default: 0)
 
 **Returns:** Object containing recordings list, metadata, and pagination information
 
@@ -966,8 +1006,8 @@ Get system performance metrics and statistics.
     "camera_metrics": {
       "connected_cameras": 2,
       "cameras": {
-        "/dev/video0": {
-          "path": "/dev/video0",
+        "camera0": {
+          "path": "camera0",
           "name": "USB 2.0 Camera: USB 2.0 Camera",
           "status": "CONNECTED",
           "device_num": 0,
@@ -1077,28 +1117,15 @@ Get list of all active streams from MediaMTX.
 - `readers`: Number of active stream readers (integer)
 - `bytes_sent`: Total bytes sent for this stream (integer)
 
-**Response Fields:**
-
-- `files`: Array of recording file information objects (array)
-  - `filename`: Recording filename without extension (string)
-  - `file_size`: File size in bytes (integer)
-  - `modified_time`: File modification timestamp (ISO 8601 string)
-  - `download_url`: HTTP download URL for the file (string)
-- `total`: Total number of recording files (integer)
-- `limit`: Maximum number of files requested (integer)
-- `offset`: Number of files skipped for pagination (integer)
-
 **Error Response (MediaMTX Unavailable):**
 
 ```json
 {
   "jsonrpc": "2.0",
   "error": {
-    "code": -32006,
-    "message": "MediaMTX service unavailable",
-    "data": {
-      "reason": "MediaMTX REST API not responding"
-    }
+    "code": -32050,
+    "message": "Dependency failed",
+    "data": { "dependency": "MediaMTX", "detail": "REST API not responding" }
   },
   "id": 10
 }
@@ -1129,15 +1156,14 @@ The server sends real-time notifications for camera events.
   "jsonrpc": "2.0",
   "method": "camera_status_update", 
   "params": {
-    "device": "/dev/video0",
+    "device": "camera0",
     "status": "CONNECTED",
     "name": "Camera 0",
     "resolution": "1920x1080", 
     "fps": 30,
     "streams": {
       "rtsp": "rtsp://localhost:8554/camera0",
-      "webrtc": "http://localhost:8889/camera0/webrtc",
-      "hls": "http://localhost:8888/camera0"
+      "hls": "https://localhost/hls/camera0.m3u8"
     }
   }
 }
@@ -1168,7 +1194,7 @@ The server sends real-time notifications for camera events.
   "jsonrpc": "2.0",
   "method": "recording_status_update",
   "params": {
-    "device": "/dev/video0", 
+    "device": "camera0", 
     "status": "STARTED",
     "filename": "camera0_2025-01-15_14-30-00",
     "duration": 0
@@ -1211,37 +1237,21 @@ All error responses follow a consistent JSON-RPC 2.0 error format with standardi
 
 ### Go Error Response Types
 
-## Error Codes
+## Error Catalog
 
-### Standard JSON-RPC 2.0 Error Codes
-
-- **-32600**: Invalid Request
-- **-32601**: Method not found
-- **-32602**: Invalid parameters
-- **-32603**: Internal server error
-
-### Service-Specific Error Codes
-
-- **-32001**: Authentication failed or token expired
-- **-32002**: Rate limit exceeded
-- **-32003**: Insufficient permissions
-- **-32004**: Camera not found or disconnected
-- **-32005**: Recording already in progress
-- **-32006**: MediaMTX service unavailable  
-- **-32007**: Insufficient storage space
-- **-32008**: Camera capability not supported
-- **-32009**: Stream not found or not active
-- **-32010**: File not found or inaccessible
-
-### Enhanced Recording Management Error Codes
-
-- **-1000**: Camera not found
-- **-1001**: Camera not available
-- **-1002**: Recording in progress
-- **-1003**: MediaMTX error
-- **-1006**: Camera is currently recording
-- **-1008**: Storage space is low
-- **-1010**: Storage space is critical
+| Code       | Name              | When to use                            | `error.data` fields          |
+| ---------- | ----------------- | -------------------------------------- | ---------------------------- |
+| **-32600** | Invalid Request   | Bad JSON-RPC envelope                  | `hint`                       |
+| **-32601** | Method Not Found  | Unknown `"method"`                     | `hint`                       |
+| **-32602** | Invalid Params    | Fails validation rules                 | `param`, `rule`, `hint`      |
+| **-32603** | Internal Error    | Unhandled server error                 | `request_id`                 |
+| **-32001** | Auth Failed       | Invalid/expired token                  | `reason`                     |
+| **-32002** | Permission Denied | Role lacks permission                  | `required_role`, `have_role` |
+| **-32010** | Not Found         | Recording/file/camera not found        | `resource`, `id`             |
+| **-32020** | Invalid State     | Operation not allowed in current state | `state`, `allowed_states`    |
+| **-32030** | Unsupported       | Feature/capability not available       | `feature`                    |
+| **-32040** | Rate Limited      | Too many requests                      | `retry_after_ms`             |
+| **-32050** | Dependency Failed | MediaMTX/FFmpeg error                  | `dependency`, `detail`       |
 
 ---
 
@@ -1255,8 +1265,8 @@ List available snapshot files with metadata and pagination support.
 
 **Parameters:**
 
-- limit: number - Maximum number of files to return (optional)
-- offset: number - Number of files to skip for pagination (optional)
+- limit: number - Maximum number of files to return (optional, default: 50, max: 1000)
+- offset: number - Number of files to skip for pagination (optional, default: 0)
 
 **Returns:** Object containing snapshots list, metadata, and pagination information
 
@@ -2366,6 +2376,8 @@ curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
 
 All API parameters are validated according to the following rules:
 
+On any validation failure, the server MUST return `-32602 Invalid Params` with `error.data.rule` and `error.data.param`.
+
 #### String Parameters
 
 - **Camera identifiers**: Must match pattern `camera[0-9]+` (e.g., "camera0", "camera1")
@@ -2409,27 +2421,21 @@ All responses are validated to ensure:
 - Error messages provide actionable information
 - Error data includes technical details and suggestions
 
-### Response Metadata
+### Response Metadata (Optional)
 
-All responses include optional metadata for debugging and monitoring:
+Responses MAY include a top-level `"metadata"` object with:
 
-#### Performance Metrics
+* `processing_time_ms` (number)
+* `server_timestamp` (ISO 8601 string)
+* `request_id` (string, for tracing)
 
-- **Processing time**: Time taken to process the request
-- **Server timestamp**: When the response was generated
-- **Request ID**: Unique identifier for request tracing
-
-#### Example Response with Metadata
+**Example:**
 
 ```json
 {
   "jsonrpc": "2.0",
-  "result": {
-    "cameras": [...],
-    "total": 1,
-    "connected": 1
-  },
-  "id": 2,
+  "result": { "...": "..." },
+  "id": 42,
   "metadata": {
     "processing_time_ms": 45,
     "server_timestamp": "2025-01-15T14:30:00Z",
