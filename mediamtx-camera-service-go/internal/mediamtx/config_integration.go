@@ -26,6 +26,7 @@ import (
 // ConfigIntegration provides integration between MediaMTX package and existing config system
 type ConfigIntegration struct {
 	configManager *config.ConfigManager
+	ffmpegManager FFmpegManager
 	logger        *logging.Logger
 }
 
@@ -45,9 +46,10 @@ var (
 )
 
 // NewConfigIntegration creates a new configuration integration
-func NewConfigIntegration(configManager *config.ConfigManager, logger *logging.Logger) *ConfigIntegration {
+func NewConfigIntegration(configManager *config.ConfigManager, ffmpegManager FFmpegManager, logger *logging.Logger) *ConfigIntegration {
 	ci := &ConfigIntegration{
 		configManager: configManager,
+		ffmpegManager: ffmpegManager,
 		logger:        logger,
 	}
 
@@ -394,7 +396,7 @@ func (ci *ConfigIntegration) BuildPathConf(pathName string, pathSource *PathSour
 		SourceOnDemandCloseAfter:   cfg.MediaMTX.RunOnDemandCloseAfter,
 
 		// FFmpeg command configuration using FFmpegManager
-		RunOnDemand:        buildPathCommandWithFFmpegManager(devicePath, pathName, &cfg.MediaMTX, ci.configManager, ci.logger),
+		RunOnDemand:        ci.buildPathCommand(devicePath, pathName),
 		RunOnDemandRestart: true,
 	}
 
@@ -420,15 +422,14 @@ func (ci *ConfigIntegration) WatchConfigChanges(controller MediaMTXController) e
 	return nil
 }
 
-// buildPathCommandWithFFmpegManager builds FFmpeg command using FFmpegManager with fallback
-func buildPathCommandWithFFmpegManager(devicePath, pathName string, cfg *config.MediaMTXConfig, configManager *config.ConfigManager, logger *logging.Logger) string {
-	ff := NewFFmpegManager(cfg, logger).(*ffmpegManager)
-	ff.SetDependencies(configManager, nil) // No camera monitor in this context
-	runOnDemand, err := ff.BuildRunOnDemandCommand(devicePath, pathName)
+// buildPathCommand builds FFmpeg command using injected FFmpegManager with fallback
+func (ci *ConfigIntegration) buildPathCommand(devicePath, pathName string) string {
+	runOnDemand, err := ci.ffmpegManager.BuildRunOnDemandCommand(devicePath, pathName)
 	if err != nil {
 		// Return a basic fallback command if FFmpegManager fails
+		cfg := ci.configManager.GetConfig()
 		return fmt.Sprintf("ffmpeg -f v4l2 -i %s -c:v libx264 -preset %s -f rtsp rtsp://%s:%d/%s",
-			devicePath, cfg.Codec.Preset, cfg.Host, cfg.RTSPPort, pathName)
+			devicePath, cfg.MediaMTX.Codec.Preset, cfg.MediaMTX.Host, cfg.MediaMTX.RTSPPort, pathName)
 	}
 	return runOnDemand
 }

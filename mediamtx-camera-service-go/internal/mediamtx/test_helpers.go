@@ -303,8 +303,11 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 	// Create centralized MediaMTX config for all managers - use full config from config manager
 	mediaMTXConfig := &cfg.MediaMTX // Use the full MediaMTX config from the fixture
 
-	// Create centralized ConfigIntegration for all managers
-	configIntegration := NewConfigIntegration(configManager, logger)
+	// Create centralized ConfigIntegration for all managers with injected FFmpegManager
+	ff := NewFFmpegManager(mediaMTXConfig, logger).(*ffmpegManager)
+	ff.SetDependencies(configManager, nil)
+	_ = ff // ensure used below
+	configIntegration := NewConfigIntegration(configManager, ff, logger)
 
 	helper := &MediaMTXTestHelper{
 		config:            testConfig,
@@ -520,8 +523,9 @@ func (h *MediaMTXTestHelper) GetStreamManager() StreamManager {
 		cfg := h.configManager.GetConfig()
 		recordingConfig := &cfg.Recording
 
-		// Use centralized MediaMTX config and ConfigIntegration
-		h.streamManager = NewStreamManager(h.client, pathManager, h.mediaMTXConfig, recordingConfig, h.configIntegration, h.logger)
+		// Use centralized MediaMTX config and ConfigIntegration with injected FFmpegManager
+		ff := h.GetFFmpegManager()
+		h.streamManager = NewStreamManager(h.client, pathManager, h.mediaMTXConfig, recordingConfig, h.configIntegration, ff, h.logger)
 	})
 	return h.streamManager
 }
@@ -543,13 +547,12 @@ func (h *MediaMTXTestHelper) GetRecordingManager() *RecordingManager {
 		// Use centralized MediaMTX config and ConfigIntegration
 		pathManager := h.GetPathManager()
 		streamManager := h.GetStreamManager()
-		ffmpegManager := h.GetFFmpegManager()
 
 		// Get recording configuration
 		cfg := h.configManager.GetConfig()
 		recordingConfig := &cfg.Recording
 
-		h.recordingManager = NewRecordingManager(h.client, pathManager, streamManager, ffmpegManager, h.mediaMTXConfig, recordingConfig, h.configIntegration, h.logger)
+		h.recordingManager = NewRecordingManager(h.client, pathManager, streamManager, h.mediaMTXConfig, recordingConfig, h.configIntegration, h.logger)
 	})
 	return h.recordingManager
 }

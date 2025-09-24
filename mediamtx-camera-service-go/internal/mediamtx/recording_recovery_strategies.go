@@ -129,9 +129,8 @@ func (rrs *RecordingRecoveryStrategy) recoverPathNotFound(ctx context.Context, e
 			return fmt.Errorf("device path not found for camera %s: %w", errorCtx.CameraID, err)
 		}
 
-		// Build path configuration
-		// Use resolver-based path configuration for recovery
-		pathOptions, buildErr := rrs.recordingManager.configIntegration.BuildRecordingPathConf(devicePath, errorCtx.CameraID)
+		// Build path configuration using ConfigIntegration (architectural alignment)
+		pathOptions, buildErr := rrs.recordingManager.configIntegration.BuildPathConf(errorCtx.CameraID, &PathSource{ID: devicePath}, true)
 		if buildErr != nil {
 			return fmt.Errorf("failed to build path configuration: %w", buildErr)
 		}

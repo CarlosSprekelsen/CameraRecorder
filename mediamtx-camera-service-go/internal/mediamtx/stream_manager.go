@@ -114,6 +114,7 @@ type streamManager struct {
 	config            *config.MediaMTXConfig
 	recordingConfig   *config.RecordingConfig
 	configIntegration *ConfigIntegration
+	ffmpegManager     FFmpegManager
 	logger            *logging.Logger
 	useCaseConfigs    map[StreamUseCase]UseCaseConfig
 	keepaliveReader   *RTSPKeepaliveReader
@@ -127,7 +128,7 @@ type streamManager struct {
 
 // NewStreamManager creates a new MediaMTX stream manager
 // OPTIMIZED: Accept PathManager instead of creating a new one to ensure single instance
-func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *config.MediaMTXConfig, recordingConfig *config.RecordingConfig, configIntegration *ConfigIntegration, logger *logging.Logger) StreamManager {
+func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *config.MediaMTXConfig, recordingConfig *config.RecordingConfig, configIntegration *ConfigIntegration, ffmpegManager FFmpegManager, logger *logging.Logger) StreamManager {
 	// Fail fast if required dependencies are nil
 	if client == nil {
 		panic("MediaMTXClient cannot be nil")
@@ -158,6 +159,7 @@ func NewStreamManager(client MediaMTXClient, pathManager PathManager, config *co
 		config:            config,
 		recordingConfig:   recordingConfig,
 		configIntegration: configIntegration,
+		ffmpegManager:     ffmpegManager,
 		logger:            logger,
 		useCaseConfigs:    useCaseConfigs,
 		keepaliveReader:   NewRTSPKeepaliveReader(config, logger), // ADD THIS
@@ -274,8 +276,11 @@ func (sm *streamManager) startStreamForUseCase(ctx context.Context, cameraID str
 	// Store metadata for tracking
 	sm.streamMetadata.Store(cameraID, metadata)
 
-	// Build FFmpeg command using devicePath (only place where devicePath is needed)
-	ffmpegCommand := sm.buildFFmpegCommand(devicePath, streamName)
+	// Build FFmpeg command using injected FFmpegManager
+	ffmpegCommand, err := sm.ffmpegManager.BuildRunOnDemandCommand(devicePath, streamName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to build FFmpeg command: %w", err)
+	}
 
 	// All use cases use the same configuration - stable path for streaming AND recording
 	pathConfig := &PathConf{
@@ -293,7 +298,7 @@ func (sm *streamManager) startStreamForUseCase(ctx context.Context, cameraID str
 		"path_config": pathConfig,
 	}).Info("About to create MediaMTX path")
 
-	err := sm.pathManager.CreatePath(ctx, streamName, devicePath, pathConfig)
+	err = sm.pathManager.CreatePath(ctx, streamName, devicePath, pathConfig)
 	if err != nil {
 		// Log the actual error for debugging
 		sm.logger.WithError(err).WithFields(logging.Fields{
@@ -408,29 +413,17 @@ func (sm *streamManager) buildFFmpegCommand(devicePath, streamName string) strin
 		return cachedCommand.(string)
 	}
 
-	// Build new command
-	// Build runOnDemand command via FFmpegManager to avoid duplication
-	ff := NewFFmpegManager(sm.config, sm.logger).(*ffmpegManager)
-	ff.SetDependencies(sm.configIntegration.configManager, nil)
-	if built, err := ff.BuildRunOnDemandCommand(devicePath, streamName); err == nil {
+	// Build new command via injected FFmpegManager
+	if built, err := sm.ffmpegManager.BuildRunOnDemandCommand(devicePath, streamName); err == nil {
 		command := built
 		sm.ffmpegCommands.Store(devicePath, command)
 		sm.logger.WithField("device_path", devicePath).Debug("Built and cached new FFmpeg command")
 		return command
 	}
 
-	// Fallback: use FFmpegManager with minimal config if previous attempt failed
-	ffFallback := NewFFmpegManager(sm.config, sm.logger).(*ffmpegManager)
-	ffFallback.SetDependencies(sm.configIntegration.configManager, nil)
-	if fallbackCmd, err := ffFallback.BuildRunOnDemandCommand(devicePath, streamName); err == nil {
-		sm.ffmpegCommands.Store(devicePath, fallbackCmd)
-		sm.logger.WithField("device_path", devicePath).Warn("FFmpegManager build failed; using fallback command")
-		return fallbackCmd
-	}
-
-	// If we reach here, all FFmpegManager attempts failed
-	sm.logger.WithField("device_path", devicePath).Error("All FFmpegManager attempts failed")
-	return "", fmt.Errorf("failed to build FFmpeg command for device %s", devicePath)
+	// If we reach here, FFmpegManager failed
+	sm.logger.WithField("device_path", devicePath).Error("FFmpegManager failed to build command")
+	return ""
 }
 
 // CreateStream creates a new stream with automatic USB device handling

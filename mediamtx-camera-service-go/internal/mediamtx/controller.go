@@ -196,10 +196,21 @@ func (c *controller) GetReadinessState() map[string]interface{} {
 //
 // All methods MUST check for nil before using optional components.
 func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMonitor camera.CameraMonitor, logger *logging.Logger) (MediaMTXController, error) {
-	// Create configuration integration
-	configIntegration := NewConfigIntegration(configManager, logger)
+	// Get MediaMTX configuration first (needed for FFmpegManager)
+	cfgAll := configManager.GetConfig()
+	if cfgAll == nil {
+		return nil, fmt.Errorf("failed to get configuration: nil config")
+	}
+	mediaMTXConfig := &cfgAll.MediaMTX
 
-	// Get MediaMTX configuration
+	// Create FFmpeg manager and wire dependencies
+	ffmpegManager := NewFFmpegManager(mediaMTXConfig, logger).(*ffmpegManager)
+	ffmpegManager.SetDependencies(configManager, cameraMonitor)
+
+	// Create configuration integration with FFmpegManager injected
+	configIntegration := NewConfigIntegration(configManager, ffmpegManager, logger)
+
+	// Get MediaMTX configuration (validated access path)
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get MediaMTX configuration: %w", err)
@@ -256,19 +267,15 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 	// Create path manager with camera monitor (consolidated camera operations)
 	pathManager := NewPathManagerWithCamera(client, mediaMTXConfig, cameraMonitor, logger)
 
-	// Create FFmpeg manager and wire dependencies
-	ffmpegManager := NewFFmpegManager(mediaMTXConfig, logger).(*ffmpegManager)
-	ffmpegManager.SetDependencies(configManager, cameraMonitor)
-
 	// Get recording configuration
 	cfg := configManager.GetConfig()
 	recordingConfig := &cfg.Recording
 
-	// Create stream manager with shared PathManager
-	streamManager := NewStreamManager(client, pathManager, mediaMTXConfig, recordingConfig, configIntegration, logger)
+	// Create stream manager with shared PathManager and injected FFmpegManager
+	streamManager := NewStreamManager(client, pathManager, mediaMTXConfig, recordingConfig, configIntegration, ffmpegManager, logger)
 
 	// Create recording manager (using existing client and pathManager)
-	recordingManager := NewRecordingManager(client, pathManager, streamManager, ffmpegManager, mediaMTXConfig, recordingConfig, configIntegration, logger)
+	recordingManager := NewRecordingManager(client, pathManager, streamManager, mediaMTXConfig, recordingConfig, configIntegration, logger)
 
 	// Create snapshot manager with configuration integration
 	snapshotManager := NewSnapshotManagerWithConfig(ffmpegManager, streamManager, cameraMonitor, pathManager, mediaMTXConfig, configManager, logger)

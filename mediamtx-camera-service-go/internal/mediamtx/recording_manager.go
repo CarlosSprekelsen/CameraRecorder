@@ -130,7 +130,7 @@ type RecordingResourceStats struct {
 }
 
 // NewRecordingManager creates a new MediaMTX-based recording manager
-func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamManager StreamManager, ffmpegManager FFmpegManager, config *config.MediaMTXConfig, recordingConfig *config.RecordingConfig, configIntegration *ConfigIntegration, logger *logging.Logger) *RecordingManager {
+func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamManager StreamManager, config *config.MediaMTXConfig, recordingConfig *config.RecordingConfig, configIntegration *ConfigIntegration, logger *logging.Logger) *RecordingManager {
 	rm := &RecordingManager{
 		client:            client,
 		config:            config,
@@ -142,7 +142,7 @@ func NewRecordingManager(client MediaMTXClient, pathManager PathManager, streamM
 		keepaliveReader:   NewRTSPKeepaliveReaderWithConfig(config, recordingConfig, logger),
 		// Enhanced components for metadata and timer management
 		timerManager:    NewRecordingTimerManager(logger),
-		metadataManager: NewMetadataManager(configIntegration, ffmpegManager, logger),
+		metadataManager: NewMetadataManager(configIntegration, configIntegration.ffmpegManager, logger),
 		// Circuit breaker for recording operations (configurable)
 		recordingCircuitBreaker: NewCircuitBreaker("recording", getCircuitBreakerConfig(*configIntegration), logger),
 		// Error recovery manager
@@ -219,9 +219,8 @@ func (rm *RecordingManager) executeStartRecording(ctx context.Context, cameraID 
 		var pathOptions *PathConf
 		var err error
 
-		// Use format resolver if available for dynamic pixel format detection
-		// Always use resolver-based configuration; resolver may be nil safely
-		pathOptions, err = rm.configIntegration.BuildRecordingPathConf(devicePath, pathName)
+		// Use ConfigIntegration to build path configuration (architectural alignment)
+		pathOptions, err = rm.configIntegration.BuildPathConf(pathName, &PathSource{ID: devicePath}, true)
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to build recording path configuration: %w", err)

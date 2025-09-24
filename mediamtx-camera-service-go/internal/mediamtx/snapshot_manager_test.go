@@ -976,7 +976,9 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_MultiTier_Tiers2And3(t *testing.
 
 	// Create config manager using test fixture
 	configManager := CreateConfigManagerWithFixture(t, "config_test_minimal.yaml")
-	configIntegration := NewConfigIntegration(configManager, helper.GetLogger())
+	ff := NewFFmpegManager(mediaMTXConfig, helper.GetLogger()).(*ffmpegManager)
+	ff.SetDependencies(configManager, helper.GetCameraMonitor())
+	configIntegration := NewConfigIntegration(configManager, ff, helper.GetLogger())
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	require.NoError(t, err, "Should be able to get MediaMTX config from fixture")
 
@@ -989,7 +991,7 @@ func TestSnapshotManager_TakeSnapshot_ReqMTX002_MultiTier_Tiers2And3(t *testing.
 	// Note: ffmpegManager is not exported, so we can't cast to it
 	// The SetDependencies method is not available in the interface
 	// This is a limitation of the current design
-	streamManager := NewStreamManager(helper.GetClient(), helper.GetPathManager(), mediaMTXConfig, recordingConfig, configIntegration, helper.GetLogger())
+	streamManager := NewStreamManager(helper.GetClient(), helper.GetPathManager(), mediaMTXConfig, recordingConfig, configIntegration, ff, helper.GetLogger())
 	// Create real hardware camera monitor for testing
 	cameraMonitor := helper.GetCameraMonitor()
 	client := helper.GetClient()
