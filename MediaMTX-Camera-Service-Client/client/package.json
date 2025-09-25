@@ -14,7 +14,7 @@
     "lint:fix": "eslint src --fix",
     "type-check": "tsc --noEmit",
     "preview": "vite preview",
-    "test:unit": "jest --config tests/config/jest-unit.config.cjs",
+    "test:unit": "cd tests && npx jest --config config/jest-unit.config.cjs",
     "test:integration": "jest --config tests/config/jest-integration.config.cjs",
     "test:e2e": "jest --config tests/config/jest-e2e.config.cjs",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",

@@ -55,10 +55,10 @@ module.exports = {
     }
   },
   collectCoverageFrom: [
-    'src/**/*.{ts,tsx}',
-    '!src/**/*.d.ts',
-    '!src/main.tsx',
-    '!src/vite-env.d.ts'
+    '<rootDir>/../../src/**/*.{ts,tsx}',
+    '!<rootDir>/../../src/**/*.d.ts',
+    '!<rootDir>/../../src/main.tsx',
+    '!<rootDir>/../../src/vite-env.d.ts'
   ],
   coveragePathIgnorePatterns: [
     '/node_modules/',
