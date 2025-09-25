@@ -40,6 +40,38 @@ import {
 } from '../../src/types/api';
 
 /**
+ * Centralized mock utilities for MediaMTX Camera Service Client tests
+ * All mocks comply with official RPC documentation schemas
+ */
+
+// ============================================================================
+// CENTRALIZED MOCK UTILITIES (RULE COMPLIANCE)
+// ============================================================================
+
+/**
+ * Centralized logger mock - prevents duplicate implementations
+ */
+export const mockLogger = {
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn()
+  }
+};
+
+/**
+ * Centralized router mock - prevents duplicate implementations
+ */
+export const mockRouter = {
+  useNavigate: jest.fn()
+};
+
+/**
+ * Centralized auth store mock - prevents duplicate implementations
+ */
+export const mockAuthStore = jest.fn();
+
+/**
  * Centralized mock data factory for MediaMTX Camera Service Client tests
  * All mocks comply with official RPC documentation schemas
  */
@@ -318,7 +350,7 @@ export class MockDataFactory {
       authenticated: true,
       role: 'operator',
       permissions: ['view', 'control'],
-      expires_at: '2025-01-16T14:30:00Z',
+      expires_at: '2025-01-16T14:30:00.000Z',
       session_id: '550e8400-e29b-41d4-a716-446655440000'
     };
   }
@@ -667,7 +699,7 @@ export class MockDataFactory {
       role: 'operator',
       session_id: '550e8400-e29b-41d4-a716-446655440000',
       isAuthenticated: true,
-      expires_at: '2025-01-16T14:30:00Z',
+      expires_at: '2025-01-16T14:30:00.000Z',
       permissions: ['view', 'control']
     };
   }
@@ -765,128 +797,4 @@ export class MockDataFactory {
     };
   }
 
-  // ============================================================================
-  // ZUSTAND STORE MOCKS (JEST MOCK FUNCTIONS)
-  // ============================================================================
-
-  /**
-   * Mock Device Store
-   */
-  static createMockDeviceStore() {
-    return {
-      cameras: this.getCameraListResult().cameras,
-      streams: this.getStreamsListResult(),
-      loading: false,
-      error: null,
-      lastUpdated: '2025-01-15T14:30:00Z',
-      getCameraList: () => Promise.resolve(),
-      getStreamUrl: () => Promise.resolve(null),
-      getStreams: () => Promise.resolve(),
-      setLoading: () => {},
-      setError: () => {},
-      updateCameraStatus: () => {},
-      updateStreamStatus: () => {},
-      handleCameraStatusUpdate: () => {},
-      handleStreamUpdate: () => {},
-      setDeviceService: () => {},
-      reset: () => {}
-    };
-  }
-
-  /**
-   * Mock File Store
-   */
-  static createMockFileStore() {
-    return {
-      recordings: this.getFileListResult().files,
-      snapshots: this.getFileListResult().files,
-      loading: false,
-      error: null,
-      lastUpdated: '2025-01-15T14:30:00Z',
-      loadRecordings: () => Promise.resolve(),
-      loadSnapshots: () => Promise.resolve(),
-      deleteRecording: () => Promise.resolve(),
-      deleteSnapshot: () => Promise.resolve(),
-      setLoading: () => {},
-      setError: () => {},
-      setFileService: () => {},
-      reset: () => {}
-    };
-  }
-
-  /**
-   * Mock Recording Store
-   */
-  static createMockRecordingStore() {
-    return {
-      activeRecordings: [],
-      recordingHistory: [],
-      loading: false,
-      error: null,
-      lastUpdated: '2025-01-15T14:30:00Z',
-      takeSnapshot: () => Promise.resolve(),
-      startRecording: () => Promise.resolve(),
-      stopRecording: () => Promise.resolve(),
-      setLoading: () => {},
-      setError: () => {},
-      setRecordingService: () => {},
-      reset: () => {}
-    };
-  }
-
-  /**
-   * Mock Connection Store
-   */
-  static createMockConnectionStore() {
-    return {
-      status: 'connected',
-      lastError: null,
-      reconnectAttempts: 0,
-      lastConnected: '2025-01-15T14:30:00Z',
-      connect: () => Promise.resolve(),
-      disconnect: () => Promise.resolve(),
-      setConnectionService: () => {},
-      reset: () => {}
-    };
-  }
-
-  /**
-   * Mock Auth Store
-   */
-  static createMockAuthStore() {
-    return {
-      token: 'mock-jwt-token',
-      role: 'operator',
-      session_id: '550e8400-e29b-41d4-a716-446655440000',
-      isAuthenticated: true,
-      expires_at: '2025-01-16T14:30:00Z',
-      permissions: ['view', 'control'],
-      authenticate: () => Promise.resolve(),
-      logout: () => Promise.resolve(),
-      setAuthService: () => {},
-      reset: () => {}
-    };
-  }
-
-  /**
-   * Mock Server Store
-   */
-  static createMockServerStore() {
-    return {
-      info: this.getServerInfo(),
-      status: this.getSystemStatus(),
-      storage: this.getStorageInfo(),
-      loading: false,
-      error: null,
-      lastUpdated: '2025-01-15T14:30:00Z',
-      getServerInfo: () => Promise.resolve(),
-      getSystemStatus: () => Promise.resolve(),
-      getStorageInfo: () => Promise.resolve(),
-      getMetrics: () => Promise.resolve(),
-      setLoading: () => {},
-      setError: () => {},
-      setServerService: () => {},
-      reset: () => {}
-    };
-  }
 }

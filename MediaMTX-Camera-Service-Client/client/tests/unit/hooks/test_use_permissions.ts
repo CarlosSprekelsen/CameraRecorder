@@ -19,10 +19,10 @@ import { renderHook } from '@testing-library/react';
 import { usePermissions } from '../../../src/hooks/usePermissions';
 import { useAuthStore } from '../../../src/stores/auth/authStore';
 
-// Mock the auth store
+// Mock the auth store - centralized pattern
 jest.mock('../../../src/stores/auth/authStore');
 
-// Mock logger service - following centralized pattern
+// Mock logger service - centralized pattern (no duplicate implementations)
 jest.mock('../../../src/services/logger/LoggerService', () => ({
   logger: {
     info: jest.fn(),

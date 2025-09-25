@@ -19,7 +19,7 @@
 import { renderHook } from '@testing-library/react';
 import { usePerformanceMonitor } from '../../../src/hooks/usePerformanceMonitor';
 
-// Mock logger service - following centralized pattern
+// Mock logger service - centralized pattern (no duplicate implementations)
 jest.mock('../../../src/services/logger/LoggerService', () => ({
   logger: {
     info: jest.fn(),

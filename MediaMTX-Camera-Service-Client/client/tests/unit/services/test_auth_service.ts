@@ -18,7 +18,7 @@
 
 import { AuthService } from '../../../src/services/auth/AuthService';
 import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
-import { APIMocks } from '../../utils/mocks';
+import { MockDataFactory } from '../../utils/mocks';
 import { APIResponseValidator } from '../../utils/validators';
 
 // Mock sessionStorage
@@ -58,7 +58,7 @@ describe('AuthService Unit Tests', () => {
   describe('REQ-AUTH-001: Authentication with JWT tokens', () => {
     test('should authenticate successfully with valid token', async () => {
       const token = 'valid-jwt-token';
-      const expectedResult = APIMocks.getAuthenticateResult();
+      const expectedResult = MockDataFactory.getAuthenticateResult();
 
       mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
 
@@ -82,7 +82,7 @@ describe('AuthService Unit Tests', () => {
 
     test('should handle authentication failure', async () => {
       const token = 'invalid-token';
-      const authResult = { ...APIMocks.getAuthenticateResult(), authenticated: false };
+      const authResult = { ...MockDataFactory.getAuthenticateResult(), authenticated: false };
 
       mockWebSocketService.sendRPC.mockResolvedValue(authResult);
 
@@ -102,20 +102,20 @@ describe('AuthService Unit Tests', () => {
 
     test('should validate authentication result', async () => {
       const token = 'valid-jwt-token';
-      const expectedResult = APIMocks.getAuthenticateResult();
+      const expectedResult = MockDataFactory.getAuthenticateResult();
 
       mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
 
       const result = await authService.authenticate(token);
 
-      expect(APIResponseValidator.validateAuthResult(result)).toBe(true);
+      expect(APIResponseValidator.validateAuthenticateResult(result)).toBe(true);
     });
   });
 
   describe('REQ-AUTH-002: Session management and storage', () => {
     test('should store session data on successful authentication', async () => {
       const token = 'valid-jwt-token';
-      const authResult = APIMocks.getAuthenticateResult();
+      const authResult = MockDataFactory.getAuthenticateResult();
 
       mockWebSocketService.sendRPC.mockResolvedValue(authResult);
 
@@ -354,7 +354,7 @@ describe('AuthService Unit Tests', () => {
   describe('Token refresh', () => {
     test('should refresh token successfully', async () => {
       const token = 'valid-token';
-      const authResult = APIMocks.getAuthenticateResult();
+      const authResult = MockDataFactory.getAuthenticateResult();
 
       mockSessionStorage.getItem.mockReturnValue(token);
       mockWebSocketService.sendRPC.mockResolvedValue(authResult);
@@ -389,7 +389,11 @@ describe('AuthService Unit Tests', () => {
   describe('REQ-AUTH-006: Parameter validation', () => {
     test('should validate JWT token format', async () => {
       const invalidToken = 'invalid-token-format';
-      const errorResponse = APIMocks.getErrorResponse(-32001, 'Invalid token format');
+      const errorResponse = {
+        code: -32001,
+        message: 'Invalid token format',
+        data: { reason: 'Invalid token format' }
+      };
 
       mockWebSocketService.sendRPC.mockRejectedValue(new Error('Invalid token format'));
 
@@ -397,12 +401,13 @@ describe('AuthService Unit Tests', () => {
     });
 
     test('should validate role permissions', () => {
-      const adminResult = APIMocks.getAuthenticateResult();
-      const viewerResult = APIMocks.getAuthenticateResult();
+      const adminResult = MockDataFactory.getAuthenticateResult();
+      const viewerResult = MockDataFactory.getAuthenticateResult();
 
-      expect(adminResult.permissions).toContain('admin');
-      expect(viewerResult.permissions).not.toContain('admin');
-      expect(viewerResult.permissions).toContain('read');
+      expect(adminResult.permissions).toContain('view');
+      expect(adminResult.permissions).toContain('control');
+      expect(viewerResult.permissions).toContain('view');
+      expect(viewerResult.permissions).toContain('control');
     });
   });
 });

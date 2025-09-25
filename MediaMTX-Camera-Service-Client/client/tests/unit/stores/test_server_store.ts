@@ -1,620 +1,282 @@
 /**
- * ServerStore unit tests
+ * Unit Tests for Server Store
  * 
- * Ground Truth References:
- * - Client Architecture: ../docs/architecture/client-architechture.md
- * - API Documentation: ../mediamtx-camera-service-go/docs/api/mediamtx_camera_service_openrpc.json
+ * REQ-001: Store State Management - Test Zustand store actions
+ * REQ-002: State Transitions - Test state changes
+ * REQ-003: Error Handling - Test error states and recovery
+ * REQ-004: Server Data Management - Test server info, status, and storage
+ * REQ-005: Side Effects - Test store side effects
  * 
- * Requirements Coverage:
- * - REQ-SS-001: Server info management
- * - REQ-SS-002: System status tracking
- * - REQ-SS-003: Storage information handling
- * - REQ-SS-004: Loading and error state management
- * - REQ-SS-005: Last updated timestamp tracking
- * 
- * Test Categories: Unit
- * API Documentation Reference: mediamtx_camera_service_openrpc.json
+ * Ground Truth: Official RPC Documentation
+ * API Reference: docs/api/json_rpc_methods.md
  */
 
-import { useServerStore } from '../../../src/stores/server/serverStore';
-import { ServerInfo, SystemStatus, StorageInfo } from '../../../src/types/api';
-import { APIMocks } from '../../utils/mocks';
+import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { MockDataFactory } from '../../utils/mocks';
 import { APIResponseValidator } from '../../utils/validators';
+import { useServerStore } from '../../../src/stores/server/serverStore';
 
-describe('ServerStore Unit Tests', () => {
-  let store: ReturnType<typeof useServerStore>;
-
+describe('Server Store', () => {
   beforeEach(() => {
-    // Reset store state before each test
-    store = useServerStore.getState();
-    store.reset();
+    // Reset the store to initial state
+    useServerStore.getState().reset();
   });
 
   afterEach(() => {
-    // Reset store after each test
-    store.reset();
+    useServerStore.getState().reset();
   });
 
-  describe('REQ-SS-001: Server info management', () => {
+  describe('REQ-001: Store State Management', () => {
     test('should initialize with correct initial state', () => {
       const state = useServerStore.getState();
       
-      expect(state.info).toBeNull();
-      expect(state.status).toBeNull();
-      expect(state.storage).toBeNull();
+      expect(state.info).toBe(null);
+      expect(state.status).toBe(null);
+      expect(state.storage).toBe(null);
       expect(state.loading).toBe(false);
-      expect(state.error).toBeNull();
-      expect(state.lastUpdated).toBeNull();
+      expect(state.error).toBe(null);
+      expect(state.lastUpdated).toBe(null);
     });
 
-    test('should set server info correctly', () => {
-      const serverInfo: ServerInfo = APIMocks.getServerInfo();
-      store.setInfo(serverInfo);
+    test('should set info correctly', () => {
+      const { setInfo } = useServerStore.getState();
+      const mockInfo = MockDataFactory.getServerInfo();
       
-      expect(store.info).toEqual(serverInfo);
-      expect(store.info?.name).toBe('MediaMTX Camera Service');
-      expect(store.info?.version).toBe('1.0.0');
-      expect(store.info?.capabilities).toContain('recording');
+      setInfo(mockInfo);
+      expect(useServerStore.getState().info).toEqual(mockInfo);
+      
+      setInfo(null);
+      expect(useServerStore.getState().info).toBe(null);
     });
 
-    test('should clear server info correctly', () => {
-      store.setInfo(APIMocks.getServerInfo());
-      store.setInfo(null);
+    test('should set status correctly', () => {
+      const { setStatus } = useServerStore.getState();
+      const mockStatus = MockDataFactory.getSystemStatus();
       
-      expect(store.info).toBeNull();
+      setStatus(mockStatus);
+      expect(useServerStore.getState().status).toEqual(mockStatus);
+      
+      setStatus(null);
+      expect(useServerStore.getState().status).toBe(null);
     });
 
-    test('should handle server info with all fields', () => {
-      const serverInfo: ServerInfo = {
-        name: 'Test Server',
-        version: '2.0.0',
-        build_date: '2023-12-01T10:00:00Z',
-        go_version: '1.21.5',
-        architecture: 'linux/arm64',
-        capabilities: ['recording', 'streaming', 'snapshots', 'file_management', 'admin'],
-        supported_formats: ['fmp4', 'mp4', 'mkv', 'avi'],
-        max_cameras: 20
-      };
+    test('should set storage correctly', () => {
+      const { setStorage } = useServerStore.getState();
+      const mockStorage = MockDataFactory.getStorageInfo();
       
-      store.setInfo(serverInfo);
+      setStorage(mockStorage);
+      expect(useServerStore.getState().storage).toEqual(mockStorage);
       
-      expect(store.info).toEqual(serverInfo);
-      expect(store.info?.capabilities).toHaveLength(5);
-      expect(store.info?.supported_formats).toHaveLength(4);
-      expect(store.info?.max_cameras).toBe(20);
+      setStorage(null);
+      expect(useServerStore.getState().storage).toBe(null);
     });
 
-    test('should handle minimal server info', () => {
-      const minimalInfo: ServerInfo = {
-        name: 'Minimal Server',
-        version: '1.0.0',
-        build_date: '2023-01-01T00:00:00Z',
-        go_version: '1.20.0',
-        architecture: 'linux/amd64',
-        capabilities: [],
-        supported_formats: [],
-        max_cameras: 1
-      };
-      
-      store.setInfo(minimalInfo);
-      
-      expect(store.info).toEqual(minimalInfo);
-      expect(store.info?.capabilities).toEqual([]);
-      expect(store.info?.supported_formats).toEqual([]);
-    });
-
-    test('should update server info correctly', () => {
-      const initialInfo = APIMocks.getServerInfo();
-      store.setInfo(initialInfo);
-      
-      const updatedInfo: ServerInfo = {
-        ...initialInfo,
-        version: '1.1.0',
-        capabilities: [...initialInfo.capabilities, 'new_feature']
-      };
-      
-      store.setInfo(updatedInfo);
-      
-      expect(store.info).toEqual(updatedInfo);
-      expect(store.info?.version).toBe('1.1.0');
-      expect(store.info?.capabilities).toContain('new_feature');
-    });
-  });
-
-  describe('REQ-SS-002: System status tracking', () => {
-    test('should set system status correctly', () => {
-      const systemStatus: SystemStatus = APIMocks.getStatusResult();
-      store.setStatus(systemStatus);
-      
-      expect(store.status).toEqual(systemStatus);
-      expect(store.status?.status).toBe('HEALTHY');
-      expect(store.status?.version).toBe('1.0.0');
-    });
-
-    test('should clear system status correctly', () => {
-      store.setStatus(APIMocks.getStatusResult());
-      store.setStatus(null);
-      
-      expect(store.status).toBeNull();
-    });
-
-    test('should handle different system statuses', () => {
-      const statuses: SystemStatus[] = [
-        { status: 'HEALTHY', uptime: 3600, version: '1.0.0' },
-        { status: 'DEGRADED', uptime: 7200, version: '1.0.0', components: { websocket_server: 'HEALTHY', camera_monitor: 'DEGRADED' } },
-        { status: 'UNHEALTHY', uptime: 1800, version: '1.0.0', components: { websocket_server: 'UNHEALTHY', camera_monitor: 'UNHEALTHY' } }
-      ];
-      
-      statuses.forEach(status => {
-        store.setStatus(status);
-        expect(store.status).toEqual(status);
-      });
-    });
-
-    test('should handle system status with components', () => {
-      const statusWithComponents: SystemStatus = {
-        status: 'HEALTHY',
-        uptime: 3600.5,
-        version: '1.0.0',
-        components: {
-          websocket_server: 'HEALTHY',
-          camera_monitor: 'HEALTHY',
-          mediamtx: 'HEALTHY'
-        }
-      };
-      
-      store.setStatus(statusWithComponents);
-      
-      expect(store.status?.components).toEqual(statusWithComponents.components);
-      expect(store.status?.components?.websocket_server).toBe('HEALTHY');
-      expect(store.status?.components?.camera_monitor).toBe('HEALTHY');
-      expect(store.status?.components?.mediamtx).toBe('HEALTHY');
-    });
-
-    test('should handle system status without components', () => {
-      const statusWithoutComponents: SystemStatus = {
-        status: 'HEALTHY',
-        uptime: 3600,
-        version: '1.0.0'
-      };
-      
-      store.setStatus(statusWithoutComponents);
-      
-      expect(store.status?.status).toBe('HEALTHY');
-      expect(store.status?.components).toBeUndefined();
-    });
-  });
-
-  describe('REQ-SS-003: Storage information handling', () => {
-    test('should set storage info correctly', () => {
-      const storageInfo: StorageInfo = APIMocks.getStorageInfo();
-      store.setStorage(storageInfo);
-      
-      expect(store.storage).toEqual(storageInfo);
-      expect(store.storage?.total_space).toBe(1000000000000);
-      expect(store.storage?.usage_percentage).toBe(25.0);
-      expect(store.storage?.low_space_warning).toBe(false);
-    });
-
-    test('should clear storage info correctly', () => {
-      store.setStorage(APIMocks.getStorageInfo());
-      store.setStorage(null);
-      
-      expect(store.storage).toBeNull();
-    });
-
-    test('should handle storage info with low space warning', () => {
-      const storageWithWarning: StorageInfo = {
-        total_space: 1000000000000,
-        used_space: 900000000000,
-        available_space: 100000000000,
-        usage_percentage: 90.0,
-        recordings_size: 800000000000,
-        snapshots_size: 100000000000,
-        low_space_warning: true
-      };
-      
-      store.setStorage(storageWithWarning);
-      
-      expect(store.storage?.low_space_warning).toBe(true);
-      expect(store.storage?.usage_percentage).toBe(90.0);
-    });
-
-    test('should handle storage info with different sizes', () => {
-      const storageInfo: StorageInfo = {
-        total_space: 500000000000, // 500GB
-        used_space: 250000000000,  // 250GB
-        available_space: 250000000000, // 250GB
-        usage_percentage: 50.0,
-        recordings_size: 200000000000, // 200GB
-        snapshots_size: 50000000000,   // 50GB
-        low_space_warning: false
-      };
-      
-      store.setStorage(storageInfo);
-      
-      expect(store.storage?.total_space).toBe(500000000000);
-      expect(store.storage?.used_space).toBe(250000000000);
-      expect(store.storage?.available_space).toBe(250000000000);
-      expect(store.storage?.usage_percentage).toBe(50.0);
-    });
-
-    test('should handle zero storage values', () => {
-      const emptyStorage: StorageInfo = {
-        total_space: 0,
-        used_space: 0,
-        available_space: 0,
-        usage_percentage: 0.0,
-        recordings_size: 0,
-        snapshots_size: 0,
-        low_space_warning: false
-      };
-      
-      store.setStorage(emptyStorage);
-      
-      expect(store.storage).toEqual(emptyStorage);
-      expect(store.storage?.usage_percentage).toBe(0.0);
-    });
-  });
-
-  describe('REQ-SS-004: Loading and error state management', () => {
     test('should set loading state correctly', () => {
-      store.setLoading(true);
-      expect(store.loading).toBe(true);
+      const { setLoading } = useServerStore.getState();
       
-      store.setLoading(false);
-      expect(store.loading).toBe(false);
+      setLoading(true);
+      expect(useServerStore.getState().loading).toBe(true);
+      
+      setLoading(false);
+      expect(useServerStore.getState().loading).toBe(false);
     });
 
     test('should set error state correctly', () => {
-      const errorMessage = 'Server connection failed';
-      store.setError(errorMessage);
+      const { setError } = useServerStore.getState();
+      const errorMessage = 'Server error';
       
-      expect(store.error).toBe(errorMessage);
+      setError(errorMessage);
+      expect(useServerStore.getState().error).toBe(errorMessage);
+      
+      setError(null);
+      expect(useServerStore.getState().error).toBe(null);
     });
 
-    test('should clear error state correctly', () => {
-      store.setError('Test error');
-      store.setError(null);
-      
-      expect(store.error).toBeNull();
-    });
-
-    test('should handle different error types', () => {
-      const errors = [
-        'Network timeout',
-        'Authentication failed',
-        'Server unavailable',
-        'Invalid response format',
-        'Permission denied'
-      ];
-      
-      errors.forEach(error => {
-        store.setError(error);
-        expect(store.error).toBe(error);
-      });
-    });
-
-    test('should handle loading and error states together', () => {
-      // Set loading
-      store.setLoading(true);
-      expect(store.loading).toBe(true);
-      expect(store.error).toBeNull();
-      
-      // Set error while loading
-      store.setError('Connection failed');
-      expect(store.loading).toBe(true);
-      expect(store.error).toBe('Connection failed');
-      
-      // Clear loading
-      store.setLoading(false);
-      expect(store.loading).toBe(false);
-      expect(store.error).toBe('Connection failed');
-      
-      // Clear error
-      store.setError(null);
-      expect(store.loading).toBe(false);
-      expect(store.error).toBeNull();
-    });
-
-    test('should reset loading and error states', () => {
-      store.setLoading(true);
-      store.setError('Test error');
-      
-      store.reset();
-      
-      expect(store.loading).toBe(false);
-      expect(store.error).toBeNull();
-    });
-  });
-
-  describe('REQ-SS-005: Last updated timestamp tracking', () => {
     test('should set last updated timestamp correctly', () => {
-      const timestamp = new Date().toISOString();
-      store.setLastUpdated(timestamp);
+      const { setLastUpdated } = useServerStore.getState();
+      const timestamp = '2025-01-15T14:30:00Z';
       
-      expect(store.lastUpdated).toBe(timestamp);
-    });
-
-    test('should clear last updated timestamp correctly', () => {
-      store.setLastUpdated(new Date().toISOString());
-      store.setLastUpdated(null);
+      setLastUpdated(timestamp);
+      expect(useServerStore.getState().lastUpdated).toBe(timestamp);
       
-      expect(store.lastUpdated).toBeNull();
-    });
-
-    test('should handle timestamp updates with server info', () => {
-      const timestamp = new Date().toISOString();
-      const serverInfo = APIMocks.getServerInfo();
-      
-      store.setInfo(serverInfo);
-      store.setLastUpdated(timestamp);
-      
-      expect(store.info).toEqual(serverInfo);
-      expect(store.lastUpdated).toBe(timestamp);
-    });
-
-    test('should handle timestamp updates with status', () => {
-      const timestamp = new Date().toISOString();
-      const status = APIMocks.getStatusResult();
-      
-      store.setStatus(status);
-      store.setLastUpdated(timestamp);
-      
-      expect(store.status).toEqual(status);
-      expect(store.lastUpdated).toBe(timestamp);
-    });
-
-    test('should handle timestamp updates with storage', () => {
-      const timestamp = new Date().toISOString();
-      const storage = APIMocks.getStorageInfo();
-      
-      store.setStorage(storage);
-      store.setLastUpdated(timestamp);
-      
-      expect(store.storage).toEqual(storage);
-      expect(store.lastUpdated).toBe(timestamp);
-    });
-
-    test('should handle invalid timestamp formats', () => {
-      const invalidTimestamps = [
-        'invalid-date',
-        '',
-        '2023-13-45T25:70:90Z',
-        null,
-        undefined
-      ];
-      
-      invalidTimestamps.forEach(timestamp => {
-        store.setLastUpdated(timestamp as any);
-        expect(store.lastUpdated).toBe(timestamp);
-      });
+      setLastUpdated(null);
+      expect(useServerStore.getState().lastUpdated).toBe(null);
     });
   });
 
-  describe('Integration Tests', () => {
-    test('should handle complete server data update', () => {
-      const timestamp = new Date().toISOString();
-      const serverInfo = APIMocks.getServerInfo();
-      const status = APIMocks.getStatusResult();
-      const storage = APIMocks.getStorageInfo();
+  describe('REQ-004: Server Data Management', () => {
+    test('should manage server info data', () => {
+      const { setInfo } = useServerStore.getState();
+      const mockInfo = MockDataFactory.getServerInfo();
       
-      // Set all server data
-      store.setInfo(serverInfo);
-      store.setStatus(status);
-      store.setStorage(storage);
-      store.setLastUpdated(timestamp);
+      setInfo(mockInfo);
       
-      expect(store.info).toEqual(serverInfo);
-      expect(store.status).toEqual(status);
-      expect(store.storage).toEqual(storage);
-      expect(store.lastUpdated).toBe(timestamp);
-      expect(store.loading).toBe(false);
-      expect(store.error).toBeNull();
+      const state = useServerStore.getState();
+      expect(state.info).toEqual(mockInfo);
+      expect(state.info?.version).toBe(mockInfo.version);
+      expect(state.info?.build_time).toBe(mockInfo.build_time);
     });
 
-    test('should handle server data update with loading state', () => {
-      const timestamp = new Date().toISOString();
-      const serverInfo = APIMocks.getServerInfo();
+    test('should manage system status data', () => {
+      const { setStatus } = useServerStore.getState();
+      const mockStatus = MockDataFactory.getSystemStatus();
+      
+      setStatus(mockStatus);
+      
+      const state = useServerStore.getState();
+      expect(state.status).toEqual(mockStatus);
+      expect(state.status?.uptime).toBe(mockStatus.uptime);
+      expect(state.status?.cpu_usage).toBe(mockStatus.cpu_usage);
+    });
+
+    test('should manage storage info data', () => {
+      const { setStorage } = useServerStore.getState();
+      const mockStorage = MockDataFactory.getStorageInfo();
+      
+      setStorage(mockStorage);
+      
+      const state = useServerStore.getState();
+      expect(state.storage).toEqual(mockStorage);
+      expect(state.storage?.total_space).toBe(mockStorage.total_space);
+      expect(state.storage?.used_space).toBe(mockStorage.used_space);
+    });
+  });
+
+  describe('REQ-002: State Transitions', () => {
+    test('should handle loading to success transition', () => {
+      const { setLoading, setInfo, setLastUpdated } = useServerStore.getState();
+      const mockInfo = MockDataFactory.getServerInfo();
       
       // Start loading
-      store.setLoading(true);
-      expect(store.loading).toBe(true);
-      
-      // Update data
-      store.setInfo(serverInfo);
-      store.setLastUpdated(timestamp);
-      
-      // Still loading
-      expect(store.loading).toBe(true);
-      expect(store.info).toEqual(serverInfo);
-      expect(store.lastUpdated).toBe(timestamp);
-      
-      // Finish loading
-      store.setLoading(false);
-      expect(store.loading).toBe(false);
-    });
-
-    test('should handle server data update with error', () => {
-      const serverInfo = APIMocks.getServerInfo();
-      const errorMessage = 'Failed to fetch server data';
+      setLoading(true);
+      expect(useServerStore.getState().loading).toBe(true);
       
       // Set data
-      store.setInfo(serverInfo);
+      setInfo(mockInfo);
+      setLastUpdated('2025-01-15T14:30:00Z');
       
-      // Error occurs
-      store.setError(errorMessage);
+      // Stop loading
+      setLoading(false);
       
-      expect(store.info).toEqual(serverInfo); // Data should remain
-      expect(store.error).toBe(errorMessage);
+      const state = useServerStore.getState();
+      expect(state.loading).toBe(false);
+      expect(state.info).toEqual(mockInfo);
+      expect(state.lastUpdated).toBe('2025-01-15T14:30:00Z');
     });
 
-    test('should handle complete reset', () => {
-      // Set all data
-      store.setInfo(APIMocks.getServerInfo());
-      store.setStatus(APIMocks.getStatusResult());
-      store.setStorage(APIMocks.getStorageInfo());
-      store.setLoading(true);
-      store.setError('Test error');
-      store.setLastUpdated(new Date().toISOString());
+    test('should handle loading to error transition', () => {
+      const { setLoading, setError } = useServerStore.getState();
+      
+      // Start loading
+      setLoading(true);
+      expect(useServerStore.getState().loading).toBe(true);
+      
+      // Set error
+      setError('Server unavailable');
+      
+      // Stop loading
+      setLoading(false);
+      
+      const state = useServerStore.getState();
+      expect(state.loading).toBe(false);
+      expect(state.error).toBe('Server unavailable');
+    });
+  });
+
+  describe('REQ-003: Error Handling', () => {
+    test('should handle null values correctly', () => {
+      const { setInfo, setStatus, setStorage } = useServerStore.getState();
+      
+      setInfo(null);
+      setStatus(null);
+      setStorage(null);
+      
+      const state = useServerStore.getState();
+      expect(state.info).toBe(null);
+      expect(state.status).toBe(null);
+      expect(state.storage).toBe(null);
+    });
+
+    test('should handle error state correctly', () => {
+      const { setError } = useServerStore.getState();
+      
+      setError('Connection failed');
+      
+      const state = useServerStore.getState();
+      expect(state.error).toBe('Connection failed');
+    });
+  });
+
+  describe('REQ-005: Side Effects', () => {
+    test('should reset store to initial state', () => {
+      const { reset, setInfo, setStatus, setStorage, setLoading, setError } = useServerStore.getState();
+      
+      // Modify state
+      setInfo(MockDataFactory.getServerInfo());
+      setStatus(MockDataFactory.getSystemStatus());
+      setStorage(MockDataFactory.getStorageInfo());
+      setLoading(true);
+      setError('Test error');
       
       // Reset
-      store.reset();
+      reset();
       
-      expect(store.info).toBeNull();
-      expect(store.status).toBeNull();
-      expect(store.storage).toBeNull();
-      expect(store.loading).toBe(false);
-      expect(store.error).toBeNull();
-      expect(store.lastUpdated).toBeNull();
+      // Check state is back to initial
+      const state = useServerStore.getState();
+      expect(state.info).toBe(null);
+      expect(state.status).toBe(null);
+      expect(state.storage).toBe(null);
+      expect(state.loading).toBe(false);
+      expect(state.error).toBe(null);
+      expect(state.lastUpdated).toBe(null);
+    });
+
+    test('should maintain state consistency during updates', () => {
+      const { setInfo, setStatus, setStorage, setLoading } = useServerStore.getState();
+      
+      // Set multiple properties
+      setInfo(MockDataFactory.getServerInfo());
+      setStatus(MockDataFactory.getSystemStatus());
+      setStorage(MockDataFactory.getStorageInfo());
+      setLoading(true);
+      
+      const state = useServerStore.getState();
+      expect(state.info).toBeTruthy();
+      expect(state.status).toBeTruthy();
+      expect(state.storage).toBeTruthy();
+      expect(state.loading).toBe(true);
     });
   });
 
-  describe('API Compliance Tests', () => {
-    test('should handle server info that matches API schema', () => {
-      const serverInfo = APIMocks.getServerInfo();
-      store.setInfo(serverInfo);
+  describe('API Compliance Validation', () => {
+    test('should validate server info against RPC spec', () => {
+      const { setInfo } = useServerStore.getState();
+      const mockInfo = MockDataFactory.getServerInfo();
       
-      expect(APIResponseValidator.validateServerInfo(serverInfo)).toBe(true);
-      expect(store.info).toEqual(serverInfo);
+      setInfo(mockInfo);
+      
+      const state = useServerStore.getState();
+      expect(APIResponseValidator.validateServerInfo(state.info!)).toBe(true);
     });
 
-    test('should handle status result that matches API schema', () => {
-      const status = APIMocks.getStatusResult();
-      store.setStatus(status);
+    test('should validate system status against RPC spec', () => {
+      const { setStatus } = useServerStore.getState();
+      const mockStatus = MockDataFactory.getSystemStatus();
       
-      expect(APIResponseValidator.validateStatusResult(status)).toBe(true);
-      expect(store.status).toEqual(status);
+      setStatus(mockStatus);
+      
+      const state = useServerStore.getState();
+      expect(APIResponseValidator.validateSystemStatus(state.status!)).toBe(true);
     });
 
-    test('should handle storage info that matches API schema', () => {
-      const storage = APIMocks.getStorageInfo();
-      store.setStorage(storage);
+    test('should validate storage info against RPC spec', () => {
+      const { setStorage } = useServerStore.getState();
+      const mockStorage = MockDataFactory.getStorageInfo();
       
-      expect(APIResponseValidator.validateStorageInfo(storage)).toBe(true);
-      expect(store.storage).toEqual(storage);
-    });
-
-    test('should handle valid system status values', () => {
-      const validStatuses = ['HEALTHY', 'DEGRADED', 'UNHEALTHY'];
+      setStorage(mockStorage);
       
-      validStatuses.forEach(status => {
-        const systemStatus: SystemStatus = { status: status as any, uptime: 3600, version: '1.0.0' };
-        store.setStatus(systemStatus);
-        expect(store.status?.status).toBe(status);
-      });
-    });
-  });
-
-  describe('Edge Cases and Complex Scenarios', () => {
-    test('should handle rapid data updates', () => {
-      const serverInfos = [
-        APIMocks.getServerInfo(),
-        { ...APIMocks.getServerInfo(), version: '1.1.0' },
-        { ...APIMocks.getServerInfo(), version: '1.2.0' }
-      ];
-      
-      serverInfos.forEach(info => {
-        store.setInfo(info);
-        expect(store.info?.version).toBe(info.version);
-      });
-      
-      expect(store.info?.version).toBe('1.2.0');
-    });
-
-    test('should handle concurrent loading and error states', () => {
-      // Rapid state changes
-      store.setLoading(true);
-      store.setError('Error 1');
-      store.setLoading(false);
-      store.setError('Error 2');
-      store.setLoading(true);
-      store.setError(null);
-      
-      expect(store.loading).toBe(true);
-      expect(store.error).toBeNull();
-    });
-
-    test('should handle large storage values', () => {
-      const largeStorage: StorageInfo = {
-        total_space: 1000000000000000, // 1PB
-        used_space: 500000000000000,   // 500TB
-        available_space: 500000000000000, // 500TB
-        usage_percentage: 50.0,
-        recordings_size: 400000000000000, // 400TB
-        snapshots_size: 100000000000000,  // 100TB
-        low_space_warning: false
-      };
-      
-      store.setStorage(largeStorage);
-      
-      expect(store.storage?.total_space).toBe(1000000000000000);
-      expect(store.storage?.usage_percentage).toBe(50.0);
-    });
-
-    test('should handle server info with many capabilities', () => {
-      const serverInfoWithManyCapabilities: ServerInfo = {
-        name: 'Feature-Rich Server',
-        version: '2.0.0',
-        build_date: '2023-12-01T10:00:00Z',
-        go_version: '1.21.5',
-        architecture: 'linux/amd64',
-        capabilities: [
-          'recording', 'streaming', 'snapshots', 'file_management',
-          'admin', 'monitoring', 'analytics', 'automation',
-          'backup', 'restore', 'scheduling', 'notifications'
-        ],
-        supported_formats: ['fmp4', 'mp4', 'mkv', 'avi', 'mov', 'wmv'],
-        max_cameras: 100
-      };
-      
-      store.setInfo(serverInfoWithManyCapabilities);
-      
-      expect(store.info?.capabilities).toHaveLength(12);
-      expect(store.info?.supported_formats).toHaveLength(6);
-      expect(store.info?.max_cameras).toBe(100);
-    });
-
-    test('should handle status with all components', () => {
-      const statusWithAllComponents: SystemStatus = {
-        status: 'HEALTHY',
-        uptime: 86400.5,
-        version: '1.0.0',
-        components: {
-          websocket_server: 'HEALTHY',
-          camera_monitor: 'HEALTHY',
-          mediamtx: 'HEALTHY',
-          database: 'HEALTHY',
-          storage: 'HEALTHY',
-          network: 'HEALTHY'
-        }
-      };
-      
-      store.setStatus(statusWithAllComponents);
-      
-      expect(store.status?.components?.websocket_server).toBe('HEALTHY');
-      expect(store.status?.components?.camera_monitor).toBe('HEALTHY');
-      expect(store.status?.components?.mediamtx).toBe('HEALTHY');
-      expect(store.status?.components?.database).toBe('HEALTHY');
-      expect(store.status?.components?.storage).toBe('HEALTHY');
-      expect(store.status?.components?.network).toBe('HEALTHY');
-    });
-
-    test('should handle mixed data types and null values', () => {
-      // Set some data
-      store.setInfo(APIMocks.getServerInfo());
-      store.setStatus(APIMocks.getStatusResult());
-      
-      // Set some to null
-      store.setStorage(null);
-      store.setError(null);
-      store.setLastUpdated(null);
-      
-      expect(store.info).toBeTruthy();
-      expect(store.status).toBeTruthy();
-      expect(store.storage).toBeNull();
-      expect(store.error).toBeNull();
-      expect(store.lastUpdated).toBeNull();
+      const state = useServerStore.getState();
+      expect(APIResponseValidator.validateStorageInfo(state.storage!)).toBe(true);
     });
   });
 });

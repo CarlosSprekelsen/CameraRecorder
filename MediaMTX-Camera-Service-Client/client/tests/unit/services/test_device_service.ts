@@ -19,7 +19,7 @@
 import { DeviceService } from '../../../src/services/device/DeviceService';
 import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
 import { LoggerService } from '../../../src/services/logger/LoggerService';
-import { APIMocks } from '../../utils/mocks';
+import { MockDataFactory } from '../../utils/mocks';
 import { APIResponseValidator } from '../../utils/validators';
 
 // Mock dependencies
@@ -43,7 +43,7 @@ describe('DeviceService Unit Tests', () => {
 
   describe('REQ-DEV-001: Camera discovery and listing', () => {
     test('should get camera list successfully', async () => {
-      const expectedResult = APIMocks.getCameraListResult();
+      const expectedResult = MockDataFactory.getCameraListResult();
       mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
 
       const result = await deviceService.getCameraList();
@@ -79,7 +79,7 @@ describe('DeviceService Unit Tests', () => {
     });
 
     test('should validate camera objects', async () => {
-      const cameraList = APIMocks.getCameraListResult();
+      const cameraList = MockDataFactory.getCameraListResult();
       mockWebSocketService.sendRPC.mockResolvedValue(cameraList);
 
       const result = await deviceService.getCameraList();
@@ -187,7 +187,7 @@ describe('DeviceService Unit Tests', () => {
 
     test('should get stream status for specific device', async () => {
       const device = 'camera0';
-      const expectedStatus = APIMocks.getStreamStatus(device);
+      const expectedStatus = MockDataFactory.getStreamStatus(device);
       
       mockWebSocketService.sendRPC.mockResolvedValue(expectedStatus);
 
@@ -309,7 +309,7 @@ describe('DeviceService Unit Tests', () => {
 
   describe('Error handling and logging', () => {
     test('should log all operations with appropriate levels', async () => {
-      const cameraList = APIMocks.getCameraListResult();
+      const cameraList = MockDataFactory.getCameraListResult();
       mockWebSocketService.sendRPC.mockResolvedValue(cameraList);
 
       await deviceService.getCameraList();

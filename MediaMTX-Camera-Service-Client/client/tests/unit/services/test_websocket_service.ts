@@ -17,7 +17,7 @@
  */
 
 import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
-import { APIMocks } from '../../utils/mocks';
+import { MockDataFactory } from '../../utils/mocks';
 import { APIResponseValidator } from '../../utils/validators';
 
 // Mock WebSocket constants
@@ -125,10 +125,14 @@ describe('WebSocketService Unit Tests', () => {
     test('should send RPC requests correctly', async () => {
       const method = 'get_camera_list';
       const params = { limit: 10 };
-      const expectedResult = APIMocks.getCameraListResult();
+      const expectedResult = MockDataFactory.getCameraListResult();
 
       // Mock successful response
-      const mockResponse = APIMocks.getWebSocketResponse(expectedResult, 1);
+      const mockResponse = {
+        jsonrpc: '2.0',
+        result: expectedResult,
+        id: 1
+      };
       
       // Simulate response after a short delay
       setTimeout(() => {
@@ -178,7 +182,7 @@ describe('WebSocketService Unit Tests', () => {
       await webSocketService.connect();
       mockWebSocket.onopen?.();
 
-      const errorResponse = APIMocks.getErrorResponse(-32601, 'Method Not Found');
+      const errorResponse = MockDataFactory.getErrorResponse(-32601, 'Method Not Found');
       
       // Simulate error response
       setTimeout(() => {
@@ -194,7 +198,7 @@ describe('WebSocketService Unit Tests', () => {
       await webSocketService.connect();
       mockWebSocket.onopen?.();
 
-      const authError = APIMocks.getErrorResponse(-32001, 'Auth Failed');
+      const authError = MockDataFactory.getErrorResponse(-32001, 'Auth Failed');
       
       setTimeout(() => {
         mockWebSocket.onmessage?.({ data: JSON.stringify(authError) });

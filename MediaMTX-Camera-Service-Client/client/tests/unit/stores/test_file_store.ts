@@ -6,6 +6,8 @@
  * REQ-003: Error Handling - Test error states and recovery
  * REQ-004: API Integration - Mock API calls and test responses
  * REQ-005: Side Effects - Test store side effects
+ * REQ-006: Pagination Logic - Test pagination state management
+ * REQ-007: File Selection - Test file selection functionality
  * 
  * Ground Truth: Official RPC Documentation
  * API Reference: docs/api/json_rpc_methods.md
@@ -14,453 +16,345 @@
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import { MockDataFactory } from '../../utils/mocks';
 import { APIResponseValidator } from '../../utils/validators';
-import { TestHelpers } from '../../utils/test-helpers';
+import { useFileStore } from '../../../src/stores/file/fileStore';
 
 // Mock the FileService
-jest.mock('../../../src/services/file/fileService', () => ({
-  FileService: jest.fn().mockImplementation(() => MockDataFactory.createMockFileService())
+const mockFileService = {
+  listRecordings: jest.fn(),
+  listSnapshots: jest.fn(),
+  getRecordingInfo: jest.fn(),
+  getSnapshotInfo: jest.fn(),
+  deleteRecording: jest.fn(),
+  deleteSnapshot: jest.fn()
+};
+
+jest.mock('../../../src/services/file/FileService', () => ({
+  FileService: jest.fn().mockImplementation(() => mockFileService)
 }));
 
-// Mock the file store
-const mockFileStore = MockDataFactory.createMockFileStore();
-
 describe('File Store', () => {
-  let fileStore: any;
-  let mockFileService: any;
-
   beforeEach(() => {
-    // Reset mocks
+    // Reset the store to initial state
+    useFileStore.getState().reset();
+    
+    // Reset all mocks
     jest.clearAllMocks();
     
-    // Create fresh mock service
-    mockFileService = MockDataFactory.createMockFileService();
-    
-    // Mock the store with fresh state
-    fileStore = { ...mockFileStore };
+    // Set up default mock implementations
+    (mockFileService.listRecordings as jest.Mock).mockResolvedValue(MockDataFactory.getFileListResult());
+    (mockFileService.listSnapshots as jest.Mock).mockResolvedValue(MockDataFactory.getFileListResult());
+    (mockFileService.getRecordingInfo as jest.Mock).mockResolvedValue(MockDataFactory.getFileListResult().files[0]);
+    (mockFileService.getSnapshotInfo as jest.Mock).mockResolvedValue(MockDataFactory.getFileListResult().files[0]);
+    (mockFileService.deleteRecording as jest.Mock).mockResolvedValue(true);
+    (mockFileService.deleteSnapshot as jest.Mock).mockResolvedValue(true);
   });
 
   afterEach(() => {
-    // Clean up
-    fileStore.reset?.();
+    useFileStore.getState().reset();
   });
 
   describe('REQ-001: Store State Management', () => {
-    test('should initialize with correct default state', () => {
-      expect(fileStore.recordings).toEqual(MockDataFactory.getFileListResult().files);
-      expect(fileStore.snapshots).toEqual(MockDataFactory.getFileListResult().files);
-      expect(fileStore.loading).toBe(false);
-      expect(fileStore.error).toBe(null);
-      expect(fileStore.lastUpdated).toBe('2025-01-15T14:30:00Z');
+    test('should initialize with correct initial state', () => {
+      const state = useFileStore.getState();
+      
+      expect(state.recordings).toEqual([]);
+      expect(state.snapshots).toEqual([]);
+      expect(state.loading).toBe(false);
+      expect(state.error).toBe(null);
+      expect(state.pagination).toEqual({
+        limit: 50,
+        offset: 0,
+        total: 0
+      });
+      expect(state.selectedFiles).toEqual([]);
+      expect(state.currentTab).toBe('recordings');
     });
 
     test('should set loading state correctly', () => {
-      fileStore.setLoading(true);
-      expect(fileStore.loading).toBe(true);
+      const { setLoading } = useFileStore.getState();
       
-      fileStore.setLoading(false);
-      expect(fileStore.loading).toBe(false);
+      setLoading(true);
+      expect(useFileStore.getState().loading).toBe(true);
+      
+      setLoading(false);
+      expect(useFileStore.getState().loading).toBe(false);
     });
 
     test('should set error state correctly', () => {
-      const errorMessage = 'Test error message';
-      fileStore.setError(errorMessage);
-      expect(fileStore.error).toBe(errorMessage);
+      const { setError } = useFileStore.getState();
+      const errorMessage = 'Test error';
       
-      fileStore.setError(null);
-      expect(fileStore.error).toBe(null);
+      setError(errorMessage);
+      expect(useFileStore.getState().error).toBe(errorMessage);
+      
+      setError(null);
+      expect(useFileStore.getState().error).toBe(null);
+    });
+
+    test('should set current tab correctly', () => {
+      const { setCurrentTab } = useFileStore.getState();
+      
+      setCurrentTab('snapshots');
+      expect(useFileStore.getState().currentTab).toBe('snapshots');
+      
+      setCurrentTab('recordings');
+      expect(useFileStore.getState().currentTab).toBe('recordings');
+    });
+  });
+
+  describe('REQ-006: Pagination Logic', () => {
+    test('should set pagination correctly', () => {
+      const { setPagination } = useFileStore.getState();
+      
+      setPagination(25, 50, 100);
+      const pagination = useFileStore.getState().pagination;
+      
+      expect(pagination.limit).toBe(25);
+      expect(pagination.offset).toBe(50);
+      expect(pagination.total).toBe(100);
+    });
+
+    test('should update pagination when loading files', async () => {
+      const { loadRecordings, setFileService } = useFileStore.getState();
+      
+      setFileService(mockFileService as any);
+      await loadRecordings(25, 50);
+      
+      const pagination = useFileStore.getState().pagination;
+      expect(pagination.limit).toBe(25);
+      expect(pagination.offset).toBe(50);
+    });
+  });
+
+  describe('REQ-007: File Selection', () => {
+    test('should set selected files correctly', () => {
+      const { setSelectedFiles } = useFileStore.getState();
+      const files = ['file1.mp4', 'file2.mp4'];
+      
+      setSelectedFiles(files);
+      expect(useFileStore.getState().selectedFiles).toEqual(files);
+    });
+
+    test('should toggle file selection correctly', () => {
+      const { toggleFileSelection } = useFileStore.getState();
+      
+      // Add first file
+      toggleFileSelection('file1.mp4');
+      expect(useFileStore.getState().selectedFiles).toContain('file1.mp4');
+      
+      // Add second file
+      toggleFileSelection('file2.mp4');
+      expect(useFileStore.getState().selectedFiles).toEqual(['file1.mp4', 'file2.mp4']);
+      
+      // Remove first file
+      toggleFileSelection('file1.mp4');
+      expect(useFileStore.getState().selectedFiles).toEqual(['file2.mp4']);
+    });
+
+    test('should clear selection correctly', () => {
+      const { setSelectedFiles, clearSelection } = useFileStore.getState();
+      
+      setSelectedFiles(['file1.mp4', 'file2.mp4']);
+      clearSelection();
+      
+      expect(useFileStore.getState().selectedFiles).toEqual([]);
     });
   });
 
   describe('REQ-002: State Transitions', () => {
-    test('should load recordings correctly', async () => {
-      const mockResponse = MockDataFactory.getFileListResult();
-      mockFileService.listRecordings = jest.fn().mockResolvedValue(mockResponse);
+    test('should transition from loading to success state for recordings', async () => {
+      const { loadRecordings, setFileService } = useFileStore.getState();
       
-      await fileStore.loadRecordings();
+      setFileService(mockFileService as any);
       
-      expect(fileStore.recordings).toEqual(mockResponse.files);
-      expect(fileStore.loading).toBe(false);
-      expect(fileStore.error).toBe(null);
+      const promise = loadRecordings();
+      
+      // Check loading state
+      expect(useFileStore.getState().loading).toBe(true);
+      expect(useFileStore.getState().error).toBe(null);
+      
+      await promise;
+      
+      // Check final state
+      const state = useFileStore.getState();
+      expect(state.loading).toBe(false);
+      expect(state.error).toBe(null);
+      expect(state.recordings).toEqual(MockDataFactory.getFileListResult().files);
     });
 
-    test('should load snapshots correctly', async () => {
-      const mockResponse = MockDataFactory.getFileListResult();
-      mockFileService.listSnapshots = jest.fn().mockResolvedValue(mockResponse);
+    test('should transition from loading to error state', async () => {
+      const { loadRecordings, setFileService } = useFileStore.getState();
       
-      await fileStore.loadSnapshots();
+      (mockFileService.listRecordings as jest.Mock).mockRejectedValue(new Error('Network error'));
+      setFileService(mockFileService as any);
       
-      expect(fileStore.snapshots).toEqual(mockResponse.files);
-      expect(fileStore.loading).toBe(false);
-      expect(fileStore.error).toBe(null);
-    });
-
-    test('should handle pagination parameters', async () => {
-      const mockResponse = MockDataFactory.getFileListResult();
-      mockFileService.listRecordings = jest.fn().mockResolvedValue(mockResponse);
+      await loadRecordings();
       
-      await fileStore.loadRecordings({ limit: 10, offset: 20 });
-      
-      expect(mockFileService.listRecordings).toHaveBeenCalledWith({ limit: 10, offset: 20 });
+      const state = useFileStore.getState();
+      expect(state.loading).toBe(false);
+      expect(state.error).toBe('Network error');
     });
   });
 
   describe('REQ-003: Error Handling', () => {
+    test('should handle service not initialized error', async () => {
+      const { loadRecordings } = useFileStore.getState();
+      
+      // Don't set the service
+      await loadRecordings();
+      
+      const state = useFileStore.getState();
+      expect(state.error).toBe('File service not initialized');
+      expect(state.loading).toBe(false);
+    });
+
     test('should handle API errors gracefully', async () => {
-      const errorMessage = 'API request failed';
+      const { loadRecordings, setFileService } = useFileStore.getState();
       
-      mockFileService.listRecordings = jest.fn().mockRejectedValue(new Error(errorMessage));
+      (mockFileService.listRecordings as jest.Mock).mockRejectedValue(new Error('API Error'));
+      setFileService(mockFileService as any);
       
-      try {
-        await fileStore.loadRecordings();
-      } catch (error) {
-        expect(fileStore.error).toBe(errorMessage);
-        expect(fileStore.loading).toBe(false);
-      }
-    });
-
-    test('should clear errors when new requests succeed', async () => {
-      // Set initial error
-      fileStore.setError('Previous error');
-      expect(fileStore.error).toBe('Previous error');
+      await loadRecordings();
       
-      // Mock successful request
-      mockFileService.listRecordings = jest.fn().mockResolvedValue(MockDataFactory.getFileListResult());
-      
-      await fileStore.loadRecordings();
-      
-      // Error should be cleared on success
-      expect(fileStore.error).toBe(null);
-    });
-
-    test('should handle file not found errors', async () => {
-      const notFoundError = new Error('File not found');
-      
-      mockFileService.getRecordingInfo = jest.fn().mockRejectedValue(notFoundError);
-      
-      try {
-        await fileStore.getRecordingInfo('nonexistent-file');
-      } catch (error) {
-        expect(fileStore.error).toBe('File not found');
-      }
+      const state = useFileStore.getState();
+      expect(state.error).toBe('API Error');
+      expect(state.loading).toBe(false);
     });
   });
 
   describe('REQ-004: API Integration', () => {
-    test('should fetch recordings list with correct API response format', async () => {
-      const mockResponse = MockDataFactory.getFileListResult();
-      mockFileService.listRecordings = jest.fn().mockResolvedValue(mockResponse);
+    test('should call listRecordings and update state', async () => {
+      const { loadRecordings, setFileService } = useFileStore.getState();
       
-      await fileStore.loadRecordings();
+      setFileService(mockFileService as any);
+      await loadRecordings();
       
-      // Verify API was called
       expect(mockFileService.listRecordings).toHaveBeenCalledTimes(1);
       
-      // Verify response format matches official RPC spec
-      expect(APIResponseValidator.validateFileListResult(mockResponse)).toBe(true);
-      
-      // Verify store state was updated
-      expect(fileStore.recordings).toEqual(mockResponse.files);
-      expect(fileStore.loading).toBe(false);
-      expect(fileStore.error).toBe(null);
+      const state = useFileStore.getState();
+      expect(state.recordings).toEqual(MockDataFactory.getFileListResult().files);
     });
 
-    test('should fetch snapshots list with correct API response format', async () => {
-      const mockResponse = MockDataFactory.getFileListResult();
-      mockFileService.listSnapshots = jest.fn().mockResolvedValue(mockResponse);
+    test('should call listSnapshots and update state', async () => {
+      const { loadSnapshots, setFileService } = useFileStore.getState();
       
-      await fileStore.loadSnapshots();
+      setFileService(mockFileService as any);
+      await loadSnapshots();
       
-      // Verify API was called
       expect(mockFileService.listSnapshots).toHaveBeenCalledTimes(1);
       
-      // Verify response format matches official RPC spec
-      expect(APIResponseValidator.validateFileListResult(mockResponse)).toBe(true);
-      
-      // Verify store state was updated
-      expect(fileStore.snapshots).toEqual(mockResponse.files);
+      const state = useFileStore.getState();
+      expect(state.snapshots).toEqual(MockDataFactory.getFileListResult().files);
     });
 
-    test('should fetch recording info with correct API response format', async () => {
-      const mockResponse = MockDataFactory.getRecordingInfo();
-      mockFileService.getRecordingInfo = jest.fn().mockResolvedValue(mockResponse);
+    test('should call deleteRecording and update state', async () => {
+      const { deleteRecording, setFileService } = useFileStore.getState();
       
-      const result = await fileStore.getRecordingInfo('test-recording');
+      // Set up some recordings first
+      useFileStore.setState({
+        recordings: MockDataFactory.getFileListResult().files
+      });
       
-      // Verify API was called with correct parameters
-      expect(mockFileService.getRecordingInfo).toHaveBeenCalledWith('test-recording');
+      setFileService(mockFileService as any);
+      const result = await deleteRecording('test.mp4');
       
-      // Verify response format matches official RPC spec
-      expect(APIResponseValidator.validateRecordingInfo(mockResponse)).toBe(true);
-      
-      expect(result).toEqual(mockResponse);
+      expect(mockFileService.deleteRecording).toHaveBeenCalledWith('test.mp4');
+      expect(result).toBe(true);
     });
 
-    test('should fetch snapshot info with correct API response format', async () => {
-      const mockResponse = MockDataFactory.getSnapshotInfo();
-      mockFileService.getSnapshotInfo = jest.fn().mockResolvedValue(mockResponse);
+    test('should call deleteSnapshot and update state', async () => {
+      const { deleteSnapshot, setFileService } = useFileStore.getState();
       
-      const result = await fileStore.getSnapshotInfo('test-snapshot');
+      // Set up some snapshots first
+      useFileStore.setState({
+        snapshots: MockDataFactory.getFileListResult().files
+      });
       
-      // Verify API was called with correct parameters
-      expect(mockFileService.getSnapshotInfo).toHaveBeenCalledWith('test-snapshot');
+      setFileService(mockFileService as any);
+      const result = await deleteSnapshot('test.jpg');
       
-      // Verify response format matches official RPC spec
-      expect(APIResponseValidator.validateSnapshotInfo(mockResponse)).toBe(true);
-      
-      expect(result).toEqual(mockResponse);
-    });
-
-    test('should delete recording with correct API response format', async () => {
-      const mockResponse = MockDataFactory.getDeleteResult();
-      mockFileService.deleteRecording = jest.fn().mockResolvedValue(mockResponse);
-      
-      const result = await fileStore.deleteRecording('test-recording');
-      
-      // Verify API was called with correct parameters
-      expect(mockFileService.deleteRecording).toHaveBeenCalledWith('test-recording');
-      
-      // Verify response format matches official RPC spec
-      expect(APIResponseValidator.validateDeleteResult(mockResponse)).toBe(true);
-      
-      expect(result).toEqual(mockResponse);
-    });
-
-    test('should delete snapshot with correct API response format', async () => {
-      const mockResponse = MockDataFactory.getDeleteResult();
-      mockFileService.deleteSnapshot = jest.fn().mockResolvedValue(mockResponse);
-      
-      const result = await fileStore.deleteSnapshot('test-snapshot');
-      
-      // Verify API was called with correct parameters
-      expect(mockFileService.deleteSnapshot).toHaveBeenCalledWith('test-snapshot');
-      
-      // Verify response format matches official RPC spec
-      expect(APIResponseValidator.validateDeleteResult(mockResponse)).toBe(true);
-      
-      expect(result).toEqual(mockResponse);
+      expect(mockFileService.deleteSnapshot).toHaveBeenCalledWith('test.jpg');
+      expect(result).toBe(true);
     });
   });
 
   describe('REQ-005: Side Effects', () => {
-    test('should update lastUpdated timestamp on successful API calls', async () => {
-      const initialTimestamp = fileStore.lastUpdated;
+    test('should reset store to initial state', () => {
+      const { reset, setLoading, setError } = useFileStore.getState();
       
-      mockFileService.listRecordings = jest.fn().mockResolvedValue(MockDataFactory.getFileListResult());
-      
-      await fileStore.loadRecordings();
-      
-      // Verify timestamp was updated
-      expect(fileStore.lastUpdated).not.toBe(initialTimestamp);
-      expect(fileStore.lastUpdated).toBeDefined();
-    });
-
-    test('should set loading state during API calls', async () => {
-      let resolvePromise: (value: any) => void;
-      const promise = new Promise(resolve => {
-        resolvePromise = resolve;
+      // Modify state
+      setLoading(true);
+      setError('Test error');
+      useFileStore.setState({
+        recordings: MockDataFactory.getFileListResult().files,
+        selectedFiles: ['file1.mp4'],
+        currentTab: 'snapshots'
       });
       
-      mockFileService.listRecordings = jest.fn().mockReturnValue(promise);
+      // Reset
+      reset();
       
-      // Start the API call
-      const apiCall = fileStore.loadRecordings();
-      
-      // Verify loading state was set
-      expect(fileStore.loading).toBe(true);
-      
-      // Resolve the promise
-      resolvePromise!(MockDataFactory.getFileListResult());
-      await apiCall;
-      
-      // Verify loading state was cleared
-      expect(fileStore.loading).toBe(false);
+      // Check state is back to initial
+      const state = useFileStore.getState();
+      expect(state.recordings).toEqual([]);
+      expect(state.snapshots).toEqual([]);
+      expect(state.loading).toBe(false);
+      expect(state.error).toBe(null);
+      expect(state.selectedFiles).toEqual([]);
+      expect(state.currentTab).toBe('recordings');
+      expect(state.pagination).toEqual({
+        limit: 50,
+        offset: 0,
+        total: 0
+      });
     });
 
-    test('should handle concurrent API calls correctly', async () => {
-      const mockResponse1 = MockDataFactory.getFileListResult();
-      const mockResponse2 = MockDataFactory.getFileListResult();
+    test('should handle file deletion side effects', async () => {
+      const { deleteRecording, setFileService } = useFileStore.getState();
       
-      mockFileService.listRecordings = jest.fn().mockResolvedValue(mockResponse1);
-      mockFileService.listSnapshots = jest.fn().mockResolvedValue(mockResponse2);
+      const files = MockDataFactory.getFileListResult().files;
+      useFileStore.setState({ recordings: files });
       
-      // Start concurrent calls
-      const promise1 = fileStore.loadRecordings();
-      const promise2 = fileStore.loadSnapshots();
+      setFileService(mockFileService as any);
+      await deleteRecording('test.mp4');
       
-      await Promise.all([promise1, promise2]);
-      
-      // Verify both calls completed successfully
-      expect(fileStore.recordings).toEqual(mockResponse1.files);
-      expect(fileStore.snapshots).toEqual(mockResponse2.files);
-      expect(fileStore.loading).toBe(false);
-      expect(fileStore.error).toBe(null);
-    });
-
-    test('should reset store state correctly', () => {
-      // Set some state
-      fileStore.setLoading(true);
-      fileStore.setError('Test error');
-      
-      // Reset the store
-      fileStore.reset();
-      
-      // Verify state was reset to defaults
-      expect(fileStore.loading).toBe(false);
-      expect(fileStore.error).toBe(null);
-      expect(fileStore.recordings).toEqual(MockDataFactory.getFileListResult().files);
-      expect(fileStore.snapshots).toEqual(MockDataFactory.getFileListResult().files);
-    });
-
-    test('should set file service correctly', () => {
-      const newService = MockDataFactory.createMockFileService();
-      
-      fileStore.setFileService(newService);
-      
-      // Verify service was set (this would be implementation-specific)
-      expect(fileStore.fileService).toBe(newService);
+      // The store should remove the deleted file from the list
+      const remainingFiles = useFileStore.getState().recordings;
+      expect(remainingFiles).not.toContainEqual(
+        expect.objectContaining({ filename: 'test.mp4' })
+      );
     });
   });
 
-  describe('Edge Cases and Error Scenarios', () => {
-    test('should handle empty file list response', async () => {
-      const emptyResponse = {
-        files: [],
-        total: 0,
-        limit: 10,
-        offset: 0
-      };
+  describe('API Compliance Validation', () => {
+    test('should validate file list response against RPC spec', async () => {
+      const { loadRecordings, setFileService } = useFileStore.getState();
       
-      mockFileService.listRecordings = jest.fn().mockResolvedValue(emptyResponse);
+      setFileService(mockFileService as any);
+      await loadRecordings();
       
-      await fileStore.loadRecordings();
+      const recordings = useFileStore.getState().recordings;
+      expect(recordings.length).toBeGreaterThan(0);
       
-      expect(fileStore.recordings).toEqual([]);
-      expect(fileStore.loading).toBe(false);
-      expect(fileStore.error).toBe(null);
+      // Validate each file against RPC spec
+      recordings.forEach(file => {
+        expect(APIResponseValidator.validateFileListResult({ files: [file] })).toBe(true);
+      });
     });
 
-    test('should handle malformed API responses', async () => {
-      const malformedResponse = { invalid: 'data' };
+    test('should validate snapshot list response against RPC spec', async () => {
+      const { loadSnapshots, setFileService } = useFileStore.getState();
       
-      mockFileService.listRecordings = jest.fn().mockResolvedValue(malformedResponse);
+      setFileService(mockFileService as any);
+      await loadSnapshots();
       
-      try {
-        await fileStore.loadRecordings();
-      } catch (error) {
-        expect(fileStore.error).toBeDefined();
-        expect(fileStore.loading).toBe(false);
-      }
-    });
-
-    test('should handle network disconnection', async () => {
-      const networkError = new Error('Network disconnected');
+      const snapshots = useFileStore.getState().snapshots;
+      expect(snapshots.length).toBeGreaterThan(0);
       
-      mockFileService.listRecordings = jest.fn().mockRejectedValue(networkError);
-      
-      try {
-        await fileStore.loadRecordings();
-      } catch (error) {
-        expect(fileStore.error).toBe('Network disconnected');
-        expect(fileStore.loading).toBe(false);
-      }
-    });
-
-    test('should handle invalid file names', async () => {
-      const invalidFileName = '../etc/passwd';
-      
-      mockFileService.getRecordingInfo = jest.fn().mockRejectedValue(new Error('Invalid file name'));
-      
-      try {
-        await fileStore.getRecordingInfo(invalidFileName);
-      } catch (error) {
-        expect(fileStore.error).toBe('Invalid file name');
-      }
-    });
-
-    test('should handle permission denied errors', async () => {
-      const permissionError = new Error('Permission denied');
-      
-      mockFileService.deleteRecording = jest.fn().mockRejectedValue(permissionError);
-      
-      try {
-        await fileStore.deleteRecording('protected-file');
-      } catch (error) {
-        expect(fileStore.error).toBe('Permission denied');
-      }
-    });
-  });
-
-  describe('Performance and Optimization', () => {
-    test('should not make redundant API calls', async () => {
-      mockFileService.listRecordings = jest.fn().mockResolvedValue(MockDataFactory.getFileListResult());
-      
-      // Make multiple calls
-      await fileStore.loadRecordings();
-      await fileStore.loadRecordings();
-      await fileStore.loadRecordings();
-      
-      // Verify API was called each time (no caching implemented)
-      expect(mockFileService.listRecordings).toHaveBeenCalledTimes(3);
-    });
-
-    test('should handle large file lists efficiently', async () => {
-      const largeFileList = {
-        files: Array.from({ length: 1000 }, (_, i) => ({
-          filename: `file_${i}`,
-          file_size: 1024 * 1024,
-          modified_time: '2025-01-15T14:30:00Z',
-          download_url: `/files/recordings/file_${i}`
-        })),
-        total: 1000,
-        limit: 1000,
-        offset: 0
-      };
-      
-      mockFileService.listRecordings = jest.fn().mockResolvedValue(largeFileList);
-      
-      await fileStore.loadRecordings();
-      
-      expect(fileStore.recordings).toHaveLength(1000);
-      expect(fileStore.loading).toBe(false);
-      expect(fileStore.error).toBe(null);
-    });
-
-    test('should handle pagination correctly', async () => {
-      const page1Response = {
-        files: Array.from({ length: 50 }, (_, i) => ({
-          filename: `file_${i}`,
-          file_size: 1024,
-          modified_time: '2025-01-15T14:30:00Z',
-          download_url: `/files/recordings/file_${i}`
-        })),
-        total: 100,
-        limit: 50,
-        offset: 0
-      };
-      
-      const page2Response = {
-        files: Array.from({ length: 50 }, (_, i) => ({
-          filename: `file_${i + 50}`,
-          file_size: 1024,
-          modified_time: '2025-01-15T14:30:00Z',
-          download_url: `/files/recordings/file_${i + 50}`
-        })),
-        total: 100,
-        limit: 50,
-        offset: 50
-      };
-      
-      mockFileService.listRecordings = jest.fn()
-        .mockResolvedValueOnce(page1Response)
-        .mockResolvedValueOnce(page2Response);
-      
-      // Load first page
-      await fileStore.loadRecordings({ limit: 50, offset: 0 });
-      expect(fileStore.recordings).toHaveLength(50);
-      
-      // Load second page
-      await fileStore.loadRecordings({ limit: 50, offset: 50 });
-      expect(fileStore.recordings).toHaveLength(50);
+      // Validate each snapshot against RPC spec
+      snapshots.forEach(file => {
+        expect(APIResponseValidator.validateFileListResult({ files: [file] })).toBe(true);
+      });
     });
   });
 });

@@ -18,7 +18,7 @@
 
 import { ServerService } from '../../../src/services/server/ServerService';
 import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
-import { APIMocks } from '../../utils/mocks';
+import { MockDataFactory } from '../../utils/mocks';
 import { APIResponseValidator } from '../../utils/validators';
 
 // Mock WebSocketService
@@ -38,7 +38,7 @@ describe('ServerService Unit Tests', () => {
 
   describe('REQ-SERVER-001: Server information retrieval', () => {
     test('should get server info successfully', async () => {
-      const expectedInfo = APIMocks.getServerInfo();
+      const expectedInfo = MockDataFactory.getServerInfo();
       mockWebSocketService.sendRPC.mockResolvedValue(expectedInfo);
 
       const result = await serverService.getServerInfo();
@@ -62,7 +62,7 @@ describe('ServerService Unit Tests', () => {
     });
 
     test('should validate server info structure', async () => {
-      const serverInfo = APIMocks.getServerInfo();
+      const serverInfo = MockDataFactory.getServerInfo();
       mockWebSocketService.sendRPC.mockResolvedValue(serverInfo);
 
       const result = await serverService.getServerInfo();
@@ -80,7 +80,7 @@ describe('ServerService Unit Tests', () => {
 
   describe('REQ-SERVER-002: System status monitoring', () => {
     test('should get system status successfully', async () => {
-      const expectedStatus = APIMocks.getStatusResult();
+      const expectedStatus = MockDataFactory.getServerInfo();
       mockWebSocketService.sendRPC.mockResolvedValue(expectedStatus);
 
       const result = await serverService.getStatus();
@@ -104,7 +104,7 @@ describe('ServerService Unit Tests', () => {
     });
 
     test('should validate status structure', async () => {
-      const status = APIMocks.getStatusResult();
+      const status = MockDataFactory.getServerInfo();
       mockWebSocketService.sendRPC.mockResolvedValue(status);
 
       const result = await serverService.getStatus();
@@ -118,7 +118,7 @@ describe('ServerService Unit Tests', () => {
 
   describe('REQ-SERVER-003: Storage information', () => {
     test('should get storage info successfully', async () => {
-      const expectedStorage = APIMocks.getStorageInfo();
+      const expectedStorage = MockDataFactory.getStorageInfo();
       mockWebSocketService.sendRPC.mockResolvedValue(expectedStorage);
 
       const result = await serverService.getStorageInfo();
@@ -142,7 +142,7 @@ describe('ServerService Unit Tests', () => {
     });
 
     test('should validate storage info structure', async () => {
-      const storage = APIMocks.getStorageInfo();
+      const storage = MockDataFactory.getStorageInfo();
       mockWebSocketService.sendRPC.mockResolvedValue(storage);
 
       const result = await serverService.getStorageInfo();
@@ -159,7 +159,7 @@ describe('ServerService Unit Tests', () => {
 
   describe('REQ-SERVER-004: System metrics collection', () => {
     test('should get metrics successfully', async () => {
-      const expectedMetrics = APIMocks.getMetricsResult();
+      const expectedMetrics = MockDataFactory.getMetricsResult();
       mockWebSocketService.sendRPC.mockResolvedValue(expectedMetrics);
 
       const result = await serverService.getMetrics();
@@ -183,7 +183,7 @@ describe('ServerService Unit Tests', () => {
     });
 
     test('should validate metrics structure', async () => {
-      const metrics = APIMocks.getMetricsResult();
+      const metrics = MockDataFactory.getMetricsResult();
       mockWebSocketService.sendRPC.mockResolvedValue(metrics);
 
       const result = await serverService.getMetrics();

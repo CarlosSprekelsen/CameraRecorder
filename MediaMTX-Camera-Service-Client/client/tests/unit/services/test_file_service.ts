@@ -19,7 +19,7 @@
 import { FileService } from '../../../src/services/file/FileService';
 import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
 import { LoggerService } from '../../../src/services/logger/LoggerService';
-import { APIMocks } from '../../utils/mocks';
+import { MockDataFactory } from '../../utils/mocks';
 import { APIResponseValidator } from '../../utils/validators';
 
 // Mock dependencies
@@ -75,7 +75,7 @@ describe('FileService Unit Tests', () => {
     test('should list recordings with pagination', async () => {
       const limit = 10;
       const offset = 0;
-      const expectedResult = APIMocks.getListFilesResult('recordings');
+      const expectedResult = MockDataFactory.getFileListResult();
       
       mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
 
@@ -91,7 +91,7 @@ describe('FileService Unit Tests', () => {
     test('should list snapshots with pagination', async () => {
       const limit = 20;
       const offset = 10;
-      const expectedResult = APIMocks.getListFilesResult('snapshots');
+      const expectedResult = MockDataFactory.getFileListResult();
       
       mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
 
@@ -124,7 +124,7 @@ describe('FileService Unit Tests', () => {
     test('should validate pagination parameters', async () => {
       const limit = 10;
       const offset = 0;
-      const result = APIMocks.getListFilesResult('recordings');
+      const result = MockDataFactory.getFileListResult();
       
       mockWebSocketService.sendRPC.mockResolvedValue(result);
 
@@ -332,7 +332,7 @@ describe('FileService Unit Tests', () => {
     });
 
     test('should log all operations with appropriate levels', async () => {
-      const result = APIMocks.getListFilesResult('recordings');
+      const result = MockDataFactory.getFileListResult();
       mockWebSocketService.sendRPC.mockResolvedValue(result);
 
       await fileService.listRecordings(10, 0);

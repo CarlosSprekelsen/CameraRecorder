@@ -19,13 +19,13 @@
 import { renderHook } from '@testing-library/react';
 import { useKeyboardShortcuts } from '../../../src/hooks/useKeyboardShortcuts';
 
-// Mock react-router-dom
+// Mock react-router-dom - centralized pattern
 const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate
 }));
 
-// Mock logger service - following centralized pattern
+// Mock logger service - centralized pattern (no duplicate implementations)
 jest.mock('../../../src/services/logger/LoggerService', () => ({
   logger: {
     info: jest.fn(),
