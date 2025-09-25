@@ -159,7 +159,7 @@ describe('FileService Unit Tests', () => {
       const fileInfo = {
         filename,
         file_size: 1024000,
-        modified_time: new Date().toISOString(),
+        created_time: new Date().toISOString(),
         download_url: `https://localhost/downloads/${filename}`
       };
       

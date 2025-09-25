@@ -754,10 +754,10 @@ export class APIResponseValidator {
     return (
       typeof obj.filename === 'string' &&
       typeof obj.file_size === 'number' &&
-      typeof obj.modified_time === 'string' &&
+      typeof obj.created_time === 'string' &&
       typeof obj.download_url === 'string' &&
       obj.file_size >= 0 &&
-      this.validateIsoTimestamp(obj.modified_time)
+      this.validateIsoTimestamp(obj.created_time)
     );
   }
 

@@ -101,7 +101,7 @@ export class FileService implements IFileCatalog, IFileActions {
   async getRecordingInfo(filename: string): Promise<{
     filename: string;
     file_size: number;
-    modified_time: string;
+    created_time: string;
     download_url: string;
     duration?: number;
     format?: string;
@@ -111,11 +111,11 @@ export class FileService implements IFileCatalog, IFileActions {
       this.logger.info(`Getting recording info for: ${filename}`);
       const response = await this.wsService.sendRPC('get_recording_info', { filename }) as RecordingInfo;
       this.logger.info(`Recording info retrieved for ${filename}`);
-      // Transform API response to expected format
+      // Return API response directly as per authoritative specification
       return {
         filename: response.filename,
         file_size: response.file_size,
-        modified_time: response.created_time,
+        created_time: response.created_time,
         download_url: response.download_url,
         duration: response.duration
       };
@@ -132,7 +132,7 @@ export class FileService implements IFileCatalog, IFileActions {
   async getSnapshotInfo(filename: string): Promise<{
     filename: string;
     file_size: number;
-    modified_time: string;
+    created_time: string;
     download_url: string;
     format?: string;
     device?: string;
@@ -141,11 +141,11 @@ export class FileService implements IFileCatalog, IFileActions {
       this.logger.info(`Getting snapshot info for: ${filename}`);
       const response = await this.wsService.sendRPC('get_snapshot_info', { filename }) as SnapshotInfo;
       this.logger.info(`Snapshot info retrieved for ${filename}`);
-      // Transform API response to expected format
+      // Return API response directly as per authoritative specification
       return {
         filename: response.filename,
         file_size: response.file_size,
-        modified_time: response.created_time,
+        created_time: response.created_time,
         download_url: response.download_url
       };
     } catch (error) {
