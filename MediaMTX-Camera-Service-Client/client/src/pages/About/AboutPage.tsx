@@ -152,9 +152,7 @@ const AboutPage: React.FC = () => {
                     </Typography>
                     <Chip
                       label={status.status}
-                      color={
-                        getStatusColor(status.status) as 'success' | 'error' | 'warning' | 'info'
-                      }
+                      color={getStatusColor(status.status) as 'success' | 'error' | 'warning' | 'info'}
                       size="small"
                     />
                   </Box>

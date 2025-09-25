@@ -18,10 +18,10 @@
 /** @type {import('jest').Config} */
 module.exports = {
   testEnvironment: 'node',
-  setupFilesAfterEnv: ['<rootDir>/tests/setup.integration.ts'],
+  setupFilesAfterEnv: ['<rootDir>/../setup.integration.ts'],
   testMatch: [
-    '<rootDir>/tests/integration/**/test_*.{js,ts,tsx}',
-    '<rootDir>/tests/e2e/**/test_*.{js,ts,tsx}'
+    '<rootDir>/../integration/**/test_*.{js,ts,tsx}',
+    '<rootDir>/../e2e/**/test_*.{js,ts,tsx}'
   ],
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
@@ -36,7 +36,7 @@ module.exports = {
     '^.+\\.js$': 'babel-jest'
   },
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
+    '^@/(.*)$': '<rootDir>/../../src/$1',
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
   },
   testTimeout: 30000,

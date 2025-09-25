@@ -92,15 +92,7 @@ const CameraPage: React.FC = memo(() => {
     };
 
     initializeDeviceService();
-  }, [
-    isAuthenticated,
-    getCameraList,
-    getStreams,
-    setDeviceService,
-    handleCameraStatusUpdate,
-    handleRecordingStatusUpdate,
-    setRecordingService,
-  ]);
+  }, [isAuthenticated, getCameraList, getStreams, setDeviceService, handleCameraStatusUpdate, handleRecordingStatusUpdate, setRecordingService]);
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {

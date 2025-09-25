@@ -19,11 +19,7 @@ export class RecordingService implements ICommand {
     }
   }
 
-  async startRecording(
-    device: string,
-    duration?: number,
-    format?: string,
-  ): Promise<RecordingResult> {
+  async startRecording(device: string, duration?: number, format?: string): Promise<RecordingResult> {
     try {
       this.logger.info('start_recording request', { device, duration, format });
       return await this.wsService.sendRPC('start_recording', { device, duration, format });
