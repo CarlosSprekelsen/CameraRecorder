@@ -35,81 +35,98 @@ const initialState: RecordingState = {
 };
 
 export const useRecordingStore = create<RecordingState & RecordingActions>()(
-  devtools(persist((set, get) => {
-    let service: RecordingService | null = null;
+  devtools(
+    persist(
+      (set, get) => {
+        let service: RecordingService | null = null;
 
-    return {
-      ...initialState,
+        return {
+          ...initialState,
 
-      setService: (s: RecordingService) => {
-        service = s;
+          setService: (s: RecordingService) => {
+            service = s;
+          },
+
+          takeSnapshot: async (device: string, filename?: string) => {
+            if (!service) {
+              set({ error: 'Recording service not initialized' });
+              return;
+            }
+            set({ loading: true, error: null });
+            try {
+              await service.takeSnapshot(device, filename);
+              set({ loading: false });
+            } catch (error) {
+              set({
+                loading: false,
+                error: error instanceof Error ? error.message : 'Snapshot failed',
+              });
+            }
+          },
+
+          startRecording: async (device: string, duration?: number, format?: string) => {
+            if (!service) {
+              set({ error: 'Recording service not initialized' });
+              return;
+            }
+            // Concurrency limit: do not start if device already recording
+            if (get().activeRecordings[device]) {
+              set({ error: `Device ${device} is already recording` });
+              return;
+            }
+            set({ loading: true, error: null });
+            try {
+              await service.startRecording(device, duration, format);
+              set({ loading: false });
+            } catch (error) {
+              set({
+                loading: false,
+                error: error instanceof Error ? error.message : 'Start recording failed',
+              });
+            }
+          },
+
+          stopRecording: async (device: string) => {
+            if (!service) {
+              set({ error: 'Recording service not initialized' });
+              return;
+            }
+            set({ loading: true, error: null });
+            try {
+              await service.stopRecording(device);
+              set({ loading: false });
+            } catch (error) {
+              set({
+                loading: false,
+                error: error instanceof Error ? error.message : 'Stop recording failed',
+              });
+            }
+          },
+
+          handleRecordingStatusUpdate: (info: RecordingInfo) => {
+            set((state) => {
+              const nextActive = { ...state.activeRecordings };
+              if (info.status === 'RECORDING' || info.status === 'STARTED') {
+                nextActive[info.device] = info;
+              } else if (info.status === 'STOPPED' || info.status === 'ERROR') {
+                delete nextActive[info.device];
+              }
+              const nextHistory = [...state.history];
+              nextHistory.unshift(info);
+              return { activeRecordings: nextActive, history: nextHistory };
+            });
+          },
+
+          reset: () => set(initialState),
+        };
       },
-
-      takeSnapshot: async (device: string, filename?: string) => {
-        if (!service) {
-          set({ error: 'Recording service not initialized' });
-          return;
-        }
-        set({ loading: true, error: null });
-        try {
-          await service.takeSnapshot(device, filename);
-          set({ loading: false });
-        } catch (error) {
-          set({ loading: false, error: error instanceof Error ? error.message : 'Snapshot failed' });
-        }
+      {
+        name: 'recording-store',
+        partialize: (state) => ({
+          activeRecordings: state.activeRecordings,
+          history: state.history,
+        }),
       },
-
-      startRecording: async (device: string, duration?: number, format?: string) => {
-        if (!service) {
-          set({ error: 'Recording service not initialized' });
-          return;
-        }
-        // Concurrency limit: do not start if device already recording
-        if (get().activeRecordings[device]) {
-          set({ error: `Device ${device} is already recording` });
-          return;
-        }
-        set({ loading: true, error: null });
-        try {
-          await service.startRecording(device, duration, format);
-          set({ loading: false });
-        } catch (error) {
-          set({ loading: false, error: error instanceof Error ? error.message : 'Start recording failed' });
-        }
-      },
-
-      stopRecording: async (device: string) => {
-        if (!service) {
-          set({ error: 'Recording service not initialized' });
-          return;
-        }
-        set({ loading: true, error: null });
-        try {
-          await service.stopRecording(device);
-          set({ loading: false });
-        } catch (error) {
-          set({ loading: false, error: error instanceof Error ? error.message : 'Stop recording failed' });
-        }
-      },
-
-      handleRecordingStatusUpdate: (info: RecordingInfo) => {
-        set((state) => {
-          const nextActive = { ...state.activeRecordings };
-          if (info.status === 'RECORDING' || info.status === 'STARTED') {
-            nextActive[info.device] = info;
-          } else if (info.status === 'STOPPED' || info.status === 'ERROR') {
-            delete nextActive[info.device];
-          }
-          const nextHistory = [...state.history];
-          nextHistory.unshift(info);
-          return { activeRecordings: nextActive, history: nextHistory };
-        });
-      },
-
-      reset: () => set(initialState),
-    };
-  }, {
-    name: 'recording-store',
-    partialize: (state) => ({ activeRecordings: state.activeRecordings, history: state.history })
-  }))
+    ),
+  ),
 );

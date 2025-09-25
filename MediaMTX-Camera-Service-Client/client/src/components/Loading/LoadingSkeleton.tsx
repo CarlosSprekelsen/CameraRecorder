@@ -28,7 +28,7 @@ const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
           <Skeleton key={`header-${index}`} variant="rectangular" width={120} height={40} />
         ))}
       </Box>
-      
+
       {/* Table rows skeleton */}
       {Array.from({ length: rows }).map((_, rowIndex) => (
         <Box key={`row-${rowIndex}`} display="flex" gap={2} mb={1}>

@@ -1,12 +1,5 @@
 import React, { useEffect, memo } from 'react';
-import {
-  Box,
-  Typography,
-  Paper,
-  Alert,
-  CircularProgress,
-  Container,
-} from '@mui/material';
+import { Box, Typography, Paper, Alert, CircularProgress, Container } from '@mui/material';
 import { useDeviceStore } from '../../stores/device/deviceStore';
 import { useAuthStore } from '../../stores/auth/authStore';
 import { serviceFactory } from '../../services/ServiceFactory';
@@ -20,16 +13,16 @@ import { useRecordingStore } from '../../stores/recording/recordingStore';
  * Implements I.Discovery interface for device discovery and stream links
  */
 const CameraPage: React.FC = memo(() => {
-  const { 
-    cameras, 
-    streams, 
-    loading, 
-    error, 
+  const {
+    cameras,
+    streams,
+    loading,
+    error,
     lastUpdated,
     getCameraList,
     getStreams,
     setDeviceService,
-    handleCameraStatusUpdate
+    handleCameraStatusUpdate,
   } = useDeviceStore();
 
   const { isAuthenticated } = useAuthStore();
@@ -59,7 +52,7 @@ const CameraPage: React.FC = memo(() => {
 
         // Set up notification service for real-time updates
         const notificationService = serviceFactory.createNotificationService(wsService);
-        
+
         // Subscribe to camera status updates
         const unsubscribeCameraUpdates = notificationService.subscribe(
           'camera_status_update',
@@ -67,7 +60,7 @@ const CameraPage: React.FC = memo(() => {
             if (notification.params) {
               handleCameraStatusUpdate(notification.params as any);
             }
-          }
+          },
         );
 
         // Subscribe to recording status updates
@@ -77,17 +70,14 @@ const CameraPage: React.FC = memo(() => {
             if (notification.params) {
               handleRecordingStatusUpdate(notification.params as any);
             }
-          }
+          },
         );
 
         // Subscribe to real-time events
         await deviceService.subscribeToCameraEvents();
 
         // Load initial data
-        await Promise.all([
-          getCameraList(),
-          getStreams()
-        ]);
+        await Promise.all([getCameraList(), getStreams()]);
 
         logger.info('Camera page initialized successfully');
 
@@ -109,9 +99,7 @@ const CameraPage: React.FC = memo(() => {
     return (
       <Container maxWidth="lg">
         <Box sx={{ mt: 4 }}>
-          <Alert severity="warning">
-            Please log in to view camera devices.
-          </Alert>
+          <Alert severity="warning">Please log in to view camera devices.</Alert>
         </Box>
       </Container>
     );
@@ -123,7 +111,7 @@ const CameraPage: React.FC = memo(() => {
         <Typography variant="h4" component="h1" gutterBottom>
           Camera Devices
         </Typography>
-        
+
         {lastUpdated && (
           <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
             Last updated: {new Date(lastUpdated).toLocaleString()}
@@ -145,11 +133,7 @@ const CameraPage: React.FC = memo(() => {
               </Typography>
             </Box>
           ) : (
-            <CameraTable 
-              cameras={cameras}
-              streams={streams}
-              onRefresh={getCameraList}
-            />
+            <CameraTable cameras={cameras} streams={streams} onRefresh={getCameraList} />
           )}
         </Paper>
       </Box>

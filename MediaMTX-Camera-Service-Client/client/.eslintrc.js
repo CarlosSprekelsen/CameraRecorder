@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   root: true,
   parser: '@typescript-eslint/parser',
   parserOptions: {
@@ -32,4 +32,4 @@ module.exports = {
     '@typescript-eslint/no-explicit-any': 'error',
     '@typescript-eslint/explicit-module-boundary-types': 'warn',
   },
-}; 
+};

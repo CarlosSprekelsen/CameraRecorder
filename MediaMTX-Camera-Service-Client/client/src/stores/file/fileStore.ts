@@ -145,7 +145,9 @@ export const useFileStore = create<FileState & FileActions>()(
               const info = await fileService.getRecordingInfo(filename);
               return info;
             } catch (error) {
-              set({ error: error instanceof Error ? error.message : 'Failed to get recording info' });
+              set({
+                error: error instanceof Error ? error.message : 'Failed to get recording info',
+              });
               return null;
             }
           },
@@ -159,7 +161,9 @@ export const useFileStore = create<FileState & FileActions>()(
               const info = await fileService.getSnapshotInfo(filename);
               return info;
             } catch (error) {
-              set({ error: error instanceof Error ? error.message : 'Failed to get snapshot info' });
+              set({
+                error: error instanceof Error ? error.message : 'Failed to get snapshot info',
+              });
               return null;
             }
           },
@@ -239,7 +243,7 @@ export const useFileStore = create<FileState & FileActions>()(
           toggleFileSelection: (filename: string) => {
             const { selectedFiles } = get();
             const newSelection = selectedFiles.includes(filename)
-              ? selectedFiles.filter(f => f !== filename)
+              ? selectedFiles.filter((f) => f !== filename)
               : [...selectedFiles, filename];
             set({ selectedFiles: newSelection });
           },
@@ -278,10 +282,10 @@ export const useFileStore = create<FileState & FileActions>()(
           pagination: state.pagination,
           currentTab: state.currentTab,
         }),
-      }
+      },
     ),
     {
       name: 'file-store',
-    }
-  )
+    },
+  ),
 );

@@ -49,7 +49,11 @@ function App() {
   usePerformanceMonitor();
   useKeyboardShortcuts();
 
-  const { status: connectionStatus, setStatus: setConnectionStatus, setError: setConnectionError } = useConnectionStore();
+  const {
+    status: connectionStatus,
+    setStatus: setConnectionStatus,
+    setError: setConnectionError,
+  } = useConnectionStore();
   const { isAuthenticated, login } = useAuthStore();
   const { setInfo, setStatus, setStorage, setLoading, setError } = useServerStore();
 
@@ -60,19 +64,25 @@ function App() {
     logger.info('WebSocket connected successfully');
   }, [setConnectionStatus, setConnectionError]);
 
-  const handleWebSocketDisconnect = useCallback((error?: Error) => {
-    setConnectionStatus('disconnected');
-    if (error) {
-      setConnectionError(error.message);
-      logger.warn('WebSocket disconnected', { error: error.message });
-    }
-  }, [setConnectionStatus, setConnectionError]);
+  const handleWebSocketDisconnect = useCallback(
+    (error?: Error) => {
+      setConnectionStatus('disconnected');
+      if (error) {
+        setConnectionError(error.message);
+        logger.warn('WebSocket disconnected', { error: error.message });
+      }
+    },
+    [setConnectionStatus, setConnectionError],
+  );
 
-  const handleWebSocketError = useCallback((error: Error) => {
-    setConnectionStatus('error');
-    setConnectionError(error.message);
-    logger.error('WebSocket error', { error: error.message }, error);
-  }, [setConnectionStatus, setConnectionError]);
+  const handleWebSocketError = useCallback(
+    (error: Error) => {
+      setConnectionStatus('error');
+      setConnectionError(error.message);
+      logger.error('WebSocket error', { error: error.message }, error);
+    },
+    [setConnectionStatus, setConnectionError],
+  );
 
   // Initialize WebSocket connection
   useEffect(() => {
@@ -80,7 +90,7 @@ function App() {
       try {
         setConnectionStatus('connecting');
         logger.info('Initializing WebSocket connection', { url: WS_URL });
-        
+
         // Set up WebSocket event handlers with memoized callbacks
         wsService.events = {
           onConnect: handleWebSocketConnect,
@@ -89,7 +99,7 @@ function App() {
         };
 
         await wsService.connect();
-        
+
         // Try to restore authentication from session storage
         if (authService.isAuthenticated()) {
           const session = authService.getStoredSession();
@@ -99,7 +109,7 @@ function App() {
               session.role,
               session.session_id,
               session.expires_at,
-              session.permissions
+              session.permissions,
             );
           }
         }
@@ -149,18 +159,23 @@ function App() {
 
       loadServerData();
     }
-  }, [connectionStatus, isAuthenticated, isInitialized, serverService, setInfo, setStatus, setStorage, setLoading, setError]);
+  }, [
+    connectionStatus,
+    isAuthenticated,
+    isInitialized,
+    serverService,
+    setInfo,
+    setStatus,
+    setStorage,
+    setLoading,
+    setError,
+  ]);
 
   if (!isInitialized) {
     return (
       <ThemeProvider theme={theme}>
         <CssBaseline />
-        <Box
-          display="flex"
-          justifyContent="center"
-          alignItems="center"
-          minHeight="100vh"
-        >
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
           <LoadingSpinner />
         </Box>
       </ThemeProvider>

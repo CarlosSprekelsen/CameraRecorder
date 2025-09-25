@@ -35,12 +35,7 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   severity = 'warning',
 }) => {
   return (
-    <Dialog
-      open={open}
-      onClose={onCancel}
-      maxWidth="sm"
-      fullWidth
-    >
+    <Dialog open={open} onClose={onCancel} maxWidth="sm" fullWidth>
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
         <Alert severity={severity} sx={{ mb: 2 }}>

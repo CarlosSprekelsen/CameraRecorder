@@ -1,5 +1,13 @@
 import React, { useState } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, MenuItem } from '@mui/material';
+import {
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  Button,
+  TextField,
+  MenuItem,
+} from '@mui/material';
 
 interface TimedRecordDialogProps {
   open: boolean;
@@ -39,7 +47,9 @@ const TimedRecordDialog: React.FC<TimedRecordDialogProps> = ({ open, onCancel, o
       </DialogContent>
       <DialogActions>
         <Button onClick={onCancel}>Cancel</Button>
-        <Button onClick={() => onStart(duration, format)} variant="contained">Start</Button>
+        <Button onClick={() => onStart(duration, format)} variant="contained">
+          Start
+        </Button>
       </DialogActions>
     </Dialog>
   );

@@ -15,16 +15,19 @@ export class AuthService {
 
     const params: AuthenticateParams = { auth_token: token };
     const result = await this.wsService.sendRPC<AuthenticateResult>('authenticate', params);
-    
+
     // Store token in session storage
     if (result.authenticated) {
       sessionStorage.setItem('auth_token', token);
-      sessionStorage.setItem('auth_session', JSON.stringify({
-        session_id: result.session_id,
-        role: result.role,
-        permissions: result.permissions,
-        expires_at: result.expires_at
-      }));
+      sessionStorage.setItem(
+        'auth_session',
+        JSON.stringify({
+          session_id: result.session_id,
+          role: result.role,
+          permissions: result.permissions,
+          expires_at: result.expires_at,
+        }),
+      );
     }
 
     return result;
@@ -75,7 +78,7 @@ export class AuthService {
 
     const expiresAt = new Date(session.expires_at);
     const now = new Date();
-    
+
     // Consider token expired if it expires within 5 minutes
     return expiresAt.getTime() - now.getTime() < 5 * 60 * 1000;
   }
@@ -83,7 +86,7 @@ export class AuthService {
   isAuthenticated(): boolean {
     const token = this.getStoredToken();
     const session = this.getStoredSession();
-    
+
     return !!(token && session && !this.isTokenExpired());
   }
 

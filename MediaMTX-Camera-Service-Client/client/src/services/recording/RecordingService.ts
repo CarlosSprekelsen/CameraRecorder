@@ -5,7 +5,7 @@ import { ICommand } from '../interfaces/ServiceInterfaces';
 export class RecordingService implements ICommand {
   constructor(
     private wsService: WebSocketService,
-    private logger: LoggerService
+    private logger: LoggerService,
   ) {}
 
   async takeSnapshot(device: string, filename?: string): Promise<any> {

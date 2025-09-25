@@ -32,9 +32,9 @@ export class NotificationService {
     if (!this.handlers.has(method)) {
       this.handlers.set(method, new Set());
     }
-    
+
     this.handlers.get(method)!.add(handler);
-    
+
     logger.info(`Subscribed to notifications: ${method}`);
 
     // Return unsubscribe function
@@ -51,18 +51,18 @@ export class NotificationService {
         this.handlers.delete(method);
       }
     }
-    
+
     logger.info(`Unsubscribed from notifications: ${method}`);
   }
 
   private handleNotification(notification: JsonRpcNotification): void {
     const method = notification.method;
     const methodHandlers = this.handlers.get(method);
-    
+
     if (methodHandlers) {
       logger.debug(`Handling notification: ${method}`, { notification });
-      
-      methodHandlers.forEach(handler => {
+
+      methodHandlers.forEach((handler) => {
         try {
           handler(notification);
         } catch (error) {

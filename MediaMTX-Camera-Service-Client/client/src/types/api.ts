@@ -101,7 +101,7 @@ export interface ServerState {
 }
 
 // RPC Method Names (for type safety) - ALIGNED WITH SERVER API
-export type RpcMethod = 
+export type RpcMethod =
   | 'ping'
   | 'authenticate'
   | 'get_server_info'

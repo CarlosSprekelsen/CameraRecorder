@@ -1,4 +1,10 @@
-import { JsonRpcRequest, JsonRpcResponse, JsonRpcNotification, RpcMethod, ERROR_CODES } from '../../types/api';
+import {
+  JsonRpcRequest,
+  JsonRpcResponse,
+  JsonRpcNotification,
+  RpcMethod,
+  ERROR_CODES,
+} from '../../types/api';
 
 export interface WebSocketServiceConfig {
   url: string;
@@ -25,11 +31,14 @@ export class WebSocketService {
   private reconnectTimeout: NodeJS.Timeout | null = null;
   private pingInterval: NodeJS.Timeout | null = null;
   private pongTimeout: NodeJS.Timeout | null = null;
-  private pendingRequests = new Map<string | number, {
-    resolve: (value: any) => void;
-    reject: (error: Error) => void;
-    timestamp: number;
-  }>();
+  private pendingRequests = new Map<
+    string | number,
+    {
+      resolve: (value: any) => void;
+      reject: (error: Error) => void;
+      timestamp: number;
+    }
+  >();
   private requestId = 0;
 
   constructor(config: WebSocketServiceConfig, events?: Partial<WebSocketServiceEvents>) {
@@ -39,7 +48,7 @@ export class WebSocketService {
       maxReconnectDelay: 30000,
       pingInterval: 30000,
       pongTimeout: 5000,
-      ...config
+      ...config,
     };
     this.events = events || {};
   }
@@ -48,7 +57,7 @@ export class WebSocketService {
     return new Promise((resolve, reject) => {
       try {
         this.ws = new WebSocket(this.config.url);
-        
+
         this.ws.onopen = () => {
           // WebSocket connected - handled by connection store
           this.reconnectAttempts = 0;
@@ -78,7 +87,6 @@ export class WebSocketService {
             // Failed to parse WebSocket message - handled by error boundary
           }
         };
-
       } catch (error) {
         reject(error);
       }
@@ -88,12 +96,12 @@ export class WebSocketService {
   disconnect(): void {
     this.stopPingInterval();
     this.clearReconnectTimeout();
-    
+
     if (this.ws) {
       this.ws.close(1000, 'Client disconnect');
       this.ws = null;
     }
-    
+
     // Reject all pending requests
     this.pendingRequests.forEach(({ reject }) => {
       reject(new Error('WebSocket disconnected'));
@@ -111,7 +119,7 @@ export class WebSocketService {
       jsonrpc: '2.0',
       method,
       params,
-      id
+      id,
     };
 
     return new Promise((resolve, reject) => {
@@ -119,7 +127,7 @@ export class WebSocketService {
       this.pendingRequests.set(id, {
         resolve,
         reject,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       });
 
       // Set timeout for request
@@ -147,7 +155,7 @@ export class WebSocketService {
     const notification: JsonRpcNotification = {
       jsonrpc: '2.0',
       method,
-      params
+      params,
     };
 
     this.ws?.send(JSON.stringify(notification));
@@ -181,7 +189,7 @@ export class WebSocketService {
       // Handle specific error codes according to server API specification
       const errorCode = response.error.code;
       let errorMessage = response.error.message;
-      
+
       switch (errorCode) {
         case ERROR_CODES.AUTH_FAILED:
           errorMessage = 'Authentication failed. Please log in again.';
@@ -207,7 +215,7 @@ export class WebSocketService {
         default:
           errorMessage = `RPC Error ${errorCode}: ${response.error.message}`;
       }
-      
+
       const error = new Error(errorMessage);
       (error as any).code = errorCode;
       (error as any).data = response.error.data;
@@ -232,7 +240,7 @@ export class WebSocketService {
     this.reconnectAttempts++;
     const delay = Math.min(
       this.config.reconnectDelay * Math.pow(2, this.reconnectAttempts - 1),
-      this.config.maxReconnectDelay
+      this.config.maxReconnectDelay,
     );
 
     // Reconnecting - handled by connection store
@@ -247,7 +255,7 @@ export class WebSocketService {
 
   private startPingInterval(): void {
     this.stopPingInterval();
-    
+
     this.pingInterval = setInterval(() => {
       if (this.ws?.readyState === WebSocket.OPEN) {
         this.sendRPC('ping').catch((_error) => {

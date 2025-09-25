@@ -66,39 +66,42 @@ export const useKeyboardShortcuts = () => {
     },
   ];
 
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
-    const matchingShortcut = shortcuts.find(shortcut => {
-      return (
-        shortcut.key === event.key &&
-        !!shortcut.ctrlKey === event.ctrlKey &&
-        !!shortcut.altKey === event.altKey &&
-        !!shortcut.shiftKey === event.shiftKey &&
-        !!shortcut.metaKey === event.metaKey
-      );
-    });
-
-    if (matchingShortcut) {
-      event.preventDefault();
-      event.stopPropagation();
-      
-      logger.info('Keyboard shortcut triggered', {
-        shortcut: matchingShortcut.description,
-        key: event.key,
-        modifiers: {
-          ctrl: event.ctrlKey,
-          alt: event.altKey,
-          shift: event.shiftKey,
-          meta: event.metaKey,
-        },
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent) => {
+      const matchingShortcut = shortcuts.find((shortcut) => {
+        return (
+          shortcut.key === event.key &&
+          !!shortcut.ctrlKey === event.ctrlKey &&
+          !!shortcut.altKey === event.altKey &&
+          !!shortcut.shiftKey === event.shiftKey &&
+          !!shortcut.metaKey === event.metaKey
+        );
       });
-      
-      matchingShortcut.action();
-    }
-  }, [shortcuts]);
+
+      if (matchingShortcut) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        logger.info('Keyboard shortcut triggered', {
+          shortcut: matchingShortcut.description,
+          key: event.key,
+          modifiers: {
+            ctrl: event.ctrlKey,
+            alt: event.altKey,
+            shift: event.shiftKey,
+            meta: event.metaKey,
+          },
+        });
+
+        matchingShortcut.action();
+      }
+    },
+    [shortcuts],
+  );
 
   useEffect(() => {
     document.addEventListener('keydown', handleKeyDown);
-    
+
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
     };

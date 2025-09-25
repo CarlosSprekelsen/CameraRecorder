@@ -34,11 +34,7 @@ interface CameraTableProps {
  * CameraTable - Device list with status following architecture section 5.1
  * Displays cameras with real-time status and stream links
  */
-const CameraTable: React.FC<CameraTableProps> = ({ 
-  cameras, 
-  streams, 
-  onRefresh 
-}) => {
+const CameraTable: React.FC<CameraTableProps> = ({ cameras, streams, onRefresh }) => {
   const { activeRecordings } = useRecordingStore();
   const getStatusIcon = (status: Camera['status']) => {
     switch (status) {
@@ -67,16 +63,18 @@ const CameraTable: React.FC<CameraTableProps> = ({
   };
 
   const getStreamStatus = (device: string) => {
-    const stream = streams.find(s => s.name === device);
-    return stream ? {
-      active: stream.ready,
-      readers: stream.readers,
-      bytesSent: stream.bytes_sent
-    } : {
-      active: false,
-      readers: 0,
-      bytesSent: 0
-    };
+    const stream = streams.find((s) => s.name === device);
+    return stream
+      ? {
+          active: stream.ready,
+          readers: stream.readers,
+          bytesSent: stream.bytes_sent,
+        }
+      : {
+          active: false,
+          readers: 0,
+          bytesSent: 0,
+        };
   };
 
   const formatBytes = (bytes: number) => {
@@ -97,11 +95,7 @@ const CameraTable: React.FC<CameraTableProps> = ({
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
           Make sure cameras are connected and the service is running.
         </Typography>
-        <Button
-          variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={onRefresh}
-        >
+        <Button variant="outlined" startIcon={<RefreshIcon />} onClick={onRefresh}>
           Refresh
         </Button>
       </Box>
@@ -111,15 +105,8 @@ const CameraTable: React.FC<CameraTableProps> = ({
   return (
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
-        <Typography variant="h6">
-          Connected Devices ({cameras.length})
-        </Typography>
-        <Button
-          variant="outlined"
-          startIcon={<RefreshIcon />}
-          onClick={onRefresh}
-          size="small"
-        >
+        <Typography variant="h6">Connected Devices ({cameras.length})</Typography>
+        <Button variant="outlined" startIcon={<RefreshIcon />} onClick={onRefresh} size="small">
           Refresh
         </Button>
       </Box>
@@ -141,7 +128,7 @@ const CameraTable: React.FC<CameraTableProps> = ({
             {cameras.map((camera) => {
               const streamStatus = getStreamStatus(camera.device);
               const recording = activeRecordings[camera.device];
-              
+
               return (
                 <TableRow key={camera.device}>
                   <TableCell>
@@ -157,7 +144,7 @@ const CameraTable: React.FC<CameraTableProps> = ({
                       </Box>
                     </Box>
                   </TableCell>
-                  
+
                   <TableCell>
                     <Chip
                       label={camera.status}
@@ -165,19 +152,15 @@ const CameraTable: React.FC<CameraTableProps> = ({
                       size="small"
                     />
                   </TableCell>
-                  
+
                   <TableCell>
-                    <Typography variant="body2">
-                      {camera.resolution}
-                    </Typography>
+                    <Typography variant="body2">{camera.resolution}</Typography>
                   </TableCell>
-                  
+
                   <TableCell>
-                    <Typography variant="body2">
-                      {camera.fps} fps
-                    </Typography>
+                    <Typography variant="body2">{camera.fps} fps</Typography>
                   </TableCell>
-                  
+
                   <TableCell>
                     <Box>
                       <Chip
@@ -188,7 +171,8 @@ const CameraTable: React.FC<CameraTableProps> = ({
                       />
                       {streamStatus.active && (
                         <Typography variant="caption" display="block" color="text.secondary">
-                          {streamStatus.readers} readers • {formatBytes(streamStatus.bytesSent)} sent
+                          {streamStatus.readers} readers • {formatBytes(streamStatus.bytesSent)}{' '}
+                          sent
                         </Typography>
                       )}
                     </Box>
@@ -200,13 +184,10 @@ const CameraTable: React.FC<CameraTableProps> = ({
                       <Chip label="Idle" size="small" />
                     )}
                   </TableCell>
-                  
+
                   <TableCell>
                     <Box display="flex" gap={1}>
-                      <CopyLinkButton 
-                        device={camera.device}
-                        streams={camera.streams}
-                      />
+                      <CopyLinkButton device={camera.device} streams={camera.streams} />
                       <DeviceActions device={camera.device} />
                     </Box>
                   </TableCell>

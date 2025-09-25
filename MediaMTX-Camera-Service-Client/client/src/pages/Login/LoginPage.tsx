@@ -21,13 +21,13 @@ const LoginPage: React.FC<LoginPageProps> = memo(({ authService }) => {
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   const { login } = useAuthStore();
   const { status: connectionStatus } = useConnectionStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!token.trim()) {
       setError('Please enter a token');
       return;
@@ -43,15 +43,9 @@ const LoginPage: React.FC<LoginPageProps> = memo(({ authService }) => {
 
     try {
       const result = await authService.authenticate(token);
-      
+
       if (result.authenticated) {
-        login(
-          token,
-          result.role,
-          result.session_id,
-          result.expires_at,
-          result.permissions
-        );
+        login(token, result.role, result.session_id, result.expires_at, result.permissions);
       } else {
         setError('Authentication failed. Please check your token.');
       }
@@ -65,21 +59,31 @@ const LoginPage: React.FC<LoginPageProps> = memo(({ authService }) => {
 
   const getConnectionStatusColor = () => {
     switch (connectionStatus) {
-      case 'connected': return 'success';
-      case 'connecting': return 'warning';
-      case 'disconnected': return 'error';
-      case 'error': return 'error';
-      default: return 'info';
+      case 'connected':
+        return 'success';
+      case 'connecting':
+        return 'warning';
+      case 'disconnected':
+        return 'error';
+      case 'error':
+        return 'error';
+      default:
+        return 'info';
     }
   };
 
   const getConnectionStatusText = () => {
     switch (connectionStatus) {
-      case 'connected': return 'Connected';
-      case 'connecting': return 'Connecting...';
-      case 'disconnected': return 'Disconnected';
-      case 'error': return 'Connection Error';
-      default: return 'Unknown';
+      case 'connected':
+        return 'Connected';
+      case 'connecting':
+        return 'Connecting...';
+      case 'disconnected':
+        return 'Disconnected';
+      case 'error':
+        return 'Connection Error';
+      default:
+        return 'Unknown';
     }
   };
 
@@ -102,10 +106,7 @@ const LoginPage: React.FC<LoginPageProps> = memo(({ authService }) => {
             </Typography>
           </Box>
 
-          <Alert 
-            severity={getConnectionStatusColor() as any} 
-            sx={{ mb: 2 }}
-          >
+          <Alert severity={getConnectionStatusColor() as any} sx={{ mb: 2 }}>
             Status: {getConnectionStatusText()}
           </Alert>
 
@@ -121,7 +122,7 @@ const LoginPage: React.FC<LoginPageProps> = memo(({ authService }) => {
               required
               autoFocus
             />
-            
+
             {error && (
               <Alert severity="error" sx={{ mt: 2 }}>
                 {error}
@@ -135,11 +136,7 @@ const LoginPage: React.FC<LoginPageProps> = memo(({ authService }) => {
               disabled={loading || connectionStatus !== 'connected'}
               sx={{ mt: 3, mb: 2 }}
             >
-              {loading ? (
-                <CircularProgress size={24} />
-              ) : (
-                'Connect'
-              )}
+              {loading ? <CircularProgress size={24} /> : 'Connect'}
             </Button>
           </form>
 

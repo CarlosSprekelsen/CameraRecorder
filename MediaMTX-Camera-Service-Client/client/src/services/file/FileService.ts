@@ -7,7 +7,7 @@ import { IFileCatalog, IFileActions } from '../interfaces/ServiceInterfaces';
  *
  * Methods:
  * - list_recordings(limit, offset)
- * - list_snapshots(limit, offset) 
+ * - list_snapshots(limit, offset)
  * - get_recording_info(filename)
  * - get_snapshot_info(filename)
  * - delete_recording(filename)
@@ -16,14 +16,17 @@ import { IFileCatalog, IFileActions } from '../interfaces/ServiceInterfaces';
 export class FileService implements IFileCatalog, IFileActions {
   constructor(
     private wsService: WebSocketService,
-    private logger: LoggerService
+    private logger: LoggerService,
   ) {}
 
   /**
    * List recordings with pagination.
    * Implements list_recordings RPC method.
    */
-  async listRecordings(limit: number, offset: number): Promise<{
+  async listRecordings(
+    limit: number,
+    offset: number,
+  ): Promise<{
     files: Array<{
       filename: string;
       file_size: number;
@@ -47,7 +50,10 @@ export class FileService implements IFileCatalog, IFileActions {
    * List snapshots with pagination.
    * Implements list_snapshots RPC method.
    */
-  async listSnapshots(limit: number, offset: number): Promise<{
+  async listSnapshots(
+    limit: number,
+    offset: number,
+  ): Promise<{
     files: Array<{
       filename: string;
       file_size: number;

@@ -23,11 +23,7 @@ interface PaginationProps {
  * Pagination - Pagination controls for file lists
  * Supports page navigation and limit changes
  */
-const Pagination: React.FC<PaginationProps> = ({
-  pagination,
-  onPageChange,
-  onLimitChange,
-}) => {
+const Pagination: React.FC<PaginationProps> = ({ pagination, onPageChange, onLimitChange }) => {
   const { limit, offset, total } = pagination;
   const currentPage = Math.floor(offset / limit) + 1;
   const totalPages = Math.ceil(total / limit);
@@ -54,15 +50,11 @@ const Pagination: React.FC<PaginationProps> = ({
       <Typography variant="body2" color="text.secondary">
         Showing {startItem}-{endItem} of {total} files
       </Typography>
-      
+
       {onLimitChange && (
         <FormControl size="small" sx={{ minWidth: 120 }}>
           <InputLabel>Per page</InputLabel>
-          <Select
-            value={limit}
-            label="Per page"
-            onChange={handleLimitChange}
-          >
+          <Select value={limit} label="Per page" onChange={handleLimitChange}>
             <MenuItem value={10}>10</MenuItem>
             <MenuItem value={20}>20</MenuItem>
             <MenuItem value={50}>50</MenuItem>

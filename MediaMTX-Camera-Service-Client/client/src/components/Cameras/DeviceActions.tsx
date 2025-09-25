@@ -1,12 +1,5 @@
 import React, { useState } from 'react';
-import {
-  IconButton,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-  Divider,
-} from '@mui/material';
+import { IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider } from '@mui/material';
 import {
   MoreVert as MoreIcon,
   CameraAlt as SnapshotIcon,
@@ -33,7 +26,11 @@ interface DeviceActionsProps {
 const DeviceActions: React.FC<DeviceActionsProps> = ({ device }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const [timedOpen, setTimedOpen] = useState(false);
-  const [snack, setSnack] = useState<{open: boolean; msg: string; sev: 'success'|'error'|'info'}>({ open: false, msg: '', sev: 'success' });
+  const [snack, setSnack] = useState<{
+    open: boolean;
+    msg: string;
+    sev: 'success' | 'error' | 'info';
+  }>({ open: false, msg: '', sev: 'success' });
   const open = Boolean(anchorEl);
 
   const { takeSnapshot, startRecording, stopRecording, setService } = useRecordingStore();
@@ -100,11 +97,7 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({ device }) => {
 
   return (
     <>
-      <IconButton
-        onClick={handleClick}
-        size="small"
-        color="primary"
-      >
+      <IconButton onClick={handleClick} size="small" color="primary">
         <MoreIcon />
       </IconButton>
 
@@ -140,7 +133,12 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({ device }) => {
             <ListItemText primary="Start Recording" />
           </MenuItem>
 
-          <MenuItem onClick={() => { setTimedOpen(true); handleClose(); }}>
+          <MenuItem
+            onClick={() => {
+              setTimedOpen(true);
+              handleClose();
+            }}
+          >
             <ListItemIcon>
               <TimedIcon fontSize="small" />
             </ListItemIcon>
@@ -171,8 +169,15 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({ device }) => {
         onStart={handleTimedStart}
       />
 
-      <Snackbar open={snack.open} autoHideDuration={2500} onClose={() => setSnack({ ...snack, open: false })} anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}>
-        <Alert severity={snack.sev} sx={{ width: '100%' }}>{snack.msg}</Alert>
+      <Snackbar
+        open={snack.open}
+        autoHideDuration={2500}
+        onClose={() => setSnack({ ...snack, open: false })}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert severity={snack.sev} sx={{ width: '100%' }}>
+          {snack.msg}
+        </Alert>
       </Snackbar>
     </>
   );

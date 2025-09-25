@@ -30,7 +30,12 @@ export class LoggerService {
     return LoggerService.instance;
   }
 
-  private log(level: LogLevel, message: string, context?: Record<string, any>, error?: Error): void {
+  private log(
+    level: LogLevel,
+    message: string,
+    context?: Record<string, any>,
+    error?: Error,
+  ): void {
     const entry: LogEntry = {
       timestamp: new Date().toISOString(),
       level,
@@ -40,7 +45,7 @@ export class LoggerService {
     };
 
     this.logs.push(entry);
-    
+
     // Keep only the last maxLogs entries
     if (this.logs.length > this.maxLogs) {
       this.logs = this.logs.slice(-this.maxLogs);
@@ -71,7 +76,7 @@ export class LoggerService {
 
   getLogs(level?: LogLevel): LogEntry[] {
     if (level) {
-      return this.logs.filter(log => log.level === level);
+      return this.logs.filter((log) => log.level === level);
     }
     return [...this.logs];
   }

@@ -29,14 +29,11 @@ interface AppLayoutProps {
   authService: AuthService;
 }
 
-const AppLayout: React.FC<AppLayoutProps> = ({ 
-  children, 
-  authService
-}) => {
+const AppLayout: React.FC<AppLayoutProps> = ({ children, authService }) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   const { status: connectionStatus } = useConnectionStore();
   const { role, logout } = useAuthStore();
   const { info } = useServerStore();
@@ -57,30 +54,44 @@ const AppLayout: React.FC<AppLayoutProps> = ({
 
   const getConnectionStatusColor = () => {
     switch (connectionStatus) {
-      case 'connected': return 'success';
-      case 'connecting': return 'warning';
-      case 'disconnected': return 'error';
-      case 'error': return 'error';
-      default: return 'default';
+      case 'connected':
+        return 'success';
+      case 'connecting':
+        return 'warning';
+      case 'disconnected':
+        return 'error';
+      case 'error':
+        return 'error';
+      default:
+        return 'default';
     }
   };
 
   const getConnectionStatusText = () => {
     switch (connectionStatus) {
-      case 'connected': return 'Connected';
-      case 'connecting': return 'Connecting...';
-      case 'disconnected': return 'Disconnected';
-      case 'error': return 'Connection Error';
-      default: return 'Unknown';
+      case 'connected':
+        return 'Connected';
+      case 'connecting':
+        return 'Connecting...';
+      case 'disconnected':
+        return 'Disconnected';
+      case 'error':
+        return 'Connection Error';
+      default:
+        return 'Unknown';
     }
   };
 
   const getRoleColor = (role: string) => {
     switch (role) {
-      case 'admin': return 'error';
-      case 'operator': return 'warning';
-      case 'viewer': return 'info';
-      default: return 'default';
+      case 'admin':
+        return 'error';
+      case 'operator':
+        return 'warning';
+      case 'viewer':
+        return 'info';
+      default:
+        return 'default';
     }
   };
 
@@ -88,16 +99,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <AppBar position="static">
         <Toolbar>
-          <IconButton
-            size="large"
-            edge="start"
-            color="inherit"
-            aria-label="menu"
-            sx={{ mr: 2 }}
-          >
+          <IconButton size="large" edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }}>
             <MenuIcon />
           </IconButton>
-          
+
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             MediaMTX Camera Service
           </Typography>
@@ -108,9 +113,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({
               color="inherit"
               startIcon={<CameraIcon />}
               onClick={() => navigate('/cameras')}
-              sx={{ 
-                backgroundColor: location.pathname === '/cameras' ? 'rgba(255,255,255,0.1)' : 'transparent',
-                mr: 1 
+              sx={{
+                backgroundColor:
+                  location.pathname === '/cameras' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                mr: 1,
               }}
             >
               Cameras
@@ -119,9 +125,10 @@ const AppLayout: React.FC<AppLayoutProps> = ({
               color="inherit"
               startIcon={<FilesIcon />}
               onClick={() => navigate('/files')}
-              sx={{ 
-                backgroundColor: location.pathname === '/files' ? 'rgba(255,255,255,0.1)' : 'transparent',
-                mr: 1 
+              sx={{
+                backgroundColor:
+                  location.pathname === '/files' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                mr: 1,
               }}
             >
               Files
@@ -130,8 +137,9 @@ const AppLayout: React.FC<AppLayoutProps> = ({
               color="inherit"
               startIcon={<InfoIcon />}
               onClick={() => navigate('/about')}
-              sx={{ 
-                backgroundColor: location.pathname === '/about' ? 'rgba(255,255,255,0.1)' : 'transparent' 
+              sx={{
+                backgroundColor:
+                  location.pathname === '/about' ? 'rgba(255,255,255,0.1)' : 'transparent',
               }}
             >
               About
@@ -161,7 +169,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
               size="small"
               sx={{ mr: 1 }}
             />
-            
+
             <IconButton
               size="large"
               aria-label="account of current user"
@@ -172,7 +180,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({
             >
               <AccountCircle />
             </IconButton>
-            
+
             <Menu
               id="menu-appbar"
               anchorEl={anchorEl}

@@ -20,7 +20,10 @@ export interface ICommand {
 
 // I.FileCatalog: file listing and information
 export interface IFileCatalog {
-  listRecordings(limit: number, offset: number): Promise<{
+  listRecordings(
+    limit: number,
+    offset: number,
+  ): Promise<{
     files: Array<{
       filename: string;
       file_size: number;
@@ -29,7 +32,10 @@ export interface IFileCatalog {
     }>;
     total: number;
   }>;
-  listSnapshots(limit: number, offset: number): Promise<{
+  listSnapshots(
+    limit: number,
+    offset: number,
+  ): Promise<{
     files: Array<{
       filename: string;
       file_size: number;

@@ -34,7 +34,8 @@ const ErrorFallback: React.FC<FallbackProps> = ({ error, resetErrorBoundary }) =
       <Alert severity="error" sx={{ mb: 3, maxWidth: 600 }}>
         <AlertTitle>Something went wrong</AlertTitle>
         <Typography variant="body2" sx={{ mt: 1 }}>
-          An unexpected error occurred. Please try refreshing the page or contact support if the problem persists.
+          An unexpected error occurred. Please try refreshing the page or contact support if the
+          problem persists.
         </Typography>
       </Alert>
 
@@ -47,12 +48,7 @@ const ErrorFallback: React.FC<FallbackProps> = ({ error, resetErrorBoundary }) =
         >
           Try Again
         </Button>
-        <Button
-          variant="outlined"
-          startIcon={<BugIcon />}
-          onClick={handleReload}
-          color="secondary"
-        >
+        <Button variant="outlined" startIcon={<BugIcon />} onClick={handleReload} color="secondary">
           Reload Page
         </Button>
       </Box>
@@ -62,7 +58,11 @@ const ErrorFallback: React.FC<FallbackProps> = ({ error, resetErrorBoundary }) =
           <Typography variant="h6" color="error" gutterBottom>
             Development Error Details:
           </Typography>
-          <Typography variant="body2" component="pre" sx={{ whiteSpace: 'pre-wrap', fontSize: '0.75rem' }}>
+          <Typography
+            variant="body2"
+            component="pre"
+            sx={{ whiteSpace: 'pre-wrap', fontSize: '0.75rem' }}
+          >
             {error.toString()}
           </Typography>
         </Box>

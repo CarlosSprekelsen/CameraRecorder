@@ -90,7 +90,7 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
       } else {
         success = await deleteSnapshot(filename);
       }
-      
+
       if (success) {
         logger.info(`File deleted: ${filename}`);
         // Remove from selection if it was selected
@@ -106,7 +106,7 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      files.forEach(file => {
+      files.forEach((file) => {
         if (!selectedFiles.includes(file.filename)) {
           toggleFileSelection(file.filename);
         }
@@ -116,7 +116,8 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
     }
   };
 
-  const isAllSelected = files.length > 0 && files.every(file => selectedFiles.includes(file.filename));
+  const isAllSelected =
+    files.length > 0 && files.every((file) => selectedFiles.includes(file.filename));
   const isIndeterminate = selectedFiles.length > 0 && !isAllSelected;
 
   if (loading) {
@@ -134,10 +135,9 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
           No {fileType} found.
         </Typography>
         <Typography variant="body2" color="textSecondary">
-          {fileType === 'recordings' 
-            ? 'Start recording to see files here.' 
-            : 'Take snapshots to see files here.'
-          }
+          {fileType === 'recordings'
+            ? 'Start recording to see files here.'
+            : 'Take snapshots to see files here.'}
         </Typography>
       </Paper>
     );
@@ -181,14 +181,10 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
                   </Box>
                 </TableCell>
                 <TableCell>
-                  <Typography variant="body2">
-                    {formatFileSize(file.file_size)}
-                  </Typography>
+                  <Typography variant="body2">{formatFileSize(file.file_size)}</Typography>
                 </TableCell>
                 <TableCell>
-                  <Typography variant="body2">
-                    {formatDate(file.modified_time)}
-                  </Typography>
+                  <Typography variant="body2">{formatDate(file.modified_time)}</Typography>
                 </TableCell>
                 <TableCell>
                   <Chip
@@ -199,9 +195,7 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
                   />
                 </TableCell>
                 <TableCell>
-                  <Typography variant="body2">
-                    {file.device || 'Unknown'}
-                  </Typography>
+                  <Typography variant="body2">{file.device || 'Unknown'}</Typography>
                 </TableCell>
                 <TableCell align="center">
                   <Box display="flex" gap={1} justifyContent="center">
@@ -216,7 +210,7 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
                         </IconButton>
                       </Tooltip>
                     </PermissionGate>
-                    
+
                     <PermissionGate requirePermission="deleteFiles">
                       <Tooltip title="Delete">
                         <IconButton
@@ -228,12 +222,9 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
                         </IconButton>
                       </Tooltip>
                     </PermissionGate>
-                    
+
                     <Tooltip title="Info">
-                      <IconButton
-                        size="small"
-                        color="info"
-                      >
+                      <IconButton size="small" color="info">
                         <InfoIcon />
                       </IconButton>
                     </Tooltip>

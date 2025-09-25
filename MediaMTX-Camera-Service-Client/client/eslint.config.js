@@ -8,7 +8,7 @@ import prettier from 'eslint-plugin-prettier';
 export default [
   js.configs.recommended,
   {
-    ignores: ['node_modules/', 'tests/fixtures'],
+    ignores: ['node_modules/', 'dist/', 'coverage/'],
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       parser: tsparser,
@@ -41,4 +41,4 @@ export default [
       '@typescript-eslint/explicit-module-boundary-types': 'warn',
     },
   },
-]; 
+];

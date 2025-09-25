@@ -1,11 +1,5 @@
 import React, { useEffect } from 'react';
-import {
-  Box,
-  Typography,
-  Container,
-  Alert,
-  CircularProgress,
-} from '@mui/material';
+import { Box, Typography, Container, Alert, CircularProgress } from '@mui/material';
 import { useFileStore } from '../../stores/file/fileStore';
 import { serviceFactory } from '../../services/ServiceFactory';
 import { logger } from '../../services/logger/LoggerService';
@@ -59,7 +53,14 @@ const FilesPage: React.FC = () => {
     };
 
     initializeServiceAndLoadData();
-  }, [setFileService, loadRecordings, loadSnapshots, currentTab, pagination.limit, pagination.offset]);
+  }, [
+    setFileService,
+    loadRecordings,
+    loadSnapshots,
+    currentTab,
+    pagination.limit,
+    pagination.offset,
+  ]);
 
   // Handle tab change
   const handleTabChange = async (tab: 'recordings' | 'snapshots') => {
@@ -73,7 +74,16 @@ const FilesPage: React.FC = () => {
 
   if (loading && recordings.length === 0 && snapshots.length === 0) {
     return (
-      <Container maxWidth="lg" sx={{ mt: 4, display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+      <Container
+        maxWidth="lg"
+        sx={{
+          mt: 4,
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          minHeight: '60vh',
+        }}
+      >
         <CircularProgress />
       </Container>
     );

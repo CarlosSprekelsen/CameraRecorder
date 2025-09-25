@@ -8,7 +8,13 @@ interface AuthStore extends AuthState {
   setExpiresAt: (expiresAt: string | null) => void;
   setPermissions: (permissions: string[]) => void;
   setAuthenticated: (authenticated: boolean) => void;
-  login: (token: string, role: string, sessionId: string, expiresAt: string, permissions: string[]) => void;
+  login: (
+    token: string,
+    role: string,
+    sessionId: string,
+    expiresAt: string,
+    permissions: string[],
+  ) => void;
   logout: () => void;
   reset: () => void;
 }
@@ -24,26 +30,27 @@ const initialState: AuthState = {
 
 export const useAuthStore = create<AuthStore>((set) => ({
   ...initialState,
-  
-  setToken: (token: string | null) => 
-    set((state) => ({ ...state, token })),
-  
-  setRole: (role: 'admin' | 'operator' | 'viewer' | null) => 
-    set((state) => ({ ...state, role })),
-  
-  setSessionId: (sessionId: string | null) => 
-    set((state) => ({ ...state, session_id: sessionId })),
-  
-  setExpiresAt: (expiresAt: string | null) => 
-    set((state) => ({ ...state, expires_at: expiresAt })),
-  
-  setPermissions: (permissions: string[]) => 
-    set((state) => ({ ...state, permissions })),
-  
-  setAuthenticated: (authenticated: boolean) => 
+
+  setToken: (token: string | null) => set((state) => ({ ...state, token })),
+
+  setRole: (role: 'admin' | 'operator' | 'viewer' | null) => set((state) => ({ ...state, role })),
+
+  setSessionId: (sessionId: string | null) => set((state) => ({ ...state, session_id: sessionId })),
+
+  setExpiresAt: (expiresAt: string | null) => set((state) => ({ ...state, expires_at: expiresAt })),
+
+  setPermissions: (permissions: string[]) => set((state) => ({ ...state, permissions })),
+
+  setAuthenticated: (authenticated: boolean) =>
     set((state) => ({ ...state, isAuthenticated: authenticated })),
-  
-  login: (token: string, role: string, sessionId: string, expiresAt: string, permissions: string[]) => 
+
+  login: (
+    token: string,
+    role: string,
+    sessionId: string,
+    expiresAt: string,
+    permissions: string[],
+  ) =>
     set((state) => ({
       ...state,
       token,
@@ -53,8 +60,8 @@ export const useAuthStore = create<AuthStore>((set) => ({
       expires_at: expiresAt,
       permissions,
     })),
-  
-  logout: () => 
+
+  logout: () =>
     set((state) => ({
       ...state,
       token: null,
@@ -64,6 +71,6 @@ export const useAuthStore = create<AuthStore>((set) => ({
       expires_at: null,
       permissions: [],
     })),
-  
+
   reset: () => set(initialState),
 }));

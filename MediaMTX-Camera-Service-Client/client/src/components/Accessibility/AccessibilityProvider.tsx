@@ -120,9 +120,7 @@ export const AccessibilityProvider: React.FC<AccessibilityProviderProps> = ({ ch
 
   return (
     <AccessibilityContext.Provider value={value}>
-      <ThemeProvider theme={theme}>
-        {children}
-      </ThemeProvider>
+      <ThemeProvider theme={theme}>{children}</ThemeProvider>
     </AccessibilityContext.Provider>
   );
 };

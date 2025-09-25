@@ -5,16 +5,16 @@ import { IDiscovery } from '../interfaces/ServiceInterfaces';
 
 /**
  * Device Service - Implements I.Discovery interface from architecture section 5.3.1
- * 
+ *
  * Methods:
  * - get_camera_list → cameras with stream fields
- * - get_streams → MediaMTX active streams  
+ * - get_streams → MediaMTX active streams
  * - get_stream_url → URL for specific device
  */
 export class DeviceService implements IDiscovery {
   constructor(
     private wsService: WebSocketService,
-    private logger: LoggerService
+    private logger: LoggerService,
   ) {}
 
   /**
@@ -24,14 +24,14 @@ export class DeviceService implements IDiscovery {
   async getCameraList(): Promise<Camera[]> {
     try {
       this.logger.info('Getting camera list');
-      
+
       const response = await this.wsService.sendRPC('get_camera_list');
-      
+
       if (response.cameras) {
         this.logger.info(`Retrieved ${response.cameras.length} cameras`);
         return response.cameras;
       }
-      
+
       this.logger.warn('No cameras found in response');
       return [];
     } catch (error) {
@@ -47,14 +47,14 @@ export class DeviceService implements IDiscovery {
   async getStreamUrl(device: string): Promise<string | null> {
     try {
       this.logger.info(`Getting stream URL for device: ${device}`);
-      
+
       const response = await this.wsService.sendRPC('get_stream_url', { device });
-      
+
       if (response.stream_url) {
         this.logger.info(`Retrieved stream URL for ${device}`);
         return response.stream_url;
       }
-      
+
       this.logger.warn(`No stream URL found for device: ${device}`);
       return null;
     } catch (error) {
@@ -70,14 +70,14 @@ export class DeviceService implements IDiscovery {
   async getStreams(): Promise<StreamInfo[]> {
     try {
       this.logger.info('Getting active streams');
-      
+
       const response = await this.wsService.sendRPC('get_streams');
-      
+
       if (Array.isArray(response)) {
         this.logger.info(`Retrieved ${response.length} active streams`);
         return response;
       }
-      
+
       this.logger.warn('No streams found in response');
       return [];
     } catch (error) {
@@ -93,11 +93,11 @@ export class DeviceService implements IDiscovery {
   async subscribeToCameraEvents(): Promise<void> {
     try {
       this.logger.info('Subscribing to camera status updates');
-      
+
       await this.wsService.sendRPC('subscribe_events', {
-        topics: ['camera_status_update']
+        topics: ['camera_status_update'],
       });
-      
+
       this.logger.info('Successfully subscribed to camera events');
     } catch (error) {
       this.logger.error('Failed to subscribe to camera events', error as Error);
@@ -112,11 +112,11 @@ export class DeviceService implements IDiscovery {
   async unsubscribeFromCameraEvents(): Promise<void> {
     try {
       this.logger.info('Unsubscribing from camera status updates');
-      
+
       await this.wsService.sendRPC('unsubscribe_events', {
-        topics: ['camera_status_update']
+        topics: ['camera_status_update'],
       });
-      
+
       this.logger.info('Successfully unsubscribed from camera events');
     } catch (error) {
       this.logger.error('Failed to unsubscribe from camera events', error as Error);
@@ -131,9 +131,9 @@ export class DeviceService implements IDiscovery {
   async getCameraCapabilities(device: string): Promise<any> {
     try {
       this.logger.info(`Getting capabilities for device: ${device}`);
-      
+
       const response = await this.wsService.sendRPC('get_camera_capabilities', { device });
-      
+
       this.logger.info(`Retrieved capabilities for ${device}`);
       return response;
     } catch (error) {
@@ -149,9 +149,9 @@ export class DeviceService implements IDiscovery {
   async getStreamStatus(device: string): Promise<any> {
     try {
       this.logger.info(`Getting stream status for device: ${device}`);
-      
+
       const response = await this.wsService.sendRPC('get_stream_status', { device });
-      
+
       this.logger.info(`Retrieved stream status for ${device}`);
       return response;
     } catch (error) {

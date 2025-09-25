@@ -80,11 +80,7 @@ const CopyLinkButton: React.FC<CopyLinkButtonProps> = ({ device, streams }) => {
   return (
     <>
       <Tooltip title="Copy stream links">
-        <IconButton
-          onClick={handleClick}
-          size="small"
-          color="primary"
-        >
+        <IconButton onClick={handleClick} size="small" color="primary">
           <LinkIcon />
         </IconButton>
       </Tooltip>
@@ -106,30 +102,21 @@ const CopyLinkButton: React.FC<CopyLinkButtonProps> = ({ device, streams }) => {
           <ListItemIcon>
             <CopyIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText 
-            primary="Copy RTSP URL"
-            secondary={streams.rtsp}
-          />
+          <ListItemText primary="Copy RTSP URL" secondary={streams.rtsp} />
         </MenuItem>
 
         <MenuItem onClick={() => copyToClipboard(streams.hls, 'HLS URL')}>
           <ListItemIcon>
             <CopyIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText 
-            primary="Copy HLS URL"
-            secondary={streams.hls}
-          />
+          <ListItemText primary="Copy HLS URL" secondary={streams.hls} />
         </MenuItem>
 
         <MenuItem onClick={() => openInNewTab(streams.hls, 'HLS stream')}>
           <ListItemIcon>
             <OpenIcon fontSize="small" />
           </ListItemIcon>
-          <ListItemText 
-            primary="Open HLS in new tab"
-            secondary="View stream in browser"
-          />
+          <ListItemText primary="Open HLS in new tab" secondary="View stream in browser" />
         </MenuItem>
       </Menu>
 
@@ -139,11 +126,7 @@ const CopyLinkButton: React.FC<CopyLinkButtonProps> = ({ device, streams }) => {
         onClose={handleSnackbarClose}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert 
-          onClose={handleSnackbarClose} 
-          severity={snackbarSeverity}
-          sx={{ width: '100%' }}
-        >
+        <Alert onClose={handleSnackbarClose} severity={snackbarSeverity} sx={{ width: '100%' }}>
           {snackbarMessage}
         </Alert>
       </Snackbar>

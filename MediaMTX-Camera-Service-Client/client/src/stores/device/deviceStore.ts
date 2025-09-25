@@ -36,20 +36,20 @@ export interface DeviceActions {
   getCameraList: () => Promise<void>;
   getStreamUrl: (device: string) => Promise<string | null>;
   getStreams: () => Promise<void>;
-  
+
   // State management
   setLoading: (loading: boolean) => void;
   setError: (error: string | null) => void;
   updateCameraStatus: (device: string, status: Camera['status']) => void;
   updateStreamStatus: (name: string, ready: boolean, readers: number) => void;
-  
+
   // Real-time updates
   handleCameraStatusUpdate: (camera: Camera) => void;
   handleStreamUpdate: (stream: StreamInfo) => void;
-  
+
   // Service injection
   setDeviceService: (service: DeviceService) => void;
-  
+
   // Reset
   reset: () => void;
 }
@@ -85,16 +85,16 @@ export const useDeviceStore = create<DeviceState & DeviceActions>()(
           set({ loading: true, error: null });
           try {
             const cameras = await deviceService.getCameraList();
-            set({ 
+            set({
               cameras,
-              loading: false, 
+              loading: false,
               lastUpdated: new Date().toISOString(),
-              error: null 
+              error: null,
             });
           } catch (error) {
-            set({ 
-              loading: false, 
-              error: error instanceof Error ? error.message : 'Failed to get camera list' 
+            set({
+              loading: false,
+              error: error instanceof Error ? error.message : 'Failed to get camera list',
             });
           }
         },
@@ -123,60 +123,56 @@ export const useDeviceStore = create<DeviceState & DeviceActions>()(
           set({ loading: true, error: null });
           try {
             const streams = await deviceService.getStreams();
-            set({ 
+            set({
               streams,
-              loading: false, 
+              loading: false,
               lastUpdated: new Date().toISOString(),
-              error: null 
+              error: null,
             });
           } catch (error) {
-            set({ 
-              loading: false, 
-              error: error instanceof Error ? error.message : 'Failed to get streams' 
+            set({
+              loading: false,
+              error: error instanceof Error ? error.message : 'Failed to get streams',
             });
           }
         },
 
-      // State management
-      setLoading: (loading: boolean) => set({ loading }),
-      setError: (error: string | null) => set({ error }),
+        // State management
+        setLoading: (loading: boolean) => set({ loading }),
+        setError: (error: string | null) => set({ error }),
 
-      updateCameraStatus: (device: string, status: Camera['status']) => {
-        set((state) => ({
-          cameras: state.cameras.map(camera =>
-            camera.device === device ? { ...camera, status } : camera
-          )
-        }));
-      },
+        updateCameraStatus: (device: string, status: Camera['status']) => {
+          set((state) => ({
+            cameras: state.cameras.map((camera) =>
+              camera.device === device ? { ...camera, status } : camera,
+            ),
+          }));
+        },
 
-      updateStreamStatus: (name: string, ready: boolean, readers: number) => {
-        set((state) => ({
-          streams: state.streams.map(stream =>
-            stream.name === name ? { ...stream, ready, readers } : stream
-          )
-        }));
-      },
+        updateStreamStatus: (name: string, ready: boolean, readers: number) => {
+          set((state) => ({
+            streams: state.streams.map((stream) =>
+              stream.name === name ? { ...stream, ready, readers } : stream,
+            ),
+          }));
+        },
 
-      // Real-time updates
-      handleCameraStatusUpdate: (camera: Camera) => {
-        set((state) => ({
-          cameras: state.cameras.map(c =>
-            c.device === camera.device ? camera : c
-          ).concat(
-            state.cameras.find(c => c.device === camera.device) ? [] : [camera]
-          )
-        }));
-      },
+        // Real-time updates
+        handleCameraStatusUpdate: (camera: Camera) => {
+          set((state) => ({
+            cameras: state.cameras
+              .map((c) => (c.device === camera.device ? camera : c))
+              .concat(state.cameras.find((c) => c.device === camera.device) ? [] : [camera]),
+          }));
+        },
 
-      handleStreamUpdate: (stream: StreamInfo) => {
-        set((state) => ({
-          streams: state.streams.map(s =>
-            s.name === stream.name ? stream : s
-          ).concat(
-            state.streams.find(s => s.name === stream.name) ? [] : [stream]
-          )
-        }));
-      },
+        handleStreamUpdate: (stream: StreamInfo) => {
+          set((state) => ({
+            streams: state.streams
+              .map((s) => (s.name === stream.name ? stream : s))
+              .concat(state.streams.find((s) => s.name === stream.name) ? [] : [stream]),
+          }));
+        },
 
         // Reset
         reset: () => set(initialState),
@@ -184,6 +180,6 @@ export const useDeviceStore = create<DeviceState & DeviceActions>()(
     },
     {
       name: 'device-store',
-    }
-  )
+    },
+  ),
 );

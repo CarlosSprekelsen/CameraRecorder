@@ -10,13 +10,13 @@ export const usePermissions = () => {
   // Role-based permissions
   const hasRole = (requiredRole: 'admin' | 'operator' | 'viewer'): boolean => {
     if (!isAuthenticated || !role) return false;
-    
+
     const roleHierarchy = {
-      'viewer': 1,
-      'operator': 2,
-      'admin': 3
+      viewer: 1,
+      operator: 2,
+      admin: 3,
     };
-    
+
     return roleHierarchy[role] >= roleHierarchy[requiredRole];
   };
 
@@ -42,7 +42,7 @@ export const usePermissions = () => {
     isAdmin: hasRole('admin'),
     isOperator: hasRole('operator'),
     isViewer: hasRole('viewer'),
-    
+
     // Permission checks
     canViewCameras,
     canControlCameras,
@@ -50,14 +50,14 @@ export const usePermissions = () => {
     canDeleteFiles: canDeleteFilesPermission,
     canViewSystemStatus,
     canManageSystem,
-    
+
     // UI controls
     canTakeSnapshot,
     canStartRecording,
     canStopRecording,
     canDownloadFiles,
     canViewAdminPanel,
-    
+
     // Raw data
     role,
     permissions,

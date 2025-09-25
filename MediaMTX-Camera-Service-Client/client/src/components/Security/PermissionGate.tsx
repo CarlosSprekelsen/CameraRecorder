@@ -5,7 +5,13 @@ interface PermissionGateProps {
   children: React.ReactNode;
   fallback?: React.ReactNode;
   requireRole?: 'admin' | 'operator' | 'viewer';
-  requirePermission?: 'viewCameras' | 'controlCameras' | 'manageFiles' | 'deleteFiles' | 'viewSystem' | 'manageSystem';
+  requirePermission?:
+    | 'viewCameras'
+    | 'controlCameras'
+    | 'manageFiles'
+    | 'deleteFiles'
+    | 'viewSystem'
+    | 'manageSystem';
   requireAny?: boolean; // If true, any of the requirements must be met
 }
 
@@ -36,7 +42,7 @@ const PermissionGate: React.FC<PermissionGateProps> = ({
   // Check permission requirement
   const hasRequiredPermission = (() => {
     if (!requirePermission) return true;
-    
+
     switch (requirePermission) {
       case 'viewCameras':
         return canViewCameras();
@@ -56,9 +62,9 @@ const PermissionGate: React.FC<PermissionGateProps> = ({
   })();
 
   // Determine access based on requirements
-  const hasAccess = requireAny 
-    ? (hasRequiredRole || hasRequiredPermission)
-    : (hasRequiredRole && hasRequiredPermission);
+  const hasAccess = requireAny
+    ? hasRequiredRole || hasRequiredPermission
+    : hasRequiredRole && hasRequiredPermission;
 
   return hasAccess ? <>{children}</> : <>{fallback}</>;
 };

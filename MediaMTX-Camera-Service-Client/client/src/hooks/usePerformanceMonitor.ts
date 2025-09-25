@@ -45,14 +45,17 @@ export const usePerformanceMonitor = () => {
     }
   }, []);
 
-  const trackCustomMetric = useCallback((name: string, value: number, metadata?: Record<string, unknown>) => {
-    logger.info('Custom performance metric', {
-      metric: name,
-      value,
-      metadata,
-      timestamp: Date.now(),
-    });
-  }, []);
+  const trackCustomMetric = useCallback(
+    (name: string, value: number, metadata?: Record<string, unknown>) => {
+      logger.info('Custom performance metric', {
+        metric: name,
+        value,
+        metadata,
+        timestamp: Date.now(),
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
     // Track Core Web Vitals
@@ -78,7 +81,11 @@ export const usePerformanceMonitor = () => {
             const entries = list.getEntries();
             entries.forEach((entry: PerformanceEntryWithInput) => {
               if (entry.processingStart) {
-                trackMetric('FID', entry.processingStart - entry.startTime, entry.processingStart - entry.startTime);
+                trackMetric(
+                  'FID',
+                  entry.processingStart - entry.startTime,
+                  entry.processingStart - entry.startTime,
+                );
               }
             });
           });
@@ -109,14 +116,20 @@ export const usePerformanceMonitor = () => {
     // Track page load performance
     const trackPageLoad = () => {
       if ('performance' in window) {
-        const navigation = performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming;
+        const navigation = performance.getEntriesByType(
+          'navigation',
+        )[0] as PerformanceNavigationTiming;
         if (navigation) {
           trackCustomMetric('TTFB', navigation.responseStart - navigation.requestStart, {
             type: 'page_load',
           });
-          trackCustomMetric('DOM_LOAD', navigation.domContentLoadedEventEnd - navigation.fetchStart, {
-            type: 'page_load',
-          });
+          trackCustomMetric(
+            'DOM_LOAD',
+            navigation.domContentLoadedEventEnd - navigation.fetchStart,
+            {
+              type: 'page_load',
+            },
+          );
           trackCustomMetric('PAGE_LOAD', navigation.loadEventEnd - navigation.fetchStart, {
             type: 'page_load',
           });

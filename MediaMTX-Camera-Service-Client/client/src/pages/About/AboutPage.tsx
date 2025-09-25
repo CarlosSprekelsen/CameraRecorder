@@ -32,7 +32,7 @@ const AboutPage: React.FC = () => {
     const days = Math.floor(seconds / 86400);
     const hours = Math.floor((seconds % 86400) / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
-    
+
     if (days > 0) {
       return `${days}d ${hours}h ${minutes}m`;
     } else if (hours > 0) {
@@ -44,10 +44,14 @@ const AboutPage: React.FC = () => {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'HEALTHY': return 'success';
-      case 'DEGRADED': return 'warning';
-      case 'UNHEALTHY': return 'error';
-      default: return 'default';
+      case 'HEALTHY':
+        return 'success';
+      case 'DEGRADED':
+        return 'warning';
+      case 'UNHEALTHY':
+        return 'error';
+      default:
+        return 'default';
     }
   };
 
@@ -82,7 +86,7 @@ const AboutPage: React.FC = () => {
                 <InfoIcon sx={{ mr: 1 }} />
                 <Typography variant="h6">Server Details</Typography>
               </Box>
-              
+
               {info ? (
                 <Box>
                   <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -103,9 +107,9 @@ const AboutPage: React.FC = () => {
                   <Typography variant="body2" color="text.secondary" gutterBottom>
                     <strong>Max Cameras:</strong> {info.max_cameras}
                   </Typography>
-                  
+
                   <Divider sx={{ my: 2 }} />
-                  
+
                   <Typography variant="body2" color="text.secondary" gutterBottom>
                     <strong>Capabilities:</strong>
                   </Typography>
@@ -114,7 +118,7 @@ const AboutPage: React.FC = () => {
                       <Chip key={capability} label={capability} size="small" />
                     ))}
                   </Box>
-                  
+
                   <Typography variant="body2" color="text.secondary" gutterBottom>
                     <strong>Supported Formats:</strong>
                   </Typography>
@@ -139,35 +143,36 @@ const AboutPage: React.FC = () => {
                 <HealthIcon sx={{ mr: 1 }} />
                 <Typography variant="h6">System Status</Typography>
               </Box>
-              
+
               {status ? (
                 <Box>
                   <Box display="flex" alignItems="center" mb={2}>
                     <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
                       <strong>Status:</strong>
                     </Typography>
-                    <Chip 
-                      label={status.status} 
+                    <Chip
+                      label={status.status}
                       color={getStatusColor(status.status) as any}
                       size="small"
                     />
                   </Box>
-                  
+
                   <Typography variant="body2" color="text.secondary" gutterBottom>
                     <strong>Uptime:</strong> {formatUptime(status.uptime)}
                   </Typography>
                   <Typography variant="body2" color="text.secondary" gutterBottom>
                     <strong>Version:</strong> {status.version}
                   </Typography>
-                  
+
                   <Divider sx={{ my: 2 }} />
-                  
+
                   <Typography variant="body2" color="text.secondary" gutterBottom>
                     <strong>Components:</strong>
                   </Typography>
                   <Box>
                     <Typography variant="body2" color="text.secondary">
-                      WebSocket Server: <Chip label={status.components.websocket_server} size="small" />
+                      WebSocket Server:{' '}
+                      <Chip label={status.components.websocket_server} size="small" />
                     </Typography>
                     <Typography variant="body2" color="text.secondary">
                       Camera Monitor: <Chip label={status.components.camera_monitor} size="small" />
@@ -193,36 +198,40 @@ const AboutPage: React.FC = () => {
                   <StorageIcon sx={{ mr: 1 }} />
                   <Typography variant="h6">Storage Information</Typography>
                 </Box>
-                
+
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6} md={3}>
                     <Typography variant="body2" color="text.secondary">
-                      <strong>Total Space:</strong><br />
+                      <strong>Total Space:</strong>
+                      <br />
                       {formatBytes(storage.total_space)}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={6} md={3}>
                     <Typography variant="body2" color="text.secondary">
-                      <strong>Used Space:</strong><br />
+                      <strong>Used Space:</strong>
+                      <br />
                       {formatBytes(storage.used_space)}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={6} md={3}>
                     <Typography variant="body2" color="text.secondary">
-                      <strong>Available Space:</strong><br />
+                      <strong>Available Space:</strong>
+                      <br />
                       {formatBytes(storage.available_space)}
                     </Typography>
                   </Grid>
                   <Grid item xs={12} sm={6} md={3}>
                     <Typography variant="body2" color="text.secondary">
-                      <strong>Usage:</strong><br />
+                      <strong>Usage:</strong>
+                      <br />
                       {storage.usage_percentage.toFixed(1)}%
                     </Typography>
                   </Grid>
                 </Grid>
-                
+
                 <Divider sx={{ my: 2 }} />
-                
+
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
                     <Typography variant="body2" color="text.secondary">
@@ -235,7 +244,7 @@ const AboutPage: React.FC = () => {
                     </Typography>
                   </Grid>
                 </Grid>
-                
+
                 {storage.low_space_warning && (
                   <Alert severity="warning" sx={{ mt: 2 }}>
                     Low storage space warning is active

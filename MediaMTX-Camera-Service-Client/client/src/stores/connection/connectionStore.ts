@@ -18,26 +18,26 @@ const initialState: ConnectionState = {
 
 export const useConnectionStore = create<ConnectionStore>((set) => ({
   ...initialState,
-  
-  setStatus: (status: ConnectionStatus) => 
-    set((state) => ({ 
-      ...state, 
+
+  setStatus: (status: ConnectionStatus) =>
+    set((state) => ({
+      ...state,
       status,
-      lastError: status === 'error' ? state.lastError : null 
+      lastError: status === 'error' ? state.lastError : null,
     })),
-  
-  setError: (error: string | null) => 
-    set((state) => ({ 
-      ...state, 
+
+  setError: (error: string | null) =>
+    set((state) => ({
+      ...state,
       lastError: error,
-      status: error ? 'error' : state.status 
+      status: error ? 'error' : state.status,
     })),
-  
-  setReconnectAttempts: (attempts: number) => 
+
+  setReconnectAttempts: (attempts: number) =>
     set((state) => ({ ...state, reconnectAttempts: attempts })),
-  
-  setLastConnected: (timestamp: string | null) => 
+
+  setLastConnected: (timestamp: string | null) =>
     set((state) => ({ ...state, lastConnected: timestamp })),
-  
+
   reset: () => set(initialState),
 }));

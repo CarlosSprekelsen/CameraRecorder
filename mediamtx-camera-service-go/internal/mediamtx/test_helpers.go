@@ -143,7 +143,13 @@ type MediaMTXTestHelper struct {
 //	helper, ctx := SetupMediaMTXTest(t)
 //
 // The function automatically handles cleanup using t.Cleanup() for proper test lifecycle management.
+// CRITICAL: Uses global mutex to prevent parallel test execution due to shared MediaMTX server resources.
 func SetupMediaMTXTest(t *testing.T) (*MediaMTXTestHelper, context.Context) {
+	// CRITICAL: Lock to prevent parallel test execution
+	// MediaMTX tests share the same server, camera devices, and file paths
+	testMutex.Lock()
+	t.Cleanup(func() { testMutex.Unlock() })
+
 	helper := NewMediaMTXTestHelper(t, nil)
 	t.Cleanup(func() { helper.Cleanup(t) })
 
@@ -157,7 +163,13 @@ func SetupMediaMTXTest(t *testing.T) (*MediaMTXTestHelper, context.Context) {
 
 // SetupMediaMTXTestHelperOnly - For tests that don't need context
 // Returns only the helper for tests that don't use context operations
+// CRITICAL: Uses global mutex to prevent parallel test execution due to shared MediaMTX server resources.
 func SetupMediaMTXTestHelperOnly(t *testing.T) *MediaMTXTestHelper {
+	// CRITICAL: Lock to prevent parallel test execution
+	// MediaMTX tests share the same server, camera devices, and file paths
+	testMutex.Lock()
+	t.Cleanup(func() { testMutex.Unlock() })
+
 	helper := NewMediaMTXTestHelper(t, nil)
 	t.Cleanup(func() { helper.Cleanup(t) })
 	return helper
