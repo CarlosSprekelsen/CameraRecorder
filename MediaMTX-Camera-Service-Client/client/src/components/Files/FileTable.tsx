@@ -24,6 +24,7 @@ import { useFileStore } from '../../stores/file/fileStore';
 import { FileInfo } from '../../stores/file/fileStore';
 import ConfirmDialog from './ConfirmDialog';
 import { logger } from '../../services/logger/LoggerService';
+import PermissionGate from '../Security/PermissionGate';
 
 interface FileTableProps {
   files: FileInfo[];
@@ -204,24 +205,30 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
                 </TableCell>
                 <TableCell align="center">
                   <Box display="flex" gap={1} justifyContent="center">
-                    <Tooltip title="Download">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDownload(file)}
-                        color="primary"
-                      >
-                        <DownloadIcon />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Delete">
-                      <IconButton
-                        size="small"
-                        onClick={() => handleDeleteClick(file.filename)}
-                        color="error"
-                      >
-                        <DeleteIcon />
-                      </IconButton>
-                    </Tooltip>
+                    <PermissionGate requirePermission="manageFiles">
+                      <Tooltip title="Download">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDownload(file)}
+                          color="primary"
+                        >
+                          <DownloadIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </PermissionGate>
+                    
+                    <PermissionGate requirePermission="deleteFiles">
+                      <Tooltip title="Delete">
+                        <IconButton
+                          size="small"
+                          onClick={() => handleDeleteClick(file.filename)}
+                          color="error"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </Tooltip>
+                    </PermissionGate>
+                    
                     <Tooltip title="Info">
                       <IconButton
                         size="small"

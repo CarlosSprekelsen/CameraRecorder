@@ -20,6 +20,7 @@ import { Snackbar, Alert } from '@mui/material';
 import TimedRecordDialog from './TimedRecordDialog';
 import { useRecordingStore } from '../../stores/recording/recordingStore';
 import { serviceFactory } from '../../services/ServiceFactory';
+import PermissionGate from '../Security/PermissionGate';
 
 interface DeviceActionsProps {
   device: string;
@@ -120,35 +121,39 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({ device }) => {
           horizontal: 'right',
         }}
       >
-        <MenuItem onClick={handleSnapshot}>
-          <ListItemIcon>
-            <SnapshotIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Take Snapshot" />
-        </MenuItem>
+        <PermissionGate requirePermission="controlCameras">
+          <MenuItem onClick={handleSnapshot}>
+            <ListItemIcon>
+              <SnapshotIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="Take Snapshot" />
+          </MenuItem>
+        </PermissionGate>
 
         <Divider />
 
-        <MenuItem onClick={handleStartRecording}>
-          <ListItemIcon>
-            <RecordIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Start Recording" />
-        </MenuItem>
+        <PermissionGate requirePermission="controlCameras">
+          <MenuItem onClick={handleStartRecording}>
+            <ListItemIcon>
+              <RecordIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="Start Recording" />
+          </MenuItem>
 
-        <MenuItem onClick={() => { setTimedOpen(true); handleClose(); }}>
-          <ListItemIcon>
-            <TimedIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Timed Recording" />
-        </MenuItem>
+          <MenuItem onClick={() => { setTimedOpen(true); handleClose(); }}>
+            <ListItemIcon>
+              <TimedIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="Timed Recording" />
+          </MenuItem>
 
-        <MenuItem onClick={handleStopRecording}>
-          <ListItemIcon>
-            <StopIcon fontSize="small" />
-          </ListItemIcon>
-          <ListItemText primary="Stop Recording" />
-        </MenuItem>
+          <MenuItem onClick={handleStopRecording}>
+            <ListItemIcon>
+              <StopIcon fontSize="small" />
+            </ListItemIcon>
+            <ListItemText primary="Stop Recording" />
+          </MenuItem>
+        </PermissionGate>
 
         <Divider />
 

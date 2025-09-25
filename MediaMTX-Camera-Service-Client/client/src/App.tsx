@@ -16,6 +16,10 @@ import AboutPage from './pages/About/AboutPage';
 import CameraPage from './pages/Cameras/CameraPage';
 import FilesPage from './pages/Files/FilesPage';
 import LoadingSpinner from './components/Layout/LoadingSpinner';
+import ErrorBoundary from './components/Error/ErrorBoundary';
+import { AccessibilityProvider } from './components/Accessibility/AccessibilityProvider';
+import { usePerformanceMonitor } from './hooks/usePerformanceMonitor';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
 // Create theme
 const theme = createTheme({
@@ -40,6 +44,10 @@ function App() {
   // Notification service will be used in future sprints
   // const [notificationService] = useState(() => serviceFactory.createNotificationService(wsService));
   const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize performance monitoring and keyboard shortcuts
+  usePerformanceMonitor();
+  useKeyboardShortcuts();
 
   const { status: connectionStatus, setStatus: setConnectionStatus, setError: setConnectionError } = useConnectionStore();
   const { isAuthenticated, login } = useAuthStore();
@@ -153,41 +161,45 @@ function App() {
   }
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <BrowserRouter>
-        <Routes>
-          <Route
-            path="/login"
-            element={
-              isAuthenticated ? (
-                <Navigate to="/about" replace />
-              ) : (
-                <LoginPage authService={authService} />
-              )
-            }
-          />
-          <Route
-            path="/*"
-            element={
-              isAuthenticated ? (
-                <AppLayout authService={authService}>
-                  <Routes>
-                    <Route path="/" element={<Navigate to="/cameras" replace />} />
-                    <Route path="/cameras" element={<CameraPage />} />
-                    <Route path="/files" element={<FilesPage />} />
-                    <Route path="/about" element={<AboutPage />} />
-                    <Route path="*" element={<Navigate to="/cameras" replace />} />
-                  </Routes>
-                </AppLayout>
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-        </Routes>
-      </BrowserRouter>
-    </ThemeProvider>
+    <AccessibilityProvider>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <ErrorBoundary>
+          <BrowserRouter>
+            <Routes>
+              <Route
+                path="/login"
+                element={
+                  isAuthenticated ? (
+                    <Navigate to="/about" replace />
+                  ) : (
+                    <LoginPage authService={authService} />
+                  )
+                }
+              />
+              <Route
+                path="/*"
+                element={
+                  isAuthenticated ? (
+                    <AppLayout authService={authService}>
+                      <Routes>
+                        <Route path="/" element={<Navigate to="/cameras" replace />} />
+                        <Route path="/cameras" element={<CameraPage />} />
+                        <Route path="/files" element={<FilesPage />} />
+                        <Route path="/about" element={<AboutPage />} />
+                        <Route path="*" element={<Navigate to="/cameras" replace />} />
+                      </Routes>
+                    </AppLayout>
+                  ) : (
+                    <Navigate to="/login" replace />
+                  )
+                }
+              />
+            </Routes>
+          </BrowserRouter>
+        </ErrorBoundary>
+      </ThemeProvider>
+    </AccessibilityProvider>
   );
 }
 
