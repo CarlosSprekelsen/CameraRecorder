@@ -22,15 +22,8 @@ import { MockDataFactory } from '../../utils/mocks';
 import { APIResponseValidator } from '../../utils/validators';
 import { useDeviceStore } from '../../../src/stores/device/deviceStore';
 
-// Mock the DeviceService
-const mockDeviceService = {
-  getCameraList: jest.fn() as jest.MockedFunction<any>,
-  getCameraStatus: jest.fn() as jest.MockedFunction<any>,
-  getCameraCapabilities: jest.fn() as jest.MockedFunction<any>,
-  getStreamUrl: jest.fn() as jest.MockedFunction<any>,
-  getStreamStatus: jest.fn() as jest.MockedFunction<any>,
-  getStreams: jest.fn() as jest.MockedFunction<any>
-};
+// Use centralized mock - eliminates duplication
+const mockDeviceService = MockDataFactory.createMockDeviceService();
 
 jest.mock('../../../src/services/device/DeviceService', () => ({
   DeviceService: jest.fn().mockImplementation(() => mockDeviceService)

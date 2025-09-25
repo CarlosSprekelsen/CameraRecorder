@@ -19,20 +19,11 @@
 import { NotificationService } from '../../../src/services/notifications/NotificationService';
 import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
 import { JsonRpcNotification } from '../../../src/types/api';
+import { MockDataFactory } from '../../utils/mocks';
 
-// Mock WebSocket service
-const mockWebSocketService = {
-  events: {} as any
-} as jest.Mocked<WebSocketService>;
-
-// Mock logger service
-jest.mock('../../../src/services/logger/LoggerService', () => ({
-  logger: {
-    info: jest.fn(),
-    debug: jest.fn(),
-    error: jest.fn()
-  }
-}));
+// Use centralized mocks - eliminates duplication
+const mockWebSocketService = MockDataFactory.createMockWebSocketService();
+const mockLoggerService = MockDataFactory.createMockLoggerService();
 
 describe('NotificationService Unit Tests', () => {
   let notificationService: NotificationService;

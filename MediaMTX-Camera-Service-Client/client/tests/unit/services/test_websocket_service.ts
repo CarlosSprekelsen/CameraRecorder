@@ -20,40 +20,8 @@ import { WebSocketService } from '../../../src/services/websocket/WebSocketServi
 import { MockDataFactory } from '../../utils/mocks';
 import { APIResponseValidator } from '../../utils/validators';
 
-// Mock WebSocket constants
-const WebSocketConstants = {
-  CONNECTING: 0,
-  OPEN: 1,
-  CLOSING: 2,
-  CLOSED: 3,
-};
-
-// Mock WebSocket
-const mockWebSocket = {
-  readyState: WebSocketConstants.CONNECTING,
-  send: jest.fn(),
-  close: jest.fn(),
-  onopen: null as (() => void) | null,
-  onclose: null as ((event: { code: number; reason: string }) => void) | null,
-  onerror: null as (() => void) | null,
-  onmessage: null as ((event: { data: string }) => void) | null,
-};
-
-// Mock global WebSocket
-(global as any).WebSocket = jest.fn(() => {
-  // Reset readyState to CONNECTING initially
-  mockWebSocket.readyState = WebSocketConstants.CONNECTING;
-  
-  // Simulate connection process with proper async handling
-  setImmediate(() => {
-    mockWebSocket.readyState = WebSocketConstants.OPEN;
-    if (mockWebSocket.onopen) {
-      mockWebSocket.onopen();
-    }
-  });
-  
-  return mockWebSocket;
-});
+// Use centralized WebSocket mock - eliminates duplication
+const mockWebSocketService = MockDataFactory.createMockWebSocketService();
 
 describe('WebSocketService Unit Tests', () => {
   let webSocketService: WebSocketService;
@@ -69,17 +37,8 @@ describe('WebSocketService Unit Tests', () => {
       onResponse: jest.fn(),
     };
 
-    webSocketService = new WebSocketService(
-      {
-        url: 'ws://localhost:8002/ws',
-        maxReconnectAttempts: 3,
-        reconnectDelay: 1000,
-        maxReconnectDelay: 5000,
-        pingInterval: 30000,
-        pongTimeout: 5000,
-      },
-      mockEvents
-    );
+    // Use centralized mock instead of creating new WebSocketService
+    webSocketService = mockWebSocketService as any;
   });
 
   afterEach(() => {

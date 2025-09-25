@@ -19,17 +19,11 @@
 import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
 import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { StreamStartResult, StreamStopResult, StreamUrlResult, StreamStatusResult, StreamsListResult } from '../../../src/types/api';
+import { MockDataFactory } from '../../utils/mocks';
 
-// Mock WebSocket service
-const mockWebSocketService = {
-  sendRPC: jest.fn()
-} as jest.Mocked<WebSocketService>;
-
-// Mock logger service
-const mockLoggerService = {
-  info: jest.fn(),
-  error: jest.fn()
-} as jest.Mocked<LoggerService>;
+// Use centralized mocks - eliminates duplication
+const mockWebSocketService = MockDataFactory.createMockWebSocketService();
+const mockLoggerService = MockDataFactory.createMockLoggerService();
 
 // Create a mock streaming service class
 class StreamingService {

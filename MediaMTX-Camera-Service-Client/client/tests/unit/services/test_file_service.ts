@@ -27,19 +27,24 @@ const mockWebSocketService = MockDataFactory.createMockWebSocketService();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
 const mockDocument = MockDataFactory.createMockDocument();
 
-// Mock document for jsdom environment
+// Mock document for jsdom environment using centralized approach
 if (typeof document === 'undefined') {
   (global as any).document = mockDocument;
 } else {
-  // Mock document methods without redefining the property
-  const originalCreateElement = document.createElement;
-  document.createElement = mockDocument.createElement;
-  
+  // Use centralized document mock methods
+  Object.defineProperty(document, 'createElement', {
+    value: mockDocument.createElement,
+    writable: true,
+  });
   if (document.body) {
-    const originalAppendChild = document.body.appendChild;
-    const originalRemoveChild = document.body.removeChild;
-    document.body.appendChild = mockDocument.body.appendChild;
-    document.body.removeChild = mockDocument.body.removeChild;
+    Object.defineProperty(document.body, 'appendChild', {
+      value: mockDocument.body.appendChild,
+      writable: true,
+    });
+    Object.defineProperty(document.body, 'removeChild', {
+      value: mockDocument.body.removeChild,
+      writable: true,
+    });
   }
 }
 

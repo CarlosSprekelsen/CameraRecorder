@@ -37,7 +37,7 @@ const CONFIG = {
   ],
   
   // File patterns to include
-  INCLUDE_PATTERNS: ['.test.ts', '.test.js', '.spec.ts', '.spec.js'],
+  INCLUDE_PATTERNS: ['.test.ts', '.test.js', '.spec.ts', '.spec.js', 'test_', '_test'],
   
   // File patterns to exclude
   EXCLUDE_PATTERNS: ['node_modules', '.git', 'coverage', 'dist'],
@@ -208,11 +208,13 @@ class DuplicationDetector {
       const relativePath = relative(resolve(__dirname, '..'), filePath);
       
       const fileDuplications = [];
+      let hasDuplications = false;
       
       for (const pattern of CONFIG.DUPLICATION_PATTERNS) {
         const matches = [...content.matchAll(pattern.pattern)];
         
         if (matches.length > 0) {
+          hasDuplications = true;
           for (const match of matches) {
             const duplication = {
               file: relativePath,
@@ -231,9 +233,8 @@ class DuplicationDetector {
         }
       }
       
-      if (fileDuplications.length > 0) {
-        this.fileStats.set(relativePath, fileDuplications);
-      }
+      // Always track the file, even if no duplications found
+      this.fileStats.set(relativePath, fileDuplications);
       
     } catch (error) {
       console.warn(`⚠️  Warning: Could not scan file ${filePath}: ${error.message}`);

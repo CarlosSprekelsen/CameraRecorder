@@ -24,15 +24,8 @@ import { MockDataFactory } from '../../utils/mocks';
 import { APIResponseValidator } from '../../utils/validators';
 import { useFileStore } from '../../../src/stores/file/fileStore';
 
-// Mock the FileService
-const mockFileService = {
-  listRecordings: jest.fn(),
-  listSnapshots: jest.fn(),
-  getRecordingInfo: jest.fn(),
-  getSnapshotInfo: jest.fn(),
-  deleteRecording: jest.fn(),
-  deleteSnapshot: jest.fn()
-};
+// Use centralized mock - eliminates duplication
+const mockFileService = MockDataFactory.createMockFileService();
 
 jest.mock('../../../src/services/file/FileService', () => ({
   FileService: jest.fn().mockImplementation(() => mockFileService)
