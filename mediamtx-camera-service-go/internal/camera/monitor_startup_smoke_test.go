@@ -24,7 +24,7 @@ import (
 // Test_MonitorStart_Smoke tests the monitor startup sequence in isolation
 func Test_MonitorStart_Smoke(t *testing.T) {
 	// Setup: No MediaMTX; only the camera monitor subsystems
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLoggerFactory().CreateLogger("test")
 
 	// Create a minimal camera monitor with real implementations
 	// We need to create the required dependencies
@@ -81,7 +81,7 @@ func Test_MonitorStart_Smoke(t *testing.T) {
 
 // Test_MonitorStart_SingleStartInvariant verifies the single Start() call invariant
 func Test_MonitorStart_SingleStartInvariant(t *testing.T) {
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLoggerFactory().CreateLogger("test")
 
 	// Create monitor
 	configManager := config.CreateConfigManager() // Use centralized config creation

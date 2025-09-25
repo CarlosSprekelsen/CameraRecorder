@@ -297,7 +297,7 @@ func TestCameraMonitor_TakeDirectSnapshot(t *testing.T) {
 		// Test that TakeDirectSnapshot is part of the CameraMonitor interface
 		// Create a real monitor to test the interface
 		configManager := config.CreateConfigManager()
-		logger := logging.CreateTestLogger(t, nil)
+		logger := logging.GetLoggerFactory().CreateLogger("test")
 		deviceChecker := &RealDeviceChecker{}
 		commandExecutor := &RealV4L2CommandExecutor{}
 		infoParser := &RealDeviceInfoParser{}

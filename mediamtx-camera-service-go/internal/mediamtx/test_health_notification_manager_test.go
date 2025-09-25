@@ -25,6 +25,25 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// createHealthNotificationManagerFromFixture creates a health notification manager using test fixture
+func createHealthNotificationManagerFromFixture(t *testing.T) (*HealthNotificationManager, *MockSystemEventNotifier) {
+	// Use proper test fixture instead of hardcoding configuration
+	configManager := CreateConfigManagerWithFixture(t, "config_clean_minimal.yaml")
+	require.NotNil(t, configManager, "Config manager should not be nil")
+
+	// Get the actual configuration from the fixture
+	cfg := configManager.GetConfig()
+	require.NotNil(t, cfg, "Config should not be nil")
+
+	logger := logging.GetLogger("mediamtx")
+	notifier := NewMockSystemEventNotifier()
+
+	manager := NewHealthNotificationManager(cfg, logger, notifier)
+	require.NotNil(t, manager, "Health notification manager should not be nil")
+
+	return manager, notifier
+}
+
 // MockSystemEventNotifier provides a test implementation of SystemEventNotifier
 type MockSystemEventNotifier struct {
 	notifications []SystemHealthNotification
@@ -97,7 +116,7 @@ func TestNewHealthNotificationManager_ReqMTX004(t *testing.T) {
 		},
 	}
 
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLogger("mediamtx")
 	notifier := NewMockSystemEventNotifier()
 
 	manager := NewHealthNotificationManager(config, logger, notifier)
@@ -124,7 +143,7 @@ func TestHealthNotificationManager_CheckStorageThresholds_ReqMTX004(t *testing.T
 		},
 	}
 
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLogger("mediamtx")
 	notifier := NewMockSystemEventNotifier()
 
 	manager := NewHealthNotificationManager(config, logger, notifier)
@@ -175,7 +194,7 @@ func TestHealthNotificationManager_CheckPerformanceThresholds_ReqMTX004(t *testi
 		},
 	}
 
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLogger("mediamtx")
 	notifier := NewMockSystemEventNotifier()
 
 	manager := NewHealthNotificationManager(config, logger, notifier)
@@ -224,7 +243,7 @@ func TestHealthNotificationManager_DebounceMechanism_ReqMTX004(t *testing.T) {
 		},
 	}
 
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLogger("mediamtx")
 	notifier := NewMockSystemEventNotifier()
 
 	manager := NewHealthNotificationManager(config, logger, notifier)
@@ -281,7 +300,7 @@ func TestHealthNotificationManager_AtomicOperations_ReqMTX004(t *testing.T) {
 		},
 	}
 
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLogger("mediamtx")
 	notifier := NewMockSystemEventNotifier()
 
 	manager := NewHealthNotificationManager(config, logger, notifier)
@@ -328,29 +347,6 @@ func TestHealthNotificationManager_AtomicOperations_ReqMTX004(t *testing.T) {
 // TestHealthNotificationManager_ThresholdValidation_ReqMTX004 tests threshold validation
 func TestHealthNotificationManager_ThresholdValidation_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	config := &config.Config{
-		Performance: config.PerformanceConfig{
-			MonitoringThresholds: config.MonitoringThresholdsConfig{
-				MemoryUsagePercent:     90.0,
-				ErrorRatePercent:       5.0,
-				AverageResponseTimeMs:  1000.0,
-				ActiveConnectionsLimit: 900,
-				GoroutinesLimit:        1000,
-			},
-			Debounce: config.DebounceConfig{
-				HealthMonitorSeconds:      15,
-				StorageMonitorSeconds:     30,
-				PerformanceMonitorSeconds: 45,
-			},
-		},
-	}
-
-	logger := logging.CreateTestLogger(t, nil)
-	notifier := NewMockSystemEventNotifier()
-
-	manager := NewHealthNotificationManager(config, logger, notifier)
-	require.NotNil(t, manager, "Health notification manager should not be nil")
-
 	// Test various threshold scenarios
 	testCases := []struct {
 		name     string
@@ -427,7 +423,8 @@ func TestHealthNotificationManager_ThresholdValidation_ReqMTX004(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			notifier.ClearNotifications()
+			// Create fresh manager instance for each sub-test to avoid state contamination
+			manager, notifier := createHealthNotificationManagerFromFixture(t)
 
 			manager.CheckPerformanceThresholds(tc.metrics)
 

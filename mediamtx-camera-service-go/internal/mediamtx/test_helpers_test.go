@@ -1304,6 +1304,77 @@ func (h *MediaMTXTestHelper) cleanupMediaMTXPaths(t *testing.T) {
 	if testPathCount > 0 {
 		t.Logf("Found %d test paths in runtime state - these should be cleaned up automatically by MediaMTX when unused", testPathCount)
 	}
+
+	// Normalize recording state for all camera paths to ensure clean test isolation
+	h.normalizePathStates(ctx, t)
+}
+
+// normalizePathStates normalizes recording state for all camera paths to ensure clean test isolation
+// This method respects MediaMTX's persistent path design by normalizing state rather than deleting paths
+func (h *MediaMTXTestHelper) normalizePathStates(ctx context.Context, t *testing.T) {
+	// Get all paths from MediaMTX to discover existing camera paths
+	data, err := h.client.Get(ctx, MediaMTXPathsList)
+	if err != nil {
+		t.Logf("Warning: Failed to get paths for state normalization: %v", err)
+		return
+	}
+
+	// Parse paths response to find camera paths
+	var pathsResponse struct {
+		Items []struct {
+			Name string `json:"name"`
+		} `json:"items"`
+	}
+
+	if err := json.Unmarshal(data, &pathsResponse); err != nil {
+		t.Logf("Warning: Failed to parse paths response for normalization: %v", err)
+		return
+	}
+
+	// Normalize recording state for each camera path
+	normalizedCount := 0
+	for _, path := range pathsResponse.Items {
+		// Only normalize camera paths (camera0, camera1, etc.)
+		if h.isCameraPath(path.Name) {
+			if h.normalizePathRecordingState(ctx, t, path.Name) {
+				normalizedCount++
+			}
+		}
+	}
+
+	if normalizedCount > 0 {
+		t.Logf("Normalized recording state for %d camera paths", normalizedCount)
+	}
+}
+
+// isCameraPath determines if a path is a camera path (camera0, camera1, etc.)
+func (h *MediaMTXTestHelper) isCameraPath(pathName string) bool {
+	// Match cameraN pattern (camera0, camera1, camera2, etc.)
+	return strings.HasPrefix(pathName, "camera") && len(pathName) > 6 && pathName[6:] != ""
+}
+
+// normalizePathRecordingState normalizes a single path's recording state to disabled
+func (h *MediaMTXTestHelper) normalizePathRecordingState(ctx context.Context, t *testing.T, pathName string) bool {
+	// Create configuration to disable recording
+	disableRecordingConfig := map[string]interface{}{
+		"record": false,
+	}
+
+	configData, err := json.Marshal(disableRecordingConfig)
+	if err != nil {
+		t.Logf("Warning: Failed to marshal disable recording config for %s: %v", pathName, err)
+		return false
+	}
+
+	// PATCH the path configuration to disable recording
+	patchEndpoint := FormatConfigPathsPatch(pathName)
+	if err := h.client.Patch(ctx, patchEndpoint, configData); err != nil {
+		t.Logf("Warning: Failed to normalize recording state for path %s: %v", pathName, err)
+		return false
+	}
+
+	t.Logf("Normalized recording state for path: %s (recording disabled)", pathName)
+	return true
 }
 
 // isTestPath determines if a path was created during testing

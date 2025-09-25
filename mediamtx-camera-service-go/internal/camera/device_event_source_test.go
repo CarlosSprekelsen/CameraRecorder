@@ -208,7 +208,7 @@ func TestFsnotifyDeviceEventSource_EventProcessing(t *testing.T) {
 
 // TestFsnotifyDeviceEventSource_Concurrency tests concurrent access
 func TestFsnotifyDeviceEventSource_Concurrency(t *testing.T) {
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLoggerFactory().CreateLogger("test")
 
 	t.Run("concurrent_start_stop", func(t *testing.T) {
 		eventSource, err := NewFsnotifyDeviceEventSource(logger)
@@ -299,7 +299,7 @@ func TestFsnotifyDeviceEventSource_ErrorHandling(t *testing.T) {
 	t.Run("watcher_creation_failure", func(t *testing.T) {
 		// This is hard to test directly since fsnotify.NewWatcher() rarely fails
 		// But we can test the error handling path exists
-		_ = logging.CreateTestLogger(t, nil)
+		_ = logging.GetLoggerFactory().CreateLogger("test")
 
 		// Normal creation should work
 		eventSource := GetDeviceEventSourceFactory().Create()
@@ -313,7 +313,7 @@ func TestFsnotifyDeviceEventSource_ErrorHandling(t *testing.T) {
 	t.Run("start_with_invalid_directory", func(t *testing.T) {
 		// This tests the error handling when /dev directory can't be watched
 		// In most test environments, this should work, but we can test the path exists
-		logger := logging.CreateTestLogger(t, nil)
+		logger := logging.GetLoggerFactory().CreateLogger("test")
 		eventSource, err := NewFsnotifyDeviceEventSource(logger)
 		require.NoError(t, err)
 		defer eventSource.Close()
@@ -514,7 +514,7 @@ func TestDeviceEventTypes(t *testing.T) {
 func TestDeviceEventSource_Interface(t *testing.T) {
 	t.Parallel()
 	t.Run("fsnotify_interface_compliance", func(t *testing.T) {
-		logger := logging.CreateTestLogger(t, nil)
+		logger := logging.GetLoggerFactory().CreateLogger("test")
 		eventSource, err := NewFsnotifyDeviceEventSource(logger)
 		require.NoError(t, err)
 		defer eventSource.Close()
@@ -537,7 +537,7 @@ func TestDeviceEventSource_Interface(t *testing.T) {
 	})
 
 	t.Run("udev_interface_compliance", func(t *testing.T) {
-		logger := logging.CreateTestLogger(t, nil)
+		logger := logging.GetLoggerFactory().CreateLogger("test")
 		eventSource, err := NewUdevDeviceEventSource(logger)
 		require.NoError(t, err)
 		defer eventSource.Close()
@@ -563,7 +563,7 @@ func TestDeviceEventSource_Interface(t *testing.T) {
 // TestDeviceEventSource_Integration tests integration scenarios
 func TestDeviceEventSource_Integration(t *testing.T) {
 	t.Run("fsnotify_lifecycle", func(t *testing.T) {
-		logger := logging.CreateTestLogger(t, nil)
+		logger := logging.GetLoggerFactory().CreateLogger("test")
 		eventSource, err := NewFsnotifyDeviceEventSource(logger)
 		require.NoError(t, err)
 
@@ -590,7 +590,7 @@ func TestDeviceEventSource_Integration(t *testing.T) {
 	})
 
 	t.Run("udev_lifecycle", func(t *testing.T) {
-		logger := logging.CreateTestLogger(t, nil)
+		logger := logging.GetLoggerFactory().CreateLogger("test")
 		eventSource, err := NewUdevDeviceEventSource(logger)
 		require.NoError(t, err)
 
@@ -620,7 +620,7 @@ func TestDeviceEventSource_Integration(t *testing.T) {
 // TestDeviceEventSource_ErrorRecovery tests error recovery scenarios
 func TestDeviceEventSource_ErrorRecovery(t *testing.T) {
 	t.Run("fsnotify_recovery_after_error", func(t *testing.T) {
-		logger := logging.CreateTestLogger(t, nil)
+		logger := logging.GetLoggerFactory().CreateLogger("test")
 		eventSource, err := NewFsnotifyDeviceEventSource(logger)
 		require.NoError(t, err)
 		defer eventSource.Close()
@@ -645,7 +645,7 @@ func TestDeviceEventSource_ErrorRecovery(t *testing.T) {
 	})
 
 	t.Run("udev_recovery_after_error", func(t *testing.T) {
-		logger := logging.CreateTestLogger(t, nil)
+		logger := logging.GetLoggerFactory().CreateLogger("test")
 		eventSource, err := NewUdevDeviceEventSource(logger)
 		require.NoError(t, err)
 		defer eventSource.Close()

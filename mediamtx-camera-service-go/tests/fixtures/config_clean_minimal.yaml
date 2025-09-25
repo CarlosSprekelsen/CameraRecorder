@@ -115,6 +115,20 @@ performance:
     immediate_response_threshold: 0.5
     acceptable_response_threshold: 2.0
     slow_response_threshold: 5.0
+  
+  # Debounce settings for tests (short periods for immediate testing)
+  debounce:
+    health_monitor_seconds: 1      # 1 second for tests
+    storage_monitor_seconds: 1     # 1 second for tests  
+    performance_monitor_seconds: 1  # 1 second for tests
+  
+  # Monitoring thresholds for tests
+  monitoring_thresholds:
+    memory_usage_percent: 90.0        # Trigger at 90% memory usage
+    error_rate_percent: 5.0           # Trigger at 5% error rate  
+    average_response_time_ms: 1000.0  # Trigger at 1000ms response time
+    active_connections_limit: 900     # Trigger at 900 connections
+    goroutines_limit: 1000            # Trigger at 1000 goroutines
 
 # Security settings (actually used)
 security:

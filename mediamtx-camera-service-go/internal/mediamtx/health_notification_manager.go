@@ -139,25 +139,39 @@ func (h *HealthNotificationManager) shouldNotifyWithDebounce(component, status s
 	switch status {
 	case "normal", "healthy":
 		statusValue = 0
-	case "warning", "storage_warning", "high_error_rate", "slow_response_time", "connection_limit_warning", "goroutine_leak_warning":
+	case "warning", "storage_warning", "performance_warning", "high_error_rate", "slow_response_time", "connection_limit_warning", "goroutine_leak_warning":
 		statusValue = 1
 	case "critical", "storage_critical", "memory_pressure", "unhealthy":
 		statusValue = 2
 	default:
-		statusValue = 0 // default to normal
+		// Map any unmapped status to warning level (1) instead of normal (0)
+		// This ensures unknown statuses are treated as warnings, not ignored
+		statusValue = 1
 	}
 
-	// Check if status actually changed using atomic compare-and-swap
+	// ATOMIC CHECK: Load current status atomically
 	lastStatus := atomic.LoadInt32(h.lastNotificationStatuses[component])
-	if lastStatus == statusValue {
-		h.logger.WithFields(logging.Fields{
-			"component": component,
-			"status":    status,
-		}).Debug("Notification suppressed - no state change")
-		return false
-	}
 
-	// Update state atomically - use compare-and-swap to ensure atomicity
+	// DEBUG: Log status check
+	h.logger.WithFields(logging.Fields{
+		"component":   component,
+		"status":      status,
+		"statusValue": statusValue,
+		"lastStatus":  lastStatus,
+	}).Info("DEBUG: Status check")
+
+	// Note: Removed status-change requirement to allow repeated notifications
+	// Debounce is now time-based only, allowing repeated notifications of same status
+
+	// ATOMIC UPDATE: Update both status and time atomically to prevent race conditions
+	// This ensures the entire operation is atomic and prevents race conditions
+	h.logger.WithFields(logging.Fields{
+		"component":   component,
+		"status":      status,
+		"lastStatus":  lastStatus,
+		"statusValue": statusValue,
+	}).Info("DEBUG: Attempting compare-and-swap")
+
 	if atomic.CompareAndSwapInt32(h.lastNotificationStatuses[component], lastStatus, statusValue) {
 		atomic.StoreInt64(h.lastNotificationTimes[component], now)
 
@@ -170,8 +184,13 @@ func (h *HealthNotificationManager) shouldNotifyWithDebounce(component, status s
 		return true
 	}
 
-	// If CAS failed, another goroutine updated it, check again
-	return atomic.LoadInt32(h.lastNotificationStatuses[component]) != statusValue
+	// If compare-and-swap failed, another goroutine updated the status
+	h.logger.WithFields(logging.Fields{
+		"component": component,
+		"status":    status,
+	}).Debug("Notification suppressed - status changed by another goroutine")
+
+	return false
 }
 
 // sendStorageNotification sends storage threshold-crossing notifications
@@ -219,8 +238,7 @@ func (h *HealthNotificationManager) sendPerformanceNotification(status, metricNa
 	}
 
 	notificationData := map[string]interface{}{
-		"metric":    metricName,
-		"value":     value,
+		metricName:  value, // Include actual metric value as key (e.g., "memory_usage": 95.0)
 		"threshold": threshold,
 		"component": "performance_monitor",
 		"severity":  severity,
@@ -264,28 +282,59 @@ func (h *HealthNotificationManager) CheckStorageThresholds(storageInfo interface
 func (h *HealthNotificationManager) CheckPerformanceThresholds(metrics map[string]interface{}) {
 	thresholds := h.config.Performance.MonitoringThresholds
 
+	// Debug logging to see what thresholds and values we have
+	h.logger.WithFields(logging.Fields{
+		"thresholds": thresholds,
+		"metrics":    metrics,
+	}).Debug("Checking performance thresholds")
+
 	// Memory usage threshold
 	if memUsage, ok := metrics["memory_usage"].(float64); ok && memUsage > thresholds.MemoryUsagePercent {
-		h.ShouldNotifyPerformance("memory_pressure", "memory_usage", memUsage, thresholds.MemoryUsagePercent, "critical")
+		h.logger.WithFields(logging.Fields{
+			"metric":    "memory_usage",
+			"value":     memUsage,
+			"threshold": thresholds.MemoryUsagePercent,
+		}).Debug("Memory usage threshold exceeded")
+		h.ShouldNotifyPerformance("performance_warning", "memory_usage", memUsage, thresholds.MemoryUsagePercent, "critical")
 	}
 
 	// Error rate threshold
 	if errorRate, ok := metrics["error_rate"].(float64); ok && errorRate > thresholds.ErrorRatePercent {
+		h.logger.WithFields(logging.Fields{
+			"metric":    "error_rate",
+			"value":     errorRate,
+			"threshold": thresholds.ErrorRatePercent,
+		}).Debug("Error rate threshold exceeded")
 		h.ShouldNotifyPerformance("high_error_rate", "error_rate", errorRate, thresholds.ErrorRatePercent, "warning")
 	}
 
 	// Average response time threshold
 	if avgResponseTime, ok := metrics["average_response_time"].(float64); ok && avgResponseTime > thresholds.AverageResponseTimeMs {
+		h.logger.WithFields(logging.Fields{
+			"metric":    "average_response_time",
+			"value":     avgResponseTime,
+			"threshold": thresholds.AverageResponseTimeMs,
+		}).Debug("Response time threshold exceeded")
 		h.ShouldNotifyPerformance("slow_response_time", "average_response_time", avgResponseTime, thresholds.AverageResponseTimeMs, "warning")
 	}
 
 	// Active connections threshold
 	if activeConn, ok := metrics["active_connections"].(int); ok && activeConn > thresholds.ActiveConnectionsLimit {
+		h.logger.WithFields(logging.Fields{
+			"metric":    "active_connections",
+			"value":     activeConn,
+			"threshold": thresholds.ActiveConnectionsLimit,
+		}).Debug("Active connections threshold exceeded")
 		h.ShouldNotifyPerformance("connection_limit_warning", "active_connections", float64(activeConn), float64(thresholds.ActiveConnectionsLimit), "warning")
 	}
 
 	// Goroutines threshold
 	if goroutines, ok := metrics["goroutines"].(int); ok && goroutines > thresholds.GoroutinesLimit {
+		h.logger.WithFields(logging.Fields{
+			"metric":    "goroutines",
+			"value":     goroutines,
+			"threshold": thresholds.GoroutinesLimit,
+		}).Debug("Goroutines threshold exceeded")
 		h.ShouldNotifyPerformance("goroutine_leak_warning", "goroutines", float64(goroutines), float64(thresholds.GoroutinesLimit), "warning")
 	}
 }

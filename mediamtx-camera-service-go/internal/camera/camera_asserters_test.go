@@ -49,7 +49,7 @@ type CameraAsserter struct {
 func NewCameraAsserter(t *testing.T) *CameraAsserter {
 	// Create test config and logger
 	configMgr := config.CreateConfigManager()
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLoggerFactory().CreateLogger("test")
 
 	// Create real implementations
 	deviceChecker := &RealDeviceChecker{}

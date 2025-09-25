@@ -30,7 +30,7 @@ func TestHybridMonitor_WorkerPoolIntegration(t *testing.T) {
 
 	// Use existing test pattern from hybrid_monitor_test.go
 	configManager := config.CreateConfigManager()
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLoggerFactory().CreateLogger("test")
 
 	// Create real implementations (following existing pattern)
 	deviceChecker := &RealDeviceChecker{}
@@ -75,7 +75,7 @@ func TestHybridMonitor_EventHandlerResourceManagement(t *testing.T) {
 
 	// Use existing test pattern
 	configManager := config.CreateConfigManager()
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLoggerFactory().CreateLogger("test")
 
 	// Create real implementations
 	deviceChecker := &RealDeviceChecker{}
@@ -139,7 +139,7 @@ func TestHybridMonitor_GracefulShutdownWithWorkerPool(t *testing.T) {
 
 	// Use existing test pattern
 	configManager := config.CreateConfigManager()
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLoggerFactory().CreateLogger("test")
 
 	// Create real implementations
 	deviceChecker := &RealDeviceChecker{}
@@ -220,7 +220,7 @@ func TestHybridMonitor_WorkerPoolFailureHandling(t *testing.T) {
 
 	// Use existing test pattern
 	configManager := config.CreateConfigManager()
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLoggerFactory().CreateLogger("test")
 
 	// Create real implementations
 	deviceChecker := &RealDeviceChecker{}

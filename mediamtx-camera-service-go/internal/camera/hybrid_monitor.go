@@ -738,7 +738,7 @@ func (m *HybridCameraMonitor) TakeDirectSnapshot(ctx context.Context, devicePath
 	}
 
 	// Build V4L2 command arguments
-	args := m.buildV4L2SnapshotArgs(outputPath, format, width, height)
+	args := m.buildV4L2SnapshotArgs(devicePath, outputPath, format, width, height)
 
 	// Add the selected pixel format to the arguments
 	args += fmt.Sprintf(" --set-fmt-video pixelformat=%s", optimalPixelFormat)
@@ -761,7 +761,7 @@ func (m *HybridCameraMonitor) TakeDirectSnapshot(ctx context.Context, devicePath
 				continue // Skip the format we already tried
 			}
 
-			fallbackArgs := m.buildV4L2SnapshotArgs(outputPath, format, width, height)
+			fallbackArgs := m.buildV4L2SnapshotArgs(devicePath, outputPath, format, width, height)
 			fallbackArgs += fmt.Sprintf(" --set-fmt-video pixelformat=%s", fallbackFormat)
 
 			m.logger.WithFields(logging.Fields{
@@ -833,8 +833,9 @@ func (m *HybridCameraMonitor) TakeDirectSnapshot(ctx context.Context, devicePath
 }
 
 // buildV4L2SnapshotArgs builds V4L2 command arguments for direct snapshot capture
-func (m *HybridCameraMonitor) buildV4L2SnapshotArgs(outputPath, format string, width, height int) string {
+func (m *HybridCameraMonitor) buildV4L2SnapshotArgs(devicePath, outputPath, format string, width, height int) string {
 	args := []string{
+		devicePath,                // Device path as first argument
 		"--stream-mmap",           // Use memory-mapped streaming
 		"--stream-to", outputPath, // Output file path
 		"--stream-count", "1", // Capture only 1 frame
@@ -843,6 +844,11 @@ func (m *HybridCameraMonitor) buildV4L2SnapshotArgs(outputPath, format string, w
 	// Add resolution if specified
 	if width > 0 && height > 0 {
 		args = append(args, "--set-fmt-video", fmt.Sprintf("width=%d,height=%d", width, height))
+	}
+
+	// Add format if specified
+	if format != "" {
+		args = append(args, "--set-fmt-video", fmt.Sprintf("pixelformat=%s", format))
 	}
 
 	return strings.Join(args, " ")

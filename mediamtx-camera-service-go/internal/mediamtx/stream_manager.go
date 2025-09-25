@@ -482,12 +482,15 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 			Source: source,
 		}
 
-		// Special handling for "publisher" source - PathManager will convert this
-		// to runOnDemand configuration, so we need to ensure proper options
+		// Special handling for "publisher" source - use ConfigIntegration to build proper configuration
 		if source == "publisher" {
-			// PathManager will handle the conversion to runOnDemand
-			// Just pass the source and let PathManager do the conversion
-			pathConfig = &PathConf{}
+			// Use ConfigIntegration to build proper PathConf with RunOnDemand configuration
+			// This follows the established architecture pattern
+			builtPathConf, err := sm.configIntegration.BuildPathConf(name, nil, false)
+			if err != nil {
+				return nil, fmt.Errorf("failed to build path configuration for publisher source: %w", err)
+			}
+			pathConfig = builtPathConf
 		}
 
 		// Use PathManager for proper architectural integration

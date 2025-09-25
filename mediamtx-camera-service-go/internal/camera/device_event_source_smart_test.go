@@ -22,7 +22,7 @@ import (
 // TestSmartDeviceEventSourceSelection tests the smart selection logic
 func TestSmartDeviceEventSourceSelection(t *testing.T) {
 	t.Parallel()
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLoggerFactory().CreateLogger("test")
 
 	t.Run("factory_creates_instance", func(t *testing.T) {
 		factory := GetDeviceEventSourceFactory()
@@ -118,7 +118,7 @@ func TestEnvironmentDetectionAccuracy(t *testing.T) {
 	})
 
 	t.Run("selection_logic", func(t *testing.T) {
-		logger := logging.CreateTestLogger(t, nil)
+		logger := logging.GetLoggerFactory().CreateLogger("test")
 
 		isContainer := isContainerEnvironment()
 		isUdev := isUdevAvailable()
