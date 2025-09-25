@@ -23,10 +23,9 @@ import { APIResponseValidator } from '../../utils/validators';
 
 // Mock the RecordingService
 jest.mock('../../../src/services/recording/RecordingService');
-const MockedRecordingService = RecordingService as jest.MockedClass<typeof RecordingService>;
 
 describe('RecordingStore Unit Tests', () => {
-  let mockRecordingService: jest.Mocked<RecordingService>;
+  let mockRecordingService: any;
   let store: ReturnType<typeof useRecordingStore>;
 
   beforeEach(() => {

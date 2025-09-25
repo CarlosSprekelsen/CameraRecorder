@@ -23,10 +23,9 @@ import { APIResponseValidator } from '../../utils/validators';
 
 // Mock the DeviceService
 jest.mock('../../../src/services/device/DeviceService');
-const MockedDeviceService = DeviceService as jest.MockedClass<typeof DeviceService>;
 
 describe('DeviceStore Unit Tests', () => {
-  let mockDeviceService: jest.Mocked<DeviceService>;
+  let mockDeviceService: any;
   let store: ReturnType<typeof useDeviceStore>;
 
   beforeEach(() => {

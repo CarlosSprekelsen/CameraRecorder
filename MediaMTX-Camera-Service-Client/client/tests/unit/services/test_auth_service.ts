@@ -13,7 +13,7 @@
  * - REQ-AUTH-005: Permission checking
  * 
  * Test Categories: Unit
- * API Documentation Reference: mediamtx_camera_service_openrpc.json
+ * API Documentation Reference: ../mediamtx-camera-service-go/docs/api/json_rpc_methods.md
  */
 
 import { AuthService } from '../../../src/services/auth/AuthService';
@@ -28,9 +28,17 @@ const mockSessionStorage = {
   removeItem: jest.fn(),
 };
 
-Object.defineProperty(window, 'sessionStorage', {
-  value: mockSessionStorage,
-});
+// Mock sessionStorage for jsdom environment
+if (typeof window === 'undefined') {
+  (global as any).window = {
+    sessionStorage: mockSessionStorage,
+  };
+} else {
+  Object.defineProperty(window, 'sessionStorage', {
+    value: mockSessionStorage,
+    writable: true,
+  });
+}
 
 // Mock WebSocketService
 const mockWebSocketService = {
@@ -43,6 +51,7 @@ describe('AuthService Unit Tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockWebSocketService.isConnected = true;
     authService = new AuthService(mockWebSocketService);
   });
 
@@ -227,9 +236,12 @@ describe('AuthService Unit Tests', () => {
         expires_at: new Date(Date.now() + 600000).toISOString(),
       };
 
-      mockSessionStorage.getItem
-        .mockReturnValueOnce(token)
-        .mockReturnValueOnce(JSON.stringify(session));
+      // Mock the sessionStorage calls
+      mockSessionStorage.getItem.mockImplementation((key: string) => {
+        if (key === 'auth_token') return token;
+        if (key === 'auth_session') return JSON.stringify(session);
+        return null;
+      });
 
       const result = authService.isAuthenticated();
 

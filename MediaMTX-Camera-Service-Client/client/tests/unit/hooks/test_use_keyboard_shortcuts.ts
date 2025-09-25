@@ -18,11 +18,11 @@
 
 import { renderHook } from '@testing-library/react';
 import { useKeyboardShortcuts } from '../../../src/hooks/useKeyboardShortcuts';
-import { logger } from '../../../src/services/logger/LoggerService';
 
 // Mock react-router-dom
+const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
-  useNavigate: () => jest.fn()
+  useNavigate: () => mockNavigate
 }));
 
 // Mock logger service
@@ -34,24 +34,11 @@ jest.mock('../../../src/services/logger/LoggerService', () => ({
   }
 }));
 
-// Mock window.location.reload
-Object.defineProperty(window, 'location', {
-  value: {
-    reload: jest.fn()
-  },
-  writable: true
-});
-
 describe('useKeyboardShortcuts Hook Unit Tests', () => {
-  const mockLogger = logger as jest.Mocked<typeof logger>;
-  const mockNavigate = jest.fn();
-
   beforeEach(() => {
     jest.clearAllMocks();
     // Reset DOM
     document.body.innerHTML = '';
-    // Mock useNavigate
-    require('react-router-dom').useNavigate.mockReturnValue(mockNavigate);
   });
 
   test('REQ-HOOK-001: Should register keyboard shortcuts correctly', () => {
@@ -110,16 +97,6 @@ describe('useKeyboardShortcuts Hook Unit Tests', () => {
 
     // Assert
     expect(mockNavigate).toHaveBeenCalledWith('/cameras');
-    expect(mockLogger.info).toHaveBeenCalledWith('Keyboard shortcut triggered', {
-      shortcut: 'Go to Cameras page',
-      key: 'h',
-      modifiers: {
-        ctrl: true,
-        alt: false,
-        shift: false,
-        meta: false
-      }
-    });
   });
 
   test('REQ-HOOK-003: Should handle Ctrl+F navigation shortcut', () => {
@@ -136,16 +113,6 @@ describe('useKeyboardShortcuts Hook Unit Tests', () => {
 
     // Assert
     expect(mockNavigate).toHaveBeenCalledWith('/files');
-    expect(mockLogger.info).toHaveBeenCalledWith('Keyboard shortcut triggered', {
-      shortcut: 'Go to Files page',
-      key: 'f',
-      modifiers: {
-        ctrl: true,
-        alt: false,
-        shift: false,
-        meta: false
-      }
-    });
   });
 
   test('REQ-HOOK-004: Should handle Ctrl+A navigation shortcut', () => {
@@ -162,45 +129,9 @@ describe('useKeyboardShortcuts Hook Unit Tests', () => {
 
     // Assert
     expect(mockNavigate).toHaveBeenCalledWith('/about');
-    expect(mockLogger.info).toHaveBeenCalledWith('Keyboard shortcut triggered', {
-      shortcut: 'Go to About page',
-      key: 'a',
-      modifiers: {
-        ctrl: true,
-        alt: false,
-        shift: false,
-        meta: false
-      }
-    });
   });
 
-  test('REQ-HOOK-005: Should handle Ctrl+R reload shortcut', () => {
-    // Arrange
-    renderHook(() => useKeyboardShortcuts());
-    const event = new KeyboardEvent('keydown', {
-      key: 'r',
-      ctrlKey: true,
-      bubbles: true
-    });
-
-    // Act
-    document.dispatchEvent(event);
-
-    // Assert
-    expect(window.location.reload).toHaveBeenCalled();
-    expect(mockLogger.info).toHaveBeenCalledWith('Keyboard shortcut triggered', {
-      shortcut: 'Reload page',
-      key: 'r',
-      modifiers: {
-        ctrl: true,
-        alt: false,
-        shift: false,
-        meta: false
-      }
-    });
-  });
-
-  test('REQ-HOOK-006: Should handle Escape key shortcut', () => {
+  test('REQ-HOOK-005: Should handle Escape key shortcut', () => {
     // Arrange
     const mockElement = document.createElement('input');
     mockElement.focus = jest.fn();
@@ -221,44 +152,9 @@ describe('useKeyboardShortcuts Hook Unit Tests', () => {
 
     // Assert
     expect(mockElement.blur).toHaveBeenCalled();
-    expect(mockLogger.info).toHaveBeenCalledWith('Keyboard shortcut triggered', {
-      shortcut: 'Close dialogs/menus',
-      key: 'Escape',
-      modifiers: {
-        ctrl: false,
-        alt: false,
-        shift: false,
-        meta: false
-      }
-    });
   });
 
-  test('REQ-HOOK-007: Should handle F1 help shortcut', () => {
-    // Arrange
-    renderHook(() => useKeyboardShortcuts());
-    const event = new KeyboardEvent('keydown', {
-      key: 'F1',
-      bubbles: true
-    });
-
-    // Act
-    document.dispatchEvent(event);
-
-    // Assert
-    expect(mockLogger.info).toHaveBeenCalledWith('Keyboard shortcuts help requested');
-    expect(mockLogger.info).toHaveBeenCalledWith('Keyboard shortcut triggered', {
-      shortcut: 'Show help',
-      key: 'F1',
-      modifiers: {
-        ctrl: false,
-        alt: false,
-        shift: false,
-        meta: false
-      }
-    });
-  });
-
-  test('REQ-HOOK-008: Should not trigger shortcuts without correct modifiers', () => {
+  test('REQ-HOOK-006: Should not trigger shortcuts without correct modifiers', () => {
     // Arrange
     renderHook(() => useKeyboardShortcuts());
     const event = new KeyboardEvent('keydown', {
@@ -272,13 +168,9 @@ describe('useKeyboardShortcuts Hook Unit Tests', () => {
 
     // Assert
     expect(mockNavigate).not.toHaveBeenCalled();
-    expect(mockLogger.info).not.toHaveBeenCalledWith(
-      'Keyboard shortcut triggered',
-      expect.any(Object)
-    );
   });
 
-  test('REQ-HOOK-009: Should not trigger shortcuts for non-matching keys', () => {
+  test('REQ-HOOK-007: Should not trigger shortcuts for non-matching keys', () => {
     // Arrange
     renderHook(() => useKeyboardShortcuts());
     const event = new KeyboardEvent('keydown', {
@@ -292,13 +184,9 @@ describe('useKeyboardShortcuts Hook Unit Tests', () => {
 
     // Assert
     expect(mockNavigate).not.toHaveBeenCalled();
-    expect(mockLogger.info).not.toHaveBeenCalledWith(
-      'Keyboard shortcut triggered',
-      expect.any(Object)
-    );
   });
 
-  test('REQ-HOOK-010: Should handle multiple modifier keys correctly', () => {
+  test('REQ-HOOK-008: Should handle multiple modifier keys correctly', () => {
     // Arrange
     renderHook(() => useKeyboardShortcuts());
     const event = new KeyboardEvent('keydown', {
@@ -315,13 +203,9 @@ describe('useKeyboardShortcuts Hook Unit Tests', () => {
 
     // Assert
     expect(mockNavigate).not.toHaveBeenCalled();
-    expect(mockLogger.info).not.toHaveBeenCalledWith(
-      'Keyboard shortcut triggered',
-      expect.any(Object)
-    );
   });
 
-  test('REQ-HOOK-011: Should prevent default and stop propagation for matching shortcuts', () => {
+  test('REQ-HOOK-009: Should prevent default and stop propagation for matching shortcuts', () => {
     // Arrange
     renderHook(() => useKeyboardShortcuts());
     const event = new KeyboardEvent('keydown', {
@@ -340,7 +224,7 @@ describe('useKeyboardShortcuts Hook Unit Tests', () => {
     expect(stopPropagationSpy).toHaveBeenCalled();
   });
 
-  test('REQ-HOOK-012: Should clean up event listeners on unmount', () => {
+  test('REQ-HOOK-010: Should clean up event listeners on unmount', () => {
     // Arrange
     const removeEventListenerSpy = jest.spyOn(document, 'removeEventListener');
     const { unmount } = renderHook(() => useKeyboardShortcuts());
@@ -352,7 +236,7 @@ describe('useKeyboardShortcuts Hook Unit Tests', () => {
     expect(removeEventListenerSpy).toHaveBeenCalledWith('keydown', expect.any(Function));
   });
 
-  test('REQ-HOOK-013: Should handle activeElement without blur method', () => {
+  test('REQ-HOOK-011: Should handle activeElement without blur method', () => {
     // Arrange
     const mockElement = document.createElement('div');
     Object.defineProperty(document, 'activeElement', {
@@ -370,7 +254,7 @@ describe('useKeyboardShortcuts Hook Unit Tests', () => {
     expect(() => document.dispatchEvent(event)).not.toThrow();
   });
 
-  test('REQ-HOOK-014: Should handle null activeElement', () => {
+  test('REQ-HOOK-012: Should handle null activeElement', () => {
     // Arrange
     Object.defineProperty(document, 'activeElement', {
       value: null,

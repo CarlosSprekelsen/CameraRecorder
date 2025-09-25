@@ -13,7 +13,7 @@
  * - REQ-SERVER-005: Event subscription management
  * 
  * Test Categories: Unit
- * API Documentation Reference: mediamtx_camera_service_openrpc.json
+ * API Documentation Reference: ../mediamtx-camera-service-go/docs/api/json_rpc_methods.md
  */
 
 import { ServerService } from '../../../src/services/server/ServerService';
@@ -32,6 +32,7 @@ describe('ServerService Unit Tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockWebSocketService.isConnected = true;
     serverService = new ServerService(mockWebSocketService);
   });
 

@@ -59,18 +59,24 @@ describe('usePerformanceMonitor Hook Unit Tests', () => {
     // Mock global objects
     Object.defineProperty(window, 'PerformanceObserver', {
       value: mockPerformanceObserver,
-      writable: true
+      writable: true,
+      configurable: true
     });
     
     Object.defineProperty(window, 'performance', {
       value: mockPerformance,
-      writable: true
+      writable: true,
+      configurable: true
     });
     
     Object.defineProperty(window, 'gtag', {
       value: mockGtag,
-      writable: true
+      writable: true,
+      configurable: true
     });
+    
+    // Mock getEntriesByType to return empty array by default
+    mockPerformance.getEntriesByType.mockReturnValue([]);
   });
 
   test('REQ-HOOK-001: Should initialize performance monitoring', () => {
@@ -301,8 +307,8 @@ describe('usePerformanceMonitor Hook Unit Tests', () => {
     // Assert
     expect(mockLogger.info).toHaveBeenCalledWith('Performance metric', {
       metric: 'CLS',
-      value: 0.3, // 0.1 + 0.2
-      delta: 0.3,
+      value: expect.closeTo(0.3, 5), // Allow for floating point precision
+      delta: expect.closeTo(0.3, 5),
       timestamp: expect.any(Number)
     });
   });

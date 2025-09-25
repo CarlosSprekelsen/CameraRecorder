@@ -15,72 +15,48 @@
  */
 
 import { 
-  Camera, 
-  CameraListResult, 
-  RecordingStart, 
-  RecordingStop, 
-  SnapshotInfo,
-  ListFilesResult,
-  StreamStatus,
-  MetricsResult,
-  StatusResult,
   ServerInfo,
+  SystemStatus,
   StorageInfo,
-  AuthResult,
-  RecordingFile
-} from '../../../src/types/api';
+  MetricsResult,
+  CameraStatusResult,
+  StreamUrlResult,
+  SnapshotResult,
+  RecordingResult
+} from '../../src/types/api';
 
 export class APIMocks {
   /**
    * Get mock camera list result
    * MANDATORY: Use this mock for all camera list tests
    */
-  static getCameraListResult(): CameraListResult {
-    return {
-      cameras: [
-        {
-          device: 'camera0',
-          status: 'CONNECTED',
-          name: 'Test Camera 0',
-          resolution: '1920x1080',
-          fps: 30,
-          streams: {
-            rtsp: 'rtsp://localhost:8554/camera0',
-            hls: 'https://localhost/hls/camera0.m3u8'
-          }
-        },
-        {
-          device: 'camera1',
-          status: 'DISCONNECTED',
-          name: 'Test Camera 1',
-          resolution: '1280x720',
-          fps: 25,
-          streams: {
-            rtsp: 'rtsp://localhost:8554/camera1',
-            hls: 'https://localhost/hls/camera1.m3u8'
-          }
-        }
-      ],
-      total: 2,
-      connected: 1
-    };
+  static getCameraListResult(): CameraStatusResult[] {
+    return [
+      {
+        device: 'camera0',
+        status: 'CONNECTED',
+        last_seen: new Date().toISOString(),
+        capabilities: ['recording', 'streaming', 'snapshots']
+      },
+      {
+        device: 'camera1',
+        status: 'DISCONNECTED',
+        last_seen: new Date(Date.now() - 3600000).toISOString(),
+        capabilities: ['recording', 'streaming']
+      }
+    ];
   }
 
   /**
    * Get mock camera object
    * MANDATORY: Use this mock for all camera tests
    */
-  static getCamera(device: string = 'camera0'): Camera {
+  static getCamera(device: string = 'camera0'): CameraStatusResult {
     return {
       device,
       status: 'CONNECTED',
-      name: `Test Camera ${device}`,
-      resolution: '1920x1080',
-      fps: 30,
-      streams: {
-        rtsp: `rtsp://localhost:8554/${device}`,
-        hls: `https://localhost/hls/${device}.m3u8`
-      }
+      last_seen: new Date().toISOString(),
+      capabilities: ['recording', 'streaming', 'snapshots']
     };
   }
 
@@ -88,13 +64,11 @@ export class APIMocks {
    * Get mock recording start result
    * MANDATORY: Use this mock for all recording start tests
    */
-  static getRecordingStartResult(device: string = 'camera0'): RecordingStart {
+  static getRecordingStartResult(device: string = 'camera0'): RecordingResult {
     return {
-      device,
-      status: 'RECORDING',
-      start_time: new Date().toISOString(),
-      filename: `recording_${device}_${Date.now()}.mp4`,
-      format: 'mp4'
+      success: true,
+      recording_id: `recording_${device}_${Date.now()}`,
+      status: 'started'
     };
   }
 
@@ -102,16 +76,11 @@ export class APIMocks {
    * Get mock recording stop result
    * MANDATORY: Use this mock for all recording stop tests
    */
-  static getRecordingStopResult(device: string = 'camera0'): RecordingStop {
+  static getRecordingStopResult(device: string = 'camera0'): RecordingResult {
     return {
-      device,
-      status: 'STOPPED',
-      start_time: new Date(Date.now() - 60000).toISOString(),
-      end_time: new Date().toISOString(),
-      duration: 60,
-      file_size: 1024000,
-      filename: `recording_${device}_${Date.now()}.mp4`,
-      format: 'mp4'
+      success: true,
+      recording_id: `recording_${device}_${Date.now()}`,
+      status: 'stopped'
     };
   }
 
@@ -119,14 +88,11 @@ export class APIMocks {
    * Get mock snapshot info
    * MANDATORY: Use this mock for all snapshot tests
    */
-  static getSnapshotInfo(device: string = 'camera0'): SnapshotInfo {
+  static getSnapshotInfo(device: string = 'camera0'): SnapshotResult {
     return {
-      device,
+      success: true,
       filename: `snapshot_${device}_${Date.now()}.jpg`,
-      status: 'SUCCESS',
-      timestamp: new Date().toISOString(),
-      file_size: 512000,
-      file_path: `/snapshots/snapshot_${device}_${Date.now()}.jpg`
+      download_url: `https://localhost/downloads/snapshot_${device}_${Date.now()}.jpg`
     };
   }
 
@@ -134,8 +100,8 @@ export class APIMocks {
    * Get mock file list result
    * MANDATORY: Use this mock for all file list tests
    */
-  static getListFilesResult(type: 'recordings' | 'snapshots' = 'recordings'): ListFilesResult {
-    const files: RecordingFile[] = [
+  static getListFilesResult(type: 'recordings' | 'snapshots' = 'recordings'): any {
+    const files: any[] = [
       {
         filename: `${type}_camera0_${Date.now()}.${type === 'recordings' ? 'mp4' : 'jpg'}`,
         file_size: type === 'recordings' ? 1024000 : 512000,
@@ -162,28 +128,12 @@ export class APIMocks {
    * Get mock stream status
    * MANDATORY: Use this mock for all stream tests
    */
-  static getStreamStatus(device: string = 'camera0'): StreamStatus {
+  static getStreamStatus(device: string = 'camera0'): StreamUrlResult {
     return {
       device,
-      status: 'ACTIVE',
-      ready: true,
-      ffmpeg_process: {
-        running: true,
-        pid: 12345,
-        uptime: 300
-      },
-      mediamtx_path: {
-        exists: true,
-        ready: true,
-        readers: 2
-      },
-      metrics: {
-        bytes_sent: 1024000,
-        frames_sent: 9000,
-        bitrate: 2000000,
-        fps: 30
-      },
-      start_time: new Date(Date.now() - 300000).toISOString()
+      hls_url: `https://localhost/hls/${device}.m3u8`,
+      webrtc_url: `https://localhost/webrtc/${device}`,
+      status: 'ACTIVE'
     };
   }
 
@@ -193,7 +143,6 @@ export class APIMocks {
    */
   static getMetricsResult(): MetricsResult {
     return {
-      timestamp: new Date().toISOString(),
       system_metrics: {
         cpu_usage: 45.5,
         memory_usage: 67.2,
@@ -216,9 +165,9 @@ export class APIMocks {
         }
       },
       recording_metrics: {
-        active_recordings: 1,
-        total_recordings: 5,
-        total_size: 1024000000
+        active_recordings: { count: 1 },
+        total_recordings: { count: 5 },
+        total_size: { bytes: 1024000000 }
       },
       stream_metrics: {
         active_streams: 2,
@@ -232,7 +181,7 @@ export class APIMocks {
    * Get mock status result
    * MANDATORY: Use this mock for all status tests
    */
-  static getStatusResult(): StatusResult {
+  static getStatusResult(): SystemStatus {
     return {
       status: 'HEALTHY',
       uptime: 3600.5,
@@ -282,7 +231,7 @@ export class APIMocks {
    * Get mock authentication result
    * MANDATORY: Use this mock for all auth tests
    */
-  static getAuthResult(role: 'admin' | 'operator' | 'viewer' = 'admin'): AuthResult {
+  static getAuthResult(role: 'admin' | 'operator' | 'viewer' = 'admin'): any {
     return {
       authenticated: true,
       role,
@@ -445,12 +394,12 @@ export class APIMocks {
       history: [],
       loading: false,
       error: null,
-      setService: jest.fn(),
-      takeSnapshot: jest.fn(),
-      startRecording: jest.fn(),
-      stopRecording: jest.fn(),
-      handleRecordingStatusUpdate: jest.fn(),
-      reset: jest.fn()
+      setService: () => {},
+      takeSnapshot: () => Promise.resolve(),
+      startRecording: () => Promise.resolve(),
+      stopRecording: () => Promise.resolve(),
+      handleRecordingStatusUpdate: () => {},
+      reset: () => {}
     };
   }
 
@@ -464,11 +413,11 @@ export class APIMocks {
       lastError: null,
       reconnectAttempts: 0,
       lastConnected: null,
-      setStatus: jest.fn(),
-      setError: jest.fn(),
-      setReconnectAttempts: jest.fn(),
-      setLastConnected: jest.fn(),
-      reset: jest.fn()
+      setStatus: () => {},
+      setError: () => {},
+      setReconnectAttempts: () => {},
+      setLastConnected: () => {},
+      reset: () => {}
     };
   }
 
@@ -484,15 +433,15 @@ export class APIMocks {
       isAuthenticated: false,
       expires_at: null,
       permissions: [],
-      setToken: jest.fn(),
-      setRole: jest.fn(),
-      setSessionId: jest.fn(),
-      setExpiresAt: jest.fn(),
-      setPermissions: jest.fn(),
-      setAuthenticated: jest.fn(),
-      login: jest.fn(),
-      logout: jest.fn(),
-      reset: jest.fn()
+      setToken: () => {},
+      setRole: () => {},
+      setSessionId: () => {},
+      setExpiresAt: () => {},
+      setPermissions: () => {},
+      setAuthenticated: () => {},
+      login: () => {},
+      logout: () => {},
+      reset: () => {}
     };
   }
 
@@ -508,13 +457,13 @@ export class APIMocks {
       loading: false,
       error: null,
       lastUpdated: null,
-      setInfo: jest.fn(),
-      setStatus: jest.fn(),
-      setStorage: jest.fn(),
-      setLoading: jest.fn(),
-      setError: jest.fn(),
-      setLastUpdated: jest.fn(),
-      reset: jest.fn()
+      setInfo: () => {},
+      setStatus: () => {},
+      setStorage: () => {},
+      setLoading: () => {},
+      setError: () => {},
+      setLastUpdated: () => {},
+      reset: () => {}
     };
   }
 
@@ -524,11 +473,11 @@ export class APIMocks {
    */
   static createMockDeviceService() {
     return {
-      getCameraList: jest.fn(),
-      getStreamUrl: jest.fn(),
-      getStreams: jest.fn(),
-      getCameraStatus: jest.fn(),
-      getCameraCapabilities: jest.fn()
+      getCameraList: () => Promise.resolve([]),
+      getStreamUrl: () => Promise.resolve(null),
+      getStreams: () => Promise.resolve([]),
+      getCameraStatus: () => Promise.resolve(null),
+      getCameraCapabilities: () => Promise.resolve(null)
     };
   }
 
@@ -538,13 +487,13 @@ export class APIMocks {
    */
   static createMockFileService() {
     return {
-      listRecordings: jest.fn(),
-      listSnapshots: jest.fn(),
-      getRecordingInfo: jest.fn(),
-      getSnapshotInfo: jest.fn(),
-      downloadFile: jest.fn(),
-      deleteRecording: jest.fn(),
-      deleteSnapshot: jest.fn()
+      listRecordings: () => Promise.resolve({ files: [], total: 0, limit: 20, offset: 0 }),
+      listSnapshots: () => Promise.resolve({ files: [], total: 0, limit: 20, offset: 0 }),
+      getRecordingInfo: () => Promise.resolve(null),
+      getSnapshotInfo: () => Promise.resolve(null),
+      downloadFile: () => Promise.resolve(),
+      deleteRecording: () => Promise.resolve({ success: false, message: 'Not implemented' }),
+      deleteSnapshot: () => Promise.resolve({ success: false, message: 'Not implemented' })
     };
   }
 
@@ -554,9 +503,9 @@ export class APIMocks {
    */
   static createMockRecordingService() {
     return {
-      takeSnapshot: jest.fn(),
-      startRecording: jest.fn(),
-      stopRecording: jest.fn()
+      takeSnapshot: () => Promise.resolve(),
+      startRecording: () => Promise.resolve(),
+      stopRecording: () => Promise.resolve()
     };
   }
 }

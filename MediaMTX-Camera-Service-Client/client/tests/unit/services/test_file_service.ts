@@ -13,7 +13,7 @@
  * - REQ-FILE-005: Error handling and validation
  * 
  * Test Categories: Unit
- * API Documentation Reference: mediamtx_camera_service_openrpc.json
+ * API Documentation Reference: ../mediamtx-camera-service-go/docs/api/json_rpc_methods.md
  */
 
 import { FileService } from '../../../src/services/file/FileService';
@@ -39,17 +39,29 @@ const mockAppendChild = jest.fn();
 const mockRemoveChild = jest.fn();
 const mockClick = jest.fn();
 
-Object.defineProperty(document, 'createElement', {
-  value: mockCreateElement,
-});
-
-Object.defineProperty(document.body, 'appendChild', {
-  value: mockAppendChild,
-});
-
-Object.defineProperty(document.body, 'removeChild', {
-  value: mockRemoveChild,
-});
+// Mock document for jsdom environment
+if (typeof document === 'undefined') {
+  (global as any).document = {
+    createElement: mockCreateElement,
+    body: {
+      appendChild: mockAppendChild,
+      removeChild: mockRemoveChild,
+    },
+  };
+} else {
+  Object.defineProperty(document, 'createElement', {
+    value: mockCreateElement,
+    writable: true,
+  });
+  Object.defineProperty(document.body, 'appendChild', {
+    value: mockAppendChild,
+    writable: true,
+  });
+  Object.defineProperty(document.body, 'removeChild', {
+    value: mockRemoveChild,
+    writable: true,
+  });
+}
 
 describe('FileService Unit Tests', () => {
   let fileService: FileService;

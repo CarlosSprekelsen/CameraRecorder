@@ -13,7 +13,7 @@
  * - REQ-WS-005: Request timeout handling
  * 
  * Test Categories: Unit
- * API Documentation Reference: mediamtx_camera_service_openrpc.json
+ * API Documentation Reference: ../mediamtx-camera-service-go/docs/api/json_rpc_methods.md
  */
 
 import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
@@ -30,7 +30,7 @@ const WebSocketConstants = {
 
 // Mock WebSocket
 const mockWebSocket = {
-  readyState: WebSocketConstants.OPEN,
+  readyState: WebSocketConstants.CONNECTING,
   send: jest.fn(),
   close: jest.fn(),
   onopen: null as (() => void) | null,
@@ -40,7 +40,16 @@ const mockWebSocket = {
 };
 
 // Mock global WebSocket
-(global as any).WebSocket = jest.fn(() => mockWebSocket);
+(global as any).WebSocket = jest.fn(() => {
+  // Simulate connection process
+  setTimeout(() => {
+    mockWebSocket.readyState = WebSocketConstants.OPEN;
+    if (mockWebSocket.onopen) {
+      mockWebSocket.onopen();
+    }
+  }, 0);
+  return mockWebSocket;
+});
 
 describe('WebSocketService Unit Tests', () => {
   let webSocketService: WebSocketService;
@@ -242,6 +251,18 @@ describe('WebSocketService Unit Tests', () => {
       jest.advanceTimersByTime(30000);
 
       await expect(requestPromise).rejects.toThrow('RPC request timeout: slow_method');
+    });
+  });
+
+  describe('Connection state management', () => {
+    test('should return correct connection state', () => {
+      expect(webSocketService.connectionState).toBe(WebSocketConstants.CLOSED);
+
+      webSocketService.connect();
+      expect(webSocketService.connectionState).toBe(WebSocketConstants.CONNECTING);
+
+      mockWebSocket.onopen?.();
+      expect(webSocketService.connectionState).toBe(WebSocketConstants.OPEN);
     });
   });
 });

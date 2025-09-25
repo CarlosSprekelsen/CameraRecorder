@@ -23,10 +23,9 @@ import { APIResponseValidator } from '../../utils/validators';
 
 // Mock the FileService
 jest.mock('../../../src/services/file/FileService');
-const MockedFileService = FileService as jest.MockedClass<typeof FileService>;
 
 describe('FileStore Unit Tests', () => {
-  let mockFileService: jest.Mocked<FileService>;
+  let mockFileService: any;
   let store: ReturnType<typeof useFileStore>;
 
   beforeEach(() => {
