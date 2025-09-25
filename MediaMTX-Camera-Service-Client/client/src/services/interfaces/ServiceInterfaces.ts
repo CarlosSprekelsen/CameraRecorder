@@ -13,7 +13,8 @@ import {
   StorageInfo,
   ServerInfo,
   SnapshotResult,
-  RecordingResult,
+  RecordingStartResult,
+  RecordingStopResult,
   SubscriptionResult,
   UnsubscriptionResult,
   SubscriptionStatsResult,
@@ -105,7 +106,7 @@ export interface ICommand {
    * @param {string} device - The camera device identifier
    * @param {number} [duration] - Optional recording duration in seconds
    * @param {string} [format] - Optional recording format (mp4, avi, etc.)
-   * @returns {Promise<RecordingResult>} Recording operation result with status
+   * @returns {Promise<RecordingStartResult>} Recording operation result with status
    * @throws {Error} When device is not found or recording fails to start
    *
    * @example
@@ -116,13 +117,13 @@ export interface ICommand {
    * }
    * ```
    */
-  startRecording(device: string, duration?: number, format?: string): Promise<RecordingResult>;
+  startRecording(device: string, duration?: number, format?: string): Promise<RecordingStartResult>;
 
   /**
    * Stops recording from the specified camera
    *
    * @param {string} device - The camera device identifier
-   * @returns {Promise<RecordingResult>} Recording stop result with final status
+   * @returns {Promise<RecordingStopResult>} Recording stop result with final status
    * @throws {Error} When device is not found or no active recording exists
    *
    * @example
@@ -133,7 +134,7 @@ export interface ICommand {
    * }
    * ```
    */
-  stopRecording(device: string): Promise<RecordingResult>;
+  stopRecording(device: string): Promise<RecordingStopResult>;
 }
 
 // I.FileCatalog: file listing and information

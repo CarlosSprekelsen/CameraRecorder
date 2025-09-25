@@ -967,4 +967,31 @@ export class MockDataFactory {
     };
   }
 
+  /**
+   * Centralized Error Response Mock - eliminates duplication in service tests
+   */
+  static getErrorResponse(code: number, message?: string): any {
+    const errorMessages: { [key: number]: string } = {
+      [-32600]: 'Invalid Request',
+      [-32601]: 'Method Not Found',
+      [-32602]: 'Invalid Params',
+      [-32603]: 'Internal Error',
+      [-32001]: 'Auth Failed',
+      [-32002]: 'Permission Denied',
+      [-32010]: 'Not Found',
+      [-32020]: 'Invalid State',
+      [-32030]: 'Unsupported',
+      [-32040]: 'Rate Limited',
+      [-32050]: 'Dependency Failed'
+    };
+    return {
+      jsonrpc: '2.0',
+      error: {
+        code,
+        message: message || errorMessages[code] || 'Unknown Error'
+      },
+      id: 1
+    };
+  }
+
 }

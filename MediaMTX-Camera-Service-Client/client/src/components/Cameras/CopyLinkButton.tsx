@@ -61,7 +61,7 @@ const CopyLinkButton: React.FC<CopyLinkButtonProps> = ({ device, streams }) => {
       setSnackbarMessage(`Failed to copy ${label}`);
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
-      logger.error(`Failed to copy ${label} for device ${device}`, error as Error);
+      logger.error(`Failed to copy ${label} for device ${device}`, error as Record<string, unknown>);
     }
     handleClose();
   };
@@ -74,7 +74,7 @@ const CopyLinkButton: React.FC<CopyLinkButtonProps> = ({ device, streams }) => {
       setSnackbarMessage(`Failed to open ${label}`);
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
-      logger.error(`Failed to open ${label} for device ${device}`, error as Error);
+      logger.error(`Failed to open ${label} for device ${device}`, error as Record<string, unknown>);
     }
     handleClose();
   };

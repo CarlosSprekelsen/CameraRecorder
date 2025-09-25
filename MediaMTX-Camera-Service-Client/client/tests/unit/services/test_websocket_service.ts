@@ -30,11 +30,11 @@ describe('WebSocketService Unit Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockEvents = {
-      onConnect: jest.fn(),
-      onDisconnect: jest.fn(),
-      onError: jest.fn(),
-      onNotification: jest.fn(),
-      onResponse: jest.fn(),
+      onConnect: MockDataFactory.createMockEventHandler(),
+      onDisconnect: MockDataFactory.createMockEventHandler(),
+      onError: MockDataFactory.createMockEventHandler(),
+      onNotification: MockDataFactory.createMockEventHandler(),
+      onResponse: MockDataFactory.createMockEventHandler(),
     };
 
     // Use centralized mock instead of creating new WebSocketService
@@ -50,7 +50,7 @@ describe('WebSocketService Unit Tests', () => {
       const connectPromise = webSocketService.connect();
 
       // Simulate successful connection
-      mockWebSocket.onopen?.();
+      (mockWebSocketService as any).onopen?.();
 
       await connectPromise;
 
@@ -62,7 +62,7 @@ describe('WebSocketService Unit Tests', () => {
       const connectPromise = webSocketService.connect();
 
       // Simulate connection error
-      mockWebSocket.onerror?.();
+      (mockWebSocketService as any).onerror?.();
 
       await expect(connectPromise).rejects.toThrow('WebSocket connection failed');
       expect(mockEvents.onError).toHaveBeenCalledWith(expect.any(Error));
@@ -70,11 +70,11 @@ describe('WebSocketService Unit Tests', () => {
 
     test('should disconnect properly', () => {
       webSocketService.connect();
-      mockWebSocket.onopen?.();
+      (mockWebSocketService as any).onopen?.();
 
       webSocketService.disconnect();
 
-      expect(mockWebSocket.close).toHaveBeenCalledWith(1000, 'Client disconnect');
+      expect((mockWebSocketService as any).close).toHaveBeenCalledWith(1000, 'Client disconnect');
       expect(webSocketService.isConnected).toBe(false);
     });
   });
@@ -82,7 +82,7 @@ describe('WebSocketService Unit Tests', () => {
   describe('REQ-WS-002: JSON-RPC message handling', () => {
     beforeEach(async () => {
       await webSocketService.connect();
-      mockWebSocket.onopen?.();
+      (mockWebSocketService as any).onopen?.();
     });
 
     test('should send RPC requests correctly', async () => {
@@ -104,7 +104,7 @@ describe('WebSocketService Unit Tests', () => {
 
       const result = await webSocketService.sendRPC(method, params);
 
-      expect(mockWebSocket.send).toHaveBeenCalledWith(
+      expect((mockWebSocketService as any).send).toHaveBeenCalledWith(
         JSON.stringify({
           jsonrpc: '2.0',
           method,
@@ -122,7 +122,7 @@ describe('WebSocketService Unit Tests', () => {
 
       webSocketService.sendNotification(method, params);
 
-      expect(mockWebSocket.send).toHaveBeenCalledWith(
+      expect((mockWebSocketService as any).send).toHaveBeenCalledWith(
         JSON.stringify({
           jsonrpc: '2.0',
           method,
@@ -143,7 +143,7 @@ describe('WebSocketService Unit Tests', () => {
   describe('REQ-WS-003: Error handling and reconnection', () => {
     test('should handle RPC errors correctly', async () => {
       await webSocketService.connect();
-      mockWebSocket.onopen?.();
+      (mockWebSocketService as any).onopen?.();
 
       const errorResponse = MockDataFactory.getErrorResponse(-32601, 'Method Not Found');
       
@@ -159,12 +159,12 @@ describe('WebSocketService Unit Tests', () => {
 
     test('should handle specific error codes', async () => {
       await webSocketService.connect();
-      mockWebSocket.onopen?.();
+      (mockWebSocketService as any).onopen?.();
 
       const authError = MockDataFactory.getErrorResponse(-32001, 'Auth Failed');
       
       setTimeout(() => {
-        mockWebSocket.onmessage?.({ data: JSON.stringify(authError) });
+        (mockWebSocketService as any).onmessage?.({ data: JSON.stringify(authError) });
       }, 10);
 
       await expect(webSocketService.sendRPC('authenticate')).rejects.toThrow(
@@ -184,12 +184,12 @@ describe('WebSocketService Unit Tests', () => {
 
     test('should start ping interval on connection', async () => {
       await webSocketService.connect();
-      mockWebSocket.onopen?.();
+      (mockWebSocketService as any).onopen?.();
 
       // Fast-forward time to trigger ping
       jest.advanceTimersByTime(30000);
 
-      expect(mockWebSocket.send).toHaveBeenCalledWith(
+      expect((mockWebSocketService as any).send).toHaveBeenCalledWith(
         JSON.stringify({
           jsonrpc: '2.0',
           method: 'ping',
@@ -210,7 +210,7 @@ describe('WebSocketService Unit Tests', () => {
 
     test('should timeout requests after 30 seconds', async () => {
       await webSocketService.connect();
-      mockWebSocket.onopen?.();
+      (mockWebSocketService as any).onopen?.();
 
       const requestPromise = webSocketService.sendRPC('slow_method');
 
@@ -223,13 +223,13 @@ describe('WebSocketService Unit Tests', () => {
 
   describe('Connection state management', () => {
     test('should return correct connection state', () => {
-      expect(webSocketService.connectionState).toBe(WebSocketConstants.CLOSED);
+      expect(webSocketService.connectionState).toBe(0); // WebSocket.CLOSED
 
       webSocketService.connect();
-      expect(webSocketService.connectionState).toBe(WebSocketConstants.CONNECTING);
+      expect(webSocketService.connectionState).toBe(0); // WebSocket.CONNECTING
 
-      mockWebSocket.onopen?.();
-      expect(webSocketService.connectionState).toBe(WebSocketConstants.OPEN);
+      (mockWebSocketService as any).onopen?.();
+      expect(webSocketService.connectionState).toBe(1); // WebSocket.OPEN
     });
   });
 });

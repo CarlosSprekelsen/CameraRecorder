@@ -1,6 +1,6 @@
 import { WebSocketService } from '../websocket/WebSocketService';
 import { LoggerService } from '../logger/LoggerService';
-import { SnapshotResult, RecordingResult } from '../../types/api';
+import { SnapshotResult, RecordingStartResult, RecordingStopResult } from '../../types/api';
 import { ICommand } from '../interfaces/ServiceInterfaces';
 
 /**
@@ -41,7 +41,7 @@ export class RecordingService implements ICommand {
       this.logger.info('take_snapshot request', { device, filename });
       return await this.wsService.sendRPC('take_snapshot', { device, filename });
     } catch (error) {
-      this.logger.error('take_snapshot failed', error as Error);
+      this.logger.error('take_snapshot failed', error as Record<string, unknown>);
       throw error;
     }
   }
@@ -50,22 +50,22 @@ export class RecordingService implements ICommand {
     device: string,
     duration?: number,
     format?: string,
-  ): Promise<RecordingResult> {
+  ): Promise<RecordingStartResult> {
     try {
       this.logger.info('start_recording request', { device, duration, format });
       return await this.wsService.sendRPC('start_recording', { device, duration, format });
     } catch (error) {
-      this.logger.error('start_recording failed', error as Error);
+      this.logger.error('start_recording failed', error as Record<string, unknown>);
       throw error;
     }
   }
 
-  async stopRecording(device: string): Promise<RecordingResult> {
+  async stopRecording(device: string): Promise<RecordingStopResult> {
     try {
       this.logger.info('stop_recording request', { device });
       return await this.wsService.sendRPC('stop_recording', { device });
     } catch (error) {
-      this.logger.error('stop_recording failed', error as Error);
+      this.logger.error('stop_recording failed', error as Record<string, unknown>);
       throw error;
     }
   }

@@ -31,7 +31,7 @@ describe('NotificationService Unit Tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockHandler = jest.fn();
+    mockHandler = MockDataFactory.createMockEventHandler();
     notificationService = new NotificationService(mockWebSocketService);
   });
 
@@ -48,8 +48,8 @@ describe('NotificationService Unit Tests', () => {
 
     test('Should handle multiple subscriptions to same method', () => {
       // Arrange
-      const handler1 = jest.fn();
-      const handler2 = jest.fn();
+      const handler1 = MockDataFactory.createMockEventHandler();
+      const handler2 = MockDataFactory.createMockEventHandler();
 
       // Act
       notificationService.subscribe('recording_status_update', handler1);
@@ -112,8 +112,8 @@ describe('NotificationService Unit Tests', () => {
 
     test('Should execute multiple handlers for same method', () => {
       // Arrange
-      const handler1 = jest.fn();
-      const handler2 = jest.fn();
+      const handler1 = MockDataFactory.createMockEventHandler();
+      const handler2 = MockDataFactory.createMockEventHandler();
       const notification: JsonRpcNotification = {
         jsonrpc: '2.0',
         method: 'recording_status_update',
@@ -222,8 +222,8 @@ describe('NotificationService Unit Tests', () => {
 
     test('Should remove method from subscribed methods when last handler is removed', () => {
       // Arrange
-      const handler1 = jest.fn();
-      const handler2 = jest.fn();
+      const handler1 = MockDataFactory.createMockEventHandler();
+      const handler2 = MockDataFactory.createMockEventHandler();
       notificationService.subscribe('camera_status_update', handler1);
       notificationService.subscribe('camera_status_update', handler2);
       expect(notificationService.getSubscribedMethods()).toContain('camera_status_update');
@@ -280,8 +280,8 @@ describe('NotificationService Unit Tests', () => {
   describe('REQ-NOTIF-006: Service state management', () => {
     test('Should return correct handler count for method', () => {
       // Arrange
-      const handler1 = jest.fn();
-      const handler2 = jest.fn();
+      const handler1 = MockDataFactory.createMockEventHandler();
+      const handler2 = MockDataFactory.createMockEventHandler();
       const handler3 = jest.fn();
 
       // Act
@@ -297,8 +297,8 @@ describe('NotificationService Unit Tests', () => {
 
     test('Should return all subscribed methods', () => {
       // Arrange
-      const handler1 = jest.fn();
-      const handler2 = jest.fn();
+      const handler1 = MockDataFactory.createMockEventHandler();
+      const handler2 = MockDataFactory.createMockEventHandler();
 
       // Act
       notificationService.subscribe('camera_status_update', handler1);

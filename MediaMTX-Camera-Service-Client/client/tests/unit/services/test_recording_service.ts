@@ -17,6 +17,7 @@
 import { RecordingService } from '../../../src/services/recording/RecordingService';
 import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
 import { LoggerService } from '../../../src/services/logger/LoggerService';
+import { MockDataFactory } from '../../utils/mocks';
 
 // Mock the dependencies
 jest.mock('../../../src/services/websocket/WebSocketService');
@@ -28,15 +29,9 @@ describe('RecordingService Unit Tests', () => {
   let mockLoggerService: jest.Mocked<LoggerService>;
 
   beforeEach(() => {
-    // Create mock instances
-    mockWebSocketService = {
-      sendRPC: jest.fn()
-    } as any;
-
-    mockLoggerService = {
-      info: jest.fn(),
-      error: jest.fn()
-    } as any;
+    // Use centralized mocks - eliminates duplication
+    mockWebSocketService = MockDataFactory.createMockWebSocketService();
+    mockLoggerService = MockDataFactory.createMockLoggerService();
 
     // Create service instance
     recordingService = new RecordingService(mockWebSocketService, mockLoggerService);

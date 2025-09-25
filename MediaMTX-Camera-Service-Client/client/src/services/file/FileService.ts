@@ -61,7 +61,7 @@ export class FileService implements IFileCatalog, IFileActions {
       this.logger.info(`Found ${response.files?.length || 0} recordings`);
       return response;
     } catch (error) {
-      this.logger.error(`Failed to list recordings`, error as Error);
+      this.logger.error(`Failed to list recordings`, error as Record<string, unknown>);
       throw error;
     }
   }
@@ -88,7 +88,7 @@ export class FileService implements IFileCatalog, IFileActions {
       this.logger.info(`Found ${response.files?.length || 0} snapshots`);
       return response;
     } catch (error) {
-      this.logger.error(`Failed to list snapshots`, error as Error);
+      this.logger.error(`Failed to list snapshots`, error as Record<string, unknown>);
       throw error;
     }
   }
@@ -112,7 +112,7 @@ export class FileService implements IFileCatalog, IFileActions {
       this.logger.info(`Recording info retrieved for ${filename}`);
       return response;
     } catch (error) {
-      this.logger.error(`Failed to get recording info for ${filename}`, error as Error);
+      this.logger.error(`Failed to get recording info for ${filename}`, error as Record<string, unknown>);
       throw error;
     }
   }
@@ -135,7 +135,7 @@ export class FileService implements IFileCatalog, IFileActions {
       this.logger.info(`Snapshot info retrieved for ${filename}`);
       return response;
     } catch (error) {
-      this.logger.error(`Failed to get snapshot info for ${filename}`, error as Error);
+      this.logger.error(`Failed to get snapshot info for ${filename}`, error as Record<string, unknown>);
       throw error;
     }
   }
@@ -151,7 +151,7 @@ export class FileService implements IFileCatalog, IFileActions {
       this.logger.info(`Recording deleted: ${filename}`);
       return response;
     } catch (error) {
-      this.logger.error(`Failed to delete recording ${filename}`, error as Error);
+      this.logger.error(`Failed to delete recording ${filename}`, error as Record<string, unknown>);
       throw error;
     }
   }
@@ -167,7 +167,7 @@ export class FileService implements IFileCatalog, IFileActions {
       this.logger.info(`Snapshot deleted: ${filename}`);
       return response;
     } catch (error) {
-      this.logger.error(`Failed to delete snapshot ${filename}`, error as Error);
+      this.logger.error(`Failed to delete snapshot ${filename}`, error as Record<string, unknown>);
       throw error;
     }
   }
@@ -189,7 +189,7 @@ export class FileService implements IFileCatalog, IFileActions {
       document.body.removeChild(link);
       this.logger.info(`Download initiated for: ${filename}`);
     } catch (error) {
-      this.logger.error(`Failed to download file ${filename}`, error as Error);
+      this.logger.error(`Failed to download file ${filename}`, error as Record<string, unknown>);
       throw error;
     }
   }

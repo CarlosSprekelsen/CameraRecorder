@@ -17,15 +17,10 @@
  */
 
 import { LoggerService, LogLevel, LogEntry } from '../../../src/services/logger/LoggerService';
+import { MockDataFactory } from '../../utils/mocks';
 
-// Mock console methods
-const mockConsole = {
-  debug: jest.fn(),
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-  log: jest.fn(),
-};
+// Mock console methods - use centralized mocks
+const mockConsole = MockDataFactory.createMockConsole();
 
 Object.defineProperty(console, 'debug', { value: mockConsole.debug });
 Object.defineProperty(console, 'info', { value: mockConsole.info });

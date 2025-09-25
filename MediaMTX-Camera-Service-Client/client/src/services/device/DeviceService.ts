@@ -47,7 +47,7 @@ export class DeviceService implements IDiscovery {
       this.logger.warn('No cameras found in response');
       return [];
     } catch (error) {
-      this.logger.error('Failed to get camera list', error as Error);
+      this.logger.error('Failed to get camera list', error as Record<string, unknown>);
       throw error;
     }
   }
@@ -70,7 +70,7 @@ export class DeviceService implements IDiscovery {
       this.logger.warn(`No stream URL found for device: ${device}`);
       return null;
     } catch (error) {
-      this.logger.error(`Failed to get stream URL for device: ${device}`, error as Error);
+      this.logger.error(`Failed to get stream URL for device: ${device}`, error as Record<string, unknown>);
       throw error;
     }
   }
@@ -93,7 +93,7 @@ export class DeviceService implements IDiscovery {
       this.logger.warn('No streams found in response');
       return [];
     } catch (error) {
-      this.logger.error('Failed to get streams', error as Error);
+      this.logger.error('Failed to get streams', error as Record<string, unknown>);
       throw error;
     }
   }
@@ -112,7 +112,7 @@ export class DeviceService implements IDiscovery {
 
       this.logger.info('Successfully subscribed to camera events');
     } catch (error) {
-      this.logger.error('Failed to subscribe to camera events', error as Error);
+      this.logger.error('Failed to subscribe to camera events', error as Record<string, unknown>);
       throw error;
     }
   }
@@ -131,7 +131,7 @@ export class DeviceService implements IDiscovery {
 
       this.logger.info('Successfully unsubscribed from camera events');
     } catch (error) {
-      this.logger.error('Failed to unsubscribe from camera events', error as Error);
+      this.logger.error('Failed to unsubscribe from camera events', error as Record<string, unknown>);
       throw error;
     }
   }
@@ -149,7 +149,7 @@ export class DeviceService implements IDiscovery {
       this.logger.info(`Retrieved capabilities for ${device}`);
       return response;
     } catch (error) {
-      this.logger.error(`Failed to get capabilities for device: ${device}`, error as Error);
+      this.logger.error(`Failed to get capabilities for device: ${device}`, error as Record<string, unknown>);
       throw error;
     }
   }
@@ -167,7 +167,7 @@ export class DeviceService implements IDiscovery {
       this.logger.info(`Retrieved stream status for ${device}`);
       return response;
     } catch (error) {
-      this.logger.error(`Failed to get stream status for device: ${device}`, error as Error);
+      this.logger.error(`Failed to get stream status for device: ${device}`, error as Record<string, unknown>);
       throw error;
     }
   }

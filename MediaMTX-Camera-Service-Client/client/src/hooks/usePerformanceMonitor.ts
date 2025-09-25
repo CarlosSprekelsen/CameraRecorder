@@ -72,7 +72,7 @@ export const usePerformanceMonitor = (): void => {
           });
           lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });
         } catch (error) {
-          logger.warn('Failed to observe LCP', error as Error);
+          logger.warn('Failed to observe LCP', error as Record<string, unknown>);
         }
 
         // First Input Delay
@@ -91,7 +91,7 @@ export const usePerformanceMonitor = (): void => {
           });
           fidObserver.observe({ entryTypes: ['first-input'] });
         } catch (error) {
-          logger.warn('Failed to observe FID', error as Error);
+          logger.warn('Failed to observe FID', error as Record<string, unknown>);
         }
 
         // Cumulative Layout Shift
@@ -108,7 +108,7 @@ export const usePerformanceMonitor = (): void => {
           });
           clsObserver.observe({ entryTypes: ['layout-shift'] });
         } catch (error) {
-          logger.warn('Failed to observe CLS', error as Error);
+          logger.warn('Failed to observe CLS', error as Record<string, unknown>);
         }
       }
     };

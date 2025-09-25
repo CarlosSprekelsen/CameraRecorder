@@ -256,7 +256,7 @@ describe('FileService Unit Tests', () => {
         href: '',
         download: '',
         target: '',
-        click: jest.fn()
+        click: MockDataFactory.createMockEventHandler()
       };
       
       mockDocument.createElement.mockReturnValue(mockLink);
@@ -297,7 +297,7 @@ describe('FileService Unit Tests', () => {
         href: '',
         download: '',
         target: '',
-        click: jest.fn()
+        click: MockDataFactory.createMockEventHandler()
       };
       
       mockDocument.createElement.mockReturnValue(mockLink);

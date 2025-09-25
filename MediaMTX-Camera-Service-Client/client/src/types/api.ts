@@ -196,6 +196,11 @@ export interface StreamsListResult {
   bytes_sent: number;
 }
 
+// Authentication Parameters
+export interface AuthenticateParams {
+  auth_token: string;
+}
+
 // Authentication Result from official spec
 export interface AuthenticateResult {
   authenticated: boolean;

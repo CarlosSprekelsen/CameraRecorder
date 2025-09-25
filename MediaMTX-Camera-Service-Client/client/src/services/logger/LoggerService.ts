@@ -11,6 +11,11 @@
  */
 
 /**
+ * Utility type for logging Error objects
+ */
+type LoggableError = Error & Record<string, unknown>;
+
+/**
  * Log Level Enumeration
  *
  * Defines the available logging levels in order of severity.

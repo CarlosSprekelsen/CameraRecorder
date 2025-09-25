@@ -103,7 +103,7 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
       await downloadFile(file.download_url, file.filename);
       logger.info(`Download initiated for: ${file.filename}`);
     } catch (error) {
-      logger.error(`Download failed for: ${file.filename}`, error as Error);
+      logger.error(`Download failed for: ${file.filename}`, error as Record<string, unknown>);
     }
   };
 
@@ -133,7 +133,7 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
         }
       }
     } catch (error) {
-      logger.error(`Delete failed for: ${filename}`, error as Error);
+      logger.error(`Delete failed for: ${filename}`, error as Record<string, unknown>);
     }
     setDeleteDialog({ open: false, filename: '', fileType: 'recordings' });
   };
