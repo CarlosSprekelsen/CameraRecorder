@@ -1,3 +1,9 @@
+/**
+ * @fileoverview LoginPage component for user authentication
+ * @author MediaMTX Development Team
+ * @version 1.0.0
+ */
+
 import React, { useState, memo } from 'react';
 import PropTypes from 'prop-types';
 import {

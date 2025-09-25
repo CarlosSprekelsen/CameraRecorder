@@ -1,6 +1,23 @@
 import { AuthenticateParams, AuthenticateResult } from '../../types/api';
 import { WebSocketService } from '../websocket/WebSocketService';
 
+/**
+ * Authentication Service
+ * 
+ * Handles user authentication and session management for the MediaMTX client.
+ * Provides JWT token validation, role-based access control, and session persistence.
+ * 
+ * @class AuthService
+ * 
+ * @example
+ * ```typescript
+ * const authService = new AuthService(wsService);
+ * const result = await authService.authenticate('jwt-token');
+ * if (result.authenticated) {
+ *   console.log(`Logged in as ${result.role}`);
+ * }
+ * ```
+ */
 export class AuthService {
   private wsService: WebSocketService;
 
