@@ -1,3 +1,9 @@
+/**
+ * @fileoverview AboutPage component for server information display
+ * @author MediaMTX Development Team
+ * @version 1.0.0
+ */
+
 import React from 'react';
 import {
   Box,
@@ -17,6 +23,29 @@ import {
 } from '@mui/icons-material';
 import { useServerStore } from '../../stores/server/serverStore';
 
+/**
+ * AboutPage - Server information and system status display
+ * 
+ * Displays comprehensive server information including system status, storage details,
+ * and server metadata. Provides real-time health monitoring and system metrics.
+ * 
+ * @component
+ * @returns {JSX.Element} The about page component
+ * 
+ * @features
+ * - Server information display (version, build, uptime)
+ * - System status monitoring (health, performance)
+ * - Storage information (usage, available space)
+ * - Real-time status updates
+ * - Error handling and loading states
+ * 
+ * @example
+ * ```tsx
+ * <AboutPage />
+ * ```
+ * 
+ * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture
+ */
 const AboutPage: React.FC = () => {
   const { info, status, storage, loading, error } = useServerStore();
 
