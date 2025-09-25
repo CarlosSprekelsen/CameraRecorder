@@ -743,14 +743,32 @@ func (m *HybridCameraMonitor) TakeDirectSnapshot(ctx context.Context, devicePath
 	// Add the selected pixel format to the arguments
 	args += fmt.Sprintf(" --set-fmt-video pixelformat=%s", optimalPixelFormat)
 
+	// Log the complete command being executed
+	fullCommand := fmt.Sprintf("v4l2-ctl --device=%s %s", devicePath, args)
+	m.logger.WithFields(logging.Fields{
+		"device_path":  devicePath,
+		"output_path":  outputPath,
+		"format":       format,
+		"width":        width,
+		"height":       height,
+		"pixel_format": optimalPixelFormat,
+		"command_args": args,
+		"full_command": fullCommand,
+	}).Info("Executing V4L2 direct snapshot command")
+
+	// Also log the command directly for debugging
+	fmt.Printf("DEBUG: V4L2 Command: %s\n", fullCommand)
+
 	// Execute V4L2 direct capture with fallback format selection
-	_, err = m.commandExecutor.ExecuteCommand(ctx, devicePath, args)
+	output, err := m.commandExecutor.ExecuteCommand(ctx, devicePath, args)
 	if err != nil {
-		// Try fallback formats if the optimal format fails
+		// Log the command output and error details
 		m.logger.WithFields(logging.Fields{
 			"device_path":    devicePath,
 			"optimal_format": optimalPixelFormat,
 			"error":          err.Error(),
+			"command_output": output,
+			"full_command":   fmt.Sprintf("v4l2-ctl --device=%s %s", devicePath, args),
 		}).Warn("Optimal pixel format failed, trying fallback formats")
 
 		// Try fallback formats
@@ -765,19 +783,33 @@ func (m *HybridCameraMonitor) TakeDirectSnapshot(ctx context.Context, devicePath
 			fallbackArgs += fmt.Sprintf(" --set-fmt-video pixelformat=%s", fallbackFormat)
 
 			m.logger.WithFields(logging.Fields{
-				"device_path":     devicePath,
-				"fallback_format": fallbackFormat,
+				"device_path":      devicePath,
+				"fallback_format":  fallbackFormat,
+				"fallback_command": fmt.Sprintf("v4l2-ctl --device=%s %s", devicePath, fallbackArgs),
 			}).Info("Trying fallback pixel format")
 
-			_, fallbackErr := m.commandExecutor.ExecuteCommand(ctx, devicePath, fallbackArgs)
+			fallbackOutput, fallbackErr := m.commandExecutor.ExecuteCommand(ctx, devicePath, fallbackArgs)
 			if fallbackErr == nil {
 				// Success with fallback format
+				m.logger.WithFields(logging.Fields{
+					"device_path":     devicePath,
+					"fallback_format": fallbackFormat,
+					"fallback_output": fallbackOutput,
+				}).Info("Fallback format succeeded")
 				m.logger.WithFields(logging.Fields{
 					"device_path":       devicePath,
 					"successful_format": fallbackFormat,
 				}).Info("V4L2 direct snapshot succeeded with fallback format")
 				success = true
 				break
+			} else {
+				m.logger.WithFields(logging.Fields{
+					"device_path":      devicePath,
+					"fallback_format":  fallbackFormat,
+					"fallback_error":   fallbackErr.Error(),
+					"fallback_output":  fallbackOutput,
+					"fallback_command": fmt.Sprintf("v4l2-ctl --device=%s %s", devicePath, fallbackArgs),
+				}).Warn("Fallback format also failed")
 			}
 		}
 
@@ -834,8 +866,8 @@ func (m *HybridCameraMonitor) TakeDirectSnapshot(ctx context.Context, devicePath
 
 // buildV4L2SnapshotArgs builds V4L2 command arguments for direct snapshot capture
 func (m *HybridCameraMonitor) buildV4L2SnapshotArgs(devicePath, outputPath, format string, width, height int) string {
+	// FIXED: Remove devicePath from args (RealV4L2CommandExecutor adds --device automatically)
 	args := []string{
-		devicePath,                // Device path as first argument
 		"--stream-mmap",           // Use memory-mapped streaming
 		"--stream-to", outputPath, // Output file path
 		"--stream-count", "1", // Capture only 1 frame
@@ -846,10 +878,8 @@ func (m *HybridCameraMonitor) buildV4L2SnapshotArgs(devicePath, outputPath, form
 		args = append(args, "--set-fmt-video", fmt.Sprintf("width=%d,height=%d", width, height))
 	}
 
-	// Add format if specified
-	if format != "" {
-		args = append(args, "--set-fmt-video", fmt.Sprintf("pixelformat=%s", format))
-	}
+	// FIXED: Don't add pixel format here - it's added in TakeDirectSnapshot with optimal format
+	// This prevents conflicting --set-fmt-video parameters
 
 	return strings.Join(args, " ")
 }
@@ -878,16 +908,16 @@ func (m *HybridCameraMonitor) selectOptimalPixelFormat(devicePath, outputFormat 
 	switch strings.ToLower(outputFormat) {
 	case "jpg", "jpeg":
 		// For JPEG output, prefer compressed formats that match
-		preferredFormats = []string{"MJPG", "MJPEG", "JPEG"}
+		preferredFormats = []string{"MJPG", "MJPEG", "JPEG", "H264", "YUYV", "RGB24"}
 	case "png":
 		// For PNG output, prefer uncompressed formats that can be converted
-		preferredFormats = []string{"YUYV", "RGB24", "BGR24", "UYVY", "YUV420"}
+		preferredFormats = []string{"YUYV", "RGB24", "BGR24", "UYVY", "YUV420", "MJPG", "MJPEG"}
 	case "":
-		// Default: prefer compressed formats for efficiency
-		preferredFormats = []string{"MJPG", "MJPEG", "YUYV", "RGB24"}
+		// Default: prefer compressed formats for efficiency and resolution
+		preferredFormats = []string{"MJPG", "MJPEG", "H264", "YUYV", "RGB24"}
 	default:
 		// Unknown format, use default preferences
-		preferredFormats = []string{"MJPG", "MJPEG", "YUYV", "RGB24"}
+		preferredFormats = []string{"MJPG", "MJPEG", "H264", "YUYV", "RGB24"}
 	}
 
 	// Find the best supported format
@@ -934,14 +964,14 @@ func (m *HybridCameraMonitor) SelectOptimalPixelFormat(devicePath, outputFormat 
 func (m *HybridCameraMonitor) getFallbackPixelFormat(outputFormat string) string {
 	switch strings.ToLower(outputFormat) {
 	case "jpg", "jpeg":
-		// Try MJPG first, fall back to YUYV if needed
+		// Try MJPG first for best quality/performance balance
 		return "MJPG"
 	case "png":
 		// For PNG, use uncompressed format
 		return "YUYV"
 	default:
-		// Default fallback
-		return "YUYV"
+		// Default fallback - prefer MJPG for modern cameras, YUYV for compatibility
+		return "MJPG"
 	}
 }
 
@@ -971,14 +1001,14 @@ func (m *HybridCameraMonitor) getFallbackFormats(devicePath, outputFormat string
 func (m *HybridCameraMonitor) getGenericFallbackFormats(outputFormat string) []string {
 	switch strings.ToLower(outputFormat) {
 	case "jpg", "jpeg":
-		// Try common JPEG-compatible formats
-		return []string{"MJPG", "MJPEG", "YUYV", "RGB24", "BGR24"}
+		// Try common JPEG-compatible formats in priority order
+		return []string{"MJPG", "MJPEG", "H264", "YUYV", "RGB24", "BGR24"}
 	case "png":
 		// Try common uncompressed formats for PNG
 		return []string{"YUYV", "RGB24", "BGR24", "UYVY", "YUV420"}
 	default:
-		// Generic fallbacks
-		return []string{"YUYV", "MJPG", "MJPEG", "RGB24", "BGR24"}
+		// Generic fallbacks in priority order
+		return []string{"MJPG", "MJPEG", "H264", "YUYV", "RGB24", "BGR24"}
 	}
 }
 
