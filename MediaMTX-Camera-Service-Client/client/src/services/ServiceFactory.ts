@@ -5,6 +5,7 @@ import { WebSocketService } from './websocket/WebSocketService';
 import { AuthService } from './auth/AuthService';
 import { ServerService } from './server/ServerService';
 import { NotificationService } from './notifications/NotificationService';
+import { DeviceService } from './device/DeviceService';
 import { logger } from './logger/LoggerService';
 
 export class ServiceFactory {
@@ -13,6 +14,7 @@ export class ServiceFactory {
   private authService: AuthService | null = null;
   private serverService: ServerService | null = null;
   private notificationService: NotificationService | null = null;
+  private deviceService: DeviceService | null = null;
 
   private constructor() {}
 
@@ -55,6 +57,14 @@ export class ServiceFactory {
     return this.notificationService;
   }
 
+  createDeviceService(wsService: WebSocketService): DeviceService {
+    if (!this.deviceService) {
+      this.deviceService = new DeviceService(wsService, logger);
+      logger.info('Device service created');
+    }
+    return this.deviceService;
+  }
+
   getWebSocketService(): WebSocketService | null {
     return this.wsService;
   }
@@ -71,12 +81,17 @@ export class ServiceFactory {
     return this.notificationService;
   }
 
+  getDeviceService(): DeviceService | null {
+    return this.deviceService;
+  }
+
   // Cleanup method for testing
   reset(): void {
     this.wsService = null;
     this.authService = null;
     this.serverService = null;
     this.notificationService = null;
+    this.deviceService = null;
     logger.info('Service factory reset');
   }
 }

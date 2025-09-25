@@ -1,0 +1,126 @@
+import { WebSocketService } from '../websocket/WebSocketService';
+import { LoggerService } from '../logger/LoggerService';
+import { Camera, StreamInfo } from '../../stores/device/deviceStore';
+import { IDiscovery } from '../interfaces/ServiceInterfaces';
+
+/**
+ * Device Service - Implements I.Discovery interface from architecture section 5.3.1
+ * 
+ * Methods:
+ * - get_camera_list → cameras with stream fields
+ * - get_streams → MediaMTX active streams  
+ * - get_stream_url → URL for specific device
+ */
+export class DeviceService implements IDiscovery {
+  constructor(
+    private wsService: WebSocketService,
+    private logger: LoggerService
+  ) {}
+
+  /**
+   * Get list of all discovered cameras with their current status
+   * Implements get_camera_list RPC method
+   */
+  async getCameraList(): Promise<Camera[]> {
+    try {
+      this.logger.info('Getting camera list');
+      
+      const response = await this.wsService.sendRPC('get_camera_list');
+      
+      if (response.cameras) {
+        this.logger.info(`Retrieved ${response.cameras.length} cameras`);
+        return response.cameras;
+      }
+      
+      this.logger.warn('No cameras found in response');
+      return [];
+    } catch (error) {
+      this.logger.error('Failed to get camera list', error as Error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the stream URL for a specific camera device
+   * Implements get_stream_url RPC method
+   */
+  async getStreamUrl(device: string): Promise<string | null> {
+    try {
+      this.logger.info(`Getting stream URL for device: ${device}`);
+      
+      const response = await this.wsService.sendRPC('get_stream_url', { device });
+      
+      if (response.stream_url) {
+        this.logger.info(`Retrieved stream URL for ${device}`);
+        return response.stream_url;
+      }
+      
+      this.logger.warn(`No stream URL found for device: ${device}`);
+      return null;
+    } catch (error) {
+      this.logger.error(`Failed to get stream URL for device: ${device}`, error as Error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get list of all active streams from MediaMTX
+   * Implements get_streams RPC method
+   */
+  async getStreams(): Promise<StreamInfo[]> {
+    try {
+      this.logger.info('Getting active streams');
+      
+      const response = await this.wsService.sendRPC('get_streams');
+      
+      if (Array.isArray(response)) {
+        this.logger.info(`Retrieved ${response.length} active streams`);
+        return response;
+      }
+      
+      this.logger.warn('No streams found in response');
+      return [];
+    } catch (error) {
+      this.logger.error('Failed to get streams', error as Error);
+      throw error;
+    }
+  }
+
+  /**
+   * Subscribe to camera status update events
+   * Implements subscribe_events RPC method
+   */
+  async subscribeToCameraEvents(): Promise<void> {
+    try {
+      this.logger.info('Subscribing to camera status updates');
+      
+      await this.wsService.sendRPC('subscribe_events', {
+        topics: ['camera_status_update']
+      });
+      
+      this.logger.info('Successfully subscribed to camera events');
+    } catch (error) {
+      this.logger.error('Failed to subscribe to camera events', error as Error);
+      throw error;
+    }
+  }
+
+  /**
+   * Unsubscribe from camera status update events
+   * Implements unsubscribe_events RPC method
+   */
+  async unsubscribeFromCameraEvents(): Promise<void> {
+    try {
+      this.logger.info('Unsubscribing from camera status updates');
+      
+      await this.wsService.sendRPC('unsubscribe_events', {
+        topics: ['camera_status_update']
+      });
+      
+      this.logger.info('Successfully unsubscribed from camera events');
+    } catch (error) {
+      this.logger.error('Failed to unsubscribe from camera events', error as Error);
+      throw error;
+    }
+  }
+}

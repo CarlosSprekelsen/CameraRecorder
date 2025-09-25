@@ -2,12 +2,13 @@
 // Implements the interfaces defined in architecture section 5.3
 
 import { JsonRpcNotification } from '../../types/api';
+import { Camera, StreamInfo } from '../../stores/device/deviceStore';
 
 // I.Discovery: list devices and stream links
 export interface IDiscovery {
-  getCameraList(): Promise<any>;
-  getStreams(): Promise<any>;
-  getStreamUrl(device: string): Promise<any>;
+  getCameraList(): Promise<Camera[]>;
+  getStreams(): Promise<StreamInfo[]>;
+  getStreamUrl(device: string): Promise<string | null>;
 }
 
 // I.Command: snapshot and recording operations

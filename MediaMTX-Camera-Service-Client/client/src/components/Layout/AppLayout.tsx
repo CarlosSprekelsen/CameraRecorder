@@ -8,12 +8,16 @@ import {
   Chip,
   Menu,
   MenuItem,
+  Button,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   AccountCircle,
   Logout,
+  Videocam as CameraIcon,
+  Info as InfoIcon,
 } from '@mui/icons-material';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { AuthService } from '../../services/auth/AuthService';
 import { useConnectionStore } from '../../stores/connection/connectionStore';
 import { useAuthStore } from '../../stores/auth/authStore';
@@ -29,6 +33,8 @@ const AppLayout: React.FC<AppLayoutProps> = ({
   authService
 }) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
+  const navigate = useNavigate();
+  const location = useLocation();
   
   const { status: connectionStatus } = useConnectionStore();
   const { role, logout } = useAuthStore();
@@ -94,6 +100,31 @@ const AppLayout: React.FC<AppLayoutProps> = ({
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             MediaMTX Camera Service
           </Typography>
+
+          {/* Navigation */}
+          <Box sx={{ mr: 2 }}>
+            <Button
+              color="inherit"
+              startIcon={<CameraIcon />}
+              onClick={() => navigate('/cameras')}
+              sx={{ 
+                backgroundColor: location.pathname === '/cameras' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                mr: 1 
+              }}
+            >
+              Cameras
+            </Button>
+            <Button
+              color="inherit"
+              startIcon={<InfoIcon />}
+              onClick={() => navigate('/about')}
+              sx={{ 
+                backgroundColor: location.pathname === '/about' ? 'rgba(255,255,255,0.1)' : 'transparent' 
+              }}
+            >
+              About
+            </Button>
+          </Box>
 
           {/* Connection Status */}
           <Chip

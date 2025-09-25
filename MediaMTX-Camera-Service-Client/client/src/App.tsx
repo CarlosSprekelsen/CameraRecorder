@@ -13,6 +13,7 @@ import { logger } from './services/logger/LoggerService';
 import AppLayout from './components/Layout/AppLayout';
 import LoginPage from './pages/Login/LoginPage';
 import AboutPage from './pages/About/AboutPage';
+import CameraPage from './pages/Cameras/CameraPage';
 import LoadingSpinner from './components/Layout/LoadingSpinner';
 
 // Create theme
@@ -171,9 +172,10 @@ function App() {
               isAuthenticated ? (
                 <AppLayout authService={authService}>
                   <Routes>
-                    <Route path="/" element={<Navigate to="/about" replace />} />
+                    <Route path="/" element={<Navigate to="/cameras" replace />} />
+                    <Route path="/cameras" element={<CameraPage />} />
                     <Route path="/about" element={<AboutPage />} />
-                    <Route path="*" element={<Navigate to="/about" replace />} />
+                    <Route path="*" element={<Navigate to="/cameras" replace />} />
                   </Routes>
                 </AppLayout>
               ) : (
