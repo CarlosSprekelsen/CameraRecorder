@@ -58,7 +58,7 @@ describe('AuthService Unit Tests', () => {
   describe('REQ-AUTH-001: Authentication with JWT tokens', () => {
     test('should authenticate successfully with valid token', async () => {
       const token = 'valid-jwt-token';
-      const expectedResult = APIMocks.getAuthResult('admin');
+      const expectedResult = APIMocks.getAuthenticateResult();
 
       mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
 
@@ -82,7 +82,7 @@ describe('AuthService Unit Tests', () => {
 
     test('should handle authentication failure', async () => {
       const token = 'invalid-token';
-      const authResult = { ...APIMocks.getAuthResult('admin'), authenticated: false };
+      const authResult = { ...APIMocks.getAuthenticateResult(), authenticated: false };
 
       mockWebSocketService.sendRPC.mockResolvedValue(authResult);
 
@@ -102,7 +102,7 @@ describe('AuthService Unit Tests', () => {
 
     test('should validate authentication result', async () => {
       const token = 'valid-jwt-token';
-      const expectedResult = APIMocks.getAuthResult('operator');
+      const expectedResult = APIMocks.getAuthenticateResult();
 
       mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
 
@@ -115,7 +115,7 @@ describe('AuthService Unit Tests', () => {
   describe('REQ-AUTH-002: Session management and storage', () => {
     test('should store session data on successful authentication', async () => {
       const token = 'valid-jwt-token';
-      const authResult = APIMocks.getAuthResult('admin');
+      const authResult = APIMocks.getAuthenticateResult();
 
       mockWebSocketService.sendRPC.mockResolvedValue(authResult);
 
@@ -354,7 +354,7 @@ describe('AuthService Unit Tests', () => {
   describe('Token refresh', () => {
     test('should refresh token successfully', async () => {
       const token = 'valid-token';
-      const authResult = APIMocks.getAuthResult('admin');
+      const authResult = APIMocks.getAuthenticateResult();
 
       mockSessionStorage.getItem.mockReturnValue(token);
       mockWebSocketService.sendRPC.mockResolvedValue(authResult);
@@ -397,8 +397,8 @@ describe('AuthService Unit Tests', () => {
     });
 
     test('should validate role permissions', () => {
-      const adminResult = APIMocks.getAuthResult('admin');
-      const viewerResult = APIMocks.getAuthResult('viewer');
+      const adminResult = APIMocks.getAuthenticateResult();
+      const viewerResult = APIMocks.getAuthenticateResult();
 
       expect(adminResult.permissions).toContain('admin');
       expect(viewerResult.permissions).not.toContain('admin');

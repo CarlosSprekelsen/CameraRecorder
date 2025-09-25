@@ -2,8 +2,8 @@
  * usePermissions hook unit tests
  * 
  * Ground Truth References:
- * - Client Architecture: ../../../docs/architecture/client-architechture.md
- * - API Documentation: ../../../mediamtx-camera-service-go/docs/api/mediamtx_camera_service_openrpc.json
+ * - Client Architecture: ../docs/architecture/client-architecture.md
+ * - Server API: ../mediamtx-camera-service/docs/api/json-rpc-methods.md
  * 
  * Requirements Coverage:
  * - REQ-HOOK-001: Role-based access control functionality
@@ -12,7 +12,7 @@
  * - REQ-HOOK-004: UI permission controls
  * 
  * Test Categories: Unit
- * API Documentation Reference: mediamtx_camera_service_openrpc.json
+ * API Documentation Reference: docs/api/json-rpc-methods.md
  */
 
 import { renderHook } from '@testing-library/react';
@@ -21,6 +21,15 @@ import { useAuthStore } from '../../../src/stores/auth/authStore';
 
 // Mock the auth store
 jest.mock('../../../src/stores/auth/authStore');
+
+// Mock logger service - following centralized pattern
+jest.mock('../../../src/services/logger/LoggerService', () => ({
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn()
+  }
+}));
 
 describe('usePermissions Hook Unit Tests', () => {
   const mockUseAuthStore = useAuthStore as jest.MockedFunction<typeof useAuthStore>;

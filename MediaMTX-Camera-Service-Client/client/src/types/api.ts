@@ -1,18 +1,211 @@
 // Generated types based on OpenRPC specification
-// MediaMTX Camera Service API Types
+// MediaMTX Camera Service API Types - OFFICIAL RPC DOCUMENTATION COMPLIANCE
 
-export interface AuthenticateParams {
-  auth_token: string;
+// ============================================================================
+// CORE TYPES FROM OFFICIAL RPC DOCUMENTATION
+// ============================================================================
+
+// Device ID pattern from official spec
+export type DeviceId = string; // Pattern: ^camera[0-9]+$
+
+// ISO Timestamp format
+export type IsoTimestamp = string; // ISO 8601 format
+
+// Pagination from official spec
+export interface Pagination {
+  limit?: number; // default: 50, max: 1000
+  offset?: number; // default: 0
 }
 
+// Streams object from official spec
+export interface Streams {
+  rtsp: string; // e.g., "rtsp://<host>:8554/camera0"
+  hls: string; // e.g., "https://<host>/hls/camera0.m3u8"
+}
+
+// Camera object from official spec
+export interface Camera {
+  device: DeviceId;
+  status: 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
+  name?: string;
+  resolution?: string;
+  fps?: number;
+  streams?: Streams;
+}
+
+// Camera List Result from official spec
+export interface CameraListResult {
+  cameras: Camera[];
+  total: number;
+  connected: number;
+}
+
+// Camera Status Result from official spec
+export interface CameraStatusResult {
+  device: DeviceId;
+  status: 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
+  name?: string;
+  resolution?: string;
+  fps?: number;
+  streams?: Streams;
+  metrics?: {
+    bytes_sent: number;
+    readers: number;
+    uptime: number;
+  };
+  capabilities?: {
+    formats: string[];
+    resolutions: string[];
+  };
+}
+
+// Camera Capabilities Result from official spec
+export interface CameraCapabilitiesResult {
+  device: DeviceId;
+  formats: string[];
+  resolutions: string[];
+  fps_options: number[];
+  validation_status: 'NONE' | 'DISCONNECTED' | 'CONFIRMED';
+}
+
+// Recording Start Result from official spec
+export interface RecordingStartResult {
+  device: DeviceId;
+  filename: string;
+  status: 'RECORDING' | 'STARTING' | 'STOPPING' | 'PAUSED' | 'ERROR' | 'FAILED';
+  start_time: IsoTimestamp;
+  format: 'fmp4' | 'mp4' | 'mkv';
+}
+
+// Recording Stop Result from official spec
+export interface RecordingStopResult {
+  device: DeviceId;
+  filename: string;
+  status: 'STOPPED' | 'STARTING' | 'STOPPING' | 'PAUSED' | 'ERROR' | 'FAILED';
+  start_time: IsoTimestamp;
+  end_time: IsoTimestamp;
+  duration: number;
+  file_size: number;
+  format: 'fmp4' | 'mp4' | 'mkv';
+}
+
+// Snapshot Result from official spec
+export interface SnapshotResult {
+  device: DeviceId;
+  filename: string;
+  status: 'SUCCESS' | 'FAILED';
+  timestamp: IsoTimestamp;
+  file_size: number;
+  file_path: string;
+}
+
+// Snapshot Info from official spec
+export interface SnapshotInfo {
+  filename: string;
+  file_size: number;
+  created_time: IsoTimestamp;
+  download_url: string;
+}
+
+// Recording Info from official spec
+export interface RecordingInfo {
+  filename: string;
+  file_size: number;
+  duration: number;
+  created_time: IsoTimestamp;
+  download_url: string;
+}
+
+// File List Result from official spec
+export interface FileListResult {
+  files: Array<{
+    filename: string;
+    file_size: number;
+    modified_time: IsoTimestamp;
+    download_url: string;
+  }>;
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+// Stream Start Result from official spec
+export interface StreamStartResult {
+  device: DeviceId;
+  stream_name: string;
+  stream_url: string;
+  status: 'STARTED' | 'FAILED';
+  start_time: IsoTimestamp;
+  auto_close_after: string;
+  ffmpeg_command: string;
+}
+
+// Stream Stop Result from official spec
+export interface StreamStopResult {
+  device: DeviceId;
+  stream_name: string;
+  status: 'STOPPED' | 'FAILED';
+  start_time: IsoTimestamp;
+  end_time: IsoTimestamp;
+  duration: number;
+  stream_continues: boolean;
+  message?: string;
+}
+
+// Stream URL Result from official spec
+export interface StreamUrlResult {
+  device: DeviceId;
+  stream_name: string;
+  stream_url: string;
+  available: boolean;
+  active_consumers: number;
+  stream_status: 'READY' | 'NOT_READY' | 'ERROR';
+}
+
+// Stream Status Result from official spec
+export interface StreamStatusResult {
+  device: DeviceId;
+  stream_name: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'ERROR' | 'STARTING' | 'STOPPING';
+  ready: boolean;
+  ffmpeg_process: {
+    running: boolean;
+    pid: number;
+    uptime: number;
+  };
+  mediamtx_path: {
+    exists: boolean;
+    ready: boolean;
+    readers: number;
+  };
+  metrics: {
+    bytes_sent: number;
+    frames_sent: number;
+    bitrate: number;
+    fps: number;
+  };
+  start_time: IsoTimestamp;
+}
+
+// Streams List Result from official spec
+export interface StreamsListResult {
+  name: string;
+  source: string;
+  ready: boolean;
+  readers: number;
+  bytes_sent: number;
+}
+
+// Authentication Result from official spec
 export interface AuthenticateResult {
   authenticated: boolean;
   role: 'admin' | 'operator' | 'viewer';
   permissions: string[];
-  expires_at: string;
+  expires_at: IsoTimestamp;
   session_id: string;
 }
 
+// Server Info from official spec
 export interface ServerInfo {
   name: string;
   version: string;
@@ -24,17 +217,19 @@ export interface ServerInfo {
   max_cameras: number;
 }
 
+// System Status from official spec
 export interface SystemStatus {
   status: 'HEALTHY' | 'DEGRADED' | 'UNHEALTHY';
   uptime: number;
   version: string;
   components: {
-    websocket_server: string;
-    camera_monitor: string;
-    mediamtx: string;
+    websocket_server: 'RUNNING' | 'STOPPED' | 'ERROR' | 'STARTING' | 'STOPPING';
+    camera_monitor: 'RUNNING' | 'STOPPED' | 'ERROR' | 'STARTING' | 'STOPPING';
+    mediamtx: 'RUNNING' | 'STOPPED' | 'ERROR' | 'STARTING' | 'STOPPING';
   };
 }
 
+// Storage Info from official spec
 export interface StorageInfo {
   total_space: number;
   used_space: number;
@@ -45,7 +240,190 @@ export interface StorageInfo {
   low_space_warning: boolean;
 }
 
-// JSON-RPC 2.0 Types
+// Metrics Result from official spec
+export interface MetricsResult {
+  timestamp: IsoTimestamp;
+  system_metrics: {
+    cpu_usage: number;
+    memory_usage: number;
+    disk_usage: number;
+    goroutines: number;
+  };
+  camera_metrics: {
+    connected_cameras: number;
+    cameras: Record<string, {
+      path: string;
+      name: string;
+      status: string;
+      device_num: number;
+      last_seen: IsoTimestamp;
+      capabilities: Record<string, unknown>;
+      formats: Array<{
+        pixel_format: string;
+        width: number;
+        height: number;
+        frame_rates: string[];
+      }>;
+    }>;
+  };
+  recording_metrics: Record<string, Record<string, unknown>>;
+  stream_metrics: {
+    active_streams: number;
+    total_streams: number;
+    total_viewers: number;
+  };
+}
+
+// Subscription Result from official spec
+export interface SubscriptionResult {
+  subscribed: boolean;
+  topics: string[];
+  filters?: Record<string, unknown>;
+}
+
+// Unsubscription Result from official spec
+export interface UnsubscriptionResult {
+  unsubscribed: boolean;
+  topics: string[];
+}
+
+// Subscription Stats Result from official spec
+export interface SubscriptionStatsResult {
+  global_stats: {
+    total_subscriptions: number;
+    active_clients: number;
+    topic_counts: Record<string, number>;
+  };
+  client_topics: string[];
+  client_id: string;
+}
+
+// External Stream Discovery Result from official spec
+export interface ExternalStreamDiscoveryResult {
+  discovered_streams: Array<{
+    url: string;
+    type: string;
+    name: string;
+    status: 'DISCOVERED' | 'ERROR';
+    discovered_at: IsoTimestamp;
+    last_seen: IsoTimestamp;
+    capabilities: Record<string, unknown>;
+  }>;
+  skydio_streams: Array<{
+    url: string;
+    type: string;
+    name: string;
+    status: 'DISCOVERED' | 'ERROR';
+    discovered_at: IsoTimestamp;
+    last_seen: IsoTimestamp;
+    capabilities: Record<string, unknown>;
+  }>;
+  generic_streams: Array<{
+    url: string;
+    type: string;
+    name: string;
+    status: 'DISCOVERED' | 'ERROR';
+    discovered_at: IsoTimestamp;
+    last_seen: IsoTimestamp;
+    capabilities: Record<string, unknown>;
+  }>;
+  scan_timestamp: IsoTimestamp;
+  total_found: number;
+  discovery_options: {
+    skydio_enabled: boolean;
+    generic_enabled: boolean;
+    force_rescan: boolean;
+    include_offline: boolean;
+  };
+  scan_duration: string;
+  errors: string[];
+}
+
+// External Stream Add Result from official spec
+export interface ExternalStreamAddResult {
+  stream_url: string;
+  stream_name: string;
+  stream_type: string;
+  status: 'ADDED' | 'ERROR';
+  timestamp: IsoTimestamp;
+}
+
+// External Stream Remove Result from official spec
+export interface ExternalStreamRemoveResult {
+  stream_url: string;
+  status: 'REMOVED' | 'ERROR';
+  timestamp: IsoTimestamp;
+}
+
+// External Streams List Result from official spec
+export interface ExternalStreamsListResult {
+  external_streams: Array<{
+    url: string;
+    type: string;
+    name: string;
+    status: 'DISCOVERED' | 'ERROR';
+    discovered_at: IsoTimestamp;
+    last_seen: IsoTimestamp;
+    capabilities: Record<string, unknown>;
+  }>;
+  skydio_streams: Array<{
+    url: string;
+    type: string;
+    name: string;
+    status: 'DISCOVERED' | 'ERROR';
+    discovered_at: IsoTimestamp;
+    last_seen: IsoTimestamp;
+    capabilities: Record<string, unknown>;
+  }>;
+  generic_streams: Array<{
+    url: string;
+    type: string;
+    name: string;
+    status: 'DISCOVERED' | 'ERROR';
+    discovered_at: IsoTimestamp;
+    last_seen: IsoTimestamp;
+    capabilities: Record<string, unknown>;
+  }>;
+  total_count: number;
+  timestamp: IsoTimestamp;
+}
+
+// Discovery Interval Set Result from official spec
+export interface DiscoveryIntervalSetResult {
+  scan_interval: number;
+  status: 'UPDATED' | 'ERROR';
+  message: string;
+  timestamp: IsoTimestamp;
+}
+
+// Retention Policy Set Result from official spec
+export interface RetentionPolicySetResult {
+  policy_type: 'age' | 'size' | 'manual';
+  max_age_days?: number;
+  max_size_gb?: number;
+  enabled: boolean;
+  message: string;
+}
+
+// Cleanup Result from official spec
+export interface CleanupResult {
+  cleanup_executed: boolean;
+  files_deleted: number;
+  space_freed: number;
+  message: string;
+}
+
+// Delete Result from official spec
+export interface DeleteResult {
+  filename: string;
+  deleted: boolean;
+  message: string;
+}
+
+// ============================================================================
+// JSON-RPC 2.0 TYPES
+// ============================================================================
+
 export interface JsonRpcRequest {
   jsonrpc: '2.0';
   method: string;
@@ -70,6 +448,10 @@ export interface JsonRpcNotification {
   params?: Record<string, unknown>;
 }
 
+// ============================================================================
+// CLIENT STATE TYPES (NOT FROM API)
+// ============================================================================
+
 // WebSocket Connection Types
 export type ConnectionStatus = 'connected' | 'connecting' | 'disconnected' | 'error';
 
@@ -80,7 +462,7 @@ export interface ConnectionState {
   lastConnected: string | null;
 }
 
-// Authentication Types
+// Authentication State
 export interface AuthState {
   token: string | null;
   role: 'admin' | 'operator' | 'viewer' | null;
@@ -90,7 +472,7 @@ export interface AuthState {
   permissions: string[];
 }
 
-// Server State Types
+// Server State
 export interface ServerState {
   info: ServerInfo | null;
   status: SystemStatus | null;
@@ -100,7 +482,10 @@ export interface ServerState {
   lastUpdated: string | null;
 }
 
-// RPC Method Names (for type safety) - ALIGNED WITH SERVER API
+// ============================================================================
+// RPC METHOD NAMES (ALIGNED WITH OFFICIAL API)
+// ============================================================================
+
 export type RpcMethod =
   | 'ping'
   | 'authenticate'
@@ -136,68 +521,10 @@ export type RpcMethod =
   | 'set_retention_policy'
   | 'cleanup_old_files';
 
-// Command Result Types (from OpenRPC spec)
-export interface SnapshotResult {
-  success: boolean;
-  filename: string;
-  download_url: string;
-}
+// ============================================================================
+// ERROR CODES (FROM OFFICIAL API)
+// ============================================================================
 
-export interface RecordingResult {
-  success: boolean;
-  recording_id: string;
-  status: 'started' | 'stopped' | 'failed';
-}
-
-export interface CameraStatusResult {
-  device: string;
-  status: 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
-  last_seen: string;
-  capabilities: string[];
-}
-
-export interface StreamUrlResult {
-  device: string;
-  hls_url: string;
-  webrtc_url: string;
-  status: 'ACTIVE' | 'INACTIVE';
-}
-
-export interface MetricsResult {
-  system_metrics: {
-    cpu_usage: number;
-    memory_usage: number;
-    disk_usage: number;
-    goroutines: number;
-  };
-  camera_metrics: {
-    connected_cameras: number;
-    cameras: Record<string, Record<string, unknown>>;
-  };
-  recording_metrics: Record<string, Record<string, unknown>>;
-  stream_metrics: {
-    active_streams: number;
-    total_streams: number;
-    total_viewers: number;
-  };
-}
-
-export interface SubscriptionResult {
-  success: boolean;
-  subscription_id: string;
-}
-
-export interface UnsubscriptionResult {
-  success: boolean;
-  unsubscribed_count: number;
-}
-
-export interface SubscriptionStatsResult {
-  active_subscriptions: number;
-  total_events: number;
-}
-
-// Error Codes (from OpenRPC spec)
 export const ERROR_CODES = {
   INVALID_REQUEST: -32600,
   METHOD_NOT_FOUND: -32601,

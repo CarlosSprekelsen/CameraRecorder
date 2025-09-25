@@ -1,310 +1,728 @@
-/**
- * SINGLE validation utility for all API responses
- * Validates against documented schemas only
- * 
- * Ground Truth References:
- * - API Documentation: ../mediamtx-camera-service-go/docs/api/mediamtx_camera_service_openrpc.json
- * 
- * Requirements Coverage:
- * - REQ-VAL-001: API response validation
- * - REQ-VAL-002: Error code validation
- * - REQ-VAL-003: Schema compliance
- * 
- * Test Categories: Unit/Integration/API-Compliance
- * API Documentation Reference: mediamtx_camera_service_openrpc.json
- */
+// API Response Validators for MediaMTX Camera Service Client tests
+// COMPLIANT WITH OFFICIAL RPC DOCUMENTATION
 
-import { 
-  Camera, 
-  CameraListResult, 
-  RecordingStart, 
-  RecordingStop, 
+import {
+  // Official RPC API Types
+  CameraListResult,
+  CameraStatusResult,
+  CameraCapabilitiesResult,
+  RecordingStartResult,
+  RecordingStopResult,
+  SnapshotResult,
   SnapshotInfo,
-  ListFilesResult,
-  StreamStatus,
-  MetricsResult,
-  StatusResult,
+  RecordingInfo,
+  FileListResult,
+  StreamStartResult,
+  StreamStopResult,
+  StreamUrlResult,
+  StreamStatusResult,
+  StreamsListResult,
+  AuthenticateResult,
   ServerInfo,
+  SystemStatus,
   StorageInfo,
-  AuthResult
-} from '@/types/api';
+  MetricsResult,
+  SubscriptionResult,
+  UnsubscriptionResult,
+  SubscriptionStatsResult,
+  ExternalStreamDiscoveryResult,
+  ExternalStreamAddResult,
+  ExternalStreamRemoveResult,
+  ExternalStreamsListResult,
+  DiscoveryIntervalSetResult,
+  RetentionPolicySetResult,
+  CleanupResult,
+  DeleteResult,
+  DeviceId,
+  IsoTimestamp,
+  Streams
+} from '../../src/types/api';
 
+/**
+ * API Response Validator - validates responses against official RPC documentation schemas
+ * GROUND TRUTH COMPLIANCE: All validations match official RPC specification exactly
+ */
 export class APIResponseValidator {
+  // ============================================================================
+  // CORE VALIDATION METHODS
+  // ============================================================================
+
   /**
-   * Validate camera list result against documented schema
-   * MANDATORY: Use this validation for all camera list tests
+   * Validate Device ID format - matches official RPC pattern: ^camera[0-9]+$
    */
-  static validateCameraListResult(result: any): result is CameraListResult {
-    return (
-      typeof result === 'object' &&
-      result !== null &&
-      Array.isArray(result.cameras) &&
-      typeof result.total === 'number' &&
-      typeof result.connected === 'number' &&
-      result.cameras.every((camera: any) => this.validateCamera(camera))
-    );
+  static validateDeviceId(deviceId: string): boolean {
+    const pattern = /^camera[0-9]+$/;
+    return pattern.test(deviceId);
   }
 
   /**
-   * Validate camera object against documented schema
-   * MANDATORY: Use this validation for all camera tests
-   */
-  static validateCamera(camera: any): camera is Camera {
-    return (
-      typeof camera === 'object' &&
-      camera !== null &&
-      typeof camera.device === 'string' &&
-      /^camera[0-9]+$/.test(camera.device) &&
-      typeof camera.status === 'string' &&
-      ['CONNECTED', 'DISCONNECTED', 'ERROR'].includes(camera.status)
-    );
-  }
-
-  /**
-   * Validate recording start result against documented schema
-   * MANDATORY: Use this validation for all recording start tests
-   */
-  static validateRecordingStartResult(result: any): result is RecordingStart {
-    return (
-      typeof result === 'object' &&
-      result !== null &&
-      typeof result.device === 'string' &&
-      /^camera[0-9]+$/.test(result.device) &&
-      typeof result.status === 'string' &&
-      ['RECORDING', 'STARTING', 'STOPPING', 'PAUSED', 'ERROR', 'FAILED'].includes(result.status) &&
-      typeof result.start_time === 'string' &&
-      this.validateIsoTimestamp(result.start_time)
-    );
-  }
-
-  /**
-   * Validate recording stop result against documented schema
-   * MANDATORY: Use this validation for all recording stop tests
-   */
-  static validateRecordingStopResult(result: any): result is RecordingStop {
-    return (
-      typeof result === 'object' &&
-      result !== null &&
-      typeof result.device === 'string' &&
-      /^camera[0-9]+$/.test(result.device) &&
-      typeof result.status === 'string' &&
-      ['STOPPED', 'FAILED'].includes(result.status) &&
-      typeof result.end_time === 'string' &&
-      this.validateIsoTimestamp(result.end_time)
-    );
-  }
-
-  /**
-   * Validate snapshot info against documented schema
-   * MANDATORY: Use this validation for all snapshot tests
-   */
-  static validateSnapshotInfo(result: any): result is SnapshotInfo {
-    return (
-      typeof result === 'object' &&
-      result !== null &&
-      typeof result.device === 'string' &&
-      /^camera[0-9]+$/.test(result.device) &&
-      typeof result.filename === 'string' &&
-      typeof result.status === 'string' &&
-      ['SUCCESS', 'FAILED'].includes(result.status) &&
-      typeof result.timestamp === 'string' &&
-      this.validateIsoTimestamp(result.timestamp)
-    );
-  }
-
-  /**
-   * Validate file list result against documented schema
-   * MANDATORY: Use this validation for all file list tests
-   */
-  static validateListFilesResult(result: any): result is ListFilesResult {
-    return (
-      typeof result === 'object' &&
-      result !== null &&
-      Array.isArray(result.files) &&
-      typeof result.total === 'number' &&
-      typeof result.limit === 'number' &&
-      typeof result.offset === 'number' &&
-      result.files.every((file: any) => this.validateRecordingFile(file))
-    );
-  }
-
-  /**
-   * Validate recording file against documented schema
-   * MANDATORY: Use this validation for all file tests
-   */
-  static validateRecordingFile(file: any): boolean {
-    return (
-      typeof file === 'object' &&
-      file !== null &&
-      typeof file.filename === 'string'
-    );
-  }
-
-  /**
-   * Validate stream status against documented schema
-   * MANDATORY: Use this validation for all stream tests
-   */
-  static validateStreamStatus(result: any): result is StreamStatus {
-    return (
-      typeof result === 'object' &&
-      result !== null &&
-      typeof result.device === 'string' &&
-      /^camera[0-9]+$/.test(result.device) &&
-      typeof result.status === 'string' &&
-      ['ACTIVE', 'INACTIVE', 'ERROR', 'STARTING', 'STOPPING'].includes(result.status)
-    );
-  }
-
-  /**
-   * Validate metrics result against documented schema
-   * MANDATORY: Use this validation for all metrics tests
-   */
-  static validateMetricsResult(result: any): result is MetricsResult {
-    return (
-      typeof result === 'object' &&
-      result !== null &&
-      typeof result.timestamp === 'string' &&
-      this.validateIsoTimestamp(result.timestamp) &&
-      typeof result.system_metrics === 'object' &&
-      typeof result.camera_metrics === 'object' &&
-      typeof result.recording_metrics === 'object' &&
-      typeof result.stream_metrics === 'object'
-    );
-  }
-
-  /**
-   * Validate status result against documented schema
-   * MANDATORY: Use this validation for all status tests
-   */
-  static validateStatusResult(result: any): result is StatusResult {
-    return (
-      typeof result === 'object' &&
-      result !== null &&
-      typeof result.status === 'string' &&
-      ['HEALTHY', 'DEGRADED', 'UNHEALTHY'].includes(result.status)
-    );
-  }
-
-  /**
-   * Validate server info against documented schema
-   * MANDATORY: Use this validation for all server info tests
-   */
-  static validateServerInfo(result: any): result is ServerInfo {
-    return (
-      typeof result === 'object' &&
-      result !== null &&
-      typeof result.name === 'string' &&
-      typeof result.version === 'string' &&
-      typeof result.build_date === 'string' &&
-      typeof result.go_version === 'string' &&
-      typeof result.architecture === 'string' &&
-      Array.isArray(result.capabilities) &&
-      Array.isArray(result.supported_formats) &&
-      typeof result.max_cameras === 'number'
-    );
-  }
-
-  /**
-   * Validate storage info against documented schema
-   * MANDATORY: Use this validation for all storage tests
-   */
-  static validateStorageInfo(result: any): result is StorageInfo {
-    return (
-      typeof result === 'object' &&
-      result !== null &&
-      typeof result.total_space === 'number' &&
-      typeof result.used_space === 'number' &&
-      typeof result.available_space === 'number' &&
-      typeof result.usage_percentage === 'number' &&
-      typeof result.recordings_size === 'number' &&
-      typeof result.snapshots_size === 'number' &&
-      typeof result.low_space_warning === 'boolean'
-    );
-  }
-
-  /**
-   * Validate authentication result against documented schema
-   * MANDATORY: Use this validation for all auth tests
-   */
-  static validateAuthResult(result: any): result is AuthResult {
-    return (
-      typeof result === 'object' &&
-      result !== null &&
-      typeof result.authenticated === 'boolean' &&
-      typeof result.role === 'string' &&
-      ['admin', 'operator', 'viewer'].includes(result.role) &&
-      Array.isArray(result.permissions) &&
-      typeof result.session_id === 'string'
-    );
-  }
-
-  /**
-   * Validate error response against documented error codes
-   * MANDATORY: Use this validation for all error tests
-   */
-  static validateErrorResponse(error: any, expectedCode: number): boolean {
-    return (
-      typeof error === 'object' &&
-      error !== null &&
-      typeof error.code === 'number' &&
-      error.code === expectedCode &&
-      typeof error.message === 'string'
-    );
-  }
-
-  /**
-   * Validate ISO timestamp format
-   * MANDATORY: Use this validation for all timestamp tests
+   * Validate ISO Timestamp format - matches official RPC ISO 8601 requirement
    */
   static validateIsoTimestamp(timestamp: string): boolean {
     try {
       const date = new Date(timestamp);
-      return !isNaN(date.getTime()) && timestamp.includes('T') && timestamp.includes('Z');
+    return !isNaN(date.getTime()) && date.toISOString() === timestamp;
     } catch {
       return false;
     }
   }
 
   /**
-   * Validate device ID format
-   * MANDATORY: Use this validation for all device ID tests
+   * Validate Camera List Result - matches official RPC spec exactly
    */
-  static validateDeviceId(deviceId: string): boolean {
-    return /^camera[0-9]+$/.test(deviceId);
-  }
-
-  /**
-   * Validate pagination parameters
-   * MANDATORY: Use this validation for all pagination tests
-   */
-  static validatePaginationParams(limit: number, offset: number): boolean {
+  static validateCameraListResult(result: unknown): result is CameraListResult {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    // Validate cameras array
+    if (!Array.isArray(obj.cameras)) return false;
+    for (const camera of obj.cameras) {
+      if (!this.validateCamera(camera)) return false;
+    }
+    
+    // Validate metadata
     return (
-      typeof limit === 'number' &&
-      limit >= 0 &&
-      limit <= 1000 &&
-      typeof offset === 'number' &&
-      offset >= 0
+      typeof obj.total === 'number' &&
+      typeof obj.connected === 'number' &&
+      obj.total >= 0 &&
+      obj.connected >= 0 &&
+      obj.connected <= obj.total
     );
   }
 
   /**
-   * Validate recording format
-   * MANDATORY: Use this validation for all format tests
+   * Validate Camera object - matches official RPC spec exactly
    */
-  static validateRecordingFormat(format: string): boolean {
-    return ['fmp4', 'mp4', 'mkv'].includes(format);
+  static validateCamera(camera: unknown): boolean {
+    if (typeof camera !== 'object' || camera === null) return false;
+    
+    const obj = camera as Record<string, unknown>;
+    
+    // Required fields
+    if (!this.validateDeviceId(obj.device as string)) return false;
+    if (!['CONNECTED', 'DISCONNECTED', 'ERROR'].includes(obj.status as string)) return false;
+    
+    // Optional fields
+    if (obj.name !== undefined && typeof obj.name !== 'string') return false;
+    if (obj.resolution !== undefined && typeof obj.resolution !== 'string') return false;
+    if (obj.fps !== undefined && typeof obj.fps !== 'number') return false;
+    if (obj.streams !== undefined && !this.validateStreams(obj.streams)) return false;
+    
+    return true;
   }
 
   /**
-   * Validate stream URL format
-   * MANDATORY: Use this validation for all stream URL tests
+   * Validate Streams object - matches official RPC spec exactly
    */
-  static validateStreamUrl(url: string): boolean {
-    try {
-      const parsedUrl = new URL(url);
-      return ['http:', 'https:', 'rtsp:'].includes(parsedUrl.protocol);
-    } catch {
-      return false;
+  static validateStreams(streams: unknown): boolean {
+    if (typeof streams !== 'object' || streams === null) return false;
+    
+    const obj = streams as Record<string, unknown>;
+    
+    return (
+      typeof obj.rtsp === 'string' &&
+      typeof obj.hls === 'string' &&
+      obj.rtsp.startsWith('rtsp://') &&
+      obj.hls.startsWith('https://')
+    );
+  }
+
+  /**
+   * Validate Camera Status Result - matches official RPC spec exactly
+   */
+  static validateCameraStatusResult(result: unknown): result is CameraStatusResult {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    // Validate base camera fields
+    if (!this.validateCamera(obj)) return false;
+    
+    // Validate optional metrics
+    if (obj.metrics !== undefined) {
+      if (!this.validateMetrics(obj.metrics)) return false;
     }
+    
+    // Validate optional capabilities
+    if (obj.capabilities !== undefined) {
+      if (!this.validateCapabilities(obj.capabilities)) return false;
+    }
+    
+    return true;
+  }
+
+  /**
+   * Validate Metrics object - matches official RPC spec exactly
+   */
+  static validateMetrics(metrics: unknown): boolean {
+    if (typeof metrics !== 'object' || metrics === null) return false;
+    
+    const obj = metrics as Record<string, unknown>;
+    
+    return (
+      typeof obj.bytes_sent === 'number' &&
+      typeof obj.readers === 'number' &&
+      typeof obj.uptime === 'number' &&
+      obj.bytes_sent >= 0 &&
+      obj.readers >= 0 &&
+      obj.uptime >= 0
+    );
+  }
+
+  /**
+   * Validate Capabilities object - matches official RPC spec exactly
+   */
+  static validateCapabilities(capabilities: unknown): boolean {
+    if (typeof capabilities !== 'object' || capabilities === null) return false;
+    
+    const obj = capabilities as Record<string, unknown>;
+    
+    return (
+      Array.isArray(obj.formats) &&
+      Array.isArray(obj.resolutions) &&
+      obj.formats.every((format: unknown) => typeof format === 'string') &&
+      obj.resolutions.every((resolution: unknown) => typeof resolution === 'string')
+    );
+  }
+
+  /**
+   * Validate Camera Capabilities Result - matches official RPC spec exactly
+   */
+  static validateCameraCapabilitiesResult(result: unknown): result is CameraCapabilitiesResult {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      this.validateDeviceId(obj.device as string) &&
+      Array.isArray(obj.formats) &&
+      Array.isArray(obj.resolutions) &&
+      Array.isArray(obj.fps_options) &&
+      ['NONE', 'DISCONNECTED', 'CONFIRMED'].includes(obj.validation_status as string) &&
+      obj.formats.every((format: unknown) => typeof format === 'string') &&
+      obj.resolutions.every((resolution: unknown) => typeof resolution === 'string') &&
+      obj.fps_options.every((fps: unknown) => typeof fps === 'number' && fps > 0)
+    );
+  }
+
+  /**
+   * Validate Recording Start Result - matches official RPC spec exactly
+   */
+  static validateRecordingStartResult(result: unknown): result is RecordingStartResult {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      this.validateDeviceId(obj.device as string) &&
+      typeof obj.filename === 'string' &&
+      ['RECORDING', 'STARTING', 'STOPPING', 'PAUSED', 'ERROR', 'FAILED'].includes(obj.status as string) &&
+      this.validateIsoTimestamp(obj.start_time as string) &&
+      ['fmp4', 'mp4', 'mkv'].includes(obj.format as string)
+    );
+  }
+
+  /**
+   * Validate Recording Stop Result - matches official RPC spec exactly
+   */
+  static validateRecordingStopResult(result: unknown): result is RecordingStopResult {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      this.validateDeviceId(obj.device as string) &&
+      typeof obj.filename === 'string' &&
+      ['STOPPED', 'STARTING', 'STOPPING', 'PAUSED', 'ERROR', 'FAILED'].includes(obj.status as string) &&
+      this.validateIsoTimestamp(obj.start_time as string) &&
+      this.validateIsoTimestamp(obj.end_time as string) &&
+      typeof obj.duration === 'number' &&
+      typeof obj.file_size === 'number' &&
+      ['fmp4', 'mp4', 'mkv'].includes(obj.format as string) &&
+      obj.duration >= 0 &&
+      obj.file_size >= 0
+    );
+  }
+
+  /**
+   * Validate Snapshot Result - matches official RPC spec exactly
+   */
+  static validateSnapshotResult(result: unknown): result is SnapshotResult {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      this.validateDeviceId(obj.device as string) &&
+      typeof obj.filename === 'string' &&
+      ['SUCCESS', 'FAILED'].includes(obj.status as string) &&
+      this.validateIsoTimestamp(obj.timestamp as string) &&
+      typeof obj.file_size === 'number' &&
+      typeof obj.file_path === 'string' &&
+      obj.file_size >= 0
+    );
+  }
+
+  /**
+   * Validate Snapshot Info - matches official RPC spec exactly
+   */
+  static validateSnapshotInfo(result: unknown): result is SnapshotInfo {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      typeof obj.filename === 'string' &&
+      typeof obj.file_size === 'number' &&
+      this.validateIsoTimestamp(obj.created_time as string) &&
+      typeof obj.download_url === 'string' &&
+      obj.file_size >= 0
+    );
+  }
+
+  /**
+   * Validate Recording Info - matches official RPC spec exactly
+   */
+  static validateRecordingInfo(result: unknown): result is RecordingInfo {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      typeof obj.filename === 'string' &&
+      typeof obj.file_size === 'number' &&
+      typeof obj.duration === 'number' &&
+      this.validateIsoTimestamp(obj.created_time as string) &&
+      typeof obj.download_url === 'string' &&
+      obj.file_size >= 0 &&
+      obj.duration >= 0
+    );
+  }
+
+  /**
+   * Validate File List Result - matches official RPC spec exactly
+   */
+  static validateFileListResult(result: unknown): result is FileListResult {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    if (!Array.isArray(obj.files)) return false;
+    
+    // Validate each file entry
+    for (const file of obj.files) {
+      if (typeof file !== 'object' || file === null) return false;
+      const fileObj = file as Record<string, unknown>;
+      if (
+        typeof fileObj.filename !== 'string' ||
+        typeof fileObj.file_size !== 'number' ||
+        !this.validateIsoTimestamp(fileObj.modified_time as string) ||
+        typeof fileObj.download_url !== 'string' ||
+        fileObj.file_size < 0
+      ) {
+        return false;
+      }
+    }
+    
+    return (
+      typeof obj.total === 'number' &&
+      typeof obj.limit === 'number' &&
+      typeof obj.offset === 'number' &&
+      obj.total >= 0 &&
+      obj.limit > 0 &&
+      obj.limit <= 1000 &&
+      obj.offset >= 0
+    );
+  }
+
+  /**
+   * Validate Stream Start Result - matches official RPC spec exactly
+   */
+  static validateStreamStartResult(result: unknown): result is StreamStartResult {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      this.validateDeviceId(obj.device as string) &&
+      typeof obj.stream_name === 'string' &&
+      typeof obj.stream_url === 'string' &&
+      ['STARTED', 'FAILED'].includes(obj.status as string) &&
+      this.validateIsoTimestamp(obj.start_time as string) &&
+      typeof obj.auto_close_after === 'string' &&
+      typeof obj.ffmpeg_command === 'string'
+    );
+  }
+
+  /**
+   * Validate Stream Stop Result - matches official RPC spec exactly
+   */
+  static validateStreamStopResult(result: unknown): result is StreamStopResult {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      this.validateDeviceId(obj.device as string) &&
+      typeof obj.stream_name === 'string' &&
+      ['STOPPED', 'FAILED'].includes(obj.status as string) &&
+      this.validateIsoTimestamp(obj.start_time as string) &&
+      this.validateIsoTimestamp(obj.end_time as string) &&
+      typeof obj.duration === 'number' &&
+      typeof obj.stream_continues === 'boolean' &&
+      obj.duration >= 0
+    );
+  }
+
+  /**
+   * Validate Stream URL Result - matches official RPC spec exactly
+   */
+  static validateStreamUrlResult(result: unknown): result is StreamUrlResult {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      this.validateDeviceId(obj.device as string) &&
+      typeof obj.stream_name === 'string' &&
+      typeof obj.stream_url === 'string' &&
+      typeof obj.available === 'boolean' &&
+      typeof obj.active_consumers === 'number' &&
+      ['READY', 'NOT_READY', 'ERROR'].includes(obj.stream_status as string) &&
+      obj.active_consumers >= 0
+    );
+  }
+
+  /**
+   * Validate Stream Status Result - matches official RPC spec exactly
+   */
+  static validateStreamStatusResult(result: unknown): result is StreamStatusResult {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    if (!this.validateDeviceId(obj.device as string)) return false;
+    if (typeof obj.stream_name !== 'string') return false;
+    if (!['ACTIVE', 'INACTIVE', 'ERROR', 'STARTING', 'STOPPING'].includes(obj.status as string)) return false;
+    if (typeof obj.ready !== 'boolean') return false;
+    if (!this.validateIsoTimestamp(obj.start_time as string)) return false;
+    
+    // Validate ffmpeg_process
+    if (typeof obj.ffmpeg_process !== 'object' || obj.ffmpeg_process === null) return false;
+    const ffmpeg = obj.ffmpeg_process as Record<string, unknown>;
+    if (
+      typeof ffmpeg.running !== 'boolean' ||
+      typeof ffmpeg.pid !== 'number' ||
+      typeof ffmpeg.uptime !== 'number' ||
+      ffmpeg.pid < 0 ||
+      ffmpeg.uptime < 0
+    ) return false;
+    
+    // Validate mediamtx_path
+    if (typeof obj.mediamtx_path !== 'object' || obj.mediamtx_path === null) return false;
+    const mediamtx = obj.mediamtx_path as Record<string, unknown>;
+    if (
+      typeof mediamtx.exists !== 'boolean' ||
+      typeof mediamtx.ready !== 'boolean' ||
+      typeof mediamtx.readers !== 'number' ||
+      mediamtx.readers < 0
+    ) return false;
+    
+    // Validate metrics
+    if (typeof obj.metrics !== 'object' || obj.metrics === null) return false;
+    const metrics = obj.metrics as Record<string, unknown>;
+    if (
+      typeof metrics.bytes_sent !== 'number' ||
+      typeof metrics.frames_sent !== 'number' ||
+      typeof metrics.bitrate !== 'number' ||
+      typeof metrics.fps !== 'number' ||
+      metrics.bytes_sent < 0 ||
+      metrics.frames_sent < 0 ||
+      metrics.bitrate < 0 ||
+      metrics.fps < 0
+    ) return false;
+    
+    return true;
+  }
+
+  /**
+   * Validate Streams List Result - matches official RPC spec exactly
+   */
+  static validateStreamsListResult(result: unknown): result is StreamsListResult[] {
+    if (!Array.isArray(result)) return false;
+    
+    for (const stream of result) {
+      if (typeof stream !== 'object' || stream === null) return false;
+      const obj = stream as Record<string, unknown>;
+      if (
+        typeof obj.name !== 'string' ||
+        typeof obj.source !== 'string' ||
+        typeof obj.ready !== 'boolean' ||
+        typeof obj.readers !== 'number' ||
+        typeof obj.bytes_sent !== 'number' ||
+        obj.readers < 0 ||
+        obj.bytes_sent < 0
+      ) {
+        return false;
+      }
+    }
+    
+    return true;
+  }
+
+  /**
+   * Validate Authentication Result - matches official RPC spec exactly
+   */
+  static validateAuthenticateResult(result: unknown): result is AuthenticateResult {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      typeof obj.authenticated === 'boolean' &&
+      ['admin', 'operator', 'viewer'].includes(obj.role as string) &&
+      Array.isArray(obj.permissions) &&
+      obj.permissions.every((permission: unknown) => typeof permission === 'string') &&
+      this.validateIsoTimestamp(obj.expires_at as string) &&
+      typeof obj.session_id === 'string'
+    );
+  }
+
+  /**
+   * Validate Server Info - matches official RPC spec exactly
+   */
+  static validateServerInfo(result: unknown): result is ServerInfo {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      typeof obj.name === 'string' &&
+      typeof obj.version === 'string' &&
+      typeof obj.build_date === 'string' &&
+      typeof obj.go_version === 'string' &&
+      typeof obj.architecture === 'string' &&
+      Array.isArray(obj.capabilities) &&
+      Array.isArray(obj.supported_formats) &&
+      typeof obj.max_cameras === 'number' &&
+      obj.capabilities.every((cap: unknown) => typeof cap === 'string') &&
+      obj.supported_formats.every((format: unknown) => typeof format === 'string') &&
+      obj.max_cameras > 0
+    );
+  }
+
+  /**
+   * Validate System Status - matches official RPC spec exactly
+   */
+  static validateSystemStatus(result: unknown): result is SystemStatus {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    if (!['HEALTHY', 'DEGRADED', 'UNHEALTHY'].includes(obj.status as string)) return false;
+    if (typeof obj.uptime !== 'number' || obj.uptime < 0) return false;
+    if (typeof obj.version !== 'string') return false;
+    
+    // Validate components
+    if (typeof obj.components !== 'object' || obj.components === null) return false;
+    const components = obj.components as Record<string, unknown>;
+    const validStates = ['RUNNING', 'STOPPED', 'ERROR', 'STARTING', 'STOPPING'];
+    
+    return (
+      validStates.includes(components.websocket_server as string) &&
+      validStates.includes(components.camera_monitor as string) &&
+      validStates.includes(components.mediamtx as string)
+    );
+  }
+
+  /**
+   * Validate Storage Info - matches official RPC spec exactly
+   */
+  static validateStorageInfo(result: unknown): result is StorageInfo {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      typeof obj.total_space === 'number' &&
+      typeof obj.used_space === 'number' &&
+      typeof obj.available_space === 'number' &&
+      typeof obj.usage_percentage === 'number' &&
+      typeof obj.recordings_size === 'number' &&
+      typeof obj.snapshots_size === 'number' &&
+      typeof obj.low_space_warning === 'boolean' &&
+      obj.total_space >= 0 &&
+      obj.used_space >= 0 &&
+      obj.available_space >= 0 &&
+      obj.usage_percentage >= 0 &&
+      obj.usage_percentage <= 100 &&
+      obj.recordings_size >= 0 &&
+      obj.snapshots_size >= 0
+    );
+  }
+
+  /**
+   * Validate Metrics Result - matches official RPC spec exactly
+   */
+  static validateMetricsResult(result: unknown): result is MetricsResult {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    if (!this.validateIsoTimestamp(obj.timestamp as string)) return false;
+    
+    // Validate system_metrics
+    if (typeof obj.system_metrics !== 'object' || obj.system_metrics === null) return false;
+    const systemMetrics = obj.system_metrics as Record<string, unknown>;
+    if (
+      typeof systemMetrics.cpu_usage !== 'number' ||
+      typeof systemMetrics.memory_usage !== 'number' ||
+      typeof systemMetrics.disk_usage !== 'number' ||
+      typeof systemMetrics.goroutines !== 'number' ||
+      systemMetrics.cpu_usage < 0 || systemMetrics.cpu_usage > 100 ||
+      systemMetrics.memory_usage < 0 || systemMetrics.memory_usage > 100 ||
+      systemMetrics.disk_usage < 0 || systemMetrics.disk_usage > 100 ||
+      systemMetrics.goroutines < 0
+    ) return false;
+    
+    // Validate camera_metrics
+    if (typeof obj.camera_metrics !== 'object' || obj.camera_metrics === null) return false;
+    const cameraMetrics = obj.camera_metrics as Record<string, unknown>;
+    if (
+      typeof cameraMetrics.connected_cameras !== 'number' ||
+      typeof cameraMetrics.cameras !== 'object' ||
+      cameraMetrics.connected_cameras < 0
+    ) return false;
+    
+    // Validate recording_metrics
+    if (typeof obj.recording_metrics !== 'object' || obj.recording_metrics === null) return false;
+    
+    // Validate stream_metrics
+    if (typeof obj.stream_metrics !== 'object' || obj.stream_metrics === null) return false;
+    const streamMetrics = obj.stream_metrics as Record<string, unknown>;
+    if (
+      typeof streamMetrics.active_streams !== 'number' ||
+      typeof streamMetrics.total_streams !== 'number' ||
+      typeof streamMetrics.total_viewers !== 'number' ||
+      streamMetrics.active_streams < 0 ||
+      streamMetrics.total_streams < 0 ||
+      streamMetrics.total_viewers < 0
+    ) return false;
+    
+    return true;
+  }
+
+  /**
+   * Validate Subscription Result - matches official RPC spec exactly
+   */
+  static validateSubscriptionResult(result: unknown): result is SubscriptionResult {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      typeof obj.subscribed === 'boolean' &&
+      Array.isArray(obj.topics) &&
+      obj.topics.every((topic: unknown) => typeof topic === 'string')
+    );
+  }
+
+  /**
+   * Validate Unsubscription Result - matches official RPC spec exactly
+   */
+  static validateUnsubscriptionResult(result: unknown): result is UnsubscriptionResult {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      typeof obj.unsubscribed === 'boolean' &&
+      Array.isArray(obj.topics) &&
+      obj.topics.every((topic: unknown) => typeof topic === 'string')
+    );
+  }
+
+  /**
+   * Validate Subscription Stats Result - matches official RPC spec exactly
+   */
+  static validateSubscriptionStatsResult(result: unknown): result is SubscriptionStatsResult {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    if (typeof obj.global_stats !== 'object' || obj.global_stats === null) return false;
+    const globalStats = obj.global_stats as Record<string, unknown>;
+    if (
+      typeof globalStats.total_subscriptions !== 'number' ||
+      typeof globalStats.active_clients !== 'number' ||
+      typeof globalStats.topic_counts !== 'object' ||
+      globalStats.total_subscriptions < 0 ||
+      globalStats.active_clients < 0
+    ) return false;
+    
+    return (
+      Array.isArray(obj.client_topics) &&
+      obj.client_topics.every((topic: unknown) => typeof topic === 'string') &&
+      typeof obj.client_id === 'string'
+    );
+  }
+
+  /**
+   * Validate Delete Result - matches official RPC spec exactly
+   */
+  static validateDeleteResult(result: unknown): result is DeleteResult {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      typeof obj.filename === 'string' &&
+      typeof obj.deleted === 'boolean' &&
+      typeof obj.message === 'string'
+    );
+  }
+
+  // ============================================================================
+  // CONVENIENCE VALIDATION METHODS
+  // ============================================================================
+
+  /**
+   * Validate any API response against its expected type
+   */
+  static validateApiResponse<T>(response: unknown, validator: (value: unknown) => value is T): response is T {
+    return validator(response);
+  }
+
+  /**
+   * Validate JSON-RPC 2.0 response envelope
+   */
+  static validateJsonRpcResponse(response: unknown): boolean {
+    if (typeof response !== 'object' || response === null) return false;
+    
+    const obj = response as Record<string, unknown>;
+    
+    return (
+      obj.jsonrpc === '2.0' &&
+      (obj.result !== undefined || obj.error !== undefined) &&
+      (obj.id === undefined || typeof obj.id === 'string' || typeof obj.id === 'number')
+    );
+  }
+
+  /**
+   * Validate JSON-RPC 2.0 error response
+   */
+  static validateJsonRpcError(response: unknown): boolean {
+    if (typeof response !== 'object' || response === null) return false;
+    
+    const obj = response as Record<string, unknown>;
+    
+    return (
+      obj.jsonrpc === '2.0' &&
+      typeof obj.error === 'object' &&
+      obj.error !== null &&
+      typeof (obj.error as Record<string, unknown>).code === 'number' &&
+      typeof (obj.error as Record<string, unknown>).message === 'string'
+    );
   }
 }

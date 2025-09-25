@@ -1,340 +1,784 @@
-/**
- * SINGLE mock implementation per API concern
- * Based on documented API responses only
- * 
- * Ground Truth References:
- * - API Documentation: ../mediamtx-camera-service-go/docs/api/mediamtx_camera_service_openrpc.json
- * 
- * Requirements Coverage:
- * - REQ-MOCK-001: Consistent mock patterns
- * - REQ-MOCK-002: API-compliant responses
- * - REQ-MOCK-003: No duplicate implementations
- * 
- * Test Categories: Unit/Mock
- * API Documentation Reference: mediamtx_camera_service_openrpc.json
- */
+// Centralized mocks for MediaMTX Camera Service Client tests
+// COMPLIANT WITH OFFICIAL RPC DOCUMENTATION
 
-import { 
+import {
+  // Official RPC API Types
+  CameraListResult,
+  CameraStatusResult,
+  CameraCapabilitiesResult,
+  RecordingStartResult,
+  RecordingStopResult,
+  SnapshotResult,
+  SnapshotInfo,
+  RecordingInfo,
+  FileListResult,
+  StreamStartResult,
+  StreamStopResult,
+  StreamUrlResult,
+  StreamStatusResult,
+  StreamsListResult,
+  AuthenticateResult,
   ServerInfo,
   SystemStatus,
   StorageInfo,
   MetricsResult,
-  CameraStatusResult,
-  StreamUrlResult,
-  SnapshotResult,
-  RecordingResult
+  SubscriptionResult,
+  UnsubscriptionResult,
+  SubscriptionStatsResult,
+  ExternalStreamDiscoveryResult,
+  ExternalStreamAddResult,
+  ExternalStreamRemoveResult,
+  ExternalStreamsListResult,
+  DiscoveryIntervalSetResult,
+  RetentionPolicySetResult,
+  CleanupResult,
+  DeleteResult,
+  // Client State Types
+  ConnectionState,
+  AuthState,
+  ServerState
 } from '../../src/types/api';
 
-export class APIMocks {
-  /**
-   * Get mock camera list result
-   * MANDATORY: Use this mock for all camera list tests
-   */
-  static getCameraListResult(): CameraStatusResult[] {
-    return [
-      {
-        device: 'camera0',
-        status: 'CONNECTED',
-        last_seen: new Date().toISOString(),
-        capabilities: ['recording', 'streaming', 'snapshots']
-      },
-      {
-        device: 'camera1',
-        status: 'DISCONNECTED',
-        last_seen: new Date(Date.now() - 3600000).toISOString(),
-        capabilities: ['recording', 'streaming']
-      }
-    ];
-  }
+/**
+ * Centralized mock data factory for MediaMTX Camera Service Client tests
+ * All mocks comply with official RPC documentation schemas
+ */
+export class MockDataFactory {
+  // ============================================================================
+  // OFFICIAL RPC API MOCKS (GROUND TRUTH COMPLIANCE)
+  // ============================================================================
 
   /**
-   * Get mock camera object
-   * MANDATORY: Use this mock for all camera tests
+   * Mock Camera List Result - matches official RPC spec exactly
    */
-  static getCamera(device: string = 'camera0'): CameraStatusResult {
+  static getCameraListResult(): CameraListResult {
     return {
-      device,
-      status: 'CONNECTED',
-      last_seen: new Date().toISOString(),
-      capabilities: ['recording', 'streaming', 'snapshots']
-    };
-  }
-
-  /**
-   * Get mock recording start result
-   * MANDATORY: Use this mock for all recording start tests
-   */
-  static getRecordingStartResult(device: string = 'camera0'): RecordingResult {
-    return {
-      success: true,
-      recording_id: `recording_${device}_${Date.now()}`,
-      status: 'started'
-    };
-  }
-
-  /**
-   * Get mock recording stop result
-   * MANDATORY: Use this mock for all recording stop tests
-   */
-  static getRecordingStopResult(device: string = 'camera0'): RecordingResult {
-    return {
-      success: true,
-      recording_id: `recording_${device}_${Date.now()}`,
-      status: 'stopped'
-    };
-  }
-
-  /**
-   * Get mock snapshot info
-   * MANDATORY: Use this mock for all snapshot tests
-   */
-  static getSnapshotInfo(device: string = 'camera0'): SnapshotResult {
-    return {
-      success: true,
-      filename: `snapshot_${device}_${Date.now()}.jpg`,
-      download_url: `https://localhost/downloads/snapshot_${device}_${Date.now()}.jpg`
-    };
-  }
-
-  /**
-   * Get mock file list result
-   * MANDATORY: Use this mock for all file list tests
-   */
-  static getListFilesResult(type: 'recordings' | 'snapshots' = 'recordings'): any {
-    const files: any[] = [
-      {
-        filename: `${type}_camera0_${Date.now()}.${type === 'recordings' ? 'mp4' : 'jpg'}`,
-        file_size: type === 'recordings' ? 1024000 : 512000,
-        modified_time: new Date().toISOString(),
-        download_url: `https://localhost/downloads/${type}_camera0_${Date.now()}.${type === 'recordings' ? 'mp4' : 'jpg'}`
-      },
-      {
-        filename: `${type}_camera1_${Date.now()}.${type === 'recordings' ? 'mp4' : 'jpg'}`,
-        file_size: type === 'recordings' ? 2048000 : 768000,
-        modified_time: new Date(Date.now() - 3600000).toISOString(),
-        download_url: `https://localhost/downloads/${type}_camera1_${Date.now()}.${type === 'recordings' ? 'mp4' : 'jpg'}`
-      }
-    ];
-
-    return {
-      files,
+      cameras: [
+        {
+          device: 'camera0',
+          status: 'CONNECTED',
+          name: 'Test Camera 0',
+          resolution: '1920x1080',
+          fps: 30,
+          streams: {
+            rtsp: 'rtsp://localhost:8554/camera0',
+            hls: 'https://localhost/hls/camera0.m3u8'
+          }
+        },
+        {
+          device: 'camera1',
+          status: 'DISCONNECTED',
+          name: 'Test Camera 1',
+          resolution: '1280x720',
+          fps: 15,
+          streams: {
+            rtsp: 'rtsp://localhost:8554/camera1',
+            hls: 'https://localhost/hls/camera1.m3u8'
+          }
+        }
+      ],
       total: 2,
-      limit: 50,
+      connected: 1
+    };
+  }
+
+  /**
+   * Mock Camera Status Result - matches official RPC spec exactly
+   */
+  static getCameraStatusResult(): CameraStatusResult {
+    return {
+      device: 'camera0',
+      status: 'CONNECTED',
+      name: 'Test Camera 0',
+      resolution: '1920x1080',
+      fps: 30,
+      streams: {
+        rtsp: 'rtsp://localhost:8554/camera0',
+        hls: 'https://localhost/hls/camera0.m3u8'
+      },
+      metrics: {
+        bytes_sent: 12345678,
+        readers: 2,
+        uptime: 3600
+      },
+      capabilities: {
+        formats: ['YUYV', 'MJPEG'],
+        resolutions: ['1920x1080', '1280x720']
+      }
+    };
+  }
+
+  /**
+   * Mock Camera Capabilities Result - matches official RPC spec exactly
+   */
+  static getCameraCapabilitiesResult(): CameraCapabilitiesResult {
+    return {
+      device: 'camera0',
+      formats: ['YUYV', 'MJPEG', 'RGB24'],
+      resolutions: ['1920x1080', '1280x720', '640x480'],
+      fps_options: [15, 30, 60],
+      validation_status: 'CONFIRMED'
+    };
+  }
+
+  /**
+   * Mock Recording Start Result - matches official RPC spec exactly
+   */
+  static getRecordingStartResult(): RecordingStartResult {
+    return {
+      device: 'camera0',
+      filename: 'camera0_2025-01-15_14-30-00',
+      status: 'RECORDING',
+      start_time: '2025-01-15T14:30:00Z',
+      format: 'fmp4'
+    };
+  }
+
+  /**
+   * Mock Recording Stop Result - matches official RPC spec exactly
+   */
+  static getRecordingStopResult(): RecordingStopResult {
+    return {
+      device: 'camera0',
+      filename: 'camera0_2025-01-15_14-30-00',
+      status: 'STOPPED',
+      start_time: '2025-01-15T14:30:00Z',
+      end_time: '2025-01-15T15:00:00Z',
+      duration: 1800,
+      file_size: 1073741824,
+      format: 'fmp4'
+    };
+  }
+
+  /**
+   * Mock Snapshot Result - matches official RPC spec exactly
+   */
+  static getSnapshotResult(): SnapshotResult {
+    return {
+      device: 'camera0',
+      filename: 'snapshot_2025-01-15_14-30-00.jpg',
+      status: 'SUCCESS',
+      timestamp: '2025-01-15T14:30:00Z',
+      file_size: 204800,
+      file_path: '/opt/camera-service/snapshots/snapshot_2025-01-15_14-30-00.jpg'
+    };
+  }
+
+  /**
+   * Mock Snapshot Info - matches official RPC spec exactly
+   */
+  static getSnapshotInfo(): SnapshotInfo {
+    return {
+      filename: 'snapshot_2025-01-15_14-30-00.jpg',
+      file_size: 204800,
+      created_time: '2025-01-15T14:30:00Z',
+      download_url: '/files/snapshots/snapshot_2025-01-15_14-30-00.jpg'
+    };
+  }
+
+  /**
+   * Mock Recording Info - matches official RPC spec exactly
+   */
+  static getRecordingInfo(): RecordingInfo {
+    return {
+      filename: 'camera0_2025-01-15_14-30-00',
+      file_size: 1073741824,
+      duration: 3600,
+      created_time: '2025-01-15T14:30:00Z',
+      download_url: '/files/recordings/camera0_2025-01-15_14-30-00.fmp4'
+    };
+  }
+
+  /**
+   * Mock File List Result - matches official RPC spec exactly
+   */
+  static getFileListResult(): FileListResult {
+    return {
+      files: [
+        {
+          filename: 'camera0_2025-01-15_14-30-00',
+          file_size: 1073741824,
+          modified_time: '2025-01-15T14:30:00Z',
+          download_url: '/files/recordings/camera0_2025-01-15_14-30-00.fmp4'
+        },
+        {
+          filename: 'camera0_2025-01-15_15-00-00',
+          file_size: 2147483648,
+          modified_time: '2025-01-15T15:00:00Z',
+          download_url: '/files/recordings/camera0_2025-01-15_15-00-00.fmp4'
+        }
+      ],
+      total: 25,
+      limit: 10,
       offset: 0
     };
   }
 
   /**
-   * Get mock stream status
-   * MANDATORY: Use this mock for all stream tests
+   * Mock Stream Start Result - matches official RPC spec exactly
    */
-  static getStreamStatus(device: string = 'camera0'): StreamUrlResult {
+  static getStreamStartResult(): StreamStartResult {
     return {
-      device,
-      hls_url: `https://localhost/hls/${device}.m3u8`,
-      webrtc_url: `https://localhost/webrtc/${device}`,
-      status: 'ACTIVE'
+      device: 'camera0',
+      stream_name: 'camera_video0_viewing',
+      stream_url: 'rtsp://localhost:8554/camera_video0_viewing',
+      status: 'STARTED',
+      start_time: '2025-01-15T14:30:00Z',
+      auto_close_after: '300s',
+      ffmpeg_command: 'ffmpeg -f v4l2 -i /dev/video0 -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp rtsp://localhost:8554/camera_video0_viewing'
     };
   }
 
   /**
-   * Get mock metrics result
-   * MANDATORY: Use this mock for all metrics tests
+   * Mock Stream Stop Result - matches official RPC spec exactly
    */
-  static getMetricsResult(): MetricsResult {
+  static getStreamStopResult(): StreamStopResult {
     return {
-      system_metrics: {
-        cpu_usage: 45.5,
-        memory_usage: 67.2,
-        disk_usage: 23.8,
-        goroutines: 150
+      device: 'camera0',
+      stream_name: 'camera_video0_viewing',
+      status: 'STOPPED',
+      start_time: '2025-01-15T14:30:00Z',
+      end_time: '2025-01-15T14:35:00Z',
+      duration: 300,
+      stream_continues: false,
+      message: 'Stream stopped successfully'
+    };
+  }
+
+  /**
+   * Mock Stream URL Result - matches official RPC spec exactly
+   */
+  static getStreamUrlResult(): StreamUrlResult {
+    return {
+      device: 'camera0',
+      stream_name: 'camera_video0_viewing',
+      stream_url: 'rtsp://localhost:8554/camera_video0_viewing',
+      available: true,
+      active_consumers: 2,
+      stream_status: 'READY'
+    };
+  }
+
+  /**
+   * Mock Stream Status Result - matches official RPC spec exactly
+   */
+  static getStreamStatusResult(): StreamStatusResult {
+    return {
+      device: 'camera0',
+      stream_name: 'camera_video0_viewing',
+      status: 'ACTIVE',
+      ready: true,
+      ffmpeg_process: {
+        running: true,
+        pid: 12345,
+        uptime: 300
       },
-      camera_metrics: {
-        connected_cameras: 2,
-        cameras: {
-          camera0: {
-            status: 'CONNECTED',
-            fps: 30,
-            bitrate: 2000000
-          },
-          camera1: {
-            status: 'DISCONNECTED',
-            fps: 0,
-            bitrate: 0
-          }
-        }
+      mediamtx_path: {
+        exists: true,
+        ready: true,
+        readers: 2
       },
-      recording_metrics: {
-        active_recordings: { count: 1 },
-        total_recordings: { count: 5 },
-        total_size: { bytes: 1024000000 }
+      metrics: {
+        bytes_sent: 12345678,
+        frames_sent: 9000,
+        bitrate: 600000,
+        fps: 30
       },
-      stream_metrics: {
-        active_streams: 2,
-        total_streams: 2,
-        total_viewers: 3
+      start_time: '2025-01-15T14:30:00Z'
+    };
+  }
+
+  /**
+   * Mock Streams List Result - matches official RPC spec exactly
+   */
+  static getStreamsListResult(): StreamsListResult[] {
+    return [
+      {
+        name: 'camera0',
+        source: 'ffmpeg -f v4l2 -i /dev/video0 -c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p -preset ultrafast -b:v 600k -f rtsp rtsp://127.0.0.1:8554/camera0',
+        ready: true,
+        readers: 2,
+        bytes_sent: 12345678
+      },
+      {
+        name: 'camera1',
+        source: 'ffmpeg -f v4l2 -i /dev/video1 -c:v libx264 -profile:v baseline -level 3.0 -pix_fmt yuv420p -preset ultrafast -b:v 600k -f rtsp rtsp://127.0.0.1:8554/camera1',
+        ready: false,
+        readers: 0,
+        bytes_sent: 0
       }
-    };
+    ];
   }
 
   /**
-   * Get mock status result
-   * MANDATORY: Use this mock for all status tests
+   * Mock Authentication Result - matches official RPC spec exactly
    */
-  static getStatusResult(): SystemStatus {
+  static getAuthenticateResult(): AuthenticateResult {
     return {
-      status: 'HEALTHY',
-      uptime: 3600.5,
-      version: '1.0.0',
-      components: {
-        websocket_server: 'HEALTHY',
-        camera_monitor: 'HEALTHY',
-        mediamtx: 'HEALTHY'
-      }
+      authenticated: true,
+      role: 'operator',
+      permissions: ['view', 'control'],
+      expires_at: '2025-01-16T14:30:00Z',
+      session_id: '550e8400-e29b-41d4-a716-446655440000'
     };
   }
 
   /**
-   * Get mock server info
-   * MANDATORY: Use this mock for all server info tests
+   * Mock Server Info - matches official RPC spec exactly
    */
   static getServerInfo(): ServerInfo {
     return {
       name: 'MediaMTX Camera Service',
       version: '1.0.0',
-      build_date: '2025-01-25T10:00:00Z',
-      go_version: '1.21.0',
-      architecture: 'linux/amd64',
-      capabilities: ['recording', 'streaming', 'snapshots', 'file_management'],
-      supported_formats: ['fmp4', 'mp4', 'mkv'],
+      build_date: '2025-01-15',
+      go_version: 'go1.24.6',
+      architecture: 'amd64',
+      capabilities: ['snapshots', 'recordings', 'streaming'],
+      supported_formats: ['fmp4', 'mp4', 'mkv', 'jpg'],
       max_cameras: 10
     };
   }
 
   /**
-   * Get mock storage info
-   * MANDATORY: Use this mock for all storage tests
+   * Mock System Status - matches official RPC spec exactly
+   */
+  static getSystemStatus(): SystemStatus {
+    return {
+      status: 'HEALTHY',
+      uptime: 86400.5,
+      version: '1.0.0',
+      components: {
+        websocket_server: 'RUNNING',
+        camera_monitor: 'RUNNING',
+        mediamtx: 'RUNNING'
+      }
+    };
+  }
+
+  /**
+   * Mock Storage Info - matches official RPC spec exactly
    */
   static getStorageInfo(): StorageInfo {
     return {
-      total_space: 1000000000000, // 1TB
-      used_space: 250000000000,  // 250GB
-      available_space: 750000000000, // 750GB
-      usage_percentage: 25.0,
-      recordings_size: 200000000000, // 200GB
-      snapshots_size: 50000000000,   // 50GB
+      total_space: 107374182400,
+      used_space: 53687091200,
+      available_space: 53687091200,
+      usage_percentage: 50.0,
+      recordings_size: 42949672960,
+      snapshots_size: 10737418240,
       low_space_warning: false
     };
   }
 
   /**
-   * Get mock authentication result
-   * MANDATORY: Use this mock for all auth tests
+   * Mock Metrics Result - matches official RPC spec exactly
    */
-  static getAuthResult(role: 'admin' | 'operator' | 'viewer' = 'admin'): any {
+  static getMetricsResult(): MetricsResult {
     return {
-      authenticated: true,
-      role,
-      permissions: this.getRolePermissions(role),
-      expires_at: new Date(Date.now() + 3600000).toISOString(),
-      session_id: `test-session-${Date.now()}`
-    };
-  }
-
-  /**
-   * Get mock error response
-   * MANDATORY: Use this mock for all error tests
-   */
-  static getErrorResponse(code: number, message?: string): any {
-    const errorMessages: { [key: number]: string } = {
-      [-32600]: 'Invalid Request',
-      [-32601]: 'Method Not Found',
-      [-32602]: 'Invalid Params',
-      [-32603]: 'Internal Error',
-      [-32001]: 'Auth Failed',
-      [-32002]: 'Permission Denied',
-      [-32010]: 'Not Found',
-      [-32020]: 'Invalid State',
-      [-32030]: 'Unsupported',
-      [-32040]: 'Rate Limited',
-      [-32050]: 'Dependency Failed'
-    };
-
-    return {
-      jsonrpc: '2.0',
-      error: {
-        code,
-        message: message || errorMessages[code] || 'Unknown Error'
+      timestamp: '2025-01-15T14:30:00Z',
+      system_metrics: {
+        cpu_usage: 23.1,
+        memory_usage: 85.5,
+        disk_usage: 45.5,
+        goroutines: 150
       },
-      id: 1
+      camera_metrics: {
+        connected_cameras: 2,
+        cameras: {
+          'camera0': {
+            path: 'camera0',
+            name: 'USB 2.0 Camera: USB 2.0 Camera',
+            status: 'CONNECTED',
+            device_num: 0,
+            last_seen: '2025-01-15T14:30:00Z',
+            capabilities: {
+              driver_name: 'uvcvideo',
+              card_name: 'USB 2.0 Camera: USB 2.0 Camera',
+              bus_info: 'usb-0000:00:1a.0-1.2',
+              version: '6.14.8',
+              capabilities: ['0x84a00001', 'Video Capture', 'Metadata Capture', 'Streaming', 'Extended Pix Format'],
+              device_caps: ['0x04200001', 'Video Capture', 'Streaming', 'Extended Pix Format']
+            },
+            formats: [
+              {
+                pixel_format: 'YUYV',
+                width: 640,
+                height: 480,
+                frame_rates: ['30.000', '20.000', '15.000', '10.000', '5.000']
+              }
+            ]
+          }
+        }
+      },
+      recording_metrics: {},
+      stream_metrics: {
+        active_streams: 0,
+        total_streams: 4,
+        total_viewers: 0
+      }
     };
   }
 
   /**
-   * Get role-specific permissions
-   * MANDATORY: Use this method for role permission tests
+   * Mock Subscription Result - matches official RPC spec exactly
    */
-  private static getRolePermissions(role: 'admin' | 'operator' | 'viewer'): string[] {
-    switch (role) {
-      case 'admin':
-        return ['read', 'write', 'delete', 'admin'];
-      case 'operator':
-        return ['read', 'write'];
-      case 'viewer':
-        return ['read'];
-      default:
-        return [];
-    }
-  }
-
-  /**
-   * Get mock WebSocket message
-   * MANDATORY: Use this mock for all WebSocket tests
-   */
-  static getWebSocketMessage(method: string, params: any[] = []): any {
+  static getSubscriptionResult(): SubscriptionResult {
     return {
-      jsonrpc: '2.0',
-      method,
-      params,
-      id: Math.floor(Math.random() * 1000)
+      subscribed: true,
+      topics: ['camera.connected', 'recording.start'],
+      filters: {
+        device: 'camera0'
+      }
     };
   }
 
   /**
-   * Get mock WebSocket response
-   * MANDATORY: Use this mock for all WebSocket response tests
+   * Mock Unsubscription Result - matches official RPC spec exactly
    */
-  static getWebSocketResponse(result: any, id: number = 1): any {
+  static getUnsubscriptionResult(): UnsubscriptionResult {
     return {
-      jsonrpc: '2.0',
-      result,
-      id
+      unsubscribed: true,
+      topics: ['camera.connected']
     };
   }
 
   /**
-   * Get mock WebSocket notification
-   * MANDATORY: Use this mock for all WebSocket notification tests
+   * Mock Subscription Stats Result - matches official RPC spec exactly
    */
-  static getWebSocketNotification(method: string, params: any[] = []): any {
+  static getSubscriptionStatsResult(): SubscriptionStatsResult {
     return {
-      jsonrpc: '2.0',
-      method,
-      params
+      global_stats: {
+        total_subscriptions: 15,
+        active_clients: 3,
+        topic_counts: {
+          'camera.connected': 2,
+          'recording.start': 1,
+          'recording.stop': 1
+        }
+      },
+      client_topics: ['camera.connected', 'recording.start'],
+      client_id: 'client_123'
     };
   }
 
   /**
-   * Create mock device store
-   * MANDATORY: Use this mock for all device store tests
+   * Mock External Stream Discovery Result - matches official RPC spec exactly
+   */
+  static getExternalStreamDiscoveryResult(): ExternalStreamDiscoveryResult {
+    return {
+      discovered_streams: [
+        {
+          url: 'rtsp://192.168.42.10:5554/subject',
+          type: 'skydio_stanag4609',
+          name: 'Skydio_EO_192.168.42.10_eo_/subject',
+          status: 'DISCOVERED',
+          discovered_at: '2025-01-15T14:30:00Z',
+          last_seen: '2025-01-15T14:30:00Z',
+          capabilities: {
+            protocol: 'rtsp',
+            format: 'stanag4609',
+            source: 'skydio_uav',
+            stream_type: 'eo',
+            port: 5554,
+            stream_path: '/subject',
+            codec: 'h264',
+            metadata: 'klv_mpegts'
+          }
+        }
+      ],
+      skydio_streams: [
+        {
+          url: 'rtsp://192.168.42.10:5554/subject',
+          type: 'skydio_stanag4609',
+          name: 'Skydio_EO_192.168.42.10_eo_/subject',
+          status: 'DISCOVERED',
+          discovered_at: '2025-01-15T14:30:00Z',
+          last_seen: '2025-01-15T14:30:00Z',
+          capabilities: {
+            protocol: 'rtsp',
+            format: 'stanag4609',
+            source: 'skydio_uav',
+            stream_type: 'eo',
+            port: 5554,
+            stream_path: '/subject',
+            codec: 'h264',
+            metadata: 'klv_mpegts'
+          }
+        }
+      ],
+      generic_streams: [],
+      scan_timestamp: '2025-01-15T14:30:00Z',
+      total_found: 1,
+      discovery_options: {
+        skydio_enabled: true,
+        generic_enabled: false,
+        force_rescan: false,
+        include_offline: false
+      },
+      scan_duration: '2.5s',
+      errors: []
+    };
+  }
+
+  /**
+   * Mock External Stream Add Result - matches official RPC spec exactly
+   */
+  static getExternalStreamAddResult(): ExternalStreamAddResult {
+    return {
+      stream_url: 'rtsp://192.168.42.15:5554/subject',
+      stream_name: 'Skydio_UAV_15',
+      stream_type: 'skydio_stanag4609',
+      status: 'ADDED',
+      timestamp: '2025-01-15T14:30:00Z'
+    };
+  }
+
+  /**
+   * Mock External Stream Remove Result - matches official RPC spec exactly
+   */
+  static getExternalStreamRemoveResult(): ExternalStreamRemoveResult {
+    return {
+      stream_url: 'rtsp://192.168.42.15:5554/subject',
+      status: 'REMOVED',
+      timestamp: '2025-01-15T14:30:00Z'
+    };
+  }
+
+  /**
+   * Mock External Streams List Result - matches official RPC spec exactly
+   */
+  static getExternalStreamsListResult(): ExternalStreamsListResult {
+    return {
+      external_streams: [
+        {
+          url: 'rtsp://192.168.42.10:5554/subject',
+          type: 'skydio_stanag4609',
+          name: 'Skydio_EO_192.168.42.10_eo_/subject',
+          status: 'DISCOVERED',
+          discovered_at: '2025-01-15T14:30:00Z',
+          last_seen: '2025-01-15T14:30:00Z',
+          capabilities: {
+            protocol: 'rtsp',
+            format: 'stanag4609',
+            source: 'skydio_uav',
+            stream_type: 'eo',
+            port: 5554,
+            stream_path: '/subject',
+            codec: 'h264',
+            metadata: 'klv_mpegts'
+          }
+        }
+      ],
+      skydio_streams: [
+        {
+          url: 'rtsp://192.168.42.10:5554/subject',
+          type: 'skydio_stanag4609',
+          name: 'Skydio_EO_192.168.42.10_eo_/subject',
+          status: 'DISCOVERED',
+          discovered_at: '2025-01-15T14:30:00Z',
+          last_seen: '2025-01-15T14:30:00Z',
+          capabilities: {
+            protocol: 'rtsp',
+            format: 'stanag4609',
+            source: 'skydio_uav',
+            stream_type: 'eo',
+            port: 5554,
+            stream_path: '/subject',
+            codec: 'h264',
+            metadata: 'klv_mpegts'
+          }
+        }
+      ],
+      generic_streams: [],
+      total_count: 1,
+      timestamp: '2025-01-15T14:30:00Z'
+    };
+  }
+
+  /**
+   * Mock Discovery Interval Set Result - matches official RPC spec exactly
+   */
+  static getDiscoveryIntervalSetResult(): DiscoveryIntervalSetResult {
+    return {
+      scan_interval: 300,
+      status: 'UPDATED',
+      message: 'Discovery interval updated (restart required for changes to take effect)',
+      timestamp: '2025-01-15T14:30:00Z'
+    };
+  }
+
+  /**
+   * Mock Retention Policy Set Result - matches official RPC spec exactly
+   */
+  static getRetentionPolicySetResult(): RetentionPolicySetResult {
+    return {
+      policy_type: 'age',
+      max_age_days: 30,
+      enabled: true,
+      message: 'Retention policy configured successfully'
+    };
+  }
+
+  /**
+   * Mock Cleanup Result - matches official RPC spec exactly
+   */
+  static getCleanupResult(): CleanupResult {
+    return {
+      cleanup_executed: true,
+      files_deleted: 15,
+      space_freed: 10737418240,
+      message: 'Cleanup completed successfully'
+    };
+  }
+
+  /**
+   * Mock Delete Result - matches official RPC spec exactly
+   */
+  static getDeleteResult(): DeleteResult {
+    return {
+      filename: 'camera0_2025-01-15_14-30-00',
+      deleted: true,
+      message: 'Recording file deleted successfully'
+    };
+  }
+
+  // ============================================================================
+  // CLIENT STATE MOCKS (NOT FROM API)
+  // ============================================================================
+
+  /**
+   * Mock Connection State
+   */
+  static getConnectionState(): ConnectionState {
+    return {
+      status: 'connected',
+      lastError: null,
+      reconnectAttempts: 0,
+      lastConnected: '2025-01-15T14:30:00Z'
+    };
+  }
+
+  /**
+   * Mock Auth State
+   */
+  static getAuthState(): AuthState {
+    return {
+      token: 'mock-jwt-token',
+      role: 'operator',
+      session_id: '550e8400-e29b-41d4-a716-446655440000',
+      isAuthenticated: true,
+      expires_at: '2025-01-16T14:30:00Z',
+      permissions: ['view', 'control']
+    };
+  }
+
+  /**
+   * Mock Server State
+   */
+  static getServerState(): ServerState {
+    return {
+      info: this.getServerInfo(),
+      status: this.getSystemStatus(),
+      storage: this.getStorageInfo(),
+      loading: false,
+      error: null,
+      lastUpdated: '2025-01-15T14:30:00Z'
+    };
+  }
+
+  // ============================================================================
+  // SERVICE MOCKS (JEST MOCK FUNCTIONS)
+  // ============================================================================
+
+  /**
+   * Mock Device Service
+   */
+  static createMockDeviceService() {
+    return {
+      getCameraList: () => Promise.resolve(this.getCameraListResult()),
+      getCameraStatus: () => Promise.resolve(this.getCameraStatusResult()),
+      getCameraCapabilities: () => Promise.resolve(this.getCameraCapabilitiesResult()),
+      getStreamUrl: () => Promise.resolve(this.getStreamUrlResult()),
+      getStreamStatus: () => Promise.resolve(this.getStreamStatusResult()),
+      getStreams: () => Promise.resolve(this.getStreamsListResult())
+    };
+  }
+
+  /**
+   * Mock File Service
+   */
+  static createMockFileService() {
+    return {
+      listRecordings: () => Promise.resolve(this.getFileListResult()),
+      listSnapshots: () => Promise.resolve(this.getFileListResult()),
+      getRecordingInfo: () => Promise.resolve(this.getRecordingInfo()),
+      getSnapshotInfo: () => Promise.resolve(this.getSnapshotInfo()),
+      deleteRecording: () => Promise.resolve(this.getDeleteResult()),
+      deleteSnapshot: () => Promise.resolve(this.getDeleteResult())
+    };
+  }
+
+  /**
+   * Mock Recording Service
+   */
+  static createMockRecordingService() {
+    return {
+      takeSnapshot: () => Promise.resolve(this.getSnapshotResult()),
+      startRecording: () => Promise.resolve(this.getRecordingStartResult()),
+      stopRecording: () => Promise.resolve(this.getRecordingStopResult())
+    };
+  }
+
+  /**
+   * Mock Connection Service
+   */
+  static createMockConnectionService() {
+    return {
+      connect: () => Promise.resolve(),
+      disconnect: () => Promise.resolve(),
+      isConnected: () => true,
+      getConnectionState: () => this.getConnectionState()
+    };
+  }
+
+  /**
+   * Mock Auth Service
+   */
+  static createMockAuthService() {
+    return {
+      authenticate: () => Promise.resolve(this.getAuthenticateResult()),
+      logout: () => Promise.resolve(),
+      getAuthState: () => this.getAuthState(),
+      isAuthenticated: () => true
+    };
+  }
+
+  /**
+   * Mock Server Service
+   */
+  static createMockServerService() {
+    return {
+      getServerInfo: () => Promise.resolve(this.getServerInfo()),
+      getSystemStatus: () => Promise.resolve(this.getSystemStatus()),
+      getStorageInfo: () => Promise.resolve(this.getStorageInfo()),
+      getMetrics: () => Promise.resolve(this.getMetricsResult())
+    };
+  }
+
+  // ============================================================================
+  // ZUSTAND STORE MOCKS (JEST MOCK FUNCTIONS)
+  // ============================================================================
+
+  /**
+   * Mock Device Store
    */
   static createMockDeviceStore() {
     return {
-      cameras: [],
-      streams: [],
+      cameras: this.getCameraListResult().cameras,
+      streams: this.getStreamsListResult(),
       loading: false,
       error: null,
-      lastUpdated: null,
+      lastUpdated: '2025-01-15T14:30:00Z',
       getCameraList: () => Promise.resolve(),
       getStreamUrl: () => Promise.resolve(null),
       getStreams: () => Promise.resolve(),
@@ -350,175 +794,99 @@ export class APIMocks {
   }
 
   /**
-   * Create mock file store
-   * MANDATORY: Use this mock for all file store tests
+   * Mock File Store
    */
   static createMockFileStore() {
     return {
-      recordings: [],
-      snapshots: [],
+      recordings: this.getFileListResult().files,
+      snapshots: this.getFileListResult().files,
       loading: false,
       error: null,
-      pagination: { limit: 20, offset: 0, total: 0 },
-      selectedFiles: [],
-      currentTab: 'recordings' as const,
+      lastUpdated: '2025-01-15T14:30:00Z',
       loadRecordings: () => Promise.resolve(),
       loadSnapshots: () => Promise.resolve(),
-      getRecordingInfo: () => Promise.resolve(null),
-      getSnapshotInfo: () => Promise.resolve(null),
-      downloadFile: () => Promise.resolve(),
-      deleteRecording: () => Promise.resolve(false),
-      deleteSnapshot: () => Promise.resolve(false),
+      deleteRecording: () => Promise.resolve(),
+      deleteSnapshot: () => Promise.resolve(),
       setLoading: () => {},
       setError: () => {},
-      setCurrentTab: () => {},
-      setSelectedFiles: () => {},
-      toggleFileSelection: () => {},
-      clearSelection: () => {},
-      setPagination: () => {},
-      nextPage: () => {},
-      prevPage: () => {},
-      goToPage: () => {},
       setFileService: () => {},
       reset: () => {}
     };
   }
 
   /**
-   * Create mock recording store
-   * MANDATORY: Use this mock for all recording store tests
+   * Mock Recording Store
    */
   static createMockRecordingStore() {
     return {
-      activeRecordings: {},
-      history: [],
+      activeRecordings: [],
+      recordingHistory: [],
       loading: false,
       error: null,
-      setService: () => {},
+      lastUpdated: '2025-01-15T14:30:00Z',
       takeSnapshot: () => Promise.resolve(),
       startRecording: () => Promise.resolve(),
       stopRecording: () => Promise.resolve(),
-      handleRecordingStatusUpdate: () => {},
+      setLoading: () => {},
+      setError: () => {},
+      setRecordingService: () => {},
       reset: () => {}
     };
   }
 
   /**
-   * Create mock connection store
-   * MANDATORY: Use this mock for all connection store tests
+   * Mock Connection Store
    */
   static createMockConnectionStore() {
     return {
-      status: 'disconnected' as const,
+      status: 'connected',
       lastError: null,
       reconnectAttempts: 0,
-      lastConnected: null,
-      setStatus: () => {},
-      setError: () => {},
-      setReconnectAttempts: () => {},
-      setLastConnected: () => {},
+      lastConnected: '2025-01-15T14:30:00Z',
+      connect: () => Promise.resolve(),
+      disconnect: () => Promise.resolve(),
+      setConnectionService: () => {},
       reset: () => {}
     };
   }
 
   /**
-   * Create mock auth store
-   * MANDATORY: Use this mock for all auth store tests
+   * Mock Auth Store
    */
   static createMockAuthStore() {
     return {
-      token: null,
-      role: null,
-      session_id: null,
-      isAuthenticated: false,
-      expires_at: null,
-      permissions: [],
-      setToken: () => {},
-      setRole: () => {},
-      setSessionId: () => {},
-      setExpiresAt: () => {},
-      setPermissions: () => {},
-      setAuthenticated: () => {},
-      login: () => {},
-      logout: () => {},
+      token: 'mock-jwt-token',
+      role: 'operator',
+      session_id: '550e8400-e29b-41d4-a716-446655440000',
+      isAuthenticated: true,
+      expires_at: '2025-01-16T14:30:00Z',
+      permissions: ['view', 'control'],
+      authenticate: () => Promise.resolve(),
+      logout: () => Promise.resolve(),
+      setAuthService: () => {},
       reset: () => {}
     };
   }
 
   /**
-   * Create mock server store
-   * MANDATORY: Use this mock for all server store tests
+   * Mock Server Store
    */
   static createMockServerStore() {
     return {
-      info: null,
-      status: null,
-      storage: null,
+      info: this.getServerInfo(),
+      status: this.getSystemStatus(),
+      storage: this.getStorageInfo(),
       loading: false,
       error: null,
-      lastUpdated: null,
-      setInfo: () => {},
-      setStatus: () => {},
-      setStorage: () => {},
+      lastUpdated: '2025-01-15T14:30:00Z',
+      getServerInfo: () => Promise.resolve(),
+      getSystemStatus: () => Promise.resolve(),
+      getStorageInfo: () => Promise.resolve(),
+      getMetrics: () => Promise.resolve(),
       setLoading: () => {},
       setError: () => {},
-      setLastUpdated: () => {},
+      setServerService: () => {},
       reset: () => {}
-    };
-  }
-
-  /**
-   * Create mock device service
-   * MANDATORY: Use this mock for all device service tests
-   */
-  static createMockDeviceService() {
-    return {
-      getCameraList: () => Promise.resolve([]),
-      getStreamUrl: () => Promise.resolve(null),
-      getStreams: () => Promise.resolve([]),
-      getCameraStatus: () => Promise.resolve(null),
-      getCameraCapabilities: () => Promise.resolve(null)
-    };
-  }
-
-  /**
-   * Create mock file service
-   * MANDATORY: Use this mock for all file service tests
-   */
-  static createMockFileService() {
-    return {
-      listRecordings: () => Promise.resolve({ files: [], total: 0, limit: 20, offset: 0 }),
-      listSnapshots: () => Promise.resolve({ files: [], total: 0, limit: 20, offset: 0 }),
-      getRecordingInfo: () => Promise.resolve(null),
-      getSnapshotInfo: () => Promise.resolve(null),
-      downloadFile: () => Promise.resolve(),
-      deleteRecording: () => Promise.resolve({ success: false, message: 'Not implemented' }),
-      deleteSnapshot: () => Promise.resolve({ success: false, message: 'Not implemented' })
-    };
-  }
-
-  /**
-   * Create mock recording service
-   * MANDATORY: Use this mock for all recording service tests
-   */
-  static createMockRecordingService() {
-    return {
-      takeSnapshot: () => Promise.resolve(),
-      startRecording: () => Promise.resolve(),
-      stopRecording: () => Promise.resolve()
-    };
-  }
-
-  /**
-   * Get centralized logger mock
-   * SINGLE mock implementation for logger service
-   * MANDATORY: Use this mock for all logger tests
-   */
-  static getMockLogger() {
-    return {
-      info: jest.fn(),
-      warn: jest.fn(),
-      error: jest.fn()
     };
   }
 }

@@ -2,8 +2,8 @@
  * usePerformanceMonitor hook unit tests
  * 
  * Ground Truth References:
- * - Client Architecture: ../../../docs/architecture/client-architechture.md
- * - API Documentation: ../../../mediamtx-camera-service-go/docs/api/mediamtx_camera_service_openrpc.json
+ * - Client Architecture: ../docs/architecture/client-architecture.md
+ * - Server API: ../mediamtx-camera-service/docs/api/json-rpc-methods.md
  * 
  * Requirements Coverage:
  * - REQ-HOOK-001: Performance monitoring setup and cleanup
@@ -13,14 +13,13 @@
  * - REQ-HOOK-005: Analytics integration
  * 
  * Test Categories: Unit
- * API Documentation Reference: mediamtx_camera_service_openrpc.json
+ * API Documentation Reference: docs/api/json-rpc-methods.md
  */
 
 import { renderHook } from '@testing-library/react';
 import { usePerformanceMonitor } from '../../../src/hooks/usePerformanceMonitor';
-import { logger } from '../../../src/services/logger/LoggerService';
 
-// Mock logger service - using consistent pattern
+// Mock logger service - following centralized pattern
 jest.mock('../../../src/services/logger/LoggerService', () => ({
   logger: {
     info: jest.fn(),
@@ -44,7 +43,7 @@ const mockPerformance = {
 const mockGtag = jest.fn();
 
 describe('usePerformanceMonitor Hook Unit Tests', () => {
-  const mockLogger = logger as jest.Mocked<typeof logger>;
+  const mockLogger = require('../../../src/services/logger/LoggerService').logger;
 
   beforeEach(() => {
     jest.clearAllMocks();
