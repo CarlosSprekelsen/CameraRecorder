@@ -13,7 +13,7 @@
  * - REQ-DEV-005: Camera capabilities retrieval
  * 
  * Test Categories: Unit
- * API Documentation Reference: mediamtx_camera_service_openrpc.json
+ * API Documentation Reference: ../mediamtx-camera-service-go/docs/api/json_rpc_methods.md
  */
 
 import { DeviceService } from '../../../src/services/device/DeviceService';

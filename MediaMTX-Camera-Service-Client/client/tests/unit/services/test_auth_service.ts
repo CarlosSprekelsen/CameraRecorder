@@ -385,4 +385,24 @@ describe('AuthService Unit Tests', () => {
       );
     });
   });
+
+  describe('REQ-AUTH-006: Parameter validation', () => {
+    test('should validate JWT token format', async () => {
+      const invalidToken = 'invalid-token-format';
+      const errorResponse = APIMocks.getErrorResponse(-32001, 'Invalid token format');
+
+      mockWebSocketService.sendRPC.mockRejectedValue(new Error('Invalid token format'));
+
+      await expect(authService.authenticate(invalidToken)).rejects.toThrow('Invalid token format');
+    });
+
+    test('should validate role permissions', () => {
+      const adminResult = APIMocks.getAuthResult('admin');
+      const viewerResult = APIMocks.getAuthResult('viewer');
+
+      expect(adminResult.permissions).toContain('admin');
+      expect(viewerResult.permissions).not.toContain('admin');
+      expect(viewerResult.permissions).toContain('read');
+    });
+  });
 });

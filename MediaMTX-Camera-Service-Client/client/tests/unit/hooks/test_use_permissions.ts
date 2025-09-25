@@ -2,8 +2,8 @@
  * usePermissions hook unit tests
  * 
  * Ground Truth References:
- * - Client Architecture: ../docs/architecture/client-architechture.md
- * - API Documentation: ../mediamtx-camera-service-go/docs/api/mediamtx_camera_service_openrpc.json
+ * - Client Architecture: ../../../docs/architecture/client-architechture.md
+ * - API Documentation: ../../../mediamtx-camera-service-go/docs/api/mediamtx_camera_service_openrpc.json
  * 
  * Requirements Coverage:
  * - REQ-HOOK-001: Role-based access control functionality

@@ -2,8 +2,8 @@
  * useKeyboardShortcuts hook unit tests
  * 
  * Ground Truth References:
- * - Client Architecture: ../docs/architecture/client-architechture.md
- * - API Documentation: ../mediamtx-camera-service-go/docs/api/mediamtx_camera_service_openrpc.json
+ * - Client Architecture: ../../../docs/architecture/client-architechture.md
+ * - API Documentation: ../../../mediamtx-camera-service-go/docs/api/mediamtx_camera_service_openrpc.json
  * 
  * Requirements Coverage:
  * - REQ-HOOK-001: Keyboard shortcut registration and handling
@@ -25,7 +25,7 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate
 }));
 
-// Mock logger service
+// Mock logger service - using consistent pattern
 jest.mock('../../../src/services/logger/LoggerService', () => ({
   logger: {
     info: jest.fn(),

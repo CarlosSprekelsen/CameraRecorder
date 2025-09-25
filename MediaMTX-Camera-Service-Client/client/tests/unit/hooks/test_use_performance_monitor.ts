@@ -2,8 +2,8 @@
  * usePerformanceMonitor hook unit tests
  * 
  * Ground Truth References:
- * - Client Architecture: ../docs/architecture/client-architechture.md
- * - API Documentation: ../mediamtx-camera-service-go/docs/api/mediamtx_camera_service_openrpc.json
+ * - Client Architecture: ../../../docs/architecture/client-architechture.md
+ * - API Documentation: ../../../mediamtx-camera-service-go/docs/api/mediamtx_camera_service_openrpc.json
  * 
  * Requirements Coverage:
  * - REQ-HOOK-001: Performance monitoring setup and cleanup
@@ -20,7 +20,7 @@ import { renderHook } from '@testing-library/react';
 import { usePerformanceMonitor } from '../../../src/hooks/usePerformanceMonitor';
 import { logger } from '../../../src/services/logger/LoggerService';
 
-// Mock logger service
+// Mock logger service - using consistent pattern
 jest.mock('../../../src/services/logger/LoggerService', () => ({
   logger: {
     info: jest.fn(),

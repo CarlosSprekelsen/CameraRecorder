@@ -508,4 +508,17 @@ export class APIMocks {
       stopRecording: () => Promise.resolve()
     };
   }
+
+  /**
+   * Get centralized logger mock
+   * SINGLE mock implementation for logger service
+   * MANDATORY: Use this mock for all logger tests
+   */
+  static getMockLogger() {
+    return {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn()
+    };
+  }
 }

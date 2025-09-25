@@ -13,7 +13,7 @@
  * - REQ-LOG-005: Singleton pattern implementation
  * 
  * Test Categories: Unit
- * API Documentation Reference: mediamtx_camera_service_openrpc.json
+ * API Documentation Reference: ../mediamtx-camera-service-go/docs/api/json_rpc_methods.md
  */
 
 import { LoggerService, LogLevel, LogEntry } from '../../../src/services/logger/LoggerService';
