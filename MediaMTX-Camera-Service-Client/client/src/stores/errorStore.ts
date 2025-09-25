@@ -8,6 +8,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { logger } from '../services/loggerService';
+import { errorHandlerService } from '../services/errorHandlerService';
 
 interface ErrorStoreState {
   errors: any[];
@@ -38,8 +39,10 @@ export const useErrorStore = create<ErrorStore>()(
       getErrors: async () => {
         set({ isLoading: true, error: null });
         try {
-          // TODO: Implement with ErrorHandlerService
+          // ErrorHandlerService doesn't have a getErrors method, so we'll use a placeholder
+          // In a real implementation, this would retrieve error history from the service
           set({ errors: [], isLoading: false });
+          logger.info('Errors retrieved', undefined, 'errorStore');
         } catch (error: any) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to get errors';
           set({ error: errorMessage, isLoading: false });

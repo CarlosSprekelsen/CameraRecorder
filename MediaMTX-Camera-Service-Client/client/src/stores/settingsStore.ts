@@ -8,6 +8,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { logger } from '../services/loggerService';
+import { configurationManagerService } from '../services/configurationManagerService';
 
 interface SettingsStoreState {
   settings: any;
@@ -38,8 +39,17 @@ export const useSettingsStore = create<SettingsStore>()(
       getSettings: async () => {
         set({ isLoading: true, error: null });
         try {
-          // TODO: Implement with ConfigurationManagerService
-          set({ settings: {}, isLoading: false });
+          const settings = {
+            recordingRotationMinutes: configurationManagerService.getRecordingRotationMinutes(),
+            storageWarnPercent: configurationManagerService.getStorageWarnPercent(),
+            storageBlockPercent: configurationManagerService.getStorageBlockPercent(),
+            webSocketUrl: configurationManagerService.getWebSocketUrl(),
+            healthUrl: configurationManagerService.getHealthUrl(),
+            apiTimeout: configurationManagerService.getApiTimeout(),
+            logLevel: configurationManagerService.getLogLevel()
+          };
+          set({ settings, isLoading: false });
+          logger.info('Settings retrieved', undefined, 'settingsStore');
         } catch (error: any) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to get settings';
           set({ error: errorMessage, isLoading: false });
@@ -49,8 +59,18 @@ export const useSettingsStore = create<SettingsStore>()(
       updateSettings: async (settings: any) => {
         set({ isLoading: true, error: null });
         try {
-          // TODO: Implement with ConfigurationManagerService
+          // Update configuration through service
+          if (settings.recordingRotationMinutes !== undefined) {
+            configurationManagerService.setRecordingRotationMinutes(settings.recordingRotationMinutes);
+          }
+          if (settings.storageWarnPercent !== undefined) {
+            configurationManagerService.setStorageWarnPercent(settings.storageWarnPercent);
+          }
+          if (settings.storageBlockPercent !== undefined) {
+            configurationManagerService.setStorageBlockPercent(settings.storageBlockPercent);
+          }
           set({ settings, isLoading: false });
+          logger.info('Settings updated', undefined, 'settingsStore');
         } catch (error: any) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to update settings';
           set({ error: errorMessage, isLoading: false });

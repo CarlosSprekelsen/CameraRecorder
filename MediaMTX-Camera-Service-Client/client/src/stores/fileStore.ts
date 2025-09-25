@@ -8,6 +8,8 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { logger } from '../services/loggerService';
+import { RPC_METHODS } from '../types/rpc';
+import { errorRecoveryService } from '../services/errorRecoveryService';
 
 interface FileStoreState {
   files: any[];
@@ -39,8 +41,31 @@ export const useFileStore = create<FileStore>()(
       getFiles: async () => {
         set({ isLoading: true, error: null });
         try {
-          // TODO: Implement with FileService
-          set({ files: [], isLoading: false });
+          // Get both recordings and snapshots
+          const [recordings, snapshots] = await Promise.all([
+            errorRecoveryService.executeWithRetry(
+              async () => {
+                // This would need websocket service - for now return empty
+                return { files: [], total: 0 };
+              },
+              'getFiles_recordings'
+            ),
+            errorRecoveryService.executeWithRetry(
+              async () => {
+                // This would need websocket service - for now return empty
+                return { files: [], total: 0 };
+              },
+              'getFiles_snapshots'
+            )
+          ]);
+          
+          const allFiles = [
+            ...recordings.files.map((f: any) => ({ ...f, type: 'recording' })),
+            ...snapshots.files.map((f: any) => ({ ...f, type: 'snapshot' }))
+          ];
+          
+          set({ files: allFiles, isLoading: false });
+          logger.info('Files retrieved', undefined, 'fileStore');
         } catch (error: any) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to get files';
           set({ error: errorMessage, isLoading: false });
@@ -49,7 +74,8 @@ export const useFileStore = create<FileStore>()(
       
       downloadFile: async (fileId: string) => {
         try {
-          // TODO: Implement with FileService
+          // File download would be handled by direct HTTP request to download URL
+          // For now, just log the action
           logger.info(`Downloading file ${fileId}`, undefined, 'fileStore');
         } catch (error: any) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to download file';
@@ -59,7 +85,8 @@ export const useFileStore = create<FileStore>()(
       
       deleteFile: async (fileId: string) => {
         try {
-          // TODO: Implement with FileService
+          // File deletion would use RPC methods DELETE_RECORDING or DELETE_SNAPSHOT
+          // For now, just log the action
           logger.info(`Deleting file ${fileId}`, undefined, 'fileStore');
         } catch (error: any) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to delete file';

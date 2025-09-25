@@ -8,6 +8,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { logger } from '../services/loggerService';
+import { configurationManagerService } from '../services/configurationManagerService';
 
 interface ConfigurationStoreState {
   configuration: any;
@@ -38,8 +39,17 @@ export const useConfigurationStore = create<ConfigurationStore>()(
       getConfiguration: async () => {
         set({ isLoading: true, error: null });
         try {
-          // TODO: Implement with ConfigurationManagerService
-          set({ configuration: {}, isLoading: false });
+          const configuration = {
+            recordingRotationMinutes: configurationManagerService.getRecordingRotationMinutes(),
+            storageWarnPercent: configurationManagerService.getStorageWarnPercent(),
+            storageBlockPercent: configurationManagerService.getStorageBlockPercent(),
+            webSocketUrl: configurationManagerService.getWebSocketUrl(),
+            healthUrl: configurationManagerService.getHealthUrl(),
+            apiTimeout: configurationManagerService.getApiTimeout(),
+            logLevel: configurationManagerService.getLogLevel()
+          };
+          set({ configuration, isLoading: false });
+          logger.info('Configuration retrieved', undefined, 'configurationStore');
         } catch (error: any) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to get configuration';
           set({ error: errorMessage, isLoading: false });
@@ -49,8 +59,18 @@ export const useConfigurationStore = create<ConfigurationStore>()(
       updateConfiguration: async (config: any) => {
         set({ isLoading: true, error: null });
         try {
-          // TODO: Implement with ConfigurationManagerService
+          // Update configuration through service
+          if (config.recordingRotationMinutes !== undefined) {
+            configurationManagerService.setRecordingRotationMinutes(config.recordingRotationMinutes);
+          }
+          if (config.storageWarnPercent !== undefined) {
+            configurationManagerService.setStorageWarnPercent(config.storageWarnPercent);
+          }
+          if (config.storageBlockPercent !== undefined) {
+            configurationManagerService.setStorageBlockPercent(config.storageBlockPercent);
+          }
           set({ configuration: config, isLoading: false });
+          logger.info('Configuration updated', undefined, 'configurationStore');
         } catch (error: any) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to update configuration';
           set({ error: errorMessage, isLoading: false });

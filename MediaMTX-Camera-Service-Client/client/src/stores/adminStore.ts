@@ -41,8 +41,9 @@ export const useAdminStore = create<AdminStore>()(
       getSystemInfo: async () => {
         set({ isLoading: true, error: null });
         try {
-          // TODO: Implement with AdminService
-          set({ isLoading: false });
+          const systemInfo = await adminService.getAllSystemInfo();
+          set({ systemInfo, isLoading: false });
+          logger.info('System info retrieved', undefined, 'adminStore');
         } catch (error: any) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to get system info';
           set({ error: errorMessage, isLoading: false });
@@ -52,8 +53,15 @@ export const useAdminStore = create<AdminStore>()(
       getServerStats: async () => {
         set({ isLoading: true, error: null });
         try {
-          // TODO: Implement with AdminService
-          set({ isLoading: false });
+          const [metrics, status, serverInfo, storageInfo] = await Promise.all([
+            adminService.getMetrics(),
+            adminService.getStatus(),
+            adminService.getServerInfo(),
+            adminService.getStorageInfo()
+          ]);
+          const serverStats = { metrics, status, serverInfo, storageInfo };
+          set({ serverStats, isLoading: false });
+          logger.info('Server stats retrieved', undefined, 'adminStore');
         } catch (error: any) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to get server stats';
           set({ error: errorMessage, isLoading: false });
