@@ -1,6 +1,17 @@
 import { useEffect, useCallback } from 'react';
 import { logger } from '../services/logger/LoggerService';
 
+// Performance API types for proper typing
+interface WindowWithGtag extends Window {
+  gtag?: (command: string, targetId: string, config: Record<string, unknown>) => void;
+}
+
+interface PerformanceEntryWithInput extends PerformanceEntry {
+  processingStart?: number;
+  hadRecentInput?: boolean;
+  value?: number;
+}
+
 // Performance metrics interface for future use
 // interface PerformanceMetrics {
 //   lcp?: number; // Largest Contentful Paint
@@ -25,7 +36,7 @@ export const usePerformanceMonitor = () => {
 
     // Send to analytics service if available
     if (typeof window !== 'undefined' && 'gtag' in window) {
-      (window as any).gtag('event', name, {
+      (window as WindowWithGtag).gtag?.('event', name, {
         value: Math.round(name === 'CLS' ? delta * 1000 : delta),
         event_category: 'Web Vitals',
         event_label: name,
@@ -34,7 +45,7 @@ export const usePerformanceMonitor = () => {
     }
   }, []);
 
-  const trackCustomMetric = useCallback((name: string, value: number, metadata?: Record<string, any>) => {
+  const trackCustomMetric = useCallback((name: string, value: number, metadata?: Record<string, unknown>) => {
     logger.info('Custom performance metric', {
       metric: name,
       value,
@@ -65,8 +76,10 @@ export const usePerformanceMonitor = () => {
         try {
           const fidObserver = new PerformanceObserver((list) => {
             const entries = list.getEntries();
-            entries.forEach((entry: any) => {
-              trackMetric('FID', entry.processingStart - entry.startTime, entry.processingStart - entry.startTime);
+            entries.forEach((entry: PerformanceEntryWithInput) => {
+              if (entry.processingStart) {
+                trackMetric('FID', entry.processingStart - entry.startTime, entry.processingStart - entry.startTime);
+              }
             });
           });
           fidObserver.observe({ entryTypes: ['first-input'] });
@@ -79,8 +92,8 @@ export const usePerformanceMonitor = () => {
           const clsObserver = new PerformanceObserver((list) => {
             let clsValue = 0;
             const entries = list.getEntries();
-            entries.forEach((entry: any) => {
-              if (!entry.hadRecentInput) {
+            entries.forEach((entry: PerformanceEntryWithInput) => {
+              if (!entry.hadRecentInput && entry.value !== undefined) {
                 clsValue += entry.value;
               }
             });

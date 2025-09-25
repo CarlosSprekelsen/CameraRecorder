@@ -1,4 +1,4 @@
-import { JsonRpcRequest, JsonRpcResponse, JsonRpcNotification, RpcMethod } from '../../types/api';
+import { JsonRpcRequest, JsonRpcResponse, JsonRpcNotification, RpcMethod, ERROR_CODES } from '../../types/api';
 
 export interface WebSocketServiceConfig {
   url: string;
@@ -178,7 +178,40 @@ export class WebSocketService {
     this.pendingRequests.delete(response.id);
 
     if (response.error) {
-      pending.reject(new Error(`RPC Error ${response.error.code}: ${response.error.message}`));
+      // Handle specific error codes according to server API specification
+      const errorCode = response.error.code;
+      let errorMessage = response.error.message;
+      
+      switch (errorCode) {
+        case ERROR_CODES.AUTH_FAILED:
+          errorMessage = 'Authentication failed. Please log in again.';
+          break;
+        case ERROR_CODES.PERMISSION_DENIED:
+          errorMessage = 'Permission denied. You do not have access to this operation.';
+          break;
+        case ERROR_CODES.NOT_FOUND:
+          errorMessage = 'Resource not found.';
+          break;
+        case ERROR_CODES.INVALID_STATE:
+          errorMessage = 'Operation not allowed in current state.';
+          break;
+        case ERROR_CODES.UNSUPPORTED:
+          errorMessage = 'Feature not supported.';
+          break;
+        case ERROR_CODES.RATE_LIMITED:
+          errorMessage = 'Rate limit exceeded. Please try again later.';
+          break;
+        case ERROR_CODES.DEPENDENCY_FAILED:
+          errorMessage = 'External service unavailable.';
+          break;
+        default:
+          errorMessage = `RPC Error ${errorCode}: ${response.error.message}`;
+      }
+      
+      const error = new Error(errorMessage);
+      (error as any).code = errorCode;
+      (error as any).data = response.error.data;
+      pending.reject(error);
     } else {
       pending.resolve(response.result);
     }

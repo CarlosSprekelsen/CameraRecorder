@@ -1,4 +1,25 @@
 import { ServerInfo, SystemStatus, StorageInfo } from '../../types/api';
+
+// Metrics interface based on server API specification
+export interface SystemMetrics {
+  timestamp: string;
+  system_metrics: {
+    cpu_usage: number;
+    memory_usage: number;
+    disk_usage: number;
+    goroutines: number;
+  };
+  camera_metrics: {
+    connected_cameras: number;
+    cameras: Record<string, any>;
+  };
+  recording_metrics: Record<string, any>;
+  stream_metrics: {
+    active_streams: number;
+    total_streams: number;
+    total_viewers: number;
+  };
+}
 import { WebSocketService } from '../websocket/WebSocketService';
 
 export class ServerService {
@@ -30,6 +51,14 @@ export class ServerService {
     }
 
     return this.wsService.sendRPC<StorageInfo>('get_storage_info');
+  }
+
+  async getMetrics(): Promise<SystemMetrics> {
+    if (!this.wsService.isConnected) {
+      throw new Error('WebSocket not connected');
+    }
+
+    return this.wsService.sendRPC<SystemMetrics>('get_metrics');
   }
 
   async ping(): Promise<string> {

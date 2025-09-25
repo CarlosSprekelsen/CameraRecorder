@@ -20,12 +20,12 @@ export const usePermissions = () => {
     return roleHierarchy[role] >= roleHierarchy[requiredRole];
   };
 
-  // Specific permission checks
+  // Specific permission checks - ALIGNED WITH SERVER API PERMISSIONS MATRIX
   const canViewCameras = (): boolean => hasRole('viewer');
   const canControlCameras = (): boolean => hasRole('operator');
-  const canManageFiles = (): boolean => hasRole('operator');
-  const canDeleteFilesPermission = (): boolean => hasRole('admin');
-  const canViewSystemStatus = (): boolean => hasRole('viewer');
+  const canManageFiles = (): boolean => hasRole('operator'); // For download operations
+  const canDeleteFilesPermission = (): boolean => hasRole('admin'); // delete_recording/delete_snapshot require admin
+  const canViewSystemStatus = (): boolean => hasRole('admin'); // get_status/get_metrics/get_storage_info require admin
   const canManageSystem = (): boolean => hasRole('admin');
 
   // Permission-based UI controls

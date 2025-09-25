@@ -100,16 +100,22 @@ export interface ServerState {
   lastUpdated: string | null;
 }
 
-// RPC Method Names (for type safety)
+// RPC Method Names (for type safety) - ALIGNED WITH SERVER API
 export type RpcMethod = 
   | 'ping'
   | 'authenticate'
   | 'get_server_info'
   | 'get_status'
   | 'get_storage_info'
+  | 'get_metrics'
   | 'get_camera_list'
+  | 'get_camera_status'
+  | 'get_camera_capabilities'
   | 'get_stream_url'
+  | 'get_stream_status'
   | 'get_streams'
+  | 'start_streaming'
+  | 'stop_streaming'
   | 'take_snapshot'
   | 'start_recording'
   | 'stop_recording'
@@ -121,7 +127,14 @@ export type RpcMethod =
   | 'delete_snapshot'
   | 'subscribe_events'
   | 'unsubscribe_events'
-  | 'get_subscription_stats';
+  | 'get_subscription_stats'
+  | 'discover_external_streams'
+  | 'add_external_stream'
+  | 'remove_external_stream'
+  | 'get_external_streams'
+  | 'set_discovery_interval'
+  | 'set_retention_policy'
+  | 'cleanup_old_files';
 
 // Error Codes (from OpenRPC spec)
 export const ERROR_CODES = {
