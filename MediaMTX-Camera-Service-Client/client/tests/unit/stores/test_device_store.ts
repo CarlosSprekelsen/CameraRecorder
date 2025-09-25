@@ -38,7 +38,8 @@ describe('Device Store', () => {
     jest.clearAllMocks();
     
     // Set up default mock implementations
-    mockDeviceService.getCameraList.mockResolvedValue(MockDataFactory.getCameraListResult());
+    const cameraListResult = MockDataFactory.getCameraListResult();
+    mockDeviceService.getCameraList.mockResolvedValue(cameraListResult.cameras);
     mockDeviceService.getStreamUrl.mockResolvedValue('rtsp://localhost:8554/camera0');
     mockDeviceService.getStreams.mockResolvedValue(MockDataFactory.getStreamsListResult());
   });
@@ -111,7 +112,7 @@ describe('Device Store', () => {
         streams: [MockDataFactory.getStreamsListResult()[0]] 
       });
       
-      updateStreamStatus('stream1', false, 5);
+      updateStreamStatus('camera0', false, 5);
       const streams = useDeviceStore.getState().streams;
       expect(streams[0].ready).toBe(false);
       expect(streams[0].readers).toBe(5);

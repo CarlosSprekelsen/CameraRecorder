@@ -27,8 +27,11 @@ const mockWebSocketService = MockDataFactory.createMockWebSocketService();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
 const mockDocument = MockDataFactory.createMockDocument();
 
-// Use centralized document mock - no direct browser API mocking
-// The jsdom environment will handle document operations automatically
+// Mock global document object
+Object.defineProperty(window, 'document', {
+  value: mockDocument,
+  writable: true
+});
 
 describe('FileService Unit Tests', () => {
   let fileService: FileService;

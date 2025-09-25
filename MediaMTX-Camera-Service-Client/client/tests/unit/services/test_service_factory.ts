@@ -28,27 +28,27 @@ import { FileService } from '../../../src/services/file/FileService';
 // Use centralized mocks - eliminates duplication
 import { MockDataFactory } from '../../utils/mocks';
 
-// Mock all services using centralized approach
+// Mock all services using centralized approach - return constructor functions
 jest.mock('../../../src/services/websocket/WebSocketService', () => ({
-  WebSocketService: () => MockDataFactory.createMockWebSocketService()
+  WebSocketService: jest.fn().mockImplementation(() => MockDataFactory.createMockWebSocketService())
 }));
 jest.mock('../../../src/services/auth/AuthService', () => ({
-  AuthService: () => MockDataFactory.createMockAuthService()
+  AuthService: jest.fn().mockImplementation(() => MockDataFactory.createMockAuthService())
 }));
 jest.mock('../../../src/services/server/ServerService', () => ({
-  ServerService: () => MockDataFactory.createMockServerService()
+  ServerService: jest.fn().mockImplementation(() => MockDataFactory.createMockServerService())
 }));
 jest.mock('../../../src/services/notifications/NotificationService', () => ({
-  NotificationService: () => MockDataFactory.createMockEventHandler()
+  NotificationService: jest.fn().mockImplementation(() => MockDataFactory.createMockEventHandler())
 }));
 jest.mock('../../../src/services/device/DeviceService', () => ({
-  DeviceService: () => MockDataFactory.createMockDeviceService()
+  DeviceService: jest.fn().mockImplementation(() => MockDataFactory.createMockDeviceService())
 }));
 jest.mock('../../../src/services/recording/RecordingService', () => ({
-  RecordingService: () => MockDataFactory.createMockRecordingService()
+  RecordingService: jest.fn().mockImplementation(() => MockDataFactory.createMockRecordingService())
 }));
 jest.mock('../../../src/services/file/FileService', () => ({
-  FileService: () => MockDataFactory.createMockFileService()
+  FileService: jest.fn().mockImplementation(() => MockDataFactory.createMockFileService())
 }));
 jest.mock('../../../src/services/logger/LoggerService', () => ({
   logger: {

@@ -41,6 +41,25 @@ const mockPerformance = MockDataFactory.createMockPerformanceMonitor();
 // Mock window.gtag
 const mockGtag = MockDataFactory.createMockEventHandler();
 
+// Mock global PerformanceObserver
+global.PerformanceObserver = jest.fn().mockImplementation(() => ({
+  observe: mockObserve,
+  disconnect: mockDisconnect,
+  takeRecords: jest.fn(() => [])
+}));
+
+// Mock global performance object
+Object.defineProperty(window, 'performance', {
+  value: mockPerformance,
+  writable: true
+});
+
+// Mock window.gtag
+Object.defineProperty(window, 'gtag', {
+  value: mockGtag,
+  writable: true
+});
+
 describe('usePerformanceMonitor Hook Unit Tests', () => {
   const mockLogger = require('../../../src/services/logger/LoggerService').logger;
 

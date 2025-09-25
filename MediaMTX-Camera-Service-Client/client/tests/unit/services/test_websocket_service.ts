@@ -37,8 +37,11 @@ describe('WebSocketService Unit Tests', () => {
       onResponse: MockDataFactory.createMockEventHandler(),
     };
 
-    // Use centralized mock instead of creating new WebSocketService
-    webSocketService = mockWebSocketService as any;
+    // Create new instance of WebSocketService with mocked dependencies
+    webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
+    
+    // Replace internal WebSocket with mock
+    (webSocketService as any).ws = MockDataFactory.createMockWebSocket();
   });
 
   afterEach(() => {

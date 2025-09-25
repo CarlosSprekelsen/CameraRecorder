@@ -101,7 +101,7 @@ describe('ServerService Unit Tests', () => {
     });
 
     test('should validate status structure', async () => {
-      const status = MockDataFactory.getServerInfo();
+      const status = MockDataFactory.getSystemStatus();
       mockWebSocketService.sendRPC.mockResolvedValue(status);
 
       const result = await serverService.getStatus();

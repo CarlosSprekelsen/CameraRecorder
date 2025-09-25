@@ -40,7 +40,7 @@ export class DeviceService implements IDiscovery {
 
       const response = await this.wsService.sendRPC('get_camera_list') as CameraListResult;
 
-      if (response.cameras) {
+      if (response.cameras && response.cameras.length > 0) {
         this.logger.info(`Retrieved ${response.cameras.length} cameras`);
         // Transform API cameras to store cameras with required fields
         return response.cameras.map(apiCamera => ({
@@ -94,7 +94,7 @@ export class DeviceService implements IDiscovery {
 
       const response = await this.wsService.sendRPC('get_streams') as StreamInfo[];
 
-      if (Array.isArray(response)) {
+      if (Array.isArray(response) && response.length > 0) {
         this.logger.info(`Retrieved ${response.length} active streams`);
         return response;
       }
