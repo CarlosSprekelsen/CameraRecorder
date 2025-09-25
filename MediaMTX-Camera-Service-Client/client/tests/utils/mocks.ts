@@ -718,6 +718,7 @@ export class MockDataFactory {
     };
   }
 
+
   // ============================================================================
   // SERVICE MOCKS (JEST MOCK FUNCTIONS)
   // ============================================================================
@@ -795,6 +796,117 @@ export class MockDataFactory {
       getStorageInfo: () => Promise.resolve(this.getStorageInfo()),
       getMetrics: () => Promise.resolve(this.getMetricsResult())
     };
+  }
+
+  // ============================================================================
+  // CENTRALIZED MOCK UTILITIES (CRITICAL FIX - ELIMINATE DUPLICATIONS)
+  // ============================================================================
+
+  /**
+   * Centralized WebSocket Service Mock - eliminates duplication across test files
+   */
+  static createMockWebSocketService(): jest.Mocked<WebSocketService> {
+    return {
+      isConnected: true,
+      sendRPC: jest.fn(),
+      connect: jest.fn(),
+      disconnect: jest.fn(),
+      sendNotification: jest.fn(),
+      onConnect: jest.fn(),
+      onDisconnect: jest.fn(),
+      onError: jest.fn(),
+      onMessage: jest.fn(),
+      connectionState: 1, // WebSocket.OPEN
+      requestId: 0,
+      pendingRequests: new Map(),
+      reconnectAttempts: 0,
+      lastConnected: new Date(),
+      pingInterval: null,
+      reconnectTimeout: null
+    } as jest.Mocked<WebSocketService>;
+  }
+
+  /**
+   * Centralized Logger Service Mock - eliminates duplication across test files
+   */
+  static createMockLoggerService(): jest.Mocked<LoggerService> {
+    return {
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn(),
+      setLevel: jest.fn(),
+      getLevel: jest.fn(),
+      isEnabled: jest.fn()
+    } as jest.Mocked<LoggerService>;
+  }
+
+  /**
+   * Centralized Session Storage Mock - eliminates duplication across test files
+   */
+  static createMockSessionStorage(): Storage {
+    const storage = new Map<string, string>();
+    
+    return {
+      getItem: jest.fn((key: string) => storage.get(key) || null),
+      setItem: jest.fn((key: string, value: string) => storage.set(key, value)),
+      removeItem: jest.fn((key: string) => storage.delete(key)),
+      clear: jest.fn(() => storage.clear()),
+      key: jest.fn((index: number) => Array.from(storage.keys())[index] || null),
+      length: storage.size
+    } as jest.Mocked<Storage>;
+  }
+
+  /**
+   * Centralized Document Mock - eliminates duplication across test files
+   */
+  static createMockDocument(): Document {
+    const mockElement = {
+      click: jest.fn(),
+      setAttribute: jest.fn(),
+      getAttribute: jest.fn(),
+      appendChild: jest.fn(),
+      removeChild: jest.fn()
+    };
+
+    return {
+      createElement: jest.fn(() => mockElement),
+      body: {
+        appendChild: jest.fn(),
+        removeChild: jest.fn()
+      }
+    } as jest.Mocked<Document>;
+  }
+
+  /**
+   * Centralized WebSocket Mock - eliminates duplication across test files
+   */
+  static createMockWebSocket(): WebSocket {
+    return {
+      readyState: 0, // WebSocket.CONNECTING
+      send: jest.fn(),
+      close: jest.fn(),
+      onopen: null,
+      onclose: null,
+      onerror: null,
+      onmessage: null,
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn()
+    } as jest.Mocked<WebSocket>;
+  }
+
+  /**
+   * Centralized Console Mock - eliminates duplication across test files
+   */
+  static createMockConsole(): Console {
+    return {
+      log: jest.fn(),
+      info: jest.fn(),
+      warn: jest.fn(),
+      error: jest.fn(),
+      debug: jest.fn()
+    } as jest.Mocked<Console>;
   }
 
 }

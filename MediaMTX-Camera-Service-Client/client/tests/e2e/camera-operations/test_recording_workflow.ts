@@ -76,7 +76,7 @@ describe('Recording Workflow E2E Tests', () => {
     
     // Step 6: Verify recording file was created
     const recordings = await apiClient.call('list_recordings', [10, 0]);
-    expect(APIResponseValidator.validateListFilesResult(recordings)).toBe(true);
+    expect(APIResponseValidator.validateFileListResult(recordings)).toBe(true);
     expect(recordings.files.length).toBeGreaterThan(0);
     
     const recordingFile = recordings.files.find(file => 
@@ -106,7 +106,7 @@ describe('Recording Workflow E2E Tests', () => {
     
     // Step 3: Verify snapshot file was created
     const snapshots = await apiClient.call('list_snapshots', [10, 0]);
-    expect(APIResponseValidator.validateListFilesResult(snapshots)).toBe(true);
+    expect(APIResponseValidator.validateFileListResult(snapshots)).toBe(true);
     expect(snapshots.files.length).toBeGreaterThan(0);
     
     const snapshotFile = snapshots.files.find(file => 
@@ -123,7 +123,7 @@ describe('Recording Workflow E2E Tests', () => {
     
     // Step 1: List recordings
     const recordings = await apiClient.call('list_recordings', [50, 0]);
-    expect(APIResponseValidator.validateListFilesResult(recordings)).toBe(true);
+    expect(APIResponseValidator.validateFileListResult(recordings)).toBe(true);
     
     if (recordings.files.length > 0) {
       const recording = recordings.files[0];
@@ -152,7 +152,7 @@ describe('Recording Workflow E2E Tests', () => {
     
     // Step 1: Get system status
     const status = await apiClient.call('get_status');
-    expect(APIResponseValidator.validateStatusResult(status)).toBe(true);
+    expect(APIResponseValidator.validateSystemStatus(status)).toBe(true);
     expect(['HEALTHY', 'DEGRADED', 'UNHEALTHY']).toContain(status.status);
     
     // Step 2: Get server information
@@ -199,7 +199,7 @@ describe('Recording Workflow E2E Tests', () => {
     
     // Verify all results are valid
     expect(APIResponseValidator.validateCameraListResult(results[0])).toBe(true);
-    expect(APIResponseValidator.validateStatusResult(results[1])).toBe(true);
+    expect(APIResponseValidator.validateSystemStatus(results[1])).toBe(true);
     expect(APIResponseValidator.validateServerInfo(results[2])).toBe(true);
     expect(APIResponseValidator.validateStorageInfo(results[3])).toBe(true);
     expect(APIResponseValidator.validateMetricsResult(results[4])).toBe(true);
@@ -214,7 +214,7 @@ describe('Recording Workflow E2E Tests', () => {
     
     // Step 2: Verify system is still operational
     const status = await apiClient.call('get_status');
-    expect(APIResponseValidator.validateStatusResult(status)).toBe(true);
+    expect(APIResponseValidator.validateSystemStatus(status)).toBe(true);
     
     // Step 3: Verify camera list still works
     const cameraList = await apiClient.call('get_camera_list');

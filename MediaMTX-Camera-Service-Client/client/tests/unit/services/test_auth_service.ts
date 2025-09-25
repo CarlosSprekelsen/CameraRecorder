@@ -21,12 +21,9 @@ import { WebSocketService } from '../../../src/services/websocket/WebSocketServi
 import { MockDataFactory } from '../../utils/mocks';
 import { APIResponseValidator } from '../../utils/validators';
 
-// Mock sessionStorage
-const mockSessionStorage = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-};
+// Use centralized mocks - eliminates duplication
+const mockWebSocketService = MockDataFactory.createMockWebSocketService();
+const mockSessionStorage = MockDataFactory.createMockSessionStorage();
 
 // Mock sessionStorage for jsdom environment
 if (typeof window === 'undefined') {
@@ -39,12 +36,6 @@ if (typeof window === 'undefined') {
     writable: true,
   });
 }
-
-// Mock WebSocketService
-const mockWebSocketService = {
-  isConnected: true,
-  sendRPC: jest.fn(),
-} as jest.Mocked<WebSocketService>;
 
 describe('AuthService Unit Tests', () => {
   let authService: AuthService;

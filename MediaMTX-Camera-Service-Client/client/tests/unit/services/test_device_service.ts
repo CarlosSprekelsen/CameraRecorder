@@ -22,16 +22,9 @@ import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { MockDataFactory } from '../../utils/mocks';
 import { APIResponseValidator } from '../../utils/validators';
 
-// Mock dependencies
-const mockWebSocketService = {
-  sendRPC: jest.fn(),
-} as jest.Mocked<WebSocketService>;
-
-const mockLoggerService = {
-  info: jest.fn(),
-  warn: jest.fn(),
-  error: jest.fn(),
-} as jest.Mocked<LoggerService>;
+// Use centralized mocks - eliminates duplication
+const mockWebSocketService = MockDataFactory.createMockWebSocketService();
+const mockLoggerService = MockDataFactory.createMockLoggerService();
 
 describe('DeviceService Unit Tests', () => {
   let deviceService: DeviceService;
@@ -187,7 +180,7 @@ describe('DeviceService Unit Tests', () => {
 
     test('should get stream status for specific device', async () => {
       const device = 'camera0';
-      const expectedStatus = MockDataFactory.getStreamStatus(device);
+      const expectedStatus = MockDataFactory.getStreamStatusResult();
       
       mockWebSocketService.sendRPC.mockResolvedValue(expectedStatus);
 

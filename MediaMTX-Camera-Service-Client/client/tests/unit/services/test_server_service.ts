@@ -21,11 +21,8 @@ import { WebSocketService } from '../../../src/services/websocket/WebSocketServi
 import { MockDataFactory } from '../../utils/mocks';
 import { APIResponseValidator } from '../../utils/validators';
 
-// Mock WebSocketService
-const mockWebSocketService = {
-  isConnected: true,
-  sendRPC: jest.fn(),
-} as jest.Mocked<WebSocketService>;
+// Use centralized mocks - eliminates duplication
+const mockWebSocketService = MockDataFactory.createMockWebSocketService();
 
 describe('ServerService Unit Tests', () => {
   let serverService: ServerService;
@@ -87,7 +84,7 @@ describe('ServerService Unit Tests', () => {
 
       expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('get_status');
       expect(result).toEqual(expectedStatus);
-      expect(APIResponseValidator.validateStatusResult(result)).toBe(true);
+      expect(APIResponseValidator.validateSystemStatus(result)).toBe(true);
     });
 
     test('should throw error when WebSocket not connected', async () => {

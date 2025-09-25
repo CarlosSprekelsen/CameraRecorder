@@ -18,7 +18,11 @@
     "test:integration": "jest --config tests/config/jest-integration.config.cjs",
     "test:e2e": "jest --config tests/config/jest-e2e.config.cjs",
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
-    "test": "npm run test:unit"
+    "test": "npm run test:unit",
+    "test:duplication-check": "node scripts/detect-duplications.js",
+    "test:duplication-check-quick": "node scripts/pre-commit-duplication-check.js",
+    "ci:duplication": "npm run test:duplication-check",
+    "ci:all": "npm run lint && npm run type-check && npm run test:all && npm run ci:duplication"
   },
   "dependencies": {
     "@emotion/react": "^11.11.1",
@@ -61,6 +65,7 @@
     "@babel/core": "^7.23.0",
     "@babel/preset-env": "^7.23.0",
     "@babel/preset-typescript": "^7.23.0",
-    "@babel/preset-react": "^7.23.0"
+    "@babel/preset-react": "^7.23.0",
+    "husky": "^8.0.3"
   }
 }

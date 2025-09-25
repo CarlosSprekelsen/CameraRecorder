@@ -1,15 +1,21 @@
 /**
  * Unit Tests for Auth Store
  * 
- * REQ-001: Store State Management - Test Zustand store actions
- * REQ-002: State Transitions - Test state changes
- * REQ-003: Error Handling - Test error states and recovery
- * REQ-004: Authentication Flow - Test login/logout functionality
- * REQ-005: Side Effects - Test store side effects
- * REQ-006: Permission Management - Test permission handling
+ * Ground Truth References:
+ * - Server API: ../mediamtx-camera-service/docs/api/json-rpc-methods.md
+ * - Client Architecture: ../docs/architecture/client-architecture.md
+ * - Client Requirements: ../docs/requirements/client-requirements.md
  * 
- * Ground Truth: Official RPC Documentation
- * API Reference: docs/api/json_rpc_methods.md
+ * Requirements Coverage:
+ * - REQ-STORE-001: Store state management validation
+ * - REQ-STORE-002: State transition testing
+ * - REQ-STORE-003: Error handling and recovery
+ * - REQ-STORE-004: Authentication flow testing
+ * - REQ-STORE-005: Store side effects validation
+ * - REQ-STORE-006: Permission management testing
+ * 
+ * Test Categories: Unit
+ * API Documentation Reference: json-rpc-methods.md
  */
 
 import { describe, test, expect, beforeEach, afterEach, jest } from '@jest/globals';

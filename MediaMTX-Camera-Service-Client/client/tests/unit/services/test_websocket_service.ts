@@ -41,13 +41,17 @@ const mockWebSocket = {
 
 // Mock global WebSocket
 (global as any).WebSocket = jest.fn(() => {
-  // Simulate connection process
-  setTimeout(() => {
+  // Reset readyState to CONNECTING initially
+  mockWebSocket.readyState = WebSocketConstants.CONNECTING;
+  
+  // Simulate connection process with proper async handling
+  setImmediate(() => {
     mockWebSocket.readyState = WebSocketConstants.OPEN;
     if (mockWebSocket.onopen) {
       mockWebSocket.onopen();
     }
-  }, 0);
+  });
+  
   return mockWebSocket;
 });
 

@@ -109,7 +109,7 @@ describe('Camera Operations Integration Tests', () => {
     
     const result = await apiClient.call('list_recordings', [10, 0]);
     
-    expect(APIResponseValidator.validateListFilesResult(result)).toBe(true);
+    expect(APIResponseValidator.validateFileListResult(result)).toBe(true);
     expect(Array.isArray(result.files)).toBe(true);
     expect(result.limit).toBe(10);
     expect(result.offset).toBe(0);
@@ -121,7 +121,7 @@ describe('Camera Operations Integration Tests', () => {
     
     const result = await apiClient.call('list_snapshots', [10, 0]);
     
-    expect(APIResponseValidator.validateListFilesResult(result)).toBe(true);
+    expect(APIResponseValidator.validateFileListResult(result)).toBe(true);
     expect(Array.isArray(result.files)).toBe(true);
     expect(result.limit).toBe(10);
     expect(result.offset).toBe(0);
@@ -133,7 +133,7 @@ describe('Camera Operations Integration Tests', () => {
     
     const result = await apiClient.call('get_status');
     
-    expect(APIResponseValidator.validateStatusResult(result)).toBe(true);
+    expect(APIResponseValidator.validateSystemStatus(result)).toBe(true);
     expect(['HEALTHY', 'DEGRADED', 'UNHEALTHY']).toContain(result.status);
   });
 

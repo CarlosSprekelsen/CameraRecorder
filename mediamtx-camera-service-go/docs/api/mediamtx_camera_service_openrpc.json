@@ -3,16 +3,43 @@
     "info": {
       "title": "MediaMTX Camera Service API",
       "version": "1.0.0",
-      "description": "OpenRPC specification for the MediaMTX Camera Service JSON\u2011RPC 2.0 API over WebSocket.",
+      "description": "OpenRPC specification for the MediaMTX Camera Service JSON\u2011RPC 2.0 API over WebSocket. Provides comprehensive camera control, recording, streaming, and file management capabilities with role-based authentication and real-time event notifications.",
       "license": {
         "name": "Proprietary"
-      }
+      },
+      "contact": {
+        "name": "MediaMTX Camera Service",
+        "url": "https://github.com/camerarecorder/mediamtx-camera-service-go"
+      },
+      "tags": [
+        {
+          "name": "Performance",
+          "description": "Performance Guarantees: Status Methods <50ms, Control Methods <100ms, WebSocket Notifications <20ms"
+        },
+        {
+          "name": "Authentication",
+          "description": "Role-based access control: viewer (read-only), operator (camera control), admin (full access)"
+        },
+        {
+          "name": "Versioning",
+          "description": "API Version 1.0.0 with 12-month deprecation notice for breaking changes"
+        },
+        {
+          "name": "Protocols",
+          "description": "JSON-RPC 2.0 over WebSocket with HTTP file download endpoints"
+        }
+      ]
     },
     "servers": [
       {
         "name": "WebSocket",
         "url": "ws://localhost:8002/ws",
         "summary": "Primary JSON\u2011RPC 2.0 endpoint over WebSocket"
+      },
+      {
+        "name": "HTTP Files",
+        "url": "http://localhost:8002",
+        "summary": "HTTP file download endpoints for recordings and snapshots"
       }
     ],
     "components": {
@@ -52,6 +79,10 @@
             "hls": {
               "type": "string",
               "description": "https://<host>/hls/camera0.m3u8"
+            },
+            "webrtc": {
+              "type": "string",
+              "description": "webrtc://<host>:8554/camera0 (reserved for future implementation)"
             }
           },
           "additionalProperties": false
@@ -818,52 +849,93 @@
               "type": "object"
             }
           }
+        },
+        "ValidationRules": {
+          "type": "object",
+          "description": "API validation rules and constraints",
+          "properties": {
+            "camera_identifiers": {
+              "type": "string",
+              "description": "Must match pattern camera[0-9]+ (e.g., 'camera0', 'camera1')"
+            },
+            "duration_limits": {
+              "type": "object",
+              "properties": {
+                "min": {"type": "integer", "minimum": 1},
+                "max": {"type": "integer", "maximum": 86400}
+              }
+            },
+            "file_size_limits": {
+              "type": "object",
+              "properties": {
+                "max_size_gb": {"type": "number", "maximum": 100}
+              }
+            },
+            "pagination_limits": {
+              "type": "object",
+              "properties": {
+                "max_limit": {"type": "integer", "maximum": 1000},
+                "default_limit": {"type": "integer", "default": 50}
+              }
+            }
+          }
         }
       },
       "errors": [
         {
           "code": -32600,
-          "message": "Invalid Request"
+          "message": "Invalid Request",
+          "description": "Bad JSON-RPC envelope"
         },
         {
           "code": -32601,
-          "message": "Method Not Found"
+          "message": "Method Not Found",
+          "description": "Unknown method name"
         },
         {
           "code": -32602,
-          "message": "Invalid Params"
+          "message": "Invalid Params",
+          "description": "Fails validation rules"
         },
         {
           "code": -32603,
-          "message": "Internal Error"
+          "message": "Internal Error",
+          "description": "Unhandled server error"
         },
         {
           "code": -32001,
-          "message": "Auth Failed"
+          "message": "Auth Failed",
+          "description": "Invalid/expired token"
         },
         {
           "code": -32002,
-          "message": "Permission Denied"
+          "message": "Permission Denied",
+          "description": "Role lacks permission"
         },
         {
           "code": -32010,
-          "message": "Not Found"
+          "message": "Not Found",
+          "description": "Recording/file/camera not found"
         },
         {
           "code": -32020,
-          "message": "Invalid State"
+          "message": "Invalid State",
+          "description": "Operation not allowed in current state"
         },
         {
           "code": -32030,
-          "message": "Unsupported"
+          "message": "Unsupported",
+          "description": "Feature/capability not available"
         },
         {
           "code": -32040,
-          "message": "Rate Limited"
+          "message": "Rate Limited",
+          "description": "Too many requests"
         },
         {
           "code": -32050,
-          "message": "Dependency Failed"
+          "message": "Dependency Failed",
+          "description": "MediaMTX/FFmpeg error"
         }
       ]
     },
@@ -1827,6 +1899,54 @@
             "type": "null"
           }
         }
+      },
+      {
+        "name": "GET /files/recordings/{filename}",
+        "summary": "Download a recording file via HTTP.",
+        "params": [
+          {
+            "name": "filename",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "string",
+            "description": "File content with appropriate Content-Type and Content-Disposition headers"
+          }
+        },
+        "servers": [
+          {
+            "name": "HTTP Files"
+          }
+        ]
+      },
+      {
+        "name": "GET /files/snapshots/{filename}",
+        "summary": "Download a snapshot file via HTTP.",
+        "params": [
+          {
+            "name": "filename",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "string",
+            "description": "File content with appropriate Content-Type and Content-Disposition headers"
+          }
+        },
+        "servers": [
+          {
+            "name": "HTTP Files"
+          }
+        ]
       }
     ]
   }

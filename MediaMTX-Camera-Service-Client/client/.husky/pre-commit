@@ -1,0 +1,25 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Pre-commit hook for MediaMTX Camera Service Client
+# Runs duplication detection on staged test files
+
+echo "🔍 Running pre-commit duplication check..."
+
+# Run the duplication check script
+node scripts/pre-commit-duplication-check.js
+
+# If duplication check fails, prevent commit
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "🚨 Commit blocked due to duplication violations"
+  echo "Please fix the issues above before committing"
+  echo ""
+  echo "Quick fix commands:"
+  echo "  npm run test:duplication-check  # Run full check"
+  echo "  npm run lint:fix               # Auto-fix some issues"
+  echo ""
+  exit 1
+fi
+
+echo "✅ Pre-commit checks passed"

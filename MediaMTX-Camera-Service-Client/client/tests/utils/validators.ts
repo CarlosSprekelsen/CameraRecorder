@@ -725,4 +725,80 @@ export class APIResponseValidator {
       typeof (obj.error as Record<string, unknown>).message === 'string'
     );
   }
+
+  // ============================================================================
+  // MISSING VALIDATOR METHODS (CRITICAL FIX)
+  // ============================================================================
+
+  /**
+   * Validate pagination parameters - matches official RPC spec
+   */
+  static validatePaginationParams(limit: number, offset: number): boolean {
+    return (
+      typeof limit === 'number' &&
+      typeof offset === 'number' &&
+      limit > 0 &&
+      limit <= 1000 &&
+      offset >= 0
+    );
+  }
+
+  /**
+   * Validate recording file object - matches official RPC spec
+   */
+  static validateRecordingFile(file: unknown): boolean {
+    if (typeof file !== 'object' || file === null) return false;
+    
+    const obj = file as Record<string, unknown>;
+    
+    return (
+      typeof obj.filename === 'string' &&
+      typeof obj.file_size === 'number' &&
+      typeof obj.modified_time === 'string' &&
+      typeof obj.download_url === 'string' &&
+      obj.file_size >= 0 &&
+      this.validateIsoTimestamp(obj.modified_time)
+    );
+  }
+
+  /**
+   * Validate stream URL format - matches official RPC spec
+   */
+  static validateStreamUrl(url: string): boolean {
+    try {
+      const urlObj = new URL(url);
+      return (
+        urlObj.protocol === 'rtsp:' ||
+        urlObj.protocol === 'https:' ||
+        urlObj.protocol === 'http:'
+      );
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * Validate recording format - matches official RPC spec
+   */
+  static validateRecordingFormat(format: string): boolean {
+    const validFormats = ['fmp4', 'mp4', 'mkv'];
+    return validFormats.includes(format);
+  }
+
+  /**
+   * Validate stream status - matches official RPC spec
+   */
+  static validateStreamStatus(status: unknown): boolean {
+    if (typeof status !== 'object' || status === null) return false;
+    
+    const obj = status as Record<string, unknown>;
+    
+    return (
+      typeof obj.device === 'string' &&
+      typeof obj.status === 'string' &&
+      typeof obj.ready === 'boolean' &&
+      this.validateDeviceId(obj.device) &&
+      ['ACTIVE', 'INACTIVE', 'ERROR', 'STARTING', 'STOPPING'].includes(obj.status)
+    );
+  }
 }
