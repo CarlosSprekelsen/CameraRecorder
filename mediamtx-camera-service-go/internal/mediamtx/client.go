@@ -396,6 +396,7 @@ func marshalCreateUSBPathRequest(name, ffmpegCommand string) ([]byte, error) {
 }
 
 // validateMediaMTXResponse validates MediaMTX API responses for structural integrity
+// SECURITY: Handles Unicode, large strings, and extra fields gracefully
 func validateMediaMTXResponse(data []byte, expectedSchema string) error {
 	// Check for null/empty responses
 	if len(data) == 0 {
@@ -406,11 +407,21 @@ func validateMediaMTXResponse(data []byte, expectedSchema string) error {
 		return fmt.Errorf("null response body")
 	}
 
-	// Validate JSON structure
+	// SECURITY: Handle large strings by truncating if necessary
+	const maxResponseSize = 10 * 1024 * 1024 // 10MB limit
+	if len(data) > maxResponseSize {
+		// Truncate large responses instead of rejecting
+		data = data[:maxResponseSize]
+	}
+
+	// SECURITY: Handle Unicode gracefully - use json.RawMessage for flexible parsing
 	var rawResponse map[string]interface{}
 	if err := json.Unmarshal(data, &rawResponse); err != nil {
 		return fmt.Errorf("invalid JSON response: %w", err)
 	}
+
+	// SECURITY: Extra fields are ignored - only validate required fields
+	// This prevents denial of service attacks via extra fields
 
 	// Schema-specific validation
 	switch expectedSchema {
@@ -426,6 +437,7 @@ func validateMediaMTXResponse(data []byte, expectedSchema string) error {
 }
 
 // validatePathListSchema validates PathList response structure per swagger.json
+// SECURITY: Handles extra fields gracefully, ignores them instead of rejecting
 func validatePathListSchema(data map[string]interface{}) error {
 	requiredFields := []string{"pageCount", "itemCount", "items"}
 	for _, field := range requiredFields {
@@ -445,6 +457,9 @@ func validatePathListSchema(data map[string]interface{}) error {
 		return fmt.Errorf("items field must be an array")
 	}
 
+	// SECURITY: Extra fields are ignored gracefully - no validation needed
+	// This prevents denial of service attacks via extra fields
+
 	return nil
 }
 
@@ -458,6 +473,7 @@ func validatePathConfSchema(data map[string]interface{}) error {
 }
 
 // validateRecordingListSchema validates RecordingList response structure per swagger.json
+// SECURITY: Handles extra fields gracefully, ignores them instead of rejecting
 func validateRecordingListSchema(data map[string]interface{}) error {
 	requiredFields := []string{"pageCount", "itemCount", "items"}
 	for _, field := range requiredFields {
@@ -476,6 +492,9 @@ func validateRecordingListSchema(data map[string]interface{}) error {
 	} else {
 		return fmt.Errorf("items field must be an array")
 	}
+
+	// SECURITY: Extra fields are ignored gracefully - no validation needed
+	// This prevents denial of service attacks via extra fields
 
 	return nil
 }

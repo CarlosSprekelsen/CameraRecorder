@@ -1897,28 +1897,28 @@ func NewJSONScenarioRegistry() *JSONScenarioRegistry {
 		},
 		{
 			Name:        "json_with_extra_fields",
-			JSONData:    []byte(`{"extraField": "should be ignored"}`), // Extra fields vary by type
-			ExpectError: false,                                         // Should handle gracefully by ignoring extra fields
+			JSONData:    []byte(`{"items": [], "pageCount": 1, "itemCount": 0, "extraField": "should be ignored"}`), // Include required fields + extra
+			ExpectError: false,                                                                                      // Should handle gracefully by ignoring extra fields
 			ErrorMsg:    "",
 			Description: "JSON with extra fields should be handled gracefully",
 		},
 		{
 			Name:        "json_with_unicode_issues",
-			JSONData:    []byte(`{"test": "test\u0000null\u0000byte"}`),
+			JSONData:    []byte(`{"items": [], "pageCount": 1, "itemCount": 0, "test": "test\u0000null\u0000byte"}`),
 			ExpectError: false, // Should handle gracefully
 			ErrorMsg:    "",
 			Description: "JSON with Unicode issues should be handled gracefully",
 		},
 		{
 			Name:        "json_with_very_large_strings",
-			JSONData:    []byte(fmt.Sprintf(`{"test": "%s"}`, strings.Repeat("x", 1000000))),
+			JSONData:    []byte(fmt.Sprintf(`{"items": [], "pageCount": 1, "itemCount": 0, "test": "%s"}`, strings.Repeat("x", 1000000))),
 			ExpectError: false, // Should handle gracefully
 			ErrorMsg:    "",
 			Description: "JSON with very large strings should be handled gracefully",
 		},
 		{
 			Name:        "json_with_special_characters",
-			JSONData:    []byte(`{"test": "test\"quotes\"and'single'quotes\nand\tnewlines"}`),
+			JSONData:    []byte(`{"items": [], "pageCount": 1, "itemCount": 0, "test": "test\"quotes\"and'single'quotes\nand\tnewlines"}`),
 			ExpectError: false, // Should handle gracefully
 			ErrorMsg:    "",
 			Description: "JSON with special characters should be handled gracefully",

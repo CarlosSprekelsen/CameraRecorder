@@ -775,7 +775,7 @@ func (rm *RecordingManager) GetRecordingsList(ctx context.Context, limit, offset
 
 	return &FileListResponse{
 		Files:  files,
-		Total:  int(recordingList.ItemCount),
+		Total:  int(recordingList.ItemCount), // Ensure integer type per JSON-RPC spec
 		Limit:  limit,
 		Offset: offset,
 	}, nil

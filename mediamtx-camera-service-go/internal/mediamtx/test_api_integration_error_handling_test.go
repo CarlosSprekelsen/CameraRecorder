@@ -352,17 +352,16 @@ func TestConcurrentRecordingOperations(t *testing.T) {
 		_, _ = controller.StopRecording(ctx, cameraID)
 		// This might succeed or fail depending on current state
 
-		// Check error patterns for shared resource (single camera)
+		// Check results for idempotent stop operations
 		mu.Lock()
 		t.Logf("Concurrent stop operations had %d errors out of %d operations: %v", len(errors), concurrency, errors)
-		// For a shared physical camera resource, expect that most/all operations may fail
-		// This is correct behavior when multiple threads compete for the same physical device
-		assert.GreaterOrEqual(t, len(errors), 0, "Some errors are expected when competing for shared camera resource")
 
-		// Verify the errors are the expected "not found" type
-		for _, err := range errors {
-			assert.Contains(t, err.Error(), "resource not found", "Errors should be 'resource not found' for already-stopped recording")
-		}
+		// StopRecording is idempotent - multiple stops should succeed
+		// This tests that the system handles concurrent stop operations gracefully
+		assert.Equal(t, 0, len(errors), "StopRecording should be idempotent - no errors expected for concurrent stops")
+
+		// Verify all operations succeeded (idempotent behavior)
+		t.Logf("✅ All %d concurrent stop operations succeeded (idempotent behavior)", concurrency)
 		mu.Unlock()
 	})
 

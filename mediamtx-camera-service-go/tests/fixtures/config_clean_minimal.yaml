@@ -130,6 +130,13 @@ performance:
     active_connections_limit: 900     # Trigger at 900 connections
     goroutines_limit: 1000            # Trigger at 1000 goroutines
 
+# Storage settings (actually used) - matches JSON-RPC authoritative source
+storage:
+  warn_percent: 70        # Warning at 70% usage (30% available)
+  block_percent: 85       # Critical at 85% usage (15% available)
+  default_path: "/tmp/recordings"
+  fallback_path: "/tmp/recordings"
+
 # Security settings (actually used)
 security:
   rate_limit_requests: 100
@@ -137,12 +144,6 @@ security:
   jwt_secret_key: "test-secret-key"
   jwt_expiry_hours: 24
 
-# Storage settings (actually used)
-storage:
-  warn_percent: 80
-  block_percent: 90
-  default_path: "/tmp/recordings"
-  fallback_path: "/tmp/recordings"
 
 # Retention policy (actually used)
 retention_policy:

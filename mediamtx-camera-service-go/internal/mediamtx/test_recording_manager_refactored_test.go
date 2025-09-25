@@ -134,7 +134,7 @@ func TestRecordingManager_APISchemaCompliance_ReqMTX001_Refactored(t *testing.T)
 
 	// Validate response structure
 	assert.NotNil(t, recordings.Files, "Files field should exist")
-	assert.GreaterOrEqual(t, recordings.Total, int64(0), "Total should be non-negative")
+	assert.GreaterOrEqual(t, recordings.Total, 0, "Total should be non-negative")
 }
 
 // TestRecordingManager_APIErrorHandling_ReqMTX004_Refactored tests API error handling

@@ -169,7 +169,7 @@ func TestHealthNotificationManager_CheckStorageThresholds_ReqMTX004(t *testing.T
 
 	// Verify notification content
 	notification := notifications[0]
-	assert.Equal(t, "storage_warning", notification.Status, "Notification status should be storage_warning")
+	assert.Equal(t, "storage_critical", notification.Status, "Notification status should be storage_critical (85% usage = 15% available = UNHEALTHY per JSON-RPC docs)")
 	assert.Contains(t, notification.Data, "usage_percentage", "Notification should contain usage percentage")
 	assert.Contains(t, notification.Data, "available_space", "Notification should contain available space")
 }
@@ -226,28 +226,8 @@ func TestHealthNotificationManager_CheckPerformanceThresholds_ReqMTX004(t *testi
 // TestHealthNotificationManager_DebounceMechanism_ReqMTX004 tests debounce mechanism
 func TestHealthNotificationManager_DebounceMechanism_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
-	config := &config.Config{
-		Performance: config.PerformanceConfig{
-			MonitoringThresholds: config.MonitoringThresholdsConfig{
-				MemoryUsagePercent:     90.0,
-				ErrorRatePercent:       5.0,
-				AverageResponseTimeMs:  1000.0,
-				ActiveConnectionsLimit: 900,
-				GoroutinesLimit:        1000,
-			},
-			Debounce: config.DebounceConfig{
-				HealthMonitorSeconds:      15,
-				StorageMonitorSeconds:     30,
-				PerformanceMonitorSeconds: 45,
-			},
-		},
-	}
-
-	logger := logging.GetLogger("mediamtx")
-	notifier := NewMockSystemEventNotifier()
-
-	manager := NewHealthNotificationManager(config, logger, notifier)
-	require.NotNil(t, manager, "Health notification manager should not be nil")
+	// Use proper test fixture instead of hardcoding configuration
+	manager, notifier := createHealthNotificationManagerFromFixture(t)
 
 	// Test debounce mechanism with rapid successive calls
 	storageInfo := &StorageInfo{
@@ -271,6 +251,9 @@ func TestHealthNotificationManager_DebounceMechanism_ReqMTX004(t *testing.T) {
 
 	// Clear notifications and make another call
 	notifier.ClearNotifications()
+
+	// Wait for debounce period to expire (fixture uses 1 second)
+	time.Sleep(1100 * time.Millisecond) // Wait slightly longer than 1 second debounce
 
 	// Make another call
 	manager.CheckStorageThresholds(storageInfo)
