@@ -23,6 +23,30 @@ export interface WebSocketServiceEvents {
   onResponse: (response: JsonRpcResponse) => void;
 }
 
+/**
+ * WebSocket Service
+ * 
+ * Manages WebSocket connections and JSON-RPC 2.0 communication with the MediaMTX server.
+ * Provides automatic reconnection, ping/pong heartbeat, and request/response handling.
+ * 
+ * @class WebSocketService
+ * @implements {WebSocketServiceConfig}
+ * 
+ * @example
+ * ```typescript
+ * const wsService = new WebSocketService({
+ *   url: 'ws://localhost:8002/ws',
+ *   reconnectInterval: 5000,
+ *   maxReconnectAttempts: 5
+ * });
+ * 
+ * wsService.events.onConnect = () => console.log('Connected');
+ * await wsService.connect();
+ * ```
+ * 
+ * @see {@link https://www.jsonrpc.org/specification} JSON-RPC 2.0 Specification
+ * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture
+ */
 export class WebSocketService {
   private ws: WebSocket | null = null;
   private config: Required<WebSocketServiceConfig>;

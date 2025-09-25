@@ -9,8 +9,28 @@ import { JsonRpcNotification } from '../../types/api';
 import { useRecordingStore } from '../../stores/recording/recordingStore';
 
 /**
- * CameraPage - Main device table following architecture section 5.1
- * Implements I.Discovery interface for device discovery and stream links
+ * CameraPage - Main device management interface
+ * 
+ * Implements the I.Discovery interface for device discovery and stream links.
+ * Provides a comprehensive view of all connected cameras with real-time status updates.
+ * 
+ * @component
+ * @returns {JSX.Element} The camera management page
+ * 
+ * @features
+ * - Real-time camera status monitoring
+ * - Device discovery and enumeration
+ * - Stream URL management
+ * - Recording status tracking
+ * - Error handling and loading states
+ * 
+ * @example
+ * ```tsx
+ * <CameraPage />
+ * ```
+ * 
+ * @see {@link https://github.com/mediamtx/mediamtx} MediaMTX documentation
+ * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture
  */
 const CameraPage: React.FC = memo(() => {
   const {

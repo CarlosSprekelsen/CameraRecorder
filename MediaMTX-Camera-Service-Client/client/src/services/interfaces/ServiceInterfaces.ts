@@ -1,5 +1,11 @@
-// Service Layer - Interface Contracts
-// Implements the interfaces defined in architecture section 5.3
+/**
+ * Service Layer - Interface Contracts
+ * Implements the interfaces defined in architecture section 5.3
+ * 
+ * @fileoverview Defines the core service interfaces for the MediaMTX Camera Service Client
+ * @author MediaMTX Development Team
+ * @version 1.0.0
+ */
 
 import {
   JsonRpcNotification,
@@ -15,17 +21,118 @@ import {
 } from '../../types/api';
 import { Camera, StreamInfo } from '../../stores/device/deviceStore';
 
-// I.Discovery: list devices and stream links
+/**
+ * Device Discovery Interface
+ * Provides methods for discovering cameras and retrieving stream information
+ * 
+ * @interface IDiscovery
+ */
 export interface IDiscovery {
+  /**
+   * Retrieves the list of available cameras
+   * 
+   * @returns {Promise<Camera[]>} Array of camera objects with device information
+   * @throws {Error} When discovery fails or connection is lost
+   * 
+   * @example
+   * ```typescript
+   * const cameras = await discoveryService.getCameraList();
+   * console.log(`Found ${cameras.length} cameras`);
+   * ```
+   */
   getCameraList(): Promise<Camera[]>;
+
+  /**
+   * Retrieves the list of active streams
+   * 
+   * @returns {Promise<StreamInfo[]>} Array of stream information objects
+   * @throws {Error} When stream discovery fails
+   * 
+   * @example
+   * ```typescript
+   * const streams = await discoveryService.getStreams();
+   * streams.forEach(stream => console.log(stream.url));
+   * ```
+   */
   getStreams(): Promise<StreamInfo[]>;
+
+  /**
+   * Gets the stream URL for a specific device
+   * 
+   * @param {string} device - The device identifier
+   * @returns {Promise<string | null>} The stream URL or null if not available
+   * @throws {Error} When device is not found or stream is unavailable
+   * 
+   * @example
+   * ```typescript
+   * const url = await discoveryService.getStreamUrl('camera-001');
+   * if (url) {
+   *   console.log(`Stream URL: ${url}`);
+   * }
+   * ```
+   */
   getStreamUrl(device: string): Promise<string | null>;
 }
 
-// I.Command: snapshot and recording operations
+/**
+ * Command Operations Interface
+ * Provides methods for camera control operations (snapshot and recording)
+ * 
+ * @interface ICommand
+ */
 export interface ICommand {
+  /**
+   * Takes a snapshot from the specified camera
+   * 
+   * @param {string} device - The camera device identifier
+   * @param {string} [filename] - Optional custom filename for the snapshot
+   * @returns {Promise<SnapshotResult>} Snapshot operation result with download URL
+   * @throws {Error} When device is not found or snapshot fails
+   * 
+   * @example
+   * ```typescript
+   * const result = await commandService.takeSnapshot('camera-001', 'my-snapshot.jpg');
+   * if (result.success) {
+   *   console.log(`Snapshot saved: ${result.filename}`);
+   * }
+   * ```
+   */
   takeSnapshot(device: string, filename?: string): Promise<SnapshotResult>;
+
+  /**
+   * Starts recording from the specified camera
+   * 
+   * @param {string} device - The camera device identifier
+   * @param {number} [duration] - Optional recording duration in seconds
+   * @param {string} [format] - Optional recording format (mp4, avi, etc.)
+   * @returns {Promise<RecordingResult>} Recording operation result with status
+   * @throws {Error} When device is not found or recording fails to start
+   * 
+   * @example
+   * ```typescript
+   * const result = await commandService.startRecording('camera-001', 60, 'mp4');
+   * if (result.success) {
+   *   console.log(`Recording started: ${result.recording_id}`);
+   * }
+   * ```
+   */
   startRecording(device: string, duration?: number, format?: string): Promise<RecordingResult>;
+
+  /**
+   * Stops recording from the specified camera
+   * 
+   * @param {string} device - The camera device identifier
+   * @returns {Promise<RecordingResult>} Recording stop result with final status
+   * @throws {Error} When device is not found or no active recording exists
+   * 
+   * @example
+   * ```typescript
+   * const result = await commandService.stopRecording('camera-001');
+   * if (result.success) {
+   *   console.log(`Recording stopped: ${result.status}`);
+   * }
+   * ```
+   */
   stopRecording(device: string): Promise<RecordingResult>;
 }
 

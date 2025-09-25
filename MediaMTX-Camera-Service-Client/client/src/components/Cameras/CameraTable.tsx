@@ -1,3 +1,9 @@
+/**
+ * @fileoverview CameraTable component for displaying camera devices in a table format
+ * @author MediaMTX Development Team
+ * @version 1.0.0
+ */
+
 import React from 'react';
 import {
   Table,
@@ -31,8 +37,35 @@ interface CameraTableProps {
 }
 
 /**
- * CameraTable - Device list with status following architecture section 5.1
- * Displays cameras with real-time status and stream links
+ * CameraTable - Device list with status and stream management
+ * 
+ * Displays cameras in a table format with real-time status updates and stream links.
+ * Implements the I.Discovery interface for device enumeration and stream URL management.
+ * 
+ * @component
+ * @param {CameraTableProps} props - Component props
+ * @param {Camera[]} props.cameras - Array of camera devices to display
+ * @param {StreamInfo[]} props.streams - Array of active stream information
+ * @param {() => void} props.onRefresh - Callback function to refresh camera list
+ * @returns {JSX.Element} The camera table component
+ * 
+ * @features
+ * - Real-time camera status display
+ * - Stream URL management and copying
+ * - Recording status indicators
+ * - Device action buttons
+ * - Responsive table design
+ * 
+ * @example
+ * ```tsx
+ * <CameraTable 
+ *   cameras={cameras} 
+ *   streams={streams} 
+ *   onRefresh={handleRefresh} 
+ * />
+ * ```
+ * 
+ * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture
  */
 const CameraTable: React.FC<CameraTableProps> = ({ cameras, streams, onRefresh }) => {
   const { activeRecordings } = useRecordingStore();
