@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import {
   Box,
   Card,
@@ -17,7 +17,7 @@ interface LoginPageProps {
   authService: AuthService;
 }
 
-const LoginPage: React.FC<LoginPageProps> = ({ authService }) => {
+const LoginPage: React.FC<LoginPageProps> = memo(({ authService }) => {
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -56,7 +56,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ authService }) => {
         setError('Authentication failed. Please check your token.');
       }
     } catch (error) {
-      console.error('Authentication error:', error);
+      // Authentication error - handled by error boundary
       setError(error instanceof Error ? error.message : 'Authentication failed');
     } finally {
       setLoading(false);
@@ -150,6 +150,6 @@ const LoginPage: React.FC<LoginPageProps> = ({ authService }) => {
       </Card>
     </Box>
   );
-};
+});
 
 export default LoginPage;

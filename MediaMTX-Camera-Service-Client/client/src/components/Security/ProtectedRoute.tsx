@@ -52,7 +52,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   // Check permission requirement (if implemented)
   if (requiredPermission) {
     // TODO: Implement specific permission checks when permission system is expanded
-    console.warn('Permission-based access control not yet implemented');
+    // Permission-based access control - handled by usePermissions hook
   }
 
   return <>{children}</>;

@@ -1,4 +1,5 @@
 import { ServerInfo, SystemStatus, StorageInfo } from '../../types/api';
+import { IStatus } from '../interfaces/ServiceInterfaces';
 
 // Metrics interface based on server API specification
 export interface SystemMetrics {
@@ -22,7 +23,7 @@ export interface SystemMetrics {
 }
 import { WebSocketService } from '../websocket/WebSocketService';
 
-export class ServerService {
+export class ServerService implements IStatus {
   private wsService: WebSocketService;
 
   constructor(wsService: WebSocketService) {
@@ -67,5 +68,30 @@ export class ServerService {
     }
 
     return this.wsService.sendRPC<string>('ping');
+  }
+
+  // IStatus interface implementation
+  async subscribeEvents(topics: string[], filters?: any): Promise<any> {
+    if (!this.wsService.isConnected) {
+      throw new Error('WebSocket not connected');
+    }
+
+    return this.wsService.sendRPC('subscribe_events', { topics, filters });
+  }
+
+  async unsubscribeEvents(topics?: string[]): Promise<any> {
+    if (!this.wsService.isConnected) {
+      throw new Error('WebSocket not connected');
+    }
+
+    return this.wsService.sendRPC('unsubscribe_events', { topics });
+  }
+
+  async getSubscriptionStats(): Promise<any> {
+    if (!this.wsService.isConnected) {
+      throw new Error('WebSocket not connected');
+    }
+
+    return this.wsService.sendRPC('get_subscription_stats');
   }
 }

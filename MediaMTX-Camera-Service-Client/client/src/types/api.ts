@@ -49,7 +49,7 @@ export interface StorageInfo {
 export interface JsonRpcRequest {
   jsonrpc: '2.0';
   method: string;
-  params?: any;
+  params?: Record<string, unknown>;
   id: string | number;
 }
 
@@ -59,7 +59,7 @@ export interface JsonRpcResponse<T = any> {
   error?: {
     code: number;
     message: string;
-    data?: any;
+    data?: unknown;
   };
   id: string | number;
 }
@@ -67,7 +67,7 @@ export interface JsonRpcResponse<T = any> {
 export interface JsonRpcNotification {
   jsonrpc: '2.0';
   method: string;
-  params?: any;
+  params?: Record<string, unknown>;
 }
 
 // WebSocket Connection Types

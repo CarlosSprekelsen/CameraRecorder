@@ -123,4 +123,40 @@ export class DeviceService implements IDiscovery {
       throw error;
     }
   }
+
+  /**
+   * Get detailed capabilities and supported formats for a specific camera device
+   * Implements get_camera_capabilities RPC method
+   */
+  async getCameraCapabilities(device: string): Promise<any> {
+    try {
+      this.logger.info(`Getting capabilities for device: ${device}`);
+      
+      const response = await this.wsService.sendRPC('get_camera_capabilities', { device });
+      
+      this.logger.info(`Retrieved capabilities for ${device}`);
+      return response;
+    } catch (error) {
+      this.logger.error(`Failed to get capabilities for device: ${device}`, error as Error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get detailed status information for a specific camera stream
+   * Implements get_stream_status RPC method
+   */
+  async getStreamStatus(device: string): Promise<any> {
+    try {
+      this.logger.info(`Getting stream status for device: ${device}`);
+      
+      const response = await this.wsService.sendRPC('get_stream_status', { device });
+      
+      this.logger.info(`Retrieved stream status for ${device}`);
+      return response;
+    } catch (error) {
+      this.logger.error(`Failed to get stream status for device: ${device}`, error as Error);
+      throw error;
+    }
+  }
 }

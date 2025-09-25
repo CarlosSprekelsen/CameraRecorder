@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -53,6 +53,27 @@ function App() {
   const { isAuthenticated, login } = useAuthStore();
   const { setInfo, setStatus, setStorage, setLoading, setError } = useServerStore();
 
+  // Memoized WebSocket event handlers for performance optimization
+  const handleWebSocketConnect = useCallback(() => {
+    setConnectionStatus('connected');
+    setConnectionError(null);
+    logger.info('WebSocket connected successfully');
+  }, [setConnectionStatus, setConnectionError]);
+
+  const handleWebSocketDisconnect = useCallback((error?: Error) => {
+    setConnectionStatus('disconnected');
+    if (error) {
+      setConnectionError(error.message);
+      logger.warn('WebSocket disconnected', { error: error.message });
+    }
+  }, [setConnectionStatus, setConnectionError]);
+
+  const handleWebSocketError = useCallback((error: Error) => {
+    setConnectionStatus('error');
+    setConnectionError(error.message);
+    logger.error('WebSocket error', { error: error.message }, error);
+  }, [setConnectionStatus, setConnectionError]);
+
   // Initialize WebSocket connection
   useEffect(() => {
     const initializeConnection = async () => {
@@ -60,25 +81,11 @@ function App() {
         setConnectionStatus('connecting');
         logger.info('Initializing WebSocket connection', { url: WS_URL });
         
-        // Set up WebSocket event handlers
+        // Set up WebSocket event handlers with memoized callbacks
         wsService.events = {
-          onConnect: () => {
-            setConnectionStatus('connected');
-            setConnectionError(null);
-            logger.info('WebSocket connected successfully');
-          },
-          onDisconnect: (error) => {
-            setConnectionStatus('disconnected');
-            if (error) {
-              setConnectionError(error.message);
-              logger.warn('WebSocket disconnected', { error: error.message });
-            }
-          },
-          onError: (error) => {
-            setConnectionStatus('error');
-            setConnectionError(error.message);
-            logger.error('WebSocket error', { error: error.message }, error);
-          },
+          onConnect: handleWebSocketConnect,
+          onDisconnect: handleWebSocketDisconnect,
+          onError: handleWebSocketError,
         };
 
         await wsService.connect();

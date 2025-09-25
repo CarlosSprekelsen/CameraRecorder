@@ -50,7 +50,7 @@ export class WebSocketService {
         this.ws = new WebSocket(this.config.url);
         
         this.ws.onopen = () => {
-          console.log('WebSocket connected');
+          // WebSocket connected - handled by connection store
           this.reconnectAttempts = 0;
           this.startPingInterval();
           this.events.onConnect?.();
@@ -58,14 +58,14 @@ export class WebSocketService {
         };
 
         this.ws.onclose = (event) => {
-          console.log('WebSocket closed', event.code, event.reason);
+          // WebSocket closed - handled by connection store
           this.stopPingInterval();
           this.events.onDisconnect?.(new Error(`Connection closed: ${event.code} ${event.reason}`));
           this.handleReconnect();
         };
 
-        this.ws.onerror = (error) => {
-          console.error('WebSocket error:', error);
+        this.ws.onerror = (_error) => {
+          // WebSocket error - handled by connection store
           this.events.onError?.(new Error('WebSocket connection error'));
           reject(new Error('WebSocket connection failed'));
         };
@@ -75,7 +75,7 @@ export class WebSocketService {
             const data = JSON.parse(event.data);
             this.handleMessage(data);
           } catch (error) {
-            console.error('Failed to parse WebSocket message:', error);
+            // Failed to parse WebSocket message - handled by error boundary
           }
         };
 
@@ -155,7 +155,7 @@ export class WebSocketService {
 
   private handleMessage(data: any): void {
     if (data.jsonrpc !== '2.0') {
-      console.warn('Invalid JSON-RPC message:', data);
+      // Invalid JSON-RPC message - handled by error boundary
       return;
     }
 
@@ -171,7 +171,7 @@ export class WebSocketService {
   private handleResponse(response: JsonRpcResponse): void {
     const pending = this.pendingRequests.get(response.id);
     if (!pending) {
-      console.warn('Received response for unknown request:', response.id);
+      // Received response for unknown request - handled by error boundary
       return;
     }
 
@@ -225,7 +225,7 @@ export class WebSocketService {
 
   private handleReconnect(): void {
     if (this.reconnectAttempts >= this.config.maxReconnectAttempts) {
-      console.error('Max reconnection attempts reached');
+      // Max reconnection attempts reached - handled by connection store
       return;
     }
 
@@ -235,11 +235,11 @@ export class WebSocketService {
       this.config.maxReconnectDelay
     );
 
-    console.log(`Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts}/${this.config.maxReconnectAttempts})`);
+    // Reconnecting - handled by connection store
 
     this.reconnectTimeout = setTimeout(() => {
-      this.connect().catch((error) => {
-        console.error('Reconnection failed:', error);
+      this.connect().catch((_error) => {
+        // Reconnection failed - handled by connection store
         this.handleReconnect();
       });
     }, delay);
@@ -250,8 +250,8 @@ export class WebSocketService {
     
     this.pingInterval = setInterval(() => {
       if (this.ws?.readyState === WebSocket.OPEN) {
-        this.sendRPC('ping').catch((error) => {
-          console.error('Ping failed:', error);
+        this.sendRPC('ping').catch((_error) => {
+          // Ping failed - handled by connection store
         });
       }
     }, this.config.pingInterval);

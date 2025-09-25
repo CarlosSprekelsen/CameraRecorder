@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, memo } from 'react';
 import {
   Box,
   Typography,
@@ -19,7 +19,7 @@ import { useRecordingStore } from '../../stores/recording/recordingStore';
  * CameraPage - Main device table following architecture section 5.1
  * Implements I.Discovery interface for device discovery and stream links
  */
-const CameraPage: React.FC = () => {
+const CameraPage: React.FC = memo(() => {
   const { 
     cameras, 
     streams, 
@@ -33,7 +33,7 @@ const CameraPage: React.FC = () => {
   } = useDeviceStore();
 
   const { isAuthenticated } = useAuthStore();
-  const { handleRecordingStatusUpdate } = useRecordingStore();
+  const { handleRecordingStatusUpdate, setService: setRecordingService } = useRecordingStore();
 
   // Initialize device service and load data
   useEffect(() => {
@@ -53,6 +53,10 @@ const CameraPage: React.FC = () => {
         const deviceService = serviceFactory.createDeviceService(wsService);
         setDeviceService(deviceService);
 
+        // Set up recording service
+        const recordingService = serviceFactory.createRecordingService(wsService);
+        setRecordingService(recordingService);
+
         // Set up notification service for real-time updates
         const notificationService = serviceFactory.createNotificationService(wsService);
         
@@ -61,7 +65,7 @@ const CameraPage: React.FC = () => {
           'camera_status_update',
           (notification: JsonRpcNotification) => {
             if (notification.params) {
-              handleCameraStatusUpdate(notification.params);
+              handleCameraStatusUpdate(notification.params as any);
             }
           }
         );
@@ -151,6 +155,6 @@ const CameraPage: React.FC = () => {
       </Box>
     </Container>
   );
-};
+});
 
 export default CameraPage;
