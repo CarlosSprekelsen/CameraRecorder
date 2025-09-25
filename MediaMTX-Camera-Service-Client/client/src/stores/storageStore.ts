@@ -8,6 +8,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { logger } from '../services/loggerService';
+import { storageMonitorService } from '../services/storageMonitorService';
 
 interface StorageStoreState {
   storageInfo: any;
@@ -38,8 +39,9 @@ export const useStorageStore = create<StorageStore>()(
       getStorageInfo: async () => {
         set({ isLoading: true, error: null });
         try {
-          // TODO: Implement with StorageMonitorService
-          set({ storageInfo: null, isLoading: false });
+          const storageInfo = await storageMonitorService.getStorageInfo();
+          set({ storageInfo, isLoading: false });
+          logger.info('Storage info retrieved', undefined, 'storageStore');
         } catch (error: any) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to get storage info';
           set({ error: errorMessage, isLoading: false });

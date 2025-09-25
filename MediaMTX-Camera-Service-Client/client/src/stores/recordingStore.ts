@@ -18,6 +18,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { logger } from '../services/loggerService';
+import { recordingManagerService } from '../services/recordingManagerService';
 import type { RecordingSession, RecordingStatus } from '../types/camera';
 
 // State interface
@@ -81,18 +82,7 @@ export const useRecordingStore = create<RecordingStore>()(
       startRecording: async (device: string) => {
         set({ isStarting: true, error: null });
         try {
-          // TODO: Implement with RecordingManagerService
-          // const recordingService = new RecordingManagerService();
-          // const result = await recordingService.startRecording(device);
-          // if (result.success) {
-          //   set(state => ({
-          //     activeSessions: [...state.activeSessions, device],
-          //     isStarting: false
-          //   }));
-          // }
-          // return result.success;
-          
-          // Temporary mock
+          const result = await recordingManagerService.startRecording(device);
           set(state => ({
             activeSessions: [...state.activeSessions, device],
             isStarting: false
@@ -112,18 +102,7 @@ export const useRecordingStore = create<RecordingStore>()(
       stopRecording: async (device: string) => {
         set({ isStopping: true, error: null });
         try {
-          // TODO: Implement with RecordingManagerService
-          // const recordingService = new RecordingManagerService();
-          // const result = await recordingService.stopRecording(device);
-          // if (result.success) {
-          //   set(state => ({
-          //     activeSessions: state.activeSessions.filter(id => id !== device),
-          //     isStopping: false
-          //   }));
-          // }
-          // return result.success;
-          
-          // Temporary mock
+          await recordingManagerService.stopRecording(device);
           set(state => ({
             activeSessions: state.activeSessions.filter(id => id !== device),
             isStopping: false
@@ -144,14 +123,9 @@ export const useRecordingStore = create<RecordingStore>()(
       getRecordingSessions: async () => {
         set({ isLoading: true, error: null });
         try {
-          // TODO: Implement with RecordingManagerService
-          // const recordingService = new RecordingManagerService();
-          // const sessions = await recordingService.getSessions();
-          // set({ sessions, isLoading: false });
-          
-          // Temporary mock
+          const sessions = recordingManagerService.getActiveSessions();
           set({ 
-            sessions: [], 
+            sessions, 
             isLoading: false 
           });
           logger.info('Recording sessions retrieved', undefined, 'recordingStore');
@@ -176,16 +150,11 @@ export const useRecordingStore = create<RecordingStore>()(
       // Status operations
       getRecordingStatus: async (device: string) => {
         try {
-          // TODO: Implement with RecordingManagerService
-          // const recordingService = new RecordingManagerService();
-          // const status = await recordingService.getRecordingStatus(device);
-          // set(state => ({
-          //   recordingStatus: { ...state.recordingStatus, [device]: status }
-          // }));
-          // return status;
-          
-          // Temporary mock
-          return null;
+          const status = recordingManagerService.getRecordingState(device);
+          set(state => ({
+            recordingStatus: { ...state.recordingStatus, [device]: status }
+          }));
+          return status;
         } catch (error: any) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to get recording status';
           set({ error: errorMessage });
