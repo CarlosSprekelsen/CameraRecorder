@@ -339,18 +339,289 @@ interface RecordingFile {
 - [ ] 100% alingment with architechture
 - [ ] All previous sprints DoD validated.
 
-### 2.6 Sprint 6 — EXCELLENT Quality Optimization
+### 2.6 Sprint 6 — CRITICAL REMEDIATION (BLOCKING)
+
+**Architecture Layer:** Infrastructure + Quality Assurance  
+**Duration:** 1 week  
+**Focus:** Fix critical compliance violations and restore code quality standards
+**PRIORITY:** P0 - BLOCKING DEPLOYMENT
+**MANDATORY:** 100% adherence to coding standards and architecture documents
+
+#### **🚨 CRITICAL ISSUES TO REMEDIATE:**
+
+**1. ESLint Configuration Fix (P0 - BLOCKING)**
+- Remove conflicting root-level `eslint.config.js`
+- Consolidate to single `.eslintrc.js` configuration in client directory
+- Ensure linting passes with 0 errors and 0 warnings
+- Fix module resolution conflicts between ESLint 8.x and 9.x formats
+
+**2. TypeScript `any` Type Elimination (P0 - CRITICAL)**
+- **Target**: Eliminate all 46 instances of `any` type usage
+- **Priority Files**:
+  - `WebSocketService.ts` (6 instances) - Replace with proper generics
+  - `ServiceInterfaces.ts` (10 instances) - Create typed return interfaces
+  - `DeviceService.ts` (2 instances) - Type method returns
+  - `ServerService.ts` (5 instances) - Type metrics interfaces
+  - `NotificationService.ts` (2 instances) - Type WebSocket service reference
+  - `LoggerService.ts` (6 instances) - Type context parameters
+  - Component files (15 instances) - Replace with proper interfaces
+
+**3. Test Infrastructure Creation (P0 - BLOCKING)**
+- Install testing dependencies: `@testing-library/react`, `@testing-library/jest-dom`, `jest`, `vitest`
+- Create test configuration files
+- Implement unit tests for all components and services
+- Target: ≥80% test coverage per testing guidelines
+- Set up CI/CD test gates
+
+#### **📋 DETAILED REMEDIATION ACTIONS:**
+
+**Day 1-2: ESLint and Build Fixes**
+```bash
+# Remove conflicting ESLint configuration
+rm /home/dts/CameraRecorder/MediaMTX-Camera-Service-Client/eslint.config.js
+
+# Verify linting works
+cd /home/dts/CameraRecorder/MediaMTX-Camera-Service-Client/client
+npm run lint  # Must pass with 0 errors
+
+# Fix any remaining linting issues
+npm run lint:fix
+```
+
+**Day 2-4: TypeScript `any` Type Elimination**
+
+**Priority 1: WebSocketService.ts**
+```typescript
+// BEFORE (VIOLATION)
+private pendingRequests = new Map<string | number, {
+  resolve: (value: any) => void;
+  reject: (error: Error) => void;
+}>;
+
+// AFTER (COMPLIANT)
+private pendingRequests = new Map<string | number, {
+  resolve: <T>(value: T) => void;
+  reject: (error: Error) => void;
+}>;
+
+// BEFORE (VIOLATION)
+async sendRPC<T = any>(method: RpcMethod, params?: any): Promise<T>
+
+// AFTER (COMPLIANT)
+async sendRPC<T = unknown>(method: RpcMethod, params?: Record<string, unknown>): Promise<T>
+```
+
+**Priority 2: ServiceInterfaces.ts**
+```typescript
+// BEFORE (VIOLATION)
+interface ICommand {
+  takeSnapshot(device: string, filename?: string): Promise<any>;
+  startRecording(device: string, duration?: number, format?: string): Promise<any>;
+  stopRecording(device: string): Promise<any>;
+}
+
+// AFTER (COMPLIANT)
+interface SnapshotResult {
+  success: boolean;
+  filename: string;
+  download_url: string;
+}
+
+interface RecordingResult {
+  success: boolean;
+  recording_id: string;
+  status: 'started' | 'failed';
+}
+
+interface ICommand {
+  takeSnapshot(device: string, filename?: string): Promise<SnapshotResult>;
+  startRecording(device: string, duration?: number, format?: string): Promise<RecordingResult>;
+  stopRecording(device: string): Promise<RecordingResult>;
+}
+```
+
+**Priority 3: Component Type Safety**
+```typescript
+// BEFORE (VIOLATION)
+const WS_URL = (import.meta as any).env?.VITE_WS_URL;
+
+// AFTER (COMPLIANT)
+interface ImportMetaEnv {
+  readonly VITE_WS_URL: string;
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}
+
+const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8002/ws';
+```
+
+**Day 4-5: Test Infrastructure Setup**
+
+**Install Testing Dependencies:**
+```bash
+npm install --save-dev @testing-library/react @testing-library/jest-dom @testing-library/user-event jest vitest jsdom
+```
+
+**Create Test Configuration:**
+```typescript
+// vitest.config.ts
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    coverage: {
+      reporter: ['text', 'json', 'html'],
+      threshold: {
+        global: {
+          branches: 80,
+          functions: 80,
+          lines: 80,
+          statements: 80
+        }
+      }
+    }
+  }
+});
+```
+
+**Implement Critical Tests:**
+```typescript
+// src/test/setup.ts
+import '@testing-library/jest-dom';
+
+// src/components/__tests__/App.test.tsx
+import { render, screen } from '@testing-library/react';
+import { describe, it, expect } from 'vitest';
+import App from '../App';
+
+describe('App Component', () => {
+  it('renders without crashing', () => {
+    render(<App />);
+    expect(screen.getByRole('main')).toBeInTheDocument();
+  });
+});
+
+// src/services/__tests__/WebSocketService.test.ts
+import { describe, it, expect, vi } from 'vitest';
+import { WebSocketService } from '../websocket/WebSocketService';
+
+describe('WebSocketService', () => {
+  it('should initialize with correct configuration', () => {
+    const service = new WebSocketService({ url: 'ws://localhost:8002/ws' });
+    expect(service).toBeDefined();
+  });
+});
+```
+
+**Day 5-7: Quality Assurance and Validation**
+
+**Create Naming Strategy Documentation:**
+```markdown
+# Naming Strategy Documentation
+
+## Store Naming Convention
+- Pattern: `use[Domain]Store`
+- Examples: `useAuthStore`, `useConnectionStore`, `useDeviceStore`
+
+## Service Naming Convention  
+- Pattern: `[Domain]Service`
+- Examples: `AuthService`, `WebSocketService`, `DeviceService`
+
+## Component Naming Convention
+- Pattern: `[Purpose][Type]`
+- Examples: `LoginPage`, `CameraTable`, `AppLayout`
+```
+
+**Performance Optimization:**
+```typescript
+// Implement code splitting for large bundles
+// Before: 581KB bundle warning
+const CameraPage = lazy(() => import('./pages/Cameras/CameraPage'));
+const FilesPage = lazy(() => import('./pages/Files/FilesPage'));
+
+// Add loading boundaries
+<Suspense fallback={<LoadingSpinner />}>
+  <Routes>
+    <Route path="/cameras" element={<CameraPage />} />
+    <Route path="/files" element={<FilesPage />} />
+  </Routes>
+</Suspense>
+```
+
+#### **Enhanced DoD (Definition of Done) - REMEDIATION SPRINT:**
+
+**🚨 CRITICAL REQUIREMENTS (MUST PASS):**
+- [ ] ESLint configuration fixed - single config, 0 errors, 0 warnings
+- [ ] All 46 `any` types eliminated and replaced with proper TypeScript types
+- [ ] Test infrastructure created with ≥80% coverage target
+- [ ] Build passes without warnings (581KB bundle size addressed)
+- [ ] TypeScript compilation passes with strict mode
+- [ ] All linting rules pass with max-warnings 0
+
+**📋 QUALITY GATES:**
+- [ ] Unit tests implemented for all services (WebSocketService, AuthService, DeviceService)
+- [ ] Component tests implemented for critical components (App, LoginPage, CameraTable)
+- [ ] Integration tests for WebSocket communication
+- [ ] Performance tests for bundle size and loading times
+- [ ] Code coverage report shows ≥80% coverage
+
+**📚 DOCUMENTATION:**
+- [ ] Naming strategy documentation created
+- [ ] Type definitions documented for all services
+- [ ] Test coverage report generated
+- [ ] Remediation completion report created
+
+**🔒 SECURITY & COMPLIANCE:**
+- [ ] All TypeScript strict mode violations resolved
+- [ ] Input validation types properly defined
+- [ ] Error handling types properly implemented
+- [ ] Security audit passes (no `any` types in security-critical code)
+
+**📊 METRICS VALIDATION:**
+- [ ] Code quality score: 95%+ (measured via SonarQube or equivalent)
+- [ ] TypeScript strict mode compliance: 100%
+- [ ] ESLint compliance: 100% (0 errors, 0 warnings)
+- [ ] Test coverage: ≥80%
+- [ ] Build performance: <3 seconds
+- [ ] Bundle size: <500KB (address 581KB warning)
+
+**✅ ACCEPTANCE CRITERIA:**
+1. **Zero blocking issues**: All P0 items resolved
+2. **Full compliance**: 100% adherence to coding standards
+3. **Quality gates passed**: All metrics meet or exceed targets
+4. **Documentation complete**: All remediation actions documented
+5. **Team sign-off**: Development team lead approval
+6. **IV&V validation**: Independent verification of compliance
+
+**🚫 BLOCKING CONDITIONS:**
+- Any ESLint errors or warnings
+- Any remaining `any` type usage
+- Test coverage below 80%
+- Build warnings or failures
+- TypeScript compilation errors
+
+---
+
+### 2.7 Sprint 7 — EXCELLENT Quality Optimization
 
 **Architecture Layer:** Cross-cutting concerns  
 **Duration:** 1 week  
 **Focus:** Advanced performance, type safety, and code quality
 **MANDATORY:** 100% adherence to architechture documents
+**PREREQUISITE:** Sprint 6 (Remediation) must be 100% complete
 
 #### **Advanced TypeScript Type Safety:**
-- Replace remaining `any` types in service layer (15 instances)
+- Verify all `any` types remain eliminated (0 instances)
 - Add generic constraints for better type inference
 - Implement strict typing for WebSocket message handling
-- Replace component-level `any` types with proper interfaces
+- Replace component-level type assertions with proper interfaces
 
 #### **Component-Level Performance Optimizations:**
 - Add `React.memo` to remaining components (FilesPage, AboutPage, AppLayout)
@@ -365,20 +636,20 @@ interface RecordingFile {
 - Implement proper dependency arrays
 
 #### **Code Quality Enhancements:**
-- Add comprehensive TypeScript strict mode
+- Verify comprehensive TypeScript strict mode compliance
 - Implement proper error boundary patterns
 - Add performance monitoring hooks
 - Optimize bundle size with code splitting
 
 #### **Enhanced DoD:**
-- [ ] All `any` types replaced with proper TypeScript types
+- [ ] Zero `any` types verified (0 instances)
 - [ ] All components memoized with React.memo
 - [ ] All event handlers optimized with useCallback
 - [ ] All expensive calculations memoized with useMemo
 - [ ] Dependency arrays optimized for all useEffect hooks
-- [ ] TypeScript strict mode enabled
+- [ ] TypeScript strict mode compliance verified
 - [ ] Performance monitoring implemented
-- [ ] Bundle size optimized
+- [ ] Bundle size optimized to <500KB
 - [ ] 100% alignment with architechture
 - [ ] All previous sprints DoD validated
 - [ ] Code quality rating: 95%+ EXCELLENT
