@@ -15,6 +15,7 @@ import {
   AccountCircle,
   Logout,
   Videocam as CameraIcon,
+  Folder as FilesIcon,
   Info as InfoIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -113,6 +114,17 @@ const AppLayout: React.FC<AppLayoutProps> = ({
               }}
             >
               Cameras
+            </Button>
+            <Button
+              color="inherit"
+              startIcon={<FilesIcon />}
+              onClick={() => navigate('/files')}
+              sx={{ 
+                backgroundColor: location.pathname === '/files' ? 'rgba(255,255,255,0.1)' : 'transparent',
+                mr: 1 
+              }}
+            >
+              Files
             </Button>
             <Button
               color="inherit"

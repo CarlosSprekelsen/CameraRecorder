@@ -20,17 +20,48 @@ export interface ICommand {
 
 // I.FileCatalog: file listing and information
 export interface IFileCatalog {
-  listRecordings(limit?: number, offset?: number): Promise<any>;
-  listSnapshots(limit?: number, offset?: number): Promise<any>;
-  getRecordingInfo(filename: string): Promise<any>;
-  getSnapshotInfo(filename: string): Promise<any>;
+  listRecordings(limit: number, offset: number): Promise<{
+    files: Array<{
+      filename: string;
+      file_size: number;
+      modified_time: string;
+      download_url: string;
+    }>;
+    total: number;
+  }>;
+  listSnapshots(limit: number, offset: number): Promise<{
+    files: Array<{
+      filename: string;
+      file_size: number;
+      modified_time: string;
+      download_url: string;
+    }>;
+    total: number;
+  }>;
+  getRecordingInfo(filename: string): Promise<{
+    filename: string;
+    file_size: number;
+    modified_time: string;
+    download_url: string;
+    duration?: number;
+    format?: string;
+    device?: string;
+  }>;
+  getSnapshotInfo(filename: string): Promise<{
+    filename: string;
+    file_size: number;
+    modified_time: string;
+    download_url: string;
+    format?: string;
+    device?: string;
+  }>;
 }
 
 // I.FileActions: file operations
 export interface IFileActions {
-  downloadFile(url: string): void;
-  deleteRecording(filename: string): Promise<any>;
-  deleteSnapshot(filename: string): Promise<any>;
+  downloadFile(downloadUrl: string, filename: string): Promise<void>;
+  deleteRecording(filename: string): Promise<{ success: boolean; message: string }>;
+  deleteSnapshot(filename: string): Promise<{ success: boolean; message: string }>;
 }
 
 // I.Status: system status and events

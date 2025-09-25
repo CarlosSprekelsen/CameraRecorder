@@ -222,6 +222,7 @@ interface Camera {
 - [ ] Recording state persistence
 - [ ] Concurrent recording limits
 - [ ] 100% adherence to architechture documents
+- [ ] All previous sprints DoD validated.
 
 #### **State Management:**
 ```typescript
@@ -334,6 +335,9 @@ interface RecordingFile {
 - [ ] Accessibility compliance (WCAG 2.1 AA)
 - [ ] Error boundary coverage
 - [ ] Loading state consistency
+- [ ] 100% alingment with architechture
+- [ ] All previous sprints DoD validated.
+
 
 ---
 

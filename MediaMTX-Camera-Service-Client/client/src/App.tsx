@@ -14,6 +14,7 @@ import AppLayout from './components/Layout/AppLayout';
 import LoginPage from './pages/Login/LoginPage';
 import AboutPage from './pages/About/AboutPage';
 import CameraPage from './pages/Cameras/CameraPage';
+import FilesPage from './pages/Files/FilesPage';
 import LoadingSpinner from './components/Layout/LoadingSpinner';
 
 // Create theme
@@ -174,6 +175,7 @@ function App() {
                   <Routes>
                     <Route path="/" element={<Navigate to="/cameras" replace />} />
                     <Route path="/cameras" element={<CameraPage />} />
+                    <Route path="/files" element={<FilesPage />} />
                     <Route path="/about" element={<AboutPage />} />
                     <Route path="*" element={<Navigate to="/cameras" replace />} />
                   </Routes>
