@@ -28,7 +28,12 @@ jest.mock('react-router-dom', () => ({
 
 // Mock logger service - use centralized pattern
 jest.mock('../../../src/services/logger/LoggerService', () => ({
-  logger: MockDataFactory.createMockLoggerService()
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn()
+  }
 }));
 
 describe('useKeyboardShortcuts Hook Unit Tests', () => {

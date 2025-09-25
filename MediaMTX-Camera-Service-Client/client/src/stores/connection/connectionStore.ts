@@ -30,7 +30,7 @@ export const useConnectionStore = create<ConnectionStore>((set) => ({
     set((state) => ({
       ...state,
       lastError: error,
-      status: error ? 'error' : state.status,
+      status: error ? 'error' : 'disconnected',
     })),
 
   setReconnectAttempts: (attempts: number) =>

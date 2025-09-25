@@ -77,7 +77,7 @@ describe('ServerService Unit Tests', () => {
 
   describe('REQ-SERVER-002: System status monitoring', () => {
     test('should get system status successfully', async () => {
-      const expectedStatus = MockDataFactory.getServerInfo();
+      const expectedStatus = MockDataFactory.getSystemStatus();
       mockWebSocketService.sendRPC.mockResolvedValue(expectedStatus);
 
       const result = await serverService.getStatus();

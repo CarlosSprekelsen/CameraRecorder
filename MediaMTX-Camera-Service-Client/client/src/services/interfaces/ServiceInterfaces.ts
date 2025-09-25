@@ -19,6 +19,7 @@ import {
   UnsubscriptionResult,
   SubscriptionStatsResult,
   MetricsResult,
+  DeleteResult,
 } from '../../types/api';
 import { Camera, StreamInfo } from '../../stores/device/deviceStore';
 
@@ -185,8 +186,8 @@ export interface IFileCatalog {
 // I.FileActions: file operations
 export interface IFileActions {
   downloadFile(downloadUrl: string, filename: string): Promise<void>;
-  deleteRecording(filename: string): Promise<{ success: boolean; message: string }>;
-  deleteSnapshot(filename: string): Promise<{ success: boolean; message: string }>;
+  deleteRecording(filename: string): Promise<DeleteResult>;
+  deleteSnapshot(filename: string): Promise<DeleteResult>;
 }
 
 // I.Status: system status and events

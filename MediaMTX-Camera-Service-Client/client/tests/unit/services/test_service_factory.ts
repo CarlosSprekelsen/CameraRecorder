@@ -51,7 +51,12 @@ jest.mock('../../../src/services/file/FileService', () => ({
   FileService: () => MockDataFactory.createMockFileService()
 }));
 jest.mock('../../../src/services/logger/LoggerService', () => ({
-  logger: MockDataFactory.createMockLoggerService()
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn()
+  }
 }));
 
 describe('ServiceFactory Unit Tests', () => {

@@ -1,4 +1,4 @@
-import { ServerInfo, SystemStatus, StorageInfo } from '../../types/api';
+import { ServerInfo, SystemStatus, StorageInfo, MetricsResult } from '../../types/api';
 import { IStatus } from '../interfaces/ServiceInterfaces';
 
 /**
@@ -89,12 +89,12 @@ export class ServerService implements IStatus {
     return this.wsService.sendRPC<StorageInfo>('get_storage_info');
   }
 
-  async getMetrics(): Promise<SystemMetrics> {
+  async getMetrics(): Promise<MetricsResult> {
     if (!this.wsService.isConnected) {
       throw new Error('WebSocket not connected');
     }
 
-    return this.wsService.sendRPC<SystemMetrics>('get_metrics');
+    return this.wsService.sendRPC<MetricsResult>('get_metrics');
   }
 
   async ping(): Promise<string> {

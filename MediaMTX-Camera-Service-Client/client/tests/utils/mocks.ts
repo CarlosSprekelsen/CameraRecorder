@@ -161,7 +161,7 @@ export class MockDataFactory {
       device: 'camera0',
       filename: 'camera0_2025-01-15_14-30-00',
       status: 'RECORDING',
-      start_time: '2025-01-15T14:30:00Z',
+      start_time: '2025-01-15T14:30:00.000Z',
       format: 'fmp4'
     };
   }
@@ -174,7 +174,7 @@ export class MockDataFactory {
       device: 'camera0',
       filename: 'camera0_2025-01-15_14-30-00',
       status: 'STOPPED',
-      start_time: '2025-01-15T14:30:00Z',
+      start_time: '2025-01-15T14:30:00.000Z',
       end_time: '2025-01-15T15:00:00Z',
       duration: 1800,
       file_size: 1073741824,
@@ -190,7 +190,7 @@ export class MockDataFactory {
       device: 'camera0',
       filename: 'snapshot_2025-01-15_14-30-00.jpg',
       status: 'SUCCESS',
-      timestamp: '2025-01-15T14:30:00Z',
+      timestamp: '2025-01-15T14:30:00.000Z',
       file_size: 204800,
       file_path: '/opt/camera-service/snapshots/snapshot_2025-01-15_14-30-00.jpg'
     };
@@ -203,7 +203,7 @@ export class MockDataFactory {
     return {
       filename: 'snapshot_2025-01-15_14-30-00.jpg',
       file_size: 204800,
-      created_time: '2025-01-15T14:30:00Z',
+      created_time: '2025-01-15T14:30:00.000Z',
       download_url: '/files/snapshots/snapshot_2025-01-15_14-30-00.jpg'
     };
   }
@@ -216,7 +216,7 @@ export class MockDataFactory {
       filename: 'camera0_2025-01-15_14-30-00',
       file_size: 1073741824,
       duration: 3600,
-      created_time: '2025-01-15T14:30:00Z',
+      created_time: '2025-01-15T14:30:00.000Z',
       download_url: '/files/recordings/camera0_2025-01-15_14-30-00.fmp4'
     };
   }
@@ -230,13 +230,13 @@ export class MockDataFactory {
         {
           filename: 'camera0_2025-01-15_14-30-00',
           file_size: 1073741824,
-          modified_time: '2025-01-15T14:30:00Z',
+          modified_time: '2025-01-15T14:30:00.000Z',
           download_url: '/files/recordings/camera0_2025-01-15_14-30-00.fmp4'
         },
         {
           filename: 'camera0_2025-01-15_15-00-00',
           file_size: 2147483648,
-          modified_time: '2025-01-15T15:00:00Z',
+          modified_time: '2025-01-15T15:00:00.000Z',
           download_url: '/files/recordings/camera0_2025-01-15_15-00-00.fmp4'
         }
       ],
@@ -255,7 +255,7 @@ export class MockDataFactory {
       stream_name: 'camera_video0_viewing',
       stream_url: 'rtsp://localhost:8554/camera_video0_viewing',
       status: 'STARTED',
-      start_time: '2025-01-15T14:30:00Z',
+      start_time: '2025-01-15T14:30:00.000Z',
       auto_close_after: '300s',
       ffmpeg_command: 'ffmpeg -f v4l2 -i /dev/video0 -c:v libx264 -preset ultrafast -tune zerolatency -f rtsp rtsp://localhost:8554/camera_video0_viewing'
     };
@@ -269,7 +269,7 @@ export class MockDataFactory {
       device: 'camera0',
       stream_name: 'camera_video0_viewing',
       status: 'STOPPED',
-      start_time: '2025-01-15T14:30:00Z',
+      start_time: '2025-01-15T14:30:00.000Z',
       end_time: '2025-01-15T14:35:00Z',
       duration: 300,
       stream_continues: false,
@@ -316,7 +316,7 @@ export class MockDataFactory {
         bitrate: 600000,
         fps: 30
       },
-      start_time: '2025-01-15T14:30:00Z'
+      start_time: '2025-01-15T14:30:00.000Z'
     };
   }
 
@@ -407,7 +407,7 @@ export class MockDataFactory {
    */
   static getMetricsResult(): MetricsResult {
     return {
-      timestamp: '2025-01-15T14:30:00Z',
+      timestamp: '2025-01-15T14:30:00.000Z',
       system_metrics: {
         cpu_usage: 23.1,
         memory_usage: 85.5,
@@ -422,7 +422,7 @@ export class MockDataFactory {
             name: 'USB 2.0 Camera: USB 2.0 Camera',
             status: 'CONNECTED',
             device_num: 0,
-            last_seen: '2025-01-15T14:30:00Z',
+            last_seen: '2025-01-15T14:30:00.000Z',
             capabilities: {
               driver_name: 'uvcvideo',
               card_name: 'USB 2.0 Camera: USB 2.0 Camera',
@@ -504,8 +504,8 @@ export class MockDataFactory {
           type: 'skydio_stanag4609',
           name: 'Skydio_EO_192.168.42.10_eo_/subject',
           status: 'DISCOVERED',
-          discovered_at: '2025-01-15T14:30:00Z',
-          last_seen: '2025-01-15T14:30:00Z',
+          discovered_at: '2025-01-15T14:30:00.000Z',
+          last_seen: '2025-01-15T14:30:00.000Z',
           capabilities: {
             protocol: 'rtsp',
             format: 'stanag4609',
@@ -524,8 +524,8 @@ export class MockDataFactory {
           type: 'skydio_stanag4609',
           name: 'Skydio_EO_192.168.42.10_eo_/subject',
           status: 'DISCOVERED',
-          discovered_at: '2025-01-15T14:30:00Z',
-          last_seen: '2025-01-15T14:30:00Z',
+          discovered_at: '2025-01-15T14:30:00.000Z',
+          last_seen: '2025-01-15T14:30:00.000Z',
           capabilities: {
             protocol: 'rtsp',
             format: 'stanag4609',
@@ -539,7 +539,7 @@ export class MockDataFactory {
         }
       ],
       generic_streams: [],
-      scan_timestamp: '2025-01-15T14:30:00Z',
+      scan_timestamp: '2025-01-15T14:30:00.000Z',
       total_found: 1,
       discovery_options: {
         skydio_enabled: true,
@@ -561,7 +561,7 @@ export class MockDataFactory {
       stream_name: 'Skydio_UAV_15',
       stream_type: 'skydio_stanag4609',
       status: 'ADDED',
-      timestamp: '2025-01-15T14:30:00Z'
+      timestamp: '2025-01-15T14:30:00.000Z'
     };
   }
 
@@ -572,7 +572,7 @@ export class MockDataFactory {
     return {
       stream_url: 'rtsp://192.168.42.15:5554/subject',
       status: 'REMOVED',
-      timestamp: '2025-01-15T14:30:00Z'
+      timestamp: '2025-01-15T14:30:00.000Z'
     };
   }
 
@@ -587,8 +587,8 @@ export class MockDataFactory {
           type: 'skydio_stanag4609',
           name: 'Skydio_EO_192.168.42.10_eo_/subject',
           status: 'DISCOVERED',
-          discovered_at: '2025-01-15T14:30:00Z',
-          last_seen: '2025-01-15T14:30:00Z',
+          discovered_at: '2025-01-15T14:30:00.000Z',
+          last_seen: '2025-01-15T14:30:00.000Z',
           capabilities: {
             protocol: 'rtsp',
             format: 'stanag4609',
@@ -607,8 +607,8 @@ export class MockDataFactory {
           type: 'skydio_stanag4609',
           name: 'Skydio_EO_192.168.42.10_eo_/subject',
           status: 'DISCOVERED',
-          discovered_at: '2025-01-15T14:30:00Z',
-          last_seen: '2025-01-15T14:30:00Z',
+          discovered_at: '2025-01-15T14:30:00.000Z',
+          last_seen: '2025-01-15T14:30:00.000Z',
           capabilities: {
             protocol: 'rtsp',
             format: 'stanag4609',
@@ -623,7 +623,7 @@ export class MockDataFactory {
       ],
       generic_streams: [],
       total_count: 1,
-      timestamp: '2025-01-15T14:30:00Z'
+      timestamp: '2025-01-15T14:30:00.000Z'
     };
   }
 
@@ -635,7 +635,7 @@ export class MockDataFactory {
       scan_interval: 300,
       status: 'UPDATED',
       message: 'Discovery interval updated (restart required for changes to take effect)',
-      timestamp: '2025-01-15T14:30:00Z'
+      timestamp: '2025-01-15T14:30:00.000Z'
     };
   }
 
@@ -686,7 +686,7 @@ export class MockDataFactory {
       status: 'connected',
       lastError: null,
       reconnectAttempts: 0,
-      lastConnected: '2025-01-15T14:30:00Z'
+      lastConnected: '2025-01-15T14:30:00.000Z'
     };
   }
 
@@ -714,7 +714,7 @@ export class MockDataFactory {
       storage: this.getStorageInfo(),
       loading: false,
       error: null,
-      lastUpdated: '2025-01-15T14:30:00Z'
+      lastUpdated: '2025-01-15T14:30:00.000Z'
     };
   }
 
@@ -728,12 +728,12 @@ export class MockDataFactory {
    */
   static createMockDeviceService() {
     return {
-      getCameraList: () => Promise.resolve(this.getCameraListResult()),
-      getCameraStatus: () => Promise.resolve(this.getCameraStatusResult()),
-      getCameraCapabilities: () => Promise.resolve(this.getCameraCapabilitiesResult()),
-      getStreamUrl: () => Promise.resolve(this.getStreamUrlResult()),
-      getStreamStatus: () => Promise.resolve(this.getStreamStatusResult()),
-      getStreams: () => Promise.resolve(this.getStreamsListResult())
+      getCameraList: jest.fn().mockResolvedValue(this.getCameraListResult()),
+      getCameraStatus: jest.fn().mockResolvedValue(this.getCameraStatusResult()),
+      getCameraCapabilities: jest.fn().mockResolvedValue(this.getCameraCapabilitiesResult()),
+      getStreamUrl: jest.fn().mockResolvedValue(this.getStreamUrlResult()),
+      getStreamStatus: jest.fn().mockResolvedValue(this.getStreamStatusResult()),
+      getStreams: jest.fn().mockResolvedValue(this.getStreamsListResult())
     };
   }
 
@@ -742,12 +742,12 @@ export class MockDataFactory {
    */
   static createMockFileService() {
     return {
-      listRecordings: () => Promise.resolve(this.getFileListResult()),
-      listSnapshots: () => Promise.resolve(this.getFileListResult()),
-      getRecordingInfo: () => Promise.resolve(this.getRecordingInfo()),
-      getSnapshotInfo: () => Promise.resolve(this.getSnapshotInfo()),
-      deleteRecording: () => Promise.resolve(this.getDeleteResult()),
-      deleteSnapshot: () => Promise.resolve(this.getDeleteResult())
+      listRecordings: jest.fn().mockResolvedValue(this.getFileListResult()),
+      listSnapshots: jest.fn().mockResolvedValue(this.getFileListResult()),
+      getRecordingInfo: jest.fn().mockResolvedValue(this.getRecordingInfo()),
+      getSnapshotInfo: jest.fn().mockResolvedValue(this.getSnapshotInfo()),
+      deleteRecording: jest.fn().mockResolvedValue(this.getDeleteResult()),
+      deleteSnapshot: jest.fn().mockResolvedValue(this.getDeleteResult())
     };
   }
 
@@ -756,9 +756,9 @@ export class MockDataFactory {
    */
   static createMockRecordingService() {
     return {
-      takeSnapshot: () => Promise.resolve(this.getSnapshotResult()),
-      startRecording: () => Promise.resolve(this.getRecordingStartResult()),
-      stopRecording: () => Promise.resolve(this.getRecordingStopResult())
+      takeSnapshot: jest.fn().mockResolvedValue(this.getSnapshotResult()),
+      startRecording: jest.fn().mockResolvedValue(this.getRecordingStartResult()),
+      stopRecording: jest.fn().mockResolvedValue(this.getRecordingStopResult())
     };
   }
 

@@ -158,15 +158,12 @@ export class FileService implements IFileCatalog, IFileActions {
    * Delete recording file.
    * Implements delete_recording RPC method.
    */
-  async deleteRecording(filename: string): Promise<{ success: boolean; message: string }> {
+  async deleteRecording(filename: string): Promise<DeleteResult> {
     try {
       this.logger.info(`Deleting recording: ${filename}`);
       const response = await this.wsService.sendRPC('delete_recording', { filename }) as DeleteResult;
       this.logger.info(`Recording deleted: ${filename}`);
-      return {
-        success: response.deleted,
-        message: response.message
-      };
+      return response;
     } catch (error) {
       this.logger.error(`Failed to delete recording ${filename}`, error as Record<string, unknown>);
       throw error;
@@ -177,15 +174,12 @@ export class FileService implements IFileCatalog, IFileActions {
    * Delete snapshot file.
    * Implements delete_snapshot RPC method.
    */
-  async deleteSnapshot(filename: string): Promise<{ success: boolean; message: string }> {
+  async deleteSnapshot(filename: string): Promise<DeleteResult> {
     try {
       this.logger.info(`Deleting snapshot: ${filename}`);
       const response = await this.wsService.sendRPC('delete_snapshot', { filename }) as DeleteResult;
       this.logger.info(`Snapshot deleted: ${filename}`);
-      return {
-        success: response.deleted,
-        message: response.message
-      };
+      return response;
     } catch (error) {
       this.logger.error(`Failed to delete snapshot ${filename}`, error as Record<string, unknown>);
       throw error;

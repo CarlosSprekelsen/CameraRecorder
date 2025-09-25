@@ -44,8 +44,8 @@ describe('File Store', () => {
     (mockFileService.listSnapshots as jest.Mock).mockResolvedValue(MockDataFactory.getFileListResult());
     (mockFileService.getRecordingInfo as jest.Mock).mockResolvedValue(MockDataFactory.getFileListResult().files[0]);
     (mockFileService.getSnapshotInfo as jest.Mock).mockResolvedValue(MockDataFactory.getFileListResult().files[0]);
-    (mockFileService.deleteRecording as jest.Mock).mockResolvedValue(true);
-    (mockFileService.deleteSnapshot as jest.Mock).mockResolvedValue(true);
+    (mockFileService.deleteRecording as jest.Mock).mockResolvedValue(MockDataFactory.getDeleteResult());
+    (mockFileService.deleteSnapshot as jest.Mock).mockResolvedValue(MockDataFactory.getDeleteResult());
   });
 
   afterEach(() => {
@@ -196,11 +196,13 @@ describe('File Store', () => {
   });
 
   describe('REQ-003: Error Handling', () => {
-    test('should handle service not initialized error', async () => {
+    test('should handle service not initialized error', () => {
       const { loadRecordings } = useFileStore.getState();
       
-      // Don't set the service
-      await loadRecordings();
+      // Don't set the service - ensure it's null
+      useFileStore.getState().setFileService(null as any);
+      
+      loadRecordings();
       
       const state = useFileStore.getState();
       expect(state.error).toBe('File service not initialized');
@@ -335,10 +337,14 @@ describe('File Store', () => {
       const recordings = useFileStore.getState().recordings;
       expect(recordings.length).toBeGreaterThan(0);
       
-      // Validate each file against RPC spec
-      recordings.forEach(file => {
-        expect(APIResponseValidator.validateFileListResult({ files: [file] })).toBe(true);
-      });
+      // Validate the complete file list response against RPC spec
+      const fileListResult = {
+        files: recordings,
+        total: recordings.length,
+        limit: 50,
+        offset: 0
+      };
+      expect(APIResponseValidator.validateFileListResult(fileListResult)).toBe(true);
     });
 
     test('should validate snapshot list response against RPC spec', async () => {
@@ -350,10 +356,14 @@ describe('File Store', () => {
       const snapshots = useFileStore.getState().snapshots;
       expect(snapshots.length).toBeGreaterThan(0);
       
-      // Validate each snapshot against RPC spec
-      snapshots.forEach(file => {
-        expect(APIResponseValidator.validateFileListResult({ files: [file] })).toBe(true);
-      });
+      // Validate the complete snapshot list response against RPC spec
+      const fileListResult = {
+        files: snapshots,
+        total: snapshots.length,
+        limit: 50,
+        offset: 0
+      };
+      expect(APIResponseValidator.validateFileListResult(fileListResult)).toBe(true);
     });
   });
 });

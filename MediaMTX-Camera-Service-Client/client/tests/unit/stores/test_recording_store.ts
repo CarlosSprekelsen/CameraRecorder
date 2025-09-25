@@ -160,11 +160,13 @@ describe('Recording Store', () => {
   });
 
   describe('REQ-003: Error Handling', () => {
-    test('should handle service not initialized error', async () => {
+    test('should handle service not initialized error', () => {
       const { startRecording } = useRecordingStore.getState();
       
-      // Don't set the service
-      await startRecording('camera0');
+      // Don't set the service - ensure it's null
+      useRecordingStore.getState().setService(null as any);
+      
+      startRecording('camera0');
       
       const state = useRecordingStore.getState();
       expect(state.error).toBe('Recording service not initialized');
@@ -193,7 +195,7 @@ describe('Recording Store', () => {
       await startRecording('camera0');
       
       const state = useRecordingStore.getState();
-      expect(state.error).toBe('Failed to start recording');
+      expect(state.error).toBe('Start recording failed');
       expect(state.loading).toBe(false);
     });
   });

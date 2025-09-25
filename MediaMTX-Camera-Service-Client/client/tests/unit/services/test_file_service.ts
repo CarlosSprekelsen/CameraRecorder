@@ -108,11 +108,9 @@ describe('FileService Unit Tests', () => {
       const expectedInfo = {
         filename,
         file_size: 1024000,
-        modified_time: new Date().toISOString(),
+        created_time: new Date().toISOString(),
         download_url: `https://localhost/downloads/${filename}`,
-        duration: 60,
-        format: 'mp4',
-        device: 'camera0'
+        duration: 60
       };
       
       mockWebSocketService.sendRPC.mockResolvedValue(expectedInfo);
@@ -130,10 +128,8 @@ describe('FileService Unit Tests', () => {
       const expectedInfo = {
         filename,
         file_size: 512000,
-        modified_time: new Date().toISOString(),
-        download_url: `https://localhost/downloads/${filename}`,
-        format: 'jpg',
-        device: 'camera0'
+        created_time: new Date().toISOString(),
+        download_url: `https://localhost/downloads/${filename}`
       };
       
       mockWebSocketService.sendRPC.mockResolvedValue(expectedInfo);

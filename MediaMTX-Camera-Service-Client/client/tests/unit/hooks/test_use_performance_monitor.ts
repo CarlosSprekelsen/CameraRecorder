@@ -22,7 +22,12 @@ import { MockDataFactory } from '../../utils/mocks';
 
 // Mock logger service - use centralized pattern
 jest.mock('../../../src/services/logger/LoggerService', () => ({
-  logger: MockDataFactory.createMockLoggerService()
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn(),
+    debug: jest.fn()
+  }
 }));
 
 // Mock PerformanceObserver - use centralized mocks

@@ -162,11 +162,13 @@ describe('Device Store', () => {
   });
 
   describe('REQ-003: Error Handling', () => {
-    test('should handle service not initialized error', async () => {
+    test('should handle service not initialized error', () => {
       const { getCameraList } = useDeviceStore.getState();
       
-      // Don't set the service
-      await getCameraList();
+      // Don't set the service - ensure it's null
+      useDeviceStore.getState().setDeviceService(null as any);
+      
+      getCameraList();
       
       const state = useDeviceStore.getState();
       expect(state.error).toBe('Device service not initialized');

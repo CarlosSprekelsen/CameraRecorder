@@ -65,7 +65,7 @@ const initialState: FileState = {
   loading: false,
   error: null,
   pagination: {
-    limit: 20,
+    limit: 50,
     offset: 0,
     total: 0,
   },
@@ -188,7 +188,7 @@ export const useFileStore = create<FileState & FileActions>()(
             set({ loading: true, error: null });
             try {
               const response = await fileService.deleteRecording(filename);
-              if (response.success) {
+              if (response.deleted) {
                 // Reload recordings after successful deletion
                 const { pagination } = get();
                 await get().loadRecordings(pagination.limit, pagination.offset);
@@ -215,7 +215,7 @@ export const useFileStore = create<FileState & FileActions>()(
             set({ loading: true, error: null });
             try {
               const response = await fileService.deleteSnapshot(filename);
-              if (response.success) {
+              if (response.deleted) {
                 // Reload snapshots after successful deletion
                 const { pagination } = get();
                 await get().loadSnapshots(pagination.limit, pagination.offset);

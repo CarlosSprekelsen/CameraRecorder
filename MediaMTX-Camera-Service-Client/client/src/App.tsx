@@ -38,7 +38,7 @@ const theme = createTheme({
 // WebSocket configuration
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8002/ws';
 
-function App(): JSX.Element {
+function App(): React.JSX.Element {
   const [wsService] = useState(() => serviceFactory.createWebSocketService(WS_URL));
   const [authService] = useState(() => serviceFactory.createAuthService(wsService));
   const [serverService] = useState(() => serviceFactory.createServerService(wsService));
