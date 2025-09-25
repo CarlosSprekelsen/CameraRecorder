@@ -18,6 +18,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { logger } from '../services/loggerService';
+import { recordingManagerService } from '../services/recordingManagerService';
 import type { CameraDevice, CameraStatus } from '../types/camera';
 
 // State interface
@@ -81,14 +82,9 @@ export const useCameraStore = create<CameraStore>()(
       getCameraList: async () => {
         set({ isLoading: true, error: null });
         try {
-          // TODO: Implement with CameraService when available
-          // const cameraService = new CameraService();
-          // const cameras = await cameraService.getCameraList();
-          // set({ cameras, isLoading: false });
-          
-          // Temporary mock data for compilation
+          const result = await recordingManagerService.getCameraList();
           set({ 
-            cameras: [], 
+            cameras: result.cameras || [], 
             isLoading: false 
           });
           logger.info('Camera list retrieved', undefined, 'cameraStore');
@@ -125,13 +121,8 @@ export const useCameraStore = create<CameraStore>()(
       // Camera operations
       startRecording: async (device: string) => {
         try {
-          // TODO: Implement with CameraService
-          // const cameraService = new CameraService();
-          // const result = await cameraService.startRecording(device);
-          // return result.success;
-          
-          // Temporary mock
-          logger.info(`Starting recording for camera ${device}`, undefined, 'cameraStore');
+          const result = await recordingManagerService.startRecording(device);
+          logger.info(`Recording started for camera ${device}`, undefined, 'cameraStore');
           return true;
         } catch (error: any) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to start recording';
@@ -142,13 +133,8 @@ export const useCameraStore = create<CameraStore>()(
       
       stopRecording: async (device: string) => {
         try {
-          // TODO: Implement with CameraService
-          // const cameraService = new CameraService();
-          // const result = await cameraService.stopRecording(device);
-          // return result.success;
-          
-          // Temporary mock
-          logger.info(`Stopping recording for camera ${device}`, undefined, 'cameraStore');
+          await recordingManagerService.stopRecording(device);
+          logger.info(`Recording stopped for camera ${device}`, undefined, 'cameraStore');
           return true;
         } catch (error: any) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to stop recording';
@@ -159,14 +145,9 @@ export const useCameraStore = create<CameraStore>()(
       
       takeSnapshot: async (device: string) => {
         try {
-          // TODO: Implement with CameraService
-          // const cameraService = new CameraService();
-          // const result = await cameraService.takeSnapshot(device);
-          // return result.success;
-          
-          // Temporary mock
-          logger.info(`Taking snapshot for camera ${device}`, undefined, 'cameraStore');
-          return true;
+          const result = await recordingManagerService.takeSnapshot(device);
+          logger.info(`Snapshot taken for camera ${device}`, undefined, 'cameraStore');
+          return result.status === 'SUCCESS';
         } catch (error: any) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to take snapshot';
           set({ error: errorMessage });
@@ -177,16 +158,11 @@ export const useCameraStore = create<CameraStore>()(
       // Status operations
       getCameraStatus: async (device: string) => {
         try {
-          // TODO: Implement with CameraService
-          // const cameraService = new CameraService();
-          // const status = await cameraService.getCameraStatus(device);
-          // set(state => ({
-          //   cameraStatus: { ...state.cameraStatus, [device]: status }
-          // }));
-          // return status;
-          
-          // Temporary mock
-          return null;
+          const status = await recordingManagerService.getCameraStatus(device);
+          set(state => ({
+            cameraStatus: { ...state.cameraStatus, [device]: status }
+          }));
+          return status;
         } catch (error: any) {
           const errorMessage = error instanceof Error ? error.message : 'Failed to get camera status';
           set({ error: errorMessage });
