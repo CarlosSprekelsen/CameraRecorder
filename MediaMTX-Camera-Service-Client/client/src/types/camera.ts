@@ -82,6 +82,76 @@ export interface StreamListResponse {
 }
 
 /**
+ * Stream start response
+ * Aligned with server start_streaming response
+ */
+export interface StreamStartResponse {
+  device: string;
+  stream_name: string;
+  stream_url: string;
+  status: 'STARTED' | 'FAILED';
+  start_time: string;
+  auto_close_after?: string;
+  ffmpeg_command?: string;
+}
+
+/**
+ * Stream stop response
+ * Aligned with server stop_streaming response
+ */
+export interface StreamStopResponse {
+  device: string;
+  stream_name: string;
+  status: 'STOPPED' | 'FAILED';
+  start_time: string;
+  end_time: string;
+  duration: number;
+  stream_continues: boolean;
+  message?: string;
+}
+
+/**
+ * Stream status response
+ * Aligned with server get_stream_status response
+ */
+export interface StreamStatusResponse {
+  device: string;
+  stream_name: string;
+  status: 'ACTIVE' | 'INACTIVE' | 'ERROR' | 'STARTING' | 'STOPPING';
+  ready: boolean;
+  ffmpeg_process?: {
+    running: boolean;
+    pid: number;
+    uptime: number;
+  };
+  mediamtx_path?: {
+    exists: boolean;
+    ready: boolean;
+    readers: number;
+  };
+  metrics?: {
+    bytes_sent: number;
+    frames_sent: number;
+    bitrate: number;
+    fps: number;
+  };
+  start_time: string;
+}
+
+/**
+ * Stream URL response
+ * Aligned with server get_stream_url response
+ */
+export interface StreamUrlResponse {
+  device: string;
+  stream_name: string;
+  stream_url: string;
+  available: boolean;
+  active_consumers: number;
+  stream_status: 'READY' | 'NOT_READY' | 'ERROR';
+}
+
+/**
  * Camera list response
  * Aligned with server get_camera_list response
  */
@@ -366,11 +436,8 @@ export type FileType = 'recordings' | 'snapshots';
 export interface FileItem {
   filename: string;
   file_size: number;
-  created_time: string;
   modified_time: string;
   download_url: string;
-  duration?: number; // Only for recordings
-  format?: string; // File format extension
 }
 
 /**

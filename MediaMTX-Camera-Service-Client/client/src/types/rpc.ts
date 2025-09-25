@@ -59,25 +59,14 @@ export const ERROR_CODES = {
   INVALID_PARAMS: -32602,
   INTERNAL_ERROR: -32603,
   
-  // Go server authentication and authorization error codes
+  // Go server error codes (aligned with server API documentation)
   AUTHENTICATION_FAILED: -32001,          // "Authentication failed or token expired"
-  RATE_LIMIT_EXCEEDED: -32002,            // "Rate limit exceeded"
-  INSUFFICIENT_PERMISSIONS: -32003,       // "Insufficient permissions"
-  CAMERA_NOT_FOUND_OR_DISCONNECTED: -32004, // "Camera not found or disconnected"
-  RECORDING_ALREADY_IN_PROGRESS: -32005,  // "Recording already in progress"
-  MEDIAMTX_SERVICE_UNAVAILABLE: -32006,   // "MediaMTX service unavailable"
-  INSUFFICIENT_STORAGE_SPACE: -32007,     // "Insufficient storage space"
-  CAMERA_CAPABILITY_NOT_SUPPORTED: -32008, // "Camera capability not supported"
-  STREAM_NOT_FOUND_OR_NOT_ACTIVE: -32009, // "Stream not found or not active"
-  
-  // Enhanced recording management error codes
-  CAMERA_NOT_FOUND: -1000,                // "Camera not found"
-  CAMERA_NOT_AVAILABLE: -1001,            // "Camera not available"
-  RECORDING_IN_PROGRESS: -1002,           // "Recording in progress"
-  MEDIAMTX_ERROR: -1003,                  // "MediaMTX error"
-  CAMERA_ALREADY_RECORDING: -1006,        // "Camera is currently recording"
-  STORAGE_SPACE_LOW: -1008,               // "Storage space is low" (below 10% available)
-  STORAGE_SPACE_CRITICAL: -1010,          // "Storage space is critical" (below 5% available)
+  PERMISSION_DENIED: -32002,              // "Permission denied"
+  NOT_FOUND: -32010,                      // "Not found"
+  INVALID_STATE: -32020,                  // "Invalid state"
+  UNSUPPORTED: -32030,                    // "Unsupported"
+  RATE_LIMITED: -32040,                   // "Rate limited"
+  DEPENDENCY_FAILED: -32050,              // "Dependency failed"
 } as const;
 
 /**

@@ -94,14 +94,35 @@ Call `authenticate` once after opening the WebSocket. If it succeeds, the **conn
 | `authenticate`       |    ✅   |     ✅    |   ✅   |
 | `get_camera_list`    |    ✅   |     ✅    |   ✅   |
 | `get_camera_status`  |    ✅   |     ✅    |   ✅   |
+| `get_camera_capabilities` | ✅ | ✅ | ✅ |
 | `take_snapshot`      |    ❌   |     ✅    |   ✅   |
 | `start_recording`    |    ❌   |     ✅    |   ✅   |
 | `stop_recording`     |    ❌   |     ✅    |   ✅   |
 | `list_recordings`    |    ✅   |     ✅    |   ✅   |
+| `list_snapshots`     |    ✅   |     ✅    |   ✅   |
+| `get_recording_info` |    ✅   |     ✅    |   ✅   |
+| `get_snapshot_info` |    ✅   |     ✅    |   ✅   |
 | `delete_recording`   |    ❌   |     ❌    |   ✅   |
+| `delete_snapshot`     |    ❌   |     ❌    |   ✅   |
+| `start_streaming`    |    ❌   |     ✅    |   ✅   |
+| `stop_streaming`     |    ❌   |     ✅    |   ✅   |
+| `get_stream_url`     |    ✅   |     ✅    |   ✅   |
+| `get_stream_status`  |    ✅   |     ✅    |   ✅   |
+| `get_streams`        |    ✅   |     ✅    |   ✅   |
+| `get_metrics`        |    ❌   |     ❌    |   ✅   |
+| `get_status`         |    ❌   |     ❌    |   ✅   |
+| `get_server_info`    |    ✅   |     ✅    |   ✅   |
+| `get_storage_info`   |    ❌   |     ❌    |   ✅   |
+| `set_retention_policy` |  ❌   |     ❌    |   ✅   |
+| `cleanup_old_files`  |    ❌   |     ❌    |   ✅   |
 | `subscribe_events`   |    ✅   |     ✅    |   ✅   |
 | `unsubscribe_events` |    ✅   |     ✅    |   ✅   |
-| `get_server_info`    |    ✅   |     ✅    |   ✅   |
+| `get_subscription_stats` | ✅ | ✅ | ✅ |
+| `discover_external_streams` | ❌ | ✅ | ✅ |
+| `add_external_stream` | ❌ | ✅ | ✅ |
+| `remove_external_stream` | ❌ | ✅ | ✅ |
+| `get_external_streams` | ✅ | ✅ | ✅ |
+| `set_discovery_interval` | ❌ | ❌ | ✅ |
 
 ### authenticate
 

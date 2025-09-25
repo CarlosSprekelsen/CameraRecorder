@@ -12,6 +12,10 @@ export type {
   CameraCapabilities,
   StreamInfo,
   StreamListResponse,
+  StreamStartResponse,
+  StreamStopResponse,
+  StreamStatusResponse,
+  StreamUrlResponse,
   // Enhanced recording management types (NEW)
   StorageInfo,
   ThresholdStatus,
