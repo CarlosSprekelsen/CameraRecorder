@@ -19,7 +19,8 @@
       "schemas": {
         "DeviceId": {
           "type": "string",
-          "description": "Logical camera id (e.g., 'camera0')."
+          "pattern": "^camera[0-9]+$",
+          "description": "Logical camera id (e.g., 'camera0', 'camera1'). Must match pattern camera[0-9]+"
         },
         "IsoTimestamp": {
           "type": "string",
@@ -397,6 +398,34 @@
             "ready": {
               "type": "boolean"
             },
+            "ffmpeg_process": {
+              "type": "object",
+              "properties": {
+                "running": {
+                  "type": "boolean"
+                },
+                "pid": {
+                  "type": "integer"
+                },
+                "uptime": {
+                  "type": "integer"
+                }
+              }
+            },
+            "mediamtx_path": {
+              "type": "object",
+              "properties": {
+                "exists": {
+                  "type": "boolean"
+                },
+                "ready": {
+                  "type": "boolean"
+                },
+                "readers": {
+                  "type": "integer"
+                }
+              }
+            },
             "metrics": {
               "type": "object",
               "properties": {
@@ -420,6 +449,212 @@
           },
           "required": [
             "device",
+            "status"
+          ]
+        },
+        "MetricsResult": {
+          "type": "object",
+          "properties": {
+            "timestamp": {
+              "$ref": "#/components/schemas/IsoTimestamp"
+            },
+            "system_metrics": {
+              "type": "object",
+              "properties": {
+                "cpu_usage": {
+                  "type": "number"
+                },
+                "memory_usage": {
+                  "type": "number"
+                },
+                "disk_usage": {
+                  "type": "number"
+                },
+                "goroutines": {
+                  "type": "integer"
+                }
+              }
+            },
+            "camera_metrics": {
+              "type": "object",
+              "properties": {
+                "connected_cameras": {
+                  "type": "integer"
+                },
+                "cameras": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "object"
+                  }
+                }
+              }
+            },
+            "recording_metrics": {
+              "type": "object"
+            },
+            "stream_metrics": {
+              "type": "object",
+              "properties": {
+                "active_streams": {
+                  "type": "integer"
+                },
+                "total_streams": {
+                  "type": "integer"
+                },
+                "total_viewers": {
+                  "type": "integer"
+                }
+              }
+            }
+          }
+        },
+        "StreamInfo": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "source": {
+              "type": "string"
+            },
+            "ready": {
+              "type": "boolean"
+            },
+            "readers": {
+              "type": "integer"
+            },
+            "bytes_sent": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "name",
+            "ready"
+          ]
+        },
+        "SubscriptionStats": {
+          "type": "object",
+          "properties": {
+            "global_stats": {
+              "type": "object",
+              "properties": {
+                "total_subscriptions": {
+                  "type": "integer"
+                },
+                "active_clients": {
+                  "type": "integer"
+                },
+                "topic_counts": {
+                  "type": "object",
+                  "additionalProperties": {
+                    "type": "integer"
+                  }
+                }
+              }
+            },
+            "client_topics": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "client_id": {
+              "type": "string"
+            }
+          }
+        },
+        "ExternalStreamDiscoveryResult": {
+          "type": "object",
+          "properties": {
+            "discovered_streams": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/ExternalStream"
+              }
+            },
+            "skydio_streams": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/ExternalStream"
+              }
+            },
+            "generic_streams": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/ExternalStream"
+              }
+            },
+            "scan_timestamp": {
+              "$ref": "#/components/schemas/IsoTimestamp"
+            },
+            "total_found": {
+              "type": "integer"
+            },
+            "discovery_options": {
+              "type": "object"
+            },
+            "scan_duration": {
+              "type": "string"
+            },
+            "errors": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "ExternalStreamsResult": {
+          "type": "object",
+          "properties": {
+            "external_streams": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/ExternalStream"
+              }
+            },
+            "skydio_streams": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/ExternalStream"
+              }
+            },
+            "generic_streams": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/ExternalStream"
+              }
+            },
+            "total_count": {
+              "type": "integer"
+            },
+            "timestamp": {
+              "$ref": "#/components/schemas/IsoTimestamp"
+            }
+          }
+        },
+        "DiscoveryIntervalResult": {
+          "type": "object",
+          "properties": {
+            "scan_interval": {
+              "type": "integer"
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "UPDATED",
+                "ERROR"
+              ]
+            },
+            "message": {
+              "type": "string"
+            },
+            "timestamp": {
+              "$ref": "#/components/schemas/IsoTimestamp"
+            }
+          },
+          "required": [
+            "scan_interval",
             "status"
           ]
         },
@@ -1085,7 +1320,7 @@
         }
       },
       {
-        "name": "get_streams",
+        "name":         "get_streams",
         "summary": "List active streams from MediaMTX.",
         "params": [],
         "result": {
@@ -1093,57 +1328,19 @@
           "schema": {
             "type": "array",
             "items": {
-              "type": "object",
-              "properties": {
-                "name": {
-                  "type": "string"
-                },
-                "source": {
-                  "type": "string"
-                },
-                "ready": {
-                  "type": "boolean"
-                },
-                "readers": {
-                  "type": "integer"
-                },
-                "bytes_sent": {
-                  "type": "integer"
-                }
-              },
-              "required": [
-                "name",
-                "ready"
-              ]
+              "$ref": "#/components/schemas/StreamInfo"
             }
           }
         }
       },
       {
-        "name": "get_metrics",
+        "name":         "get_metrics",
         "summary": "Get system and camera metrics.",
         "params": [],
         "result": {
           "name": "result",
           "schema": {
-            "type": "object",
-            "properties": {
-              "timestamp": {
-                "$ref": "#/components/schemas/IsoTimestamp"
-              },
-              "system_metrics": {
-                "type": "object"
-              },
-              "camera_metrics": {
-                "type": "object"
-              },
-              "recording_metrics": {
-                "type": "object"
-              },
-              "stream_metrics": {
-                "type": "object"
-              }
-            }
+            "$ref": "#/components/schemas/MetricsResult"
           }
         }
       },
@@ -1355,32 +1552,18 @@
         }
       },
       {
-        "name": "get_subscription_stats",
+        "name":         "get_subscription_stats",
         "summary": "Get event subscription statistics (global and client).",
         "params": [],
         "result": {
           "name": "result",
           "schema": {
-            "type": "object",
-            "properties": {
-              "global_stats": {
-                "type": "object"
-              },
-              "client_topics": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              },
-              "client_id": {
-                "type": "string"
-              }
-            }
+            "$ref": "#/components/schemas/SubscriptionStats"
           }
         }
       },
       {
-        "name": "discover_external_streams",
+        "name":         "discover_external_streams",
         "summary": "Discover external RTSP streams (e.g., UAVs).",
         "params": [
           {
@@ -1419,45 +1602,7 @@
         "result": {
           "name": "result",
           "schema": {
-            "type": "object",
-            "properties": {
-              "discovered_streams": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/ExternalStream"
-                }
-              },
-              "skydio_streams": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/ExternalStream"
-                }
-              },
-              "generic_streams": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/ExternalStream"
-                }
-              },
-              "scan_timestamp": {
-                "$ref": "#/components/schemas/IsoTimestamp"
-              },
-              "total_found": {
-                "type": "integer"
-              },
-              "discovery_options": {
-                "type": "object"
-              },
-              "scan_duration": {
-                "type": "string"
-              },
-              "errors": {
-                "type": "array",
-                "items": {
-                  "type": "string"
-                }
-              }
-            }
+            "$ref": "#/components/schemas/ExternalStreamDiscoveryResult"
           }
         }
       },
@@ -1563,33 +1708,7 @@
         "result": {
           "name": "result",
           "schema": {
-            "type": "object",
-            "properties": {
-              "external_streams": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/ExternalStream"
-                }
-              },
-              "skydio_streams": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/ExternalStream"
-                }
-              },
-              "generic_streams": {
-                "type": "array",
-                "items": {
-                  "$ref": "#/components/schemas/ExternalStream"
-                }
-              },
-              "total_count": {
-                "type": "integer"
-              },
-              "timestamp": {
-                "$ref": "#/components/schemas/IsoTimestamp"
-              }
-            }
+            "$ref": "#/components/schemas/ExternalStreamsResult"
           }
         }
       },
@@ -1607,29 +1726,104 @@
         "result": {
           "name": "result",
           "schema": {
-            "type": "object",
-            "properties": {
-              "scan_interval": {
-                "type": "integer"
-              },
-              "status": {
-                "type": "string",
-                "enum": [
-                  "UPDATED",
-                  "ERROR"
-                ]
-              },
-              "message": {
-                "type": "string"
-              },
-              "timestamp": {
-                "$ref": "#/components/schemas/IsoTimestamp"
-              }
-            },
-            "required": [
-              "scan_interval",
-              "status"
-            ]
+            "$ref": "#/components/schemas/DiscoveryIntervalResult"
+          }
+        }
+      },
+      {
+        "name": "get_system_status",
+        "summary": "Get system status and health information (legacy method).",
+        "params": [],
+        "result": {
+          "name": "result",
+          "schema": {
+            "$ref": "#/components/schemas/StatusResult"
+          }
+        }
+      },
+      {
+        "name": "camera_status_update",
+        "summary": "Server-to-client notification for camera status changes.",
+        "params": [
+          {
+            "name": "device",
+            "schema": {
+              "$ref": "#/components/schemas/DeviceId"
+            }
+          },
+          {
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": ["CONNECTED", "DISCONNECTED", "ERROR"]
+            }
+          },
+          {
+            "name": "name",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "resolution",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "fps",
+            "schema": {
+              "type": "integer"
+            }
+          },
+          {
+            "name": "streams",
+            "schema": {
+              "$ref": "#/components/schemas/Streams"
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "null"
+          }
+        }
+      },
+      {
+        "name": "recording_status_update",
+        "summary": "Server-to-client notification for recording status changes.",
+        "params": [
+          {
+            "name": "device",
+            "schema": {
+              "$ref": "#/components/schemas/DeviceId"
+            }
+          },
+          {
+            "name": "status",
+            "schema": {
+              "type": "string",
+              "enum": ["STARTED", "STOPPED", "ERROR", "FAILED"]
+            }
+          },
+          {
+            "name": "filename",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "duration",
+            "schema": {
+              "type": "integer"
+            }
+          }
+        ],
+        "result": {
+          "name": "result",
+          "schema": {
+            "type": "null"
           }
         }
       }
