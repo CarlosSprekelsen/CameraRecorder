@@ -1,7 +1,8 @@
 {
-  "name": "client",
+  "name": "mediamtx-camera-client",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "type": "module",
   "engines": {
     "node": ">=20.19.0",
     "npm": ">=10.8.0"
@@ -9,41 +10,20 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "lint": "eslint src",
-    "preview": "vite preview",
-    "test": "bash -c './set-test-env.sh && source .test_env && jest --config jest.config.cjs'",
-    "test:unit": "bash -c './set-test-env.sh && source .test_env && jest --config jest.config.cjs --testPathPattern=\"tests/unit\" --testPathIgnorePatterns=\"tests/integration|tests/e2e|tests/performance\"'",
-    "test:integration": "bash -c './set-test-env.sh && source .test_env && jest --config jest.integration.config.cjs --testPathPattern=\"tests/integration\" --testPathIgnorePatterns=\"tests/unit\"'",
-    "test:e2e": "bash -c './set-test-env.sh && source .test_env && jest --config jest.integration.config.cjs --testPathPattern=\"tests/e2e\" --testPathIgnorePatterns=\"tests/unit\"'",
-    "test:performance": "bash -c './set-test-env.sh && source .test_env && jest --config jest.performance.config.cjs --testPathPattern=\"tests/performance\"'",
-    "test:all": "bash -c './set-test-env.sh && source .test_env && npm run test:unit && npm run test:integration && npm run test:e2e && npm run test:performance'",
-    "test:watch": "jest --config jest.config.cjs --watch",
-    "test:coverage": "jest --config jest.config.cjs --coverage",
-    "test:ci": "bash -c './set-test-env-ci.sh && source .test_env && jest --config jest.config.cjs'",
-    "test:ci:unit": "bash -c './set-test-env-ci.sh && source .test_env && jest --config jest.config.cjs --testPathPattern=\"tests/unit\" --testPathIgnorePatterns=\"tests/integration|tests/e2e|tests/performance\"'",
-    "test:ci:integration": "bash -c './set-test-env-ci.sh && source .test_env && jest --config jest.integration.config.cjs --testPathPattern=\"tests/integration\" --testPathIgnorePatterns=\"tests/unit\"'",
-    "test:ci:e2e": "bash -c './set-test-env-ci.sh && source .test_env && jest --config jest.integration.config.cjs --testPathPattern=\"tests/e2e\" --testPathIgnorePatterns=\"tests/unit\"'",
-    "test:ci:performance": "bash -c './set-test-env-ci.sh && source .test_env && jest --config jest.performance.config.cjs --testPathPattern=\"tests/performance\"'",
-    "test:ci:all": "bash -c './set-test-env-ci.sh && source .test_env && npm run test:ci:unit && npm run test:ci:integration && npm run test:ci:e2e && npm run test:ci:performance'"
+    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@emotion/react": "^11.11.1",
     "@emotion/styled": "^11.11.0",
     "@mui/icons-material": "^5.14.19",
     "@mui/material": "^5.14.20",
-    "jsonwebtoken": "^9.0.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^6.20.1",
     "zustand": "^4.4.7"
   },
   "devDependencies": {
-    "@babel/preset-env": "^7.28.3",
-    "@testing-library/jest-dom": "^6.7.0",
-    "@testing-library/react": "^16.3.0",
-    "@testing-library/user-event": "^14.6.1",
-    "@types/jest": "29.5.12",
-    "@types/jsonwebtoken": "^9.0.5",
     "@types/react": "^19.1.1",
     "@types/react-dom": "^19.1.1",
     "@types/react-router-dom": "^5.3.3",
@@ -51,18 +31,12 @@
     "@typescript-eslint/eslint-plugin": "^6.12.0",
     "@typescript-eslint/parser": "^6.12.0",
     "@vitejs/plugin-react": "^4.1.1",
-    "babel-jest": "^30.0.5",
     "eslint": "^8.54.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.4",
-    "identity-obj-proxy": "^3.0.0",
-    "jest": "29.6.4",
-    "jest-environment-jsdom": "29.6.4",
     "prettier": "^3.1.0",
-    "ts-jest": "29.1.5",
     "typescript": "^5.3.3",
     "vite": "^5.4.19",
-    "vite-plugin-pwa": "^0.17.5",
     "ws": "^8.18.3"
   }
 }
