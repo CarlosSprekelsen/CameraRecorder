@@ -4,31 +4,31 @@ import { IFileCatalog, IFileActions } from '../interfaces/ServiceInterfaces';
 
 /**
  * File Service - File management and operations
- * 
+ *
  * Implements IFileCatalog and IFileActions interfaces for comprehensive file management.
  * Provides methods for listing, downloading, and deleting recordings and snapshots
  * with pagination support and server-provided download URLs.
- * 
+ *
  * @class FileService
  * @implements {IFileCatalog} {@link IFileActions}
- * 
+ *
  * @example
  * ```typescript
  * const fileService = new FileService(wsService, logger);
- * 
+ *
  * // List recordings with pagination
  * const recordings = await fileService.listRecordings(10, 0);
- * 
+ *
  * // Get file information
  * const info = await fileService.getRecordingInfo('recording.mp4');
- * 
+ *
  * // Download file
  * await fileService.downloadFile(info.download_url, 'recording.mp4');
- * 
+ *
  * // Delete file
  * await fileService.deleteRecording('recording.mp4');
  * ```
- * 
+ *
  * @see {@link ../interfaces/ServiceInterfaces#IFileCatalog} IFileCatalog interface
  * @see {@link ../interfaces/ServiceInterfaces#IFileActions} IFileActions interface
  * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture

@@ -251,20 +251,23 @@ export interface MetricsResult {
   };
   camera_metrics: {
     connected_cameras: number;
-    cameras: Record<string, {
-      path: string;
-      name: string;
-      status: string;
-      device_num: number;
-      last_seen: IsoTimestamp;
-      capabilities: Record<string, unknown>;
-      formats: Array<{
-        pixel_format: string;
-        width: number;
-        height: number;
-        frame_rates: string[];
-      }>;
-    }>;
+    cameras: Record<
+      string,
+      {
+        path: string;
+        name: string;
+        status: string;
+        device_num: number;
+        last_seen: IsoTimestamp;
+        capabilities: Record<string, unknown>;
+        formats: Array<{
+          pixel_format: string;
+          width: number;
+          height: number;
+          frame_rates: string[];
+        }>;
+      }
+    >;
   };
   recording_metrics: Record<string, Record<string, unknown>>;
   stream_metrics: {

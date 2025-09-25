@@ -113,7 +113,10 @@ const LoginPage: React.FC<LoginPageProps> = memo(({ authService }) => {
             </Typography>
           </Box>
 
-          <Alert severity={getConnectionStatusColor() as 'success' | 'error' | 'warning' | 'info'} sx={{ mb: 2 }}>
+          <Alert
+            severity={getConnectionStatusColor() as 'success' | 'error' | 'warning' | 'info'}
+            sx={{ mb: 2 }}
+          >
             Status: {getConnectionStatusText()}
           </Alert>
 

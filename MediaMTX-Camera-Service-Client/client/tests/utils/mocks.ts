@@ -909,4 +909,62 @@ export class MockDataFactory {
     } as jest.Mocked<Console>;
   }
 
+  // ============================================================================
+  // CENTRALIZED TEST UTILITIES (REDUCE JEST.FN() DUPLICATION)
+  // ============================================================================
+
+  /**
+   * Centralized Auth Store Mock - eliminates duplication in hook tests
+   */
+  static createMockAuthStore(overrides: any = {}) {
+    return {
+      role: 'admin',
+      permissions: ['read', 'write', 'delete', 'admin'],
+      isAuthenticated: true,
+      login: jest.fn(),
+      logout: jest.fn(),
+      setRole: jest.fn(),
+      setPermissions: jest.fn(),
+      ...overrides
+    };
+  }
+
+  /**
+   * Centralized Event Handler Mock - eliminates duplication in hook tests
+   */
+  static createMockEventHandler() {
+    return jest.fn();
+  }
+
+  /**
+   * Centralized Keyboard Event Mock - eliminates duplication in hook tests
+   */
+  static createMockKeyboardEvent(overrides: any = {}) {
+    return {
+      key: 'Enter',
+      code: 'Enter',
+      ctrlKey: false,
+      shiftKey: false,
+      altKey: false,
+      metaKey: false,
+      preventDefault: jest.fn(),
+      stopPropagation: jest.fn(),
+      ...overrides
+    };
+  }
+
+  /**
+   * Centralized Performance Monitor Mock - eliminates duplication in hook tests
+   */
+  static createMockPerformanceMonitor() {
+    return {
+      start: jest.fn(),
+      end: jest.fn(),
+      measure: jest.fn(),
+      getEntries: jest.fn(() => []),
+      getEntriesByName: jest.fn(() => []),
+      getEntriesByType: jest.fn(() => [])
+    };
+  }
+
 }

@@ -9,26 +9,26 @@ import Pagination from '../../components/Files/Pagination';
 
 /**
  * FilesPage - File management interface
- * 
+ *
  * Provides comprehensive file management capabilities for recordings and snapshots.
  * Implements I.FileCatalog and I.FileActions interfaces for file operations including
  * listing, downloading, and deleting files with pagination support.
- * 
+ *
  * @component
  * @returns {JSX.Element} The file management page
- * 
+ *
  * @features
  * - File listing with pagination (recordings and snapshots)
  * - File download via server-provided URLs
  * - File deletion with confirmation
  * - File information display
  * - Loading states and error handling
- * 
+ *
  * @example
  * ```tsx
  * <FilesPage />
  * ```
- * 
+ *
  * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture
  */
 const FilesPage: React.FC = () => {

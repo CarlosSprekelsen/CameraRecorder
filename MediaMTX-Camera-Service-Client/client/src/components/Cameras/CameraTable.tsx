@@ -38,33 +38,33 @@ interface CameraTableProps {
 
 /**
  * CameraTable - Device list with status and stream management
- * 
+ *
  * Displays cameras in a table format with real-time status updates and stream links.
  * Implements the I.Discovery interface for device enumeration and stream URL management.
- * 
+ *
  * @component
  * @param {CameraTableProps} props - Component props
  * @param {Camera[]} props.cameras - Array of camera devices to display
  * @param {StreamInfo[]} props.streams - Array of active stream information
  * @param {() => void} props.onRefresh - Callback function to refresh camera list
  * @returns {JSX.Element} The camera table component
- * 
+ *
  * @features
  * - Real-time camera status display
  * - Stream URL management and copying
  * - Recording status indicators
  * - Device action buttons
  * - Responsive table design
- * 
+ *
  * @example
  * ```tsx
- * <CameraTable 
- *   cameras={cameras} 
- *   streams={streams} 
- *   onRefresh={handleRefresh} 
+ * <CameraTable
+ *   cameras={cameras}
+ *   streams={streams}
+ *   onRefresh={handleRefresh}
  * />
  * ```
- * 
+ *
  * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture
  */
 const CameraTable: React.FC<CameraTableProps> = ({ cameras, streams, onRefresh }) => {
@@ -181,7 +181,9 @@ const CameraTable: React.FC<CameraTableProps> = ({ cameras, streams, onRefresh }
                   <TableCell>
                     <Chip
                       label={camera.status}
-                      color={getStatusColor(camera.status) as 'success' | 'error' | 'warning' | 'info'}
+                      color={
+                        getStatusColor(camera.status) as 'success' | 'error' | 'warning' | 'info'
+                      }
                       size="small"
                     />
                   </TableCell>

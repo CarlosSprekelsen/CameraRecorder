@@ -1,10 +1,10 @@
 /**
  * Infrastructure Layer - Logger Service
- * 
+ *
  * Provides comprehensive logging functionality for the MediaMTX client application.
  * Implements structured logging with multiple levels, context support, and development
  * console output. Singleton pattern ensures consistent logging across the application.
- * 
+ *
  * @fileoverview Logger service implementation
  * @author MediaMTX Development Team
  * @version 1.0.0
@@ -12,9 +12,9 @@
 
 /**
  * Log Level Enumeration
- * 
+ *
  * Defines the available logging levels in order of severity.
- * 
+ *
  * @enum {string}
  */
 export enum LogLevel {
@@ -26,10 +26,10 @@ export enum LogLevel {
 
 /**
  * Log Entry Interface
- * 
+ *
  * Defines the structure for individual log entries with timestamp, level,
  * message, optional context, and error information.
- * 
+ *
  * @interface LogEntry
  */
 export interface LogEntry {
@@ -47,25 +47,25 @@ export interface LogEntry {
 
 /**
  * Logger Service - Centralized logging system
- * 
+ *
  * Singleton service providing structured logging with multiple levels, context support,
  * and development console output. Manages log entries with automatic rotation and
  * provides methods for different log levels with optional context and error information.
- * 
+ *
  * @class LoggerService
- * 
+ *
  * @example
  * ```typescript
  * const logger = LoggerService.getInstance();
- * 
+ *
  * // Basic logging
  * logger.info('User logged in', { userId: '123' });
  * logger.error('Connection failed', error, { endpoint: '/api/connect' });
- * 
+ *
  * // Get logs
  * const logs = logger.getLogs(LogLevel.ERROR);
  * ```
- * 
+ *
  * @see {@link LogLevel} Available log levels
  * @see {@link LogEntry} Log entry structure
  */

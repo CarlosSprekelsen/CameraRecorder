@@ -18,6 +18,7 @@
 import { renderHook } from '@testing-library/react';
 import { usePermissions } from '../../../src/hooks/usePermissions';
 import { useAuthStore } from '../../../src/stores/auth/authStore';
+import { MockDataFactory } from '../../utils/mocks';
 
 // Mock the auth store - centralized pattern
 jest.mock('../../../src/stores/auth/authStore');
@@ -40,15 +41,10 @@ describe('usePermissions Hook Unit Tests', () => {
 
   test('REQ-HOOK-001: Should return correct permissions for admin role', () => {
     // Arrange
-    mockUseAuthStore.mockReturnValue({
+    mockUseAuthStore.mockReturnValue(MockDataFactory.createMockAuthStore({
       role: 'admin',
-      permissions: ['read', 'write', 'delete', 'admin'],
-      isAuthenticated: true,
-      login: jest.fn(),
-      logout: jest.fn(),
-      setRole: jest.fn(),
-      setPermissions: jest.fn()
-    });
+      permissions: ['read', 'write', 'delete', 'admin']
+    }));
 
     // Act
     const { result } = renderHook(() => usePermissions());
@@ -75,15 +71,10 @@ describe('usePermissions Hook Unit Tests', () => {
 
   test('REQ-HOOK-002: Should return correct permissions for operator role', () => {
     // Arrange
-    mockUseAuthStore.mockReturnValue({
+    mockUseAuthStore.mockReturnValue(MockDataFactory.createMockAuthStore({
       role: 'operator',
-      permissions: ['read', 'write'],
-      isAuthenticated: true,
-      login: jest.fn(),
-      logout: jest.fn(),
-      setRole: jest.fn(),
-      setPermissions: jest.fn()
-    });
+      permissions: ['read', 'write']
+    }));
 
     // Act
     const { result } = renderHook(() => usePermissions());
@@ -110,15 +101,10 @@ describe('usePermissions Hook Unit Tests', () => {
 
   test('REQ-HOOK-003: Should return correct permissions for viewer role', () => {
     // Arrange
-    mockUseAuthStore.mockReturnValue({
+    mockUseAuthStore.mockReturnValue(MockDataFactory.createMockAuthStore({
       role: 'viewer',
-      permissions: ['read'],
-      isAuthenticated: true,
-      login: jest.fn(),
-      logout: jest.fn(),
-      setRole: jest.fn(),
-      setPermissions: jest.fn()
-    });
+      permissions: ['read']
+    }));
 
     // Act
     const { result } = renderHook(() => usePermissions());
@@ -145,15 +131,11 @@ describe('usePermissions Hook Unit Tests', () => {
 
   test('REQ-HOOK-004: Should handle unauthenticated state correctly', () => {
     // Arrange
-    mockUseAuthStore.mockReturnValue({
+    mockUseAuthStore.mockReturnValue(MockDataFactory.createMockAuthStore({
       role: null,
       permissions: [],
-      isAuthenticated: false,
-      login: jest.fn(),
-      logout: jest.fn(),
-      setRole: jest.fn(),
-      setPermissions: jest.fn()
-    });
+      isAuthenticated: false
+    }));
 
     // Act
     const { result } = renderHook(() => usePermissions());
@@ -183,15 +165,10 @@ describe('usePermissions Hook Unit Tests', () => {
 
   test('REQ-HOOK-005: Should handle null role correctly', () => {
     // Arrange
-    mockUseAuthStore.mockReturnValue({
+    mockUseAuthStore.mockReturnValue(MockDataFactory.createMockAuthStore({
       role: null,
-      permissions: [],
-      isAuthenticated: true,
-      login: jest.fn(),
-      logout: jest.fn(),
-      setRole: jest.fn(),
-      setPermissions: jest.fn()
-    });
+      permissions: []
+    }));
 
     // Act
     const { result } = renderHook(() => usePermissions());

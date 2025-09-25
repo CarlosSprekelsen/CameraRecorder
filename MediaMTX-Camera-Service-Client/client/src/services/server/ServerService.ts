@@ -3,10 +3,10 @@ import { IStatus } from '../interfaces/ServiceInterfaces';
 
 /**
  * System Metrics Interface
- * 
+ *
  * Defines the structure for system performance metrics including CPU, memory,
  * disk usage, and camera-specific metrics.
- * 
+ *
  * @interface SystemMetrics
  */
 export interface SystemMetrics {
@@ -33,28 +33,28 @@ import { SubscriptionResult, UnsubscriptionResult, SubscriptionStatsResult } fro
 
 /**
  * Server Service - System status and metrics management
- * 
+ *
  * Implements the IStatus interface for server status monitoring, system metrics,
  * and event subscription management. Provides methods for retrieving server information,
  * system health, storage details, and managing real-time event subscriptions.
- * 
+ *
  * @class ServerService
  * @implements {IStatus}
- * 
+ *
  * @example
  * ```typescript
  * const serverService = new ServerService(wsService);
- * 
+ *
  * // Get system status
  * const status = await serverService.getStatus();
- * 
+ *
  * // Get server metrics
  * const metrics = await serverService.getMetrics();
- * 
+ *
  * // Subscribe to events
  * const subscription = await serverService.subscribeEvents(['camera_status_update']);
  * ```
- * 
+ *
  * @see {@link ../interfaces/ServiceInterfaces#IStatus} IStatus interface
  * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture
  */

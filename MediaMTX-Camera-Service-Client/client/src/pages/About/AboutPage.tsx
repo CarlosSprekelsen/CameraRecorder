@@ -25,25 +25,25 @@ import { useServerStore } from '../../stores/server/serverStore';
 
 /**
  * AboutPage - Server information and system status display
- * 
+ *
  * Displays comprehensive server information including system status, storage details,
  * and server metadata. Provides real-time health monitoring and system metrics.
- * 
+ *
  * @component
  * @returns {JSX.Element} The about page component
- * 
+ *
  * @features
  * - Server information display (version, build, uptime)
  * - System status monitoring (health, performance)
  * - Storage information (usage, available space)
  * - Real-time status updates
  * - Error handling and loading states
- * 
+ *
  * @example
  * ```tsx
  * <AboutPage />
  * ```
- * 
+ *
  * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture
  */
 const AboutPage: React.FC = () => {
@@ -181,7 +181,9 @@ const AboutPage: React.FC = () => {
                     </Typography>
                     <Chip
                       label={status.status}
-                      color={getStatusColor(status.status) as 'success' | 'error' | 'warning' | 'info'}
+                      color={
+                        getStatusColor(status.status) as 'success' | 'error' | 'warning' | 'info'
+                      }
                       size="small"
                     />
                   </Box>

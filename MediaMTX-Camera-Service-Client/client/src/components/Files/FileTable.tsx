@@ -40,34 +40,34 @@ interface FileTableProps {
 
 /**
  * FileTable - File listing with download and delete actions
- * 
+ *
  * Displays files in a table format with download and delete capabilities.
  * Implements I.FileActions interface for file operations including download
  * via server-provided URLs and file deletion with confirmation.
- * 
+ *
  * @component
  * @param {FileTableProps} props - Component props
  * @param {FileInfo[]} props.files - Array of file information to display
  * @param {'recordings' | 'snapshots'} props.fileType - Type of files being displayed
  * @param {boolean} props.loading - Loading state indicator
  * @returns {JSX.Element} The file table component
- * 
+ *
  * @features
  * - File listing with metadata (size, date, format)
  * - Download functionality via server URLs
  * - Delete operations with confirmation
  * - Loading states and error handling
  * - Responsive table design
- * 
+ *
  * @example
  * ```tsx
- * <FileTable 
- *   files={recordings} 
- *   fileType="recordings" 
- *   loading={false} 
+ * <FileTable
+ *   files={recordings}
+ *   fileType="recordings"
+ *   loading={false}
  * />
  * ```
- * 
+ *
  * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture
  */
 const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {

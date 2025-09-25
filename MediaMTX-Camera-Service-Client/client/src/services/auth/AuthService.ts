@@ -3,12 +3,12 @@ import { WebSocketService } from '../websocket/WebSocketService';
 
 /**
  * Authentication Service
- * 
+ *
  * Handles user authentication and session management for the MediaMTX client.
  * Provides JWT token validation, role-based access control, and session persistence.
- * 
+ *
  * @class AuthService
- * 
+ *
  * @example
  * ```typescript
  * const authService = new AuthService(wsService);

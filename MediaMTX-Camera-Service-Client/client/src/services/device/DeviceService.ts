@@ -5,13 +5,13 @@ import { IDiscovery } from '../interfaces/ServiceInterfaces';
 
 /**
  * Device Service - Camera discovery and stream management
- * 
+ *
  * Implements the IDiscovery interface for device enumeration and stream URL management.
  * Provides methods for discovering cameras, retrieving active streams, and getting stream URLs.
- * 
+ *
  * @class DeviceService
  * @implements {IDiscovery}
- * 
+ *
  * @example
  * ```typescript
  * const deviceService = new DeviceService(wsService, logger);
@@ -19,7 +19,7 @@ import { IDiscovery } from '../interfaces/ServiceInterfaces';
  * const streams = await deviceService.getStreams();
  * const url = await deviceService.getStreamUrl('camera-001');
  * ```
- * 
+ *
  * @see {@link ../interfaces/ServiceInterfaces#IDiscovery} IDiscovery interface
  * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture
  */

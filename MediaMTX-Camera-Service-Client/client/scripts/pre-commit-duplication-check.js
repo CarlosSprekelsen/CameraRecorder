@@ -19,7 +19,8 @@
  * API Documentation Reference: json-rpc-methods.md
  */
 
-import { readFileSync, execSync } from 'fs';
+import { readFileSync } from 'fs';
+import { execSync } from 'child_process';
 import { resolve, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
