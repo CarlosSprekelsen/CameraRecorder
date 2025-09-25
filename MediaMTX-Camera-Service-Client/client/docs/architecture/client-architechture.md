@@ -13,6 +13,20 @@
 
 The MediaMTX Camera Service Client is a web-based Progressive Web Application that provides real-time camera management, monitoring, and control capabilities. The system serves as the user interface layer for the MediaMTX Camera Service ecosystem, enabling operators to manage video streams, capture recordings, and monitor system health through an intuitive interface.
 
+#### 1.1.1 Functional Scope (Server Frontend)
+
+- Discover cameras; display opaque stream links (HLS/WebRTC) for external playback
+- Control operations via JSON-RPC: `take_snapshot`, `start_recording` (unlimited or timed), `stop_recording`
+- Files: list recordings and snapshots (paginated), get file info, download via server-provided HTTP(S) links, delete on server
+- Status: show server-reported system/storage status and subscribe to server events
+
+#### 1.1.2 Non-Goals (Explicit)
+
+- No embedded media playback, decoding, transcoding, or proxying
+- No KLV/metadata parsing or correlation logic in the client
+- No client-side media/file storage beyond browser download
+- No client-side timers that alter server behavior (timers are server-authoritative)
+
 ### 1.2 Quality Goals
 
 | Priority | Quality Attribute | Scenario |
@@ -43,6 +57,17 @@ The MediaMTX Camera Service Client is a web-based Progressive Web Application th
 - JSON-RPC 2.0 protocol for structured message exchange
 - Token-based authentication for stateless session management
 - Progressive Web App standards for offline capability
+
+Additional scope constraints for the server-frontend client:
+
+- Control plane: WebSocket + JSON-RPC 2.0 only
+- Media plane: client surfaces HLS/WebRTC links for external playback (link exposure only)
+- File access: client uses server-provided HTTP(S) download URLs; the client does not rewrite or re-sign URLs
+
+### 2.4 Security Constraint (Client)
+
+- Download links are opaque; the client must not persist or display credentials embedded in links
+- Deletion actions require explicit user confirmation; role checks enforced by server
 
 ### 2.2 Organizational Constraints
 
@@ -96,9 +121,11 @@ graph TB
 | Interface | Protocol | Purpose |
 |-----------|----------|---------|
 | Service API | WebSocket with JSON-RPC 2.0 | Primary service communication |
-| File Transfer | HTTP/HTTPS | Media file retrieval |
+| File Transfer | HTTP/HTTPS (server-provided URLs) | Media file retrieval |
 | Authentication | JWT Bearer Tokens | Session management |
-| Media Streaming | WebRTC/HLS | Live video streaming |
+| Link Provisioning | HLS/WebRTC (link exposure only) | External playback hand-off |
+
+Note: The client has no direct data-plane edge to MEDIA/STORAGE. Links may point to external hosts and are treated as opaque.
 
 ---
 
@@ -106,7 +133,7 @@ graph TB
 
 ### 4.1 Architecture Approach
 
-The system employs a layered architecture pattern with clear separation between presentation, application logic, and infrastructure concerns. Communication follows an event-driven model with centralized state management.
+The system employs a layered architecture pattern with clear separation between presentation, application control, and infrastructure concerns. The client acts as a thin server-frontend focused on: command, catalog, link provisioning, and file actions (download/delete). Communication follows an event-driven model with centralized state management.
 
 ### 4.2 Technology Decisions
 
@@ -127,33 +154,46 @@ The system employs a layered architecture pattern with clear separation between 
 ```mermaid
 graph TD
     subgraph "Presentation Layer"
-        UI[User Interface Components]
-        VIEWS[View Controllers]
+        UI[Control Interface]
+        LINKS[Link Display]
     end
     
     subgraph "Application Layer"
-        STATE[State Management]
-        LOGIC[Business Logic]
-        VALIDATION[Input Validation]
+        STATE[Command State]
+        DISCOVERY[Discovery Presenter]
+        RECORDING[Recording Commander]
+        SNAPSHOT[Snapshot Commander]
+        FILECAT[File Catalog]
+        FILEACT[File Actions]
+        STATUS[Status Presenter]
     end
     
     subgraph "Service Layer"
-        API[API Client]
-        AUTH[Authentication Service]
-        EVENTS[Event Handler]
+        RPC[RPC Client]
+        AUTH[Authentication]
+        NOTIF[Status Receiver]
     end
     
     subgraph "Infrastructure Layer"
-        TRANSPORT[Transport Protocol]
-        PERSISTENCE[Local Storage]
-        CACHE[Cache Manager]
+        WS[WebSocket Transport]
+        SESSION[Session Storage]
+        LOGGER[Logger]
     end
     
-    UI --> VIEWS
-    VIEWS --> STATE
-    STATE --> LOGIC
-    LOGIC --> API
-    API --> TRANSPORT
+    UI --> STATE
+    STATE --> DISCOVERY
+    STATE --> RECORDING
+    STATE --> SNAPSHOT
+    STATE --> FILECAT
+    STATE --> FILEACT
+    STATE --> STATUS
+    DISCOVERY --> RPC
+    RECORDING --> RPC
+    SNAPSHOT --> RPC
+    FILECAT --> RPC
+    FILEACT --> RPC
+    STATUS --> NOTIF
+    RPC --> WS
 ```
 
 ### 5.2 Component Structure
@@ -211,6 +251,35 @@ classDiagram
     StateManager --> APIClient
 ```
 
+### 5.3 Component Interfaces (Control/Files/Status)
+
+- I.Discovery: list devices and stream links (`get_camera_list`, `get_streams`, `get_stream_url`)
+- I.Command: `take_snapshot`; `start_recording` (optional `duration`); `stop_recording`
+- I.FileCatalog: `list_recordings`; `list_snapshots`; `get_recording_info`; `get_snapshot_info` (pagination)
+- I.FileActions: download(url) hand-off; `delete_recording`(filename); `delete_snapshot`(filename)
+- I.Status: `get_status`; `get_storage_info`; `get_server_info`; `subscribe_events` / `unsubscribe_events`; `get_subscription_stats`
+
+#### 5.3.1 RPC Method Alignment (Authoritative)
+
+- Discovery
+  - `get_camera_list` → cameras with stream fields
+  - `get_streams` → MediaMTX active streams
+  - `get_stream_url` → URL for specific device
+- Commands
+  - `take_snapshot`(device[, filename])
+  - `start_recording`(device[, duration][, format])
+  - `stop_recording`(device)
+- Files
+  - `list_recordings`(limit, offset)
+  - `list_snapshots`(limit, offset)
+  - `get_recording_info`(filename)
+  - `get_snapshot_info`(filename)
+  - `delete_recording`(filename)
+  - `delete_snapshot`(filename)
+- Status / Admin
+  - `get_status`, `get_storage_info`, `get_server_info`, `get_metrics`
+  - `subscribe_events`, `unsubscribe_events`, `get_subscription_stats`
+
 ---
 
 ## 6. Runtime View
@@ -232,6 +301,43 @@ sequenceDiagram
     Server-->>Auth: Session Established
     Auth-->>Transport: Authentication Success
     Transport-->>Client: Ready State
+```
+
+### 6.4 Control & File Operations (Client as Server Frontend)
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Server
+    
+    Client->>Server: get_camera_list
+    Server-->>Client: cameras[] (with stream fields)
+    Client->>Server: get_stream_url(device)
+    Server-->>Client: stream_url
+    
+    Client->>Server: take_snapshot(device[, filename])
+    Server-->>Client: ack + status event
+    
+    Client->>Server: start_recording(device[, duration][, format])
+    Server-->>Client: ack + recording status events
+    Client->>Server: stop_recording(device)
+    Server-->>Client: ack + recording status events
+
+    Client->>Server: list_recordings(limit, offset)
+    Server-->>Client: files[] (with download_url)
+    Client->>Server: list_snapshots(limit, offset)
+    Server-->>Client: files[] (with download_url)
+    Client->>Server: get_recording_info(filename)
+    Server-->>Client: recordingInfo
+    Client->>Server: get_snapshot_info(filename)
+    Server-->>Client: snapshotInfo
+
+    Client->>Browser: download(download_url)
+    
+    Client->>Server: delete_recording(filename)
+    Server-->>Client: ack + file list update event
+    Client->>Server: delete_snapshot(filename)
+    Server-->>Client: ack + file list update event
 ```
 
 ### 6.2 Camera Operation Flow
@@ -316,6 +422,8 @@ graph TB
 | Staging | Containerized deployment with test services |
 | Production | Distributed CDN with load-balanced services |
 
+Client connections are limited to the control API (WebSocket). Media streaming and file download links may point to external hosts and are handled outside of the client.
+
 ---
 
 ## 8. Cross-Cutting Concepts
@@ -393,6 +501,36 @@ graph LR
 
 ---
 
+### 9.4 ADR-004: No Embedded Playback
+
+**Status:** Accepted
+
+**Context:** Prevent scope creep and media-plane responsibilities on the client
+
+**Decision:** The client displays opaque HLS/WebRTC links for external playback and does not embed a player
+
+**Consequences:** Clear separation of concerns, reduced complexity, easier security posture
+
+### 9.5 ADR-005: Server-Authoritative Timers
+
+**Status:** Accepted
+
+**Context:** Recording durations and timing must be reliable and auditable
+
+**Decision:** Recording timers are managed by the server; the client issues intent with optional duration
+
+**Consequences:** Deterministic behavior, simpler client, consistent audit trail
+
+### 9.6 ADR-006: File Operations Limited to Server-Side
+
+**Status:** Accepted
+
+**Context:** Ensure the client does not take on storage/media responsibilities
+
+**Decision:** Client lists/downloads/deletes files via server APIs and server-provided URLs; no local copies beyond browser download
+
+**Consequences:** Simplified client and consistent server-controlled file lifecycle
+
 ## 10. Quality Requirements
 
 ### 10.1 Performance Requirements
@@ -401,8 +539,8 @@ graph LR
 |--------|--------|-------------------|
 | Initial Load Time | < 3 seconds | Performance monitoring |
 | Time to Interactive | < 5 seconds | User timing API |
-| Response Time | < 200ms | Transaction monitoring |
-| Frame Rate | 60 fps | Rendering performance |
+| Command Ack | ≤ 200ms (p95) | WebSocket round-trip |
+| Event-to-UI | ≤ 100ms (p95) | Notification to render |
 
 ### 10.2 Reliability Requirements
 
@@ -485,6 +623,14 @@ graph LR
 - ☑ Glossary provided
 
 ---
+
+### 13.4 Scope Compliance (Server Frontend)
+
+- ☑ Client does not embed or proxy media; exposes HLS/WebRTC links only
+- ☑ Client supports snapshot and recording (start/stop/timed)
+- ☑ Client supports file list, download via server-provided URLs, and delete
+- ☑ Control plane limited to WebSocket/JSON-RPC; no protocol expansion
+- ☑ Delete actions require confirmation; URLs treated as opaque; no tokens logged
 
 **Document Status:** Released  
 **Classification:** Architecture Specification  
