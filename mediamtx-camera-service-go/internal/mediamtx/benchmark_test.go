@@ -36,9 +36,8 @@ func setupBenchmarkController(b *testing.B) (*MediaMTXTestHelper, *EventDrivenTe
 		b.Fatalf("Failed to create controller: %v", err)
 	}
 
-	// Start controller
-	ctx, cancel := helper.GetStandardContext()
-	defer cancel()
+	// Start controller (use test context from SetupMediaMTXTest)
+	// Note: ctx from SetupMediaMTXTest is managed by test.Cleanup(), no need for manual cancel
 	err = controller.Start(ctx)
 	if err != nil {
 		b.Fatalf("Failed to start controller: %v", err)

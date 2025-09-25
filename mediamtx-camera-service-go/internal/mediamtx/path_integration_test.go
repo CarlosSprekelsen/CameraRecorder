@@ -34,7 +34,6 @@ func TestPathManager_RealServer_ReqMTX001(t *testing.T) {
 	// REQ-MTX-001: MediaMTX service integration
 	helper, ctx := SetupMediaMTXTest(t)
 
-
 	// Create REAL config manager (not mock!)
 	configManager := config.CreateConfigManager()
 	require.NotNil(t, configManager, "Real config manager should be created")
@@ -61,7 +60,6 @@ func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	helper, ctx := SetupMediaMTXTest(t)
 
-
 	// Create REAL config manager
 	configManager := config.CreateConfigManager()
 	require.NotNil(t, configManager, "Real config manager should be created")
@@ -70,7 +68,6 @@ func TestPathManager_StreamManagement_ReqMTX002(t *testing.T) {
 	// Use shared path manager from test helper
 	pathManager := helper.GetPathManager()
 	require.NotNil(t, pathManager, "Path manager should be created")
-
 
 	// Test path creation with real MediaMTX server
 	testPathName := "test_camera_path"
@@ -103,7 +100,6 @@ func TestPathManager_ConfigIntegration_ReqMTX003(t *testing.T) {
 	// REQ-MTX-003: Path creation and deletion
 	helper, ctx := SetupMediaMTXTest(t)
 
-
 	// Create REAL config manager
 	configManager := config.CreateConfigManager()
 	require.NotNil(t, configManager, "Real config manager should be created")
@@ -135,7 +131,6 @@ func TestPathManager_ConfigIntegration_ReqMTX003(t *testing.T) {
 func TestPathManager_HealthMonitoring_ReqMTX004(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 	helper, ctx := SetupMediaMTXTest(t)
-
 
 	// Create REAL config manager
 	configManager := config.CreateConfigManager()
@@ -179,7 +174,6 @@ func TestPathManager_HealthMonitoring_ReqMTX004(t *testing.T) {
 func TestPathManager_RealMediaMTXServer(t *testing.T) {
 	// Test real MediaMTX server integration
 	helper, ctx := SetupMediaMTXTest(t)
-
 
 	// Create REAL config manager
 	configManager := config.CreateConfigManager()

@@ -240,12 +240,15 @@ func TestController_StreamManagement_NotRunning_ReqMTX004(t *testing.T) {
 // TestController_StreamManagement_Concurrent_ReqMTX002 tests concurrent stream operations
 func TestController_StreamManagement_Concurrent_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Get ready controller with device discovery
 	controller, ctx, cancel := helper.GetReadyController(t)
 	defer cancel()
 	defer controller.Stop(ctx)
+
+	// Note: testCtx from SetupMediaMTXTest is managed by test.Cleanup() for test lifecycle
+	// ctx from GetReadyController is used for controller operations
 
 	// Wait for controller to be fully ready before concurrent operations
 	readinessChan := controller.SubscribeToReadiness()

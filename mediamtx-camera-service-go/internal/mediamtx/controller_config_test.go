@@ -32,7 +32,7 @@ func TestConfigIntegration_GetRecordingConfig_ReqMTX001_Success_Refactored(t *te
 	// Test-specific business logic only
 	assert.NotNil(t, config, "Recording config should not be nil")
 	assert.NotEmpty(t, config.Format, "Recording format should be configured")
-	
+
 	t.Logf("✅ Recording config validated: %s", config.Format)
 }
 
@@ -49,7 +49,7 @@ func TestConfigIntegration_GetSnapshotConfig_ReqMTX001_Success_Refactored(t *tes
 	// Test-specific business logic only
 	assert.NotNil(t, config, "Snapshot config should not be nil")
 	assert.NotEmpty(t, config.Format, "Snapshot format should be configured")
-	
+
 	t.Logf("✅ Snapshot config validated: %s", config.Format)
 }
 
@@ -65,7 +65,7 @@ func TestConfigIntegration_GetFFmpegConfig_ReqMTX001_Success_Refactored(t *testi
 
 	// Test-specific business logic only
 	assert.NotNil(t, config, "FFmpeg config should not be nil")
-	
+
 	t.Logf("✅ FFmpeg config validated successfully")
 }
 
@@ -98,7 +98,7 @@ func TestConfigIntegration_GetPerformanceConfig_ReqMTX001_Success_Refactored(t *
 
 	// Test-specific business logic only
 	assert.NotNil(t, config, "Performance config should not be nil")
-	
+
 	t.Logf("✅ Performance config validated successfully")
 }
 
@@ -114,6 +114,6 @@ func TestController_GetConfig_ReqMTX001_Success_Refactored(t *testing.T) {
 
 	// Test-specific business logic only
 	assert.NotNil(t, config, "Main config should not be nil")
-	
+
 	t.Logf("✅ Main config validated successfully")
 }

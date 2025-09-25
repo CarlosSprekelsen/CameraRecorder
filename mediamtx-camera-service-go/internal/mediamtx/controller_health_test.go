@@ -14,6 +14,7 @@ Requirements Coverage:
 package mediamtx
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -169,4 +170,155 @@ func TestController_GetHealth_ReqMTX004_Monitoring_Extended_Refactored(t *testin
 	assert.NotNil(t, systemMetrics, "System metrics should not be nil")
 
 	t.Log("Extended monitoring test completed successfully")
+}
+
+// ============================================================================
+// HEALTH ERROR TESTS - REQ-MTX-004
+// ============================================================================
+
+// TestController_GetHealth_ReqMTX004_ServerDown_Error tests health check when MediaMTX server is unreachable
+func TestController_GetHealth_ReqMTX004_ServerDown_Error(t *testing.T) {
+	// REQ-MTX-004: Health monitoring with server down error handling
+
+	// Create helper but don't start MediaMTX server (simulate server down)
+	helper, _ := SetupMediaMTXTest(t)
+
+	// Get controller without starting MediaMTX (server down scenario)
+	controller, err := helper.GetController(t)
+	require.NoError(t, err, "Controller creation should succeed even without server")
+
+	// Create context for health check
+	ctx, cancel := context.WithTimeout(context.Background(), testutils.UniversalTimeoutShort)
+	defer cancel()
+
+	// Try to get health when server is down
+	health, err := controller.GetHealth(ctx)
+
+	// Should get an error about server being unreachable
+	assert.Error(t, err, "Health check should fail when server is down")
+	assert.Nil(t, health, "Health response should be nil on error")
+
+	// Verify error indicates server issue (connection failure or controller not running)
+	if err != nil {
+		errorMsg := err.Error()
+		assert.True(t,
+			containsAny(errorMsg, []string{"connection", "not running", "unreachable"}),
+			"Error should indicate server issue: %s", errorMsg)
+	}
+
+	t.Log("✅ Server down scenario handled correctly")
+}
+
+// TestController_GetHealth_ReqMTX004_Timeout_Error tests health check with context timeout
+func TestController_GetHealth_ReqMTX004_Timeout_Error(t *testing.T) {
+	// REQ-MTX-004: Health monitoring with timeout error handling
+
+	asserter := NewHealthAsserter(t)
+	defer asserter.Cleanup()
+
+	// Create a very short timeout context to simulate timeout
+	shortCtx, shortCancel := context.WithTimeout(asserter.GetContext(), 1*time.Millisecond)
+	defer shortCancel()
+
+	// Wait for timeout
+	time.Sleep(2 * time.Millisecond)
+
+	// Try health check with expired context
+	health, err := asserter.GetReadyController().GetHealth(shortCtx)
+
+	// Should get context timeout error
+	assert.Error(t, err, "Health check should fail with timeout")
+	assert.Nil(t, health, "Health response should be nil on timeout")
+
+	// Verify it's a context error
+	assert.Equal(t, context.DeadlineExceeded, err, "Should be deadline exceeded error")
+
+	t.Log("✅ Timeout scenario handled correctly")
+}
+
+// TestController_GetMetrics_ReqMTX004_ServerDown_Error tests metrics check when server is down
+func TestController_GetMetrics_ReqMTX004_ServerDown_Error(t *testing.T) {
+	// REQ-MTX-004: Health monitoring with metrics server down handling
+
+	// Create helper but don't start MediaMTX server
+	helper, _ := SetupMediaMTXTest(t)
+
+	controller, err := helper.GetController(t)
+	require.NoError(t, err, "Controller creation should succeed")
+
+	ctx, cancel := context.WithTimeout(context.Background(), testutils.UniversalTimeoutShort)
+	defer cancel()
+
+	// Try to get metrics when server is down
+	metrics, err := controller.GetMetrics(ctx)
+
+	// Should get an error about server being unreachable
+	assert.Error(t, err, "Metrics check should fail when server is down")
+	assert.Nil(t, metrics, "Metrics response should be nil on error")
+
+	// Verify error indicates server issue (connection failure or controller not running)
+	if err != nil {
+		errorMsg := err.Error()
+		assert.True(t,
+			containsAny(errorMsg, []string{"connection", "not running", "unreachable"}),
+			"Error should indicate server issue: %s", errorMsg)
+	}
+
+	t.Log("✅ Metrics server down scenario handled correctly")
+}
+
+// TestController_GetSystemMetrics_ReqMTX004_Timeout_Error tests system metrics with timeout
+func TestController_GetSystemMetrics_ReqMTX004_Timeout_Error(t *testing.T) {
+	// REQ-MTX-004: Health monitoring with system metrics timeout handling
+
+	asserter := NewHealthAsserter(t)
+	defer asserter.Cleanup()
+
+	// Create a very short timeout context
+	shortCtx, shortCancel := context.WithTimeout(asserter.GetContext(), 1*time.Millisecond)
+	defer shortCancel()
+
+	// Wait for timeout
+	time.Sleep(2 * time.Millisecond)
+
+	// Try system metrics with expired context
+	metrics, err := asserter.GetReadyController().GetSystemMetrics(shortCtx)
+
+	// Should get context timeout error
+	assert.Error(t, err, "System metrics should fail with timeout")
+	assert.Nil(t, metrics, "System metrics should be nil on timeout")
+
+	// Verify it's a context error
+	assert.Equal(t, context.DeadlineExceeded, err, "Should be deadline exceeded error")
+
+	t.Log("✅ System metrics timeout scenario handled correctly")
+}
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+// containsAny checks if a string contains any of the given substrings
+func containsAny(s string, substrings []string) bool {
+	for _, substr := range substrings {
+		if len(s) >= len(substr) &&
+			(s == substr ||
+				len(s) > len(substr) &&
+					(s[:len(substr)] == substr ||
+						s[len(s)-len(substr):] == substr ||
+						indexOf(s, substr) >= 0)) {
+			return true
+		}
+	}
+	return false
+}
+
+// indexOf finds the index of a substring in a string
+func indexOf(s, substr string) int {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return i
+		}
+	}
+	return -1
 }

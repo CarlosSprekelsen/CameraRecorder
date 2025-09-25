@@ -831,15 +831,19 @@ func (h *EventDrivenTestHelper) WaitForEventSourceStarted(eventSource DeviceEven
 		return nil
 	}
 
-	h.t.Logf("Event source not immediately started, using immediate check")
+	h.t.Logf("Event source not immediately started, waiting for start event")
 
-	// CRITICAL: Immediate check eliminates polling violation
-	// Progressive Readiness Pattern requires immediate availability
-	if eventSource.Started() {
-		h.t.Log("Event source started")
-		return nil
+	// Wait for event source to start with timeout
+	startTime := time.Now()
+	for time.Since(startTime) < timeout {
+		if eventSource.Started() {
+			h.t.Log("Event source started")
+			return nil
+		}
+		time.Sleep(10 * time.Millisecond) // Small delay to avoid busy waiting
 	}
-	return fmt.Errorf("event source did not start immediately - Progressive Readiness Pattern violation")
+
+	return fmt.Errorf("event source did not start within timeout %v", timeout)
 }
 
 // WaitForEventSourceEvents waits for events from an event source with timeout

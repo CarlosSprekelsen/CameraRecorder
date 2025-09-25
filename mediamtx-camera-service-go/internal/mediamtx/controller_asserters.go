@@ -419,7 +419,7 @@ func (ca *ConfigAsserter) AssertGetRecordingConfig() *config.RecordingConfig {
 	config, err := configIntegration.GetRecordingConfig()
 	require.NoError(ca.t, err, "GetRecordingConfig should succeed")
 	require.NotNil(ca.t, config, "Recording config should not be nil")
-	
+
 	ca.t.Logf("✅ Recording config retrieved successfully")
 	return config
 }
@@ -430,7 +430,7 @@ func (ca *ConfigAsserter) AssertGetSnapshotConfig() *config.SnapshotConfig {
 	config, err := configIntegration.GetSnapshotConfig()
 	require.NoError(ca.t, err, "GetSnapshotConfig should succeed")
 	require.NotNil(ca.t, config, "Snapshot config should not be nil")
-	
+
 	ca.t.Logf("✅ Snapshot config retrieved successfully")
 	return config
 }
@@ -441,7 +441,7 @@ func (ca *ConfigAsserter) AssertGetFFmpegConfig() *config.FFmpegConfig {
 	config, err := configIntegration.GetFFmpegConfig()
 	require.NoError(ca.t, err, "GetFFmpegConfig should succeed")
 	require.NotNil(ca.t, config, "FFmpeg config should not be nil")
-	
+
 	ca.t.Logf("✅ FFmpeg config retrieved successfully")
 	return config
 }
@@ -452,7 +452,7 @@ func (ca *ConfigAsserter) AssertGetCameraConfig() *config.CameraConfig {
 	config, err := configIntegration.GetCameraConfig()
 	require.NoError(ca.t, err, "GetCameraConfig should succeed")
 	require.NotNil(ca.t, config, "Camera config should not be nil")
-	
+
 	ca.t.Logf("✅ Camera config retrieved successfully")
 	return config
 }
@@ -463,7 +463,7 @@ func (ca *ConfigAsserter) AssertGetPerformanceConfig() *config.PerformanceConfig
 	config, err := configIntegration.GetPerformanceConfig()
 	require.NoError(ca.t, err, "GetPerformanceConfig should succeed")
 	require.NotNil(ca.t, config, "Performance config should not be nil")
-	
+
 	ca.t.Logf("✅ Performance config retrieved successfully")
 	return config
 }
@@ -473,7 +473,7 @@ func (ca *ConfigAsserter) AssertGetMainConfig() *config.MediaMTXConfig {
 	config, err := ca.controller.GetConfig(ca.ctx)
 	require.NoError(ca.t, err, "GetConfig should succeed")
 	require.NotNil(ca.t, config, "Main config should not be nil")
-	
+
 	ca.t.Logf("✅ Main config retrieved successfully")
 	return config
 }

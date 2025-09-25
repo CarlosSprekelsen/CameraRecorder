@@ -43,7 +43,7 @@ func TestNewRecordingManager_ReqMTX001(t *testing.T) {
 func TestRecordingManager_CompleteLifecycle_ReqMTX002(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 	// Complete lifecycle validation: Start → Verify Recording → Stop → Verify File
-	helper, ctx := SetupMediaMTXTest(t)
+	helper, _ := SetupMediaMTXTest(t)
 
 	// Get ready controller with Progressive Readiness
 	controller, ctx, cancel := helper.GetReadyController(t)
@@ -52,6 +52,9 @@ func TestRecordingManager_CompleteLifecycle_ReqMTX002(t *testing.T) {
 
 	// Get camera ID (one line instead of 5)
 	cameraID := helper.MustGetCameraID(t, ctx, controller)
+
+	// Note: testCtx from SetupMediaMTXTest is managed by test.Cleanup() for test lifecycle
+	// ctx from GetReadyController is used for controller operations
 
 	// Get initial recording count for validation
 	recordingManager := helper.GetRecordingManager()

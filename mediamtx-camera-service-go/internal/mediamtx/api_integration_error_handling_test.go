@@ -13,7 +13,6 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package mediamtx
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"sync"
@@ -186,7 +185,7 @@ func TestPathStateTransitions_Recording(t *testing.T) {
 		require.NoError(t, err, "Recording disable should succeed")
 
 		// Verify recording can be stopped
-		_, err = recordingManager.StopRecording(ctx, cameraID)
+		_, _ = recordingManager.StopRecording(ctx, cameraID)
 		// Stop might succeed or fail depending on current state
 
 		// State 6: Cleanup
@@ -253,13 +252,6 @@ func TestConcurrentRecordingOperations(t *testing.T) {
 	defer cancel()
 	defer controllerInterface.Stop(ctx)
 	controller := controllerInterface.(*controller)
-
-	// Ensure controller is stopped after test (exact same pattern)
-	defer func() {
-		stopCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
-		controller.Stop(stopCtx)
-	}()
 
 	// PROGRESSIVE READINESS: No waiting - controller handles requests immediately after Start()
 	// Operations will return appropriate errors if components aren't ready yet
@@ -357,7 +349,7 @@ func TestConcurrentRecordingOperations(t *testing.T) {
 		wg.Wait()
 
 		// Verify recording is stopped by attempting to stop again
-		_, err = controller.StopRecording(ctx, cameraID)
+		_, _ = controller.StopRecording(ctx, cameraID)
 		// This might succeed or fail depending on current state
 
 		// Check error patterns for shared resource (single camera)

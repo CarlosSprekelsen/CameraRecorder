@@ -140,8 +140,8 @@ func (pi *PathIntegration) CreatePathForCamera(ctx context.Context, device strin
 		Type: "rtspSource",
 		ID:   device,
 	}
-    // Build path configuration
-    options, err := pi.configIntegration.BuildPathConf(pathName, pathSource, false)
+	// Build path configuration
+	options, err := pi.configIntegration.BuildPathConf(pathName, pathSource, false)
 	if err != nil {
 		return fmt.Errorf("failed to build path configuration: %w", err)
 	}

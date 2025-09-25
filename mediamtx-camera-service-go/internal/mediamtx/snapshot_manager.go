@@ -110,8 +110,8 @@ func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, cameraID string, op
 	}
 
 	// Generate snapshot path using device path for file naming
-    // Use PathManager naming policy for device subdir and filenames
-    snapshotPath := GenerateSnapshotPath(sm.config, &sm.configManager.GetConfig().Snapshots, devicePath)
+	// Use PathManager naming policy for device subdir and filenames
+	snapshotPath := GenerateSnapshotPath(sm.config, &sm.configManager.GetConfig().Snapshots, devicePath)
 
 	sm.logger.WithFields(logging.Fields{
 		"cameraID":   cameraID,
@@ -949,6 +949,14 @@ func (sm *SnapshotManager) GetSnapshotsList(ctx context.Context, limit, offset i
 		"offset": offset,
 	}).Debug("Getting snapshots list")
 
+	// Validate pagination parameters
+	if limit < 0 {
+		return nil, fmt.Errorf("limit cannot be negative, got %d", limit)
+	}
+	if offset < 0 {
+		return nil, fmt.Errorf("offset cannot be negative, got %d", offset)
+	}
+
 	// Get snapshots directory path from configuration
 	snapshotsDir := sm.config.SnapshotsPath
 	if snapshotsDir == "" {
@@ -1102,6 +1110,13 @@ func (sm *SnapshotManager) extractSnapshotMetadata(ctx context.Context, filePath
 
 	metadata := make(map[string]interface{})
 
+	// Check if ffprobe is available before attempting extraction
+	_, err := exec.LookPath("ffprobe")
+	if err != nil {
+		sm.logger.WithField("file_path", filePath).Debug("ffprobe not available, skipping metadata extraction")
+		return metadata
+	}
+
 	// Extract image metadata using FFmpeg
 	command := []string{
 		"ffprobe",
@@ -1112,11 +1127,16 @@ func (sm *SnapshotManager) extractSnapshotMetadata(ctx context.Context, filePath
 		filePath,
 	}
 
+	// Create context with timeout for metadata extraction
+	metadataCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
 	// Execute command with timeout
-	cmd := exec.CommandContext(ctx, command[0], command[1:]...)
+	cmd := exec.CommandContext(metadataCtx, command[0], command[1:]...)
 	output, err := cmd.Output()
 	if err != nil {
-		sm.logger.WithError(err).WithField("file_path", filePath).Warn("Failed to extract image metadata")
+		// Only log as debug to avoid spam - metadata extraction is optional
+		sm.logger.WithField("file_path", filePath).Debug("Failed to extract image metadata (optional operation)")
 		return metadata
 	}
 

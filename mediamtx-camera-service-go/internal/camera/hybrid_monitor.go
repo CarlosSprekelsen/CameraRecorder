@@ -600,6 +600,7 @@ func (m *HybridCameraMonitor) Stop(ctx context.Context) error {
 
 	// Set running flag to 0 after device event source is closed
 	atomic.StoreInt32(&m.running, 0)
+	atomic.StoreInt32(&m.ready, 0)
 
 	m.logger.Info("Hybrid camera monitor stopped")
 	return nil
