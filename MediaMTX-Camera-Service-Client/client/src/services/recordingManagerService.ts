@@ -7,7 +7,8 @@ import type {
   RecordingProgress,
   RecordingStatus,
   CameraDevice,
-  ConfigValidationResult
+  ConfigValidationResult,
+  StorageInfo
 } from '../types/camera';
 import { RPC_METHODS, ERROR_CODES } from '../types/rpc';
 
@@ -18,8 +19,87 @@ import { RPC_METHODS, ERROR_CODES } from '../types/rpc';
  * recording management capabilities.
  */
 class RecordingManagerService {
+  private wsService: WebSocketService | null = null;
   private activeSessions: Map<string, RecordingSession> = new Map();
   private progressCallbacks: Set<(progress: RecordingProgress) => void> = new Set();
+
+  /**
+   * Set WebSocket service instance
+   */
+  setWebSocketService(service: WebSocketService): void {
+    this.wsService = service;
+  }
+
+  /**
+   * Get list of all discovered cameras with their current status
+   */
+  async getCameraList(): Promise<any> {
+    if (!this.wsService) {
+      throw new Error('WebSocket service not initialized');
+    }
+
+    try {
+      const response = await errorRecoveryService.executeWithRetry(
+        async () => {
+          const response = await this.wsService!.call(RPC_METHODS.GET_CAMERA_LIST, {});
+          return response;
+        },
+        'getCameraList'
+      );
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to get camera list: ${error}`);
+    }
+  }
+
+  /**
+   * Get status for a specific camera
+   */
+  async getCameraStatus(cameraId: string): Promise<any> {
+    if (!this.wsService) {
+      throw new Error('WebSocket service not initialized');
+    }
+
+    try {
+      const response = await errorRecoveryService.executeWithRetry(
+        async () => {
+          const response = await this.wsService!.call(RPC_METHODS.GET_CAMERA_STATUS, { device: cameraId });
+          return response;
+        },
+        'getCameraStatus'
+      );
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to get camera status: ${error}`);
+    }
+  }
+
+  /**
+   * Take a snapshot from the specified camera
+   */
+  async takeSnapshot(cameraId: string, filename?: string): Promise<any> {
+    if (!this.wsService) {
+      throw new Error('WebSocket service not initialized');
+    }
+
+    try {
+      const params: any = { device: cameraId };
+      if (filename) {
+        params.filename = filename;
+      }
+
+      const response = await errorRecoveryService.executeWithRetry(
+        async () => {
+          const response = await this.wsService!.call(RPC_METHODS.TAKE_SNAPSHOT, params);
+          return response;
+        },
+        'takeSnapshot'
+      );
+      return response;
+    } catch (error) {
+      throw new Error(`Failed to take snapshot: ${error}`);
+    }
+  }
 
   /**
    * Start recording for a camera
@@ -40,7 +120,7 @@ class RecordingManagerService {
     try {
       const session = await errorRecoveryService.executeWithRetry(
         async () => {
-          const response = await wsService.call(RPC_METHODS.START_RECORDING, { device: cameraId });
+          const response = await this.wsService!.call(RPC_METHODS.START_RECORDING, { device: cameraId });
           return response as RecordingSession;
         },
         'startRecording'
@@ -83,7 +163,7 @@ class RecordingManagerService {
     try {
       await errorRecoveryService.executeWithRetry(
         async () => {
-          await wsService.call(RPC_METHODS.STOP_RECORDING, { device: cameraId });
+          await this.wsService!.call(RPC_METHODS.STOP_RECORDING, { device: cameraId });
         },
         'stopRecording'
       );
@@ -152,7 +232,7 @@ class RecordingManagerService {
       // Check camera status
       const cameraStatus = await errorRecoveryService.executeWithRetry(
         async () => {
-          const response = await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device: cameraId });
+          const response = await this.wsService!.call(RPC_METHODS.GET_CAMERA_STATUS, { device: cameraId });
           return response as CameraDevice;
         },
         'getCameraStatus'
@@ -204,7 +284,7 @@ class RecordingManagerService {
     try {
       const storageInfo = await errorRecoveryService.executeWithRetry(
         async () => {
-          const response = await wsService.call(RPC_METHODS.GET_STORAGE_INFO, {});
+          const response = await this.wsService!.call(RPC_METHODS.GET_STORAGE_INFO, {});
           return response as StorageInfo;
         },
         'getStorageInfo'
