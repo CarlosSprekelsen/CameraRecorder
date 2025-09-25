@@ -22,6 +22,7 @@ import {
 import { Camera, StreamInfo } from '../../stores/device/deviceStore';
 import DeviceActions from './DeviceActions';
 import CopyLinkButton from './CopyLinkButton';
+import { useRecordingStore } from '../../stores/recording/recordingStore';
 
 interface CameraTableProps {
   cameras: Camera[];
@@ -38,6 +39,7 @@ const CameraTable: React.FC<CameraTableProps> = ({
   streams, 
   onRefresh 
 }) => {
+  const { activeRecordings } = useRecordingStore();
   const getStatusIcon = (status: Camera['status']) => {
     switch (status) {
       case 'CONNECTED':
@@ -131,12 +133,14 @@ const CameraTable: React.FC<CameraTableProps> = ({
               <TableCell>Resolution</TableCell>
               <TableCell>FPS</TableCell>
               <TableCell>Stream Status</TableCell>
+              <TableCell>Recording</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {cameras.map((camera) => {
               const streamStatus = getStreamStatus(camera.device);
+              const recording = activeRecordings[camera.device];
               
               return (
                 <TableRow key={camera.device}>
@@ -188,6 +192,13 @@ const CameraTable: React.FC<CameraTableProps> = ({
                         </Typography>
                       )}
                     </Box>
+                  </TableCell>
+                  <TableCell>
+                    {recording ? (
+                      <Chip label="Recording" color="error" size="small" />
+                    ) : (
+                      <Chip label="Idle" size="small" />
+                    )}
                   </TableCell>
                   
                   <TableCell>

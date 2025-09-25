@@ -13,6 +13,7 @@ import { serviceFactory } from '../../services/ServiceFactory';
 import CameraTable from '../../components/Cameras/CameraTable';
 import { logger } from '../../services/logger/LoggerService';
 import { JsonRpcNotification } from '../../types/api';
+import { useRecordingStore } from '../../stores/recording/recordingStore';
 
 /**
  * CameraPage - Main device table following architecture section 5.1
@@ -32,6 +33,7 @@ const CameraPage: React.FC = () => {
   } = useDeviceStore();
 
   const { isAuthenticated } = useAuthStore();
+  const { handleRecordingStatusUpdate } = useRecordingStore();
 
   // Initialize device service and load data
   useEffect(() => {
@@ -64,6 +66,16 @@ const CameraPage: React.FC = () => {
           }
         );
 
+        // Subscribe to recording status updates
+        const unsubscribeRecordingUpdates = notificationService.subscribe(
+          'recording_status_update',
+          (notification: JsonRpcNotification) => {
+            if (notification.params) {
+              handleRecordingStatusUpdate(notification.params as any);
+            }
+          }
+        );
+
         // Subscribe to real-time events
         await deviceService.subscribeToCameraEvents();
 
@@ -78,6 +90,7 @@ const CameraPage: React.FC = () => {
         // Cleanup function
         return () => {
           unsubscribeCameraUpdates();
+          unsubscribeRecordingUpdates();
         };
       } catch (error) {
         logger.error('Failed to initialize camera page', error as Error);
