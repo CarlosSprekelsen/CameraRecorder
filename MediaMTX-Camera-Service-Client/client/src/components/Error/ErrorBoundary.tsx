@@ -1,3 +1,9 @@
+/**
+ * @fileoverview ErrorBoundary component for error handling and recovery
+ * @author MediaMTX Development Team
+ * @version 1.0.0
+ */
+
 import React, { ReactNode, ErrorInfo } from 'react';
 import { ErrorBoundary as ReactErrorBoundary, FallbackProps } from 'react-error-boundary';
 import { Box, Typography, Button, Alert, AlertTitle } from '@mui/material';
@@ -11,8 +17,33 @@ interface Props {
 }
 
 /**
- * ErrorFallback - Functional component for error boundary fallback UI
- * Implements error handling from architecture section 8.1
+ * ErrorFallback - Error boundary fallback UI component
+ * 
+ * Provides a user-friendly error display with recovery options when React
+ * components encounter unhandled errors. Implements error handling patterns
+ * from architecture section 8.1 with logging and recovery mechanisms.
+ * 
+ * @component
+ * @param {FallbackProps} props - Error boundary fallback props
+ * @param {Error} props.error - The error that caused the boundary to trigger
+ * @param {() => void} props.resetErrorBoundary - Function to reset the error boundary
+ * @returns {JSX.Element} The error fallback UI
+ * 
+ * @features
+ * - User-friendly error display
+ * - Error logging and reporting
+ * - Recovery options (reload, retry)
+ * - Development error details
+ * - Production-safe error messages
+ * 
+ * @example
+ * ```tsx
+ * <ErrorBoundary>
+ *   <App />
+ * </ErrorBoundary>
+ * ```
+ * 
+ * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture
  */
 const ErrorFallback: React.FC<FallbackProps> = ({ error, resetErrorBoundary }) => {
   const handleReload = () => {

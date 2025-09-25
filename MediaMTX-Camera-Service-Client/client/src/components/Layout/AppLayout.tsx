@@ -1,3 +1,9 @@
+/**
+ * @fileoverview AppLayout component for main application shell
+ * @author MediaMTX Development Team
+ * @version 1.0.0
+ */
+
 import React from 'react';
 import {
   Box,
@@ -29,6 +35,38 @@ interface AppLayoutProps {
   authService: AuthService;
 }
 
+/**
+ * AppLayout - Main application shell component
+ * 
+ * Provides the main application layout with navigation, user menu, connection status,
+ * and role-based access control. Includes responsive design with drawer navigation
+ * and real-time connection status indicators.
+ * 
+ * @component
+ * @param {AppLayoutProps} props - Component props
+ * @param {React.ReactNode} props.children - Child components to render
+ * @param {AuthService} props.authService - Authentication service instance
+ * @returns {JSX.Element} The application layout component
+ * 
+ * @features
+ * - Responsive navigation with drawer
+ * - User authentication and role display
+ * - Connection status monitoring
+ * - Role-based menu items
+ * - Server information display
+ * - Logout functionality
+ * 
+ * @example
+ * ```tsx
+ * <AppLayout authService={authService}>
+ *   <Routes>
+ *     <Route path="/cameras" element={<CameraPage />} />
+ *   </Routes>
+ * </AppLayout>
+ * ```
+ * 
+ * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture
+ */
 const AppLayout: React.FC<AppLayoutProps> = ({ children, authService }) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const navigate = useNavigate();

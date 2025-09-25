@@ -1,3 +1,9 @@
+/**
+ * @fileoverview CopyLinkButton component for stream URL management
+ * @author MediaMTX Development Team
+ * @version 1.0.0
+ */
+
 import React, { useState } from 'react';
 import {
   IconButton,
