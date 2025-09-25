@@ -34,7 +34,7 @@ export class WebSocketService {
   private pendingRequests = new Map<
     string | number,
     {
-      resolve: (value: any) => void;
+      resolve: <T>(value: T) => void;
       reject: (error: Error) => void;
       timestamp: number;
     }
@@ -73,7 +73,7 @@ export class WebSocketService {
           this.handleReconnect();
         };
 
-        this.ws.onerror = (_error) => {
+        this.ws.onerror = () => {
           // WebSocket error - handled by connection store
           this.events.onError?.(new Error('WebSocket connection error'));
           reject(new Error('WebSocket connection failed'));
@@ -109,7 +109,7 @@ export class WebSocketService {
     this.pendingRequests.clear();
   }
 
-  async sendRPC<T = any>(method: RpcMethod, params?: any): Promise<T> {
+  async sendRPC<T = unknown>(method: RpcMethod, params?: Record<string, unknown>): Promise<T> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       throw new Error('WebSocket not connected');
     }
@@ -147,7 +147,7 @@ export class WebSocketService {
     });
   }
 
-  sendNotification(method: string, params?: any): void {
+  sendNotification(method: string, params?: Record<string, unknown>): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       throw new Error('WebSocket not connected');
     }
@@ -161,7 +161,7 @@ export class WebSocketService {
     this.ws?.send(JSON.stringify(notification));
   }
 
-  private handleMessage(data: any): void {
+  private handleMessage(data: unknown): void {
     if (data.jsonrpc !== '2.0') {
       // Invalid JSON-RPC message - handled by error boundary
       return;
@@ -216,9 +216,9 @@ export class WebSocketService {
           errorMessage = `RPC Error ${errorCode}: ${response.error.message}`;
       }
 
-      const error = new Error(errorMessage);
-      (error as any).code = errorCode;
-      (error as any).data = response.error.data;
+      const error = new Error(errorMessage) as Error & { code: number; data: unknown };
+      error.code = errorCode;
+      error.data = response.error.data;
       pending.reject(error);
     } else {
       pending.resolve(response.result);
@@ -246,7 +246,7 @@ export class WebSocketService {
     // Reconnecting - handled by connection store
 
     this.reconnectTimeout = setTimeout(() => {
-      this.connect().catch((_error) => {
+      this.connect().catch(() => {
         // Reconnection failed - handled by connection store
         this.handleReconnect();
       });
@@ -258,7 +258,7 @@ export class WebSocketService {
 
     this.pingInterval = setInterval(() => {
       if (this.ws?.readyState === WebSocket.OPEN) {
-        this.sendRPC('ping').catch((_error) => {
+        this.sendRPC('ping').catch(() => {
           // Ping failed - handled by connection store
         });
       }

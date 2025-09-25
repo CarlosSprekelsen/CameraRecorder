@@ -12,9 +12,9 @@ export interface SystemMetrics {
   };
   camera_metrics: {
     connected_cameras: number;
-    cameras: Record<string, any>;
+    cameras: Record<string, Record<string, unknown>>;
   };
-  recording_metrics: Record<string, any>;
+  recording_metrics: Record<string, Record<string, unknown>>;
   stream_metrics: {
     active_streams: number;
     total_streams: number;
@@ -22,6 +22,7 @@ export interface SystemMetrics {
   };
 }
 import { WebSocketService } from '../websocket/WebSocketService';
+import { SubscriptionResult, UnsubscriptionResult, SubscriptionStatsResult } from '../../types/api';
 
 export class ServerService implements IStatus {
   private wsService: WebSocketService;
@@ -71,7 +72,10 @@ export class ServerService implements IStatus {
   }
 
   // IStatus interface implementation
-  async subscribeEvents(topics: string[], filters?: any): Promise<any> {
+  async subscribeEvents(
+    topics: string[],
+    filters?: Record<string, unknown>,
+  ): Promise<SubscriptionResult> {
     if (!this.wsService.isConnected) {
       throw new Error('WebSocket not connected');
     }
@@ -79,7 +83,7 @@ export class ServerService implements IStatus {
     return this.wsService.sendRPC('subscribe_events', { topics, filters });
   }
 
-  async unsubscribeEvents(topics?: string[]): Promise<any> {
+  async unsubscribeEvents(topics?: string[]): Promise<UnsubscriptionResult> {
     if (!this.wsService.isConnected) {
       throw new Error('WebSocket not connected');
     }
@@ -87,7 +91,7 @@ export class ServerService implements IStatus {
     return this.wsService.sendRPC('unsubscribe_events', { topics });
   }
 
-  async getSubscriptionStats(): Promise<any> {
+  async getSubscriptionStats(): Promise<SubscriptionStatsResult> {
     if (!this.wsService.isConnected) {
       throw new Error('WebSocket not connected');
     }

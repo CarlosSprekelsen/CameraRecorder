@@ -1,7 +1,18 @@
 // Service Layer - Interface Contracts
 // Implements the interfaces defined in architecture section 5.3
 
-import { JsonRpcNotification } from '../../types/api';
+import {
+  JsonRpcNotification,
+  SystemStatus,
+  StorageInfo,
+  ServerInfo,
+  SnapshotResult,
+  RecordingResult,
+  SubscriptionResult,
+  UnsubscriptionResult,
+  SubscriptionStatsResult,
+  MetricsResult,
+} from '../../types/api';
 import { Camera, StreamInfo } from '../../stores/device/deviceStore';
 
 // I.Discovery: list devices and stream links
@@ -13,9 +24,9 @@ export interface IDiscovery {
 
 // I.Command: snapshot and recording operations
 export interface ICommand {
-  takeSnapshot(device: string, filename?: string): Promise<any>;
-  startRecording(device: string, duration?: number, format?: string): Promise<any>;
-  stopRecording(device: string): Promise<any>;
+  takeSnapshot(device: string, filename?: string): Promise<SnapshotResult>;
+  startRecording(device: string, duration?: number, format?: string): Promise<RecordingResult>;
+  stopRecording(device: string): Promise<RecordingResult>;
 }
 
 // I.FileCatalog: file listing and information
@@ -72,13 +83,13 @@ export interface IFileActions {
 
 // I.Status: system status and events
 export interface IStatus {
-  getStatus(): Promise<any>;
-  getStorageInfo(): Promise<any>;
-  getServerInfo(): Promise<any>;
-  getMetrics(): Promise<any>;
-  subscribeEvents(topics: string[], filters?: any): Promise<any>;
-  unsubscribeEvents(topics?: string[]): Promise<any>;
-  getSubscriptionStats(): Promise<any>;
+  getStatus(): Promise<SystemStatus>;
+  getStorageInfo(): Promise<StorageInfo>;
+  getServerInfo(): Promise<ServerInfo>;
+  getMetrics(): Promise<MetricsResult>;
+  subscribeEvents(topics: string[], filters?: Record<string, unknown>): Promise<SubscriptionResult>;
+  unsubscribeEvents(topics?: string[]): Promise<UnsubscriptionResult>;
+  getSubscriptionStats(): Promise<SubscriptionStatsResult>;
 }
 
 // Notification handler interface

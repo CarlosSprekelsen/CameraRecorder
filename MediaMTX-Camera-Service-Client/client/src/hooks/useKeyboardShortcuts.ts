@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { logger } from '../services/logger/LoggerService';
 
@@ -16,55 +16,58 @@ interface KeyboardShortcut {
  * useKeyboardShortcuts - Keyboard navigation and shortcuts
  * Implements accessibility from Sprint 5 requirements
  */
-export const useKeyboardShortcuts = () => {
+export const useKeyboardShortcuts = (): void => {
   const navigate = useNavigate();
 
-  const shortcuts: KeyboardShortcut[] = [
-    {
-      key: 'h',
-      ctrlKey: true,
-      action: () => navigate('/cameras'),
-      description: 'Go to Cameras page',
-    },
-    {
-      key: 'f',
-      ctrlKey: true,
-      action: () => navigate('/files'),
-      description: 'Go to Files page',
-    },
-    {
-      key: 'a',
-      ctrlKey: true,
-      action: () => navigate('/about'),
-      description: 'Go to About page',
-    },
-    {
-      key: 'r',
-      ctrlKey: true,
-      action: () => window.location.reload(),
-      description: 'Reload page',
-    },
-    {
-      key: 'Escape',
-      action: () => {
-        // Close any open dialogs or menus
-        const activeElement = document.activeElement as HTMLElement;
-        if (activeElement && activeElement.blur) {
-          activeElement.blur();
-        }
+  const shortcuts: KeyboardShortcut[] = useMemo(
+    () => [
+      {
+        key: 'h',
+        ctrlKey: true,
+        action: () => navigate('/cameras'),
+        description: 'Go to Cameras page',
       },
-      description: 'Close dialogs/menus',
-    },
-    {
-      key: 'F1',
-      action: () => {
-        // Show help/shortcuts
-        logger.info('Keyboard shortcuts help requested');
-        // TODO: Implement help modal
+      {
+        key: 'f',
+        ctrlKey: true,
+        action: () => navigate('/files'),
+        description: 'Go to Files page',
       },
-      description: 'Show help',
-    },
-  ];
+      {
+        key: 'a',
+        ctrlKey: true,
+        action: () => navigate('/about'),
+        description: 'Go to About page',
+      },
+      {
+        key: 'r',
+        ctrlKey: true,
+        action: () => window.location.reload(),
+        description: 'Reload page',
+      },
+      {
+        key: 'Escape',
+        action: () => {
+          // Close any open dialogs or menus
+          const activeElement = document.activeElement as HTMLElement;
+          if (activeElement && activeElement.blur) {
+            activeElement.blur();
+          }
+        },
+        description: 'Close dialogs/menus',
+      },
+      {
+        key: 'F1',
+        action: () => {
+          // Show help/shortcuts
+          logger.info('Keyboard shortcuts help requested');
+          // TODO: Implement help modal
+        },
+        description: 'Show help',
+      },
+    ],
+    [navigate],
+  );
 
   const handleKeyDown = useCallback(
     (event: KeyboardEvent) => {

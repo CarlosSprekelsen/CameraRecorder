@@ -2,6 +2,7 @@
 // Implements notification handling as required by architecture section 5.1
 
 import { JsonRpcNotification } from '../../types/api';
+import { WebSocketService } from '../websocket/WebSocketService';
 import { logger } from '../logger/LoggerService';
 
 export interface NotificationHandler {
@@ -10,9 +11,9 @@ export interface NotificationHandler {
 
 export class NotificationService {
   private handlers = new Map<string, Set<NotificationHandler>>();
-  private wsService: any; // WebSocket service reference
+  private wsService: WebSocketService; // WebSocket service reference
 
-  constructor(wsService: any) {
+  constructor(wsService: WebSocketService) {
     this.wsService = wsService;
     this.setupWebSocketHandlers();
   }

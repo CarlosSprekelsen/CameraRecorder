@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
@@ -13,8 +13,9 @@ import { logger } from './services/logger/LoggerService';
 import AppLayout from './components/Layout/AppLayout';
 import LoginPage from './pages/Login/LoginPage';
 import AboutPage from './pages/About/AboutPage';
-import CameraPage from './pages/Cameras/CameraPage';
-import FilesPage from './pages/Files/FilesPage';
+// Lazy load heavy components for code splitting
+const CameraPage = lazy(() => import('./pages/Cameras/CameraPage'));
+const FilesPage = lazy(() => import('./pages/Files/FilesPage'));
 import LoadingSpinner from './components/Layout/LoadingSpinner';
 import ErrorBoundary from './components/Error/ErrorBoundary';
 import { AccessibilityProvider } from './components/Accessibility/AccessibilityProvider';
@@ -35,9 +36,9 @@ const theme = createTheme({
 });
 
 // WebSocket configuration
-const WS_URL = (import.meta as any).env?.VITE_WS_URL || 'ws://localhost:8002/ws';
+const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8002/ws';
 
-function App() {
+function App(): JSX.Element {
   const [wsService] = useState(() => serviceFactory.createWebSocketService(WS_URL));
   const [authService] = useState(() => serviceFactory.createAuthService(wsService));
   const [serverService] = useState(() => serviceFactory.createServerService(wsService));
@@ -130,7 +131,16 @@ function App() {
       logger.info('Cleaning up WebSocket connection');
       wsService.disconnect();
     };
-  }, [wsService, authService, login, setConnectionStatus, setConnectionError]);
+  }, [
+    wsService,
+    authService,
+    login,
+    setConnectionStatus,
+    setConnectionError,
+    handleWebSocketConnect,
+    handleWebSocketDisconnect,
+    handleWebSocketError,
+  ]);
 
   // Load server info when connected and authenticated
   useEffect(() => {
@@ -204,13 +214,15 @@ function App() {
                 element={
                   isAuthenticated ? (
                     <AppLayout authService={authService}>
-                      <Routes>
-                        <Route path="/" element={<Navigate to="/cameras" replace />} />
-                        <Route path="/cameras" element={<CameraPage />} />
-                        <Route path="/files" element={<FilesPage />} />
-                        <Route path="/about" element={<AboutPage />} />
-                        <Route path="*" element={<Navigate to="/cameras" replace />} />
-                      </Routes>
+                      <Suspense fallback={<LoadingSpinner />}>
+                        <Routes>
+                          <Route path="/" element={<Navigate to="/cameras" replace />} />
+                          <Route path="/cameras" element={<CameraPage />} />
+                          <Route path="/files" element={<FilesPage />} />
+                          <Route path="/about" element={<AboutPage />} />
+                          <Route path="*" element={<Navigate to="/cameras" replace />} />
+                        </Routes>
+                      </Suspense>
                     </AppLayout>
                   ) : (
                     <Navigate to="/login" replace />

@@ -53,7 +53,7 @@ export interface JsonRpcRequest {
   id: string | number;
 }
 
-export interface JsonRpcResponse<T = any> {
+export interface JsonRpcResponse<T = unknown> {
   jsonrpc: '2.0';
   result?: T;
   error?: {
@@ -135,6 +135,67 @@ export type RpcMethod =
   | 'set_discovery_interval'
   | 'set_retention_policy'
   | 'cleanup_old_files';
+
+// Command Result Types (from OpenRPC spec)
+export interface SnapshotResult {
+  success: boolean;
+  filename: string;
+  download_url: string;
+}
+
+export interface RecordingResult {
+  success: boolean;
+  recording_id: string;
+  status: 'started' | 'stopped' | 'failed';
+}
+
+export interface CameraStatusResult {
+  device: string;
+  status: 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
+  last_seen: string;
+  capabilities: string[];
+}
+
+export interface StreamUrlResult {
+  device: string;
+  hls_url: string;
+  webrtc_url: string;
+  status: 'ACTIVE' | 'INACTIVE';
+}
+
+export interface MetricsResult {
+  system_metrics: {
+    cpu_usage: number;
+    memory_usage: number;
+    disk_usage: number;
+    goroutines: number;
+  };
+  camera_metrics: {
+    connected_cameras: number;
+    cameras: Record<string, Record<string, unknown>>;
+  };
+  recording_metrics: Record<string, Record<string, unknown>>;
+  stream_metrics: {
+    active_streams: number;
+    total_streams: number;
+    total_viewers: number;
+  };
+}
+
+export interface SubscriptionResult {
+  success: boolean;
+  subscription_id: string;
+}
+
+export interface UnsubscriptionResult {
+  success: boolean;
+  unsubscribed_count: number;
+}
+
+export interface SubscriptionStatsResult {
+  active_subscriptions: number;
+  total_events: number;
+}
 
 // Error Codes (from OpenRPC spec)
 export const ERROR_CODES = {

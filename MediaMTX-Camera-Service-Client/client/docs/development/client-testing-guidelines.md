@@ -1,38 +1,53 @@
-# Testing Strategy
+# Test Architecture Guide - Web Client
 
-## ⚠️ CRITICAL: Environment Setup Required
-**ALWAYS run `source .test_env` before executing tests**
-- Authentication failures occur without proper environment variables
-- JWT secret and server URL must be loaded before test execution
-- This is the #1 cause of false test failures
+**Version:** 1.0  
+**Date:** 2025-09-25  
+**Status:** Active - Follow architecture principles from go-architecture-guide.md  
 
+## Core Principles
+
+### Ground Truth Validation
+- **API Documentation is FROZEN** - Only documented API as reference
+- **Architecture is AUTHORITATIVE** - Only architecture docs as reference  
+- **Tests validate against ground truth** - Not existing code
+- **Test failures indicate real problems** - Not test problems
+- **No "accommodation" of broken implementations** - Tests do not fix implementation
+- **STOP and ask for authorization** before making any test changes
+
+### Critical Rules
+1. **NEVER look at server implementation code** - Only use API documentation
+2. **NEVER look at client implementation code** - Only use architecture documentation  
+3. **If test fails, check ground truth first** - Don't adapt test to broken implementation
+4. **Test failures are real bugs** - Not test bugs to be fixed
+5. **Purpose of testing is validation** - Not to pass by any means
+
+### DRY & Single Responsibility  
+- One test utility per concern - no duplicate mock implementations
+- Shared validation patterns - centralized response validation
+- Consistent mocking strategy - single approach across test types
+- Component reuse - leverage existing infrastructure
+
+## Environment Setup - CRITICAL ⚠️
+
+### ALWAYS Required Before Testing
 ```bash
 # REQUIRED: Load environment before any test execution
-cd MediaMTX-Camera-Service-Client/client
-source .test_env
-npm test
-```
-
-## ⚠️ CRITICAL: Authentication Setup Required
-**ALWAYS run `./set-test-env.sh` before executing tests**
-- Tests accessing protected methods require valid authentication tokens
-- Environment variables get synced with git and may be outdated
-- `set-test-env.sh` ensures current valid keys for your server instance
-- **MANDATORY**: All tests calling protected methods must authenticate first
-
-```bash
-# REQUIRED: Set up authentication before any test execution
 cd MediaMTX-Camera-Service-Client/client
 ./set-test-env.sh
 source .test_env
 npm test
 ```
 
-## ⚠️ CRITICAL: Server Port Configuration
+### Authentication Setup
+- Tests accessing protected methods require valid authentication tokens
+- JWT secret and server URL must be loaded before test execution
+- `set-test-env.sh` ensures current valid keys for your server instance
+- **This is the #1 cause of false test failures**
+
+### Server Port Configuration
 **MediaMTX Camera Service has TWO endpoints - use correct ports:**
 - **WebSocket Server (JSON-RPC)**: Port 8002 - All camera operations, file management
 - **Health Server (REST)**: Port 8003 - Health checks, system status
-- **MANDATORY**: Tests must use correct endpoint for each operation type
 - **MANDATORY**: Do not mix WebSocket methods with health endpoints
 
 ```bash
@@ -43,219 +58,153 @@ ws://localhost:8002/ws
 http://localhost:8003/health/*
 ```
 
-## Philosophy
-**"Test Against Ground Truth, Never Against Implementation"**
+### IV&V Testing Protocol
+**ALWAYS run tests from `client/` directory**: `cd client && npm test`  
+**NEVER run from root** - conflicting dependencies cause failures
 
-Write specifications as failing tests before implementation. Test against frozen documentation (API docs, architecture docs), never against existing code. Validate behavior against ground truth, not implementation details.
+## Test Organization
 
-## Ground Truth Enforcement
-- **API Documentation is FROZEN** - Only documented API as reference
-- **Client Architecture is AUTHORITATIVE** - Only architecture docs as reference
-- **Tests validate against ground truth** - Not existing code
-- **Test failures indicate real problems** - Not test problems
-- **No "accommodation" of broken implementations** - Tests do not fix the implementation
+### Directory Structure
+```
+client/tests/
+├── unit/              # Isolated component/logic tests
+├── integration/       # Real server communication tests  
+├── e2e/              # Complete workflow tests
+├── fixtures/         # Shared test utilities
+├── utils/            # Centralized test utilities
+└── config/           # Test configurations
+```
 
-## 🚨 CRITICAL RULES
-1. **STOP and ask for authorization** before making any test changes
-2. **NEVER look at server implementation code** - Only use API documentation
-3. **NEVER look at client implementation code** - Only use architecture documentation
-4. **Tests must validate against ground truth** - Not against existing code
-5. **If test fails, check ground truth first** - Don't adapt test to broken implementation
-6. **Test failures are real bugs** - Not test bugs to be fixed
-7. **Purpose of testing is validation** - Not to pass by any means
+### Naming Convention
+- **Files**: `test_<what>_<type>.{ts,js}` using snake_case
+- **Functions**: `test_<behavior>_<scenario>()`
+- **Examples**: `test_camera_detail_component.ts`, `test_websocket_integration.ts`, `test_auth_flow_e2e.js`
+- **No variations**: No _real, _v2, _mock suffixes
 
-## Ground Truth Sources (FROZEN)
-- **Server WebSocket API**: `mediamtx-camera-service/docs/api/json-rpc-methods.md` (FROZEN)
-- **Server Health API**: `mediamtx-camera-service/docs/api/health-endpoints.md` (FROZEN)
-- **Client Architecture**: `client/docs/architecture/client-architecture.md` (AUTHORITATIVE)
-- **Client Requirements**: `client/docs/requirements/client-requirements.md` (AUTHORITATIVE)
-- **Naming Strategy**: `client/docs/development/naming-strategy.md` (MANDATORY)
+## Mocking Strategy
 
-## Test Development Workflow
-1. **Ground Truth Validation**: Write failing test against frozen documentation
-2. **Implementation**: Write minimal code to align with ground truth
-3. **Integration**: Validate against real MediaMTX server using documented API
-4. **Refinement**: Optimize while maintaining ground truth compliance
+### Single Mock Pattern
+- One mock implementation per API concern
+- Centralized in `utils/mocks.ts`
+- Based on documented API responses
+- No duplicate mock patterns across tests
+
+### WebSocket Mocking
+- Environment-driven: real connections for integration, mocks for unit
+- Single WebSocket abstraction in `utils/api-client.ts`
+- Toggle real/mock via configuration, not separate implementations
+
+## Shared Utilities
+
+### API Response Validation
+- Centralized validator in `utils/validators.ts`
+- Validates against documented schemas
+- Single validation pattern across all test types
+- No per-test validation logic
+
+### Authentication
+- Dynamic token generation in `utils/auth-helper.ts`
+- No hardcoded credentials
+- Token caching for performance
+- Single auth pattern for all test categories
 
 ## Test Categories
 
 ### Unit Tests (≥80% coverage)
-- Component behavior in isolation
+- Component behavior in isolation  
 - Business logic validation
 - Edge case handling
-- Mocks are permitted only for external APIs beyond project control
+- Use shared mock utilities
+- Mocks permitted only for external APIs beyond project control
 
-## API Compliance Testing - MANDATORY
-
-### 🚨 CRITICAL: API Documentation Compliance
-Every test that calls server APIs MUST validate against API documentation, not implementation.
-
-### Mandatory API Compliance Rules
-1. **Test against documented API format** - Use exact request/response formats from `json-rpc-methods.md`
-2. **Validate documented error codes** - Use error codes and messages from API documentation
-3. **Test documented authentication flow** - Follow authentication flow exactly as documented
-4. **Verify documented response fields** - Check all required fields are present and correct
-5. **No implementation-specific testing** - Don't test server internals, only documented behavior
-
-### API Compliance Test Template
-```typescript
-/**
- * API Compliance Test for [Method Name]
- * 
- * Ground Truth References:
- * - Server API: ../mediamtx-camera-service/docs/api/json-rpc-methods.md
- * - Client Architecture: ../docs/architecture/client-architecture.md
- * - Client Requirements: ../docs/requirements/client-requirements.md
- * 
- * Method: [method_name]
- * Expected Request Format: [documented format]
- * Expected Response Format: [documented format]
- * Expected Error Codes: [documented codes]
- */
-
-describe('API Compliance Tests', () => {
-  test('[method_name] validates against API documentation', async () => {
-    // 1. Use documented request format from API documentation
-    const request = {
-      jsonrpc: "2.0",
-      method: "[method_name]",
-      params: {
-        // Use exact parameter names from API documentation
-      },
-      id: 1
-    };
-    
-    // 2. Validate documented response format
-    const response = await sendRequest(request);
-    
-    // 3. Check all documented fields are present
-    expect(response).toHaveProperty('result');
-    const result = response.result;
-    
-    // 4. Validate documented response structure
-    const requiredFields = ["field1", "field2"]; // From API documentation
-    requiredFields.forEach(field => {
-      expect(result).toHaveProperty(field, `Missing required field '${field}' per API documentation`);
-    });
-    
-    // 5. Validate documented error handling
-    // Test error cases exactly as documented
-  });
-});
-```
-
-### Integration Tests (≥70% coverage)  
-- Client-server communication via real WebSocket using documented API
-- JSON-RPC method contracts against running server (validated against API documentation)
+### Integration Tests (≥70% coverage)
+- Real API communication via shared client
+- JSON-RPC method validation against documented API
 - Authentication flows with dynamic token generation (following documented flow)
-- Authentication tokens are always generated dynamically; no hardcoded credentials allowed
+- **Authentication tokens are always generated dynamically; no hardcoded credentials allowed**
 - Error handling for network/server failures (using documented error codes)
 
 ### End-to-End Tests (Critical paths)
 - Complete user workflows in real browser
-- Camera operations with actual hardware/simulation
+- Camera operations with actual hardware/simulation  
 - File management end-to-end
 - Performance validation under load
 
-## Quality Gates
+### API Compliance Testing - MANDATORY
+**Every test that calls server APIs MUST validate against API documentation, not implementation**
 
-### Performance Targets
-- Status methods: <50ms (p95 under load)
-- Control methods: <100ms (p95 under load)
-- WebSocket connection: <1s (p95 under load)
-- Client load: <3s (p95 under load)
-
-### Coverage Enforcement
-- Automated threshold validation
-- Fail build on coverage regression
-- Focus on critical business logic paths
-
-### Integration Requirements
-- All tests pass against real server
-- Authentication handled automatically via environment
-- No hardcoded credentials or mocked server responses
-
-## Test Structure
-```
-tests/
-├── unit/           # Isolated component/logic tests
-├── integration/    # Real server communication tests  
-├── e2e/           # Complete workflow tests
-└── fixtures/      # Shared test utilities
-```
-
-## Environment-Specific Configurations
-When test environment limitations prevent real integration testing (e.g., jsdom WebSocket restrictions), separate Jest configurations are permitted to maintain Real Integration First principles while preserving proper test boundaries.
-
-## ⚠️ IV&V Testing Protocol
-**ALWAYS run tests from `client/` directory**: `cd client && npm test`  
-**NEVER run from root** - conflicting dependencies cause failures
+#### Mandatory API Compliance Rules
+1. **Test against documented API format** - Use exact request/response formats from API documentation
+2. **Validate documented error codes** - Use error codes and messages from API documentation  
+3. **Test documented authentication flow** - Follow authentication flow exactly as documented
+4. **Verify documented response fields** - Check all required fields are present and correct
+5. **No implementation-specific testing** - Don't test server internals, only documented behavior
 
 ## Quality Gates
 
-### Ground Truth Compliance Gates
-- **Authorization Required**: All test changes must be explicitly authorized
-- **Ground Truth Compliance**: 100% validation against frozen documentation
-- **No Code Peeking**: Tests must not reference implementation code
-- **API Compliance**: All tests must validate against API documentation
-- **Architecture Compliance**: All tests must validate against client architecture
-- **Test Failures are Real**: No accommodation of broken implementations
-
-### Performance Targets
-- Status methods: <50ms (p95 under load)
-- Control methods: <100ms (p95 under load)
-- WebSocket connection: <1s (p95 under load)
-- Client load: <3s (p95 under load)
-
 ### Coverage Enforcement
 - Automated threshold validation
-- Fail build on coverage regression
-- Focus on critical business logic paths
+- Build failure on regression
+- Focus on business logic paths
+- Component-specific thresholds
 
-## Naming Convention
-- **Files**: `test_<what>_<type>.{ts,js}` using snake_case
-- **Functions**: `test_<behavior>_<scenario>()`
-- **Examples**: `test_camera_detail_component.ts`, `test_websocket_integration.ts`, `test_auth_flow_e2e.js`
+### Performance Targets
+- Status methods: <50ms (p95)
+- Control methods: <100ms (p95)
+- WebSocket connection: <1s (p95)
+- Client load: <3s (p95)
 
----
+## Test Configuration
 
-## Ground Truth Validation Rules
+### Environment-Specific Configs
+```javascript
+// jest.config.cjs - Unit tests (jsdom + mocks)
+module.exports = {
+  testEnvironment: 'jsdom',
+  testMatch: ['**/tests/unit/**/*.test.{ts,js}'],
+  setupFilesAfterEnv: ['<rootDir>/tests/utils/setup-unit.ts']
+};
 
-### Prevent Sneak Peeking into Code
-1. **NEVER look at server implementation code** - Only use API documentation
-2. **NEVER look at client implementation code** - Only use architecture documentation
-3. **Tests must validate against ground truth** - Not against existing code
-4. **If test fails, check ground truth first** - Don't adapt test to broken implementation
-5. **Test failures are real bugs** - Not test bugs to be fixed
+// jest.integration.config.cjs - Integration tests (Node.js + real WebSocket)
+module.exports = {
+  testEnvironment: 'node', 
+  testMatch: ['**/tests/integration/**/*.test.{ts,js}'],
+  setupFilesAfterEnv: ['<rootDir>/tests/utils/setup-integration.ts']
+};
+```
 
-### Testing Rules Violation Prevention
-1. **Tests validate against ground truth** - Not existing code
-2. **Tests must fail if implementation doesn't match ground truth**
-3. **No adapting tests to existing code flaws**
-4. **Test failures indicate real problems** - Not test problems
-5. **Purpose of testing is validation** - Not to pass by any means
-
----
-
-**Status**: **UPDATED** - Core strategy for test-driven development with ground truth validation focus
-
-## Test Execution Requirements
+### Test Execution Requirements
 - Unit tests: Use `jest.config.cjs` (jsdom + mocks)
 - Integration tests: Use `jest.integration.config.cjs` (Node.js + real WebSocket)
 - Performance tests: Use `jest.integration.config.cjs` (Node.js + real WebSocket)
 - E2E tests: Use `jest.integration.config.cjs` (Node.js + real WebSocket)
 
-## WebSocket Testing
+### WebSocket Testing
 - Unit tests: Mock WebSocket services completely
 - Integration tests: Use `require('ws')` for Node.js WebSocket
 - Browser tests: Use native WebSocket API
 
-## Requirements Traceability
-- Every test file MUST include REQ-* header
-- REQ-* IDs MUST map to actual project requirements
-- No test without requirements traceability
+## Anti-Patterns
 
-### Mandatory Format for Test Files
+### Avoid Multiple Mock Implementations
+- No duplicate mock patterns
+- No test-specific mock creation
+- No parallel implementations
+
+### Avoid Implementation Dependencies
+- No testing private methods
+- No testing internal state
+- No hardcoded test data
+- No mocking what you don't own
+
+### Avoid Configuration Duplication
+- Single source for test configuration
+- Shared utilities across test types
+- Consistent patterns across components
+
+## Requirements Traceability - MANDATORY
+
+### Mandatory Test Headers
 ```typescript
 /**
  * Module description.
@@ -272,7 +221,6 @@ When test environment limitations prevent real integration testing (e.g., jsdom 
  * Test Categories: Unit/Integration/Security/Performance/Health
  * API Documentation Reference: docs/api/json-rpc-methods.md
  */
-
 describe('Feature Tests', () => {
   test('REQ-XXX-001: Specific requirement validation', () => {
     // Test that would FAIL if requirement violated
@@ -280,3 +228,35 @@ describe('Feature Tests', () => {
   });
 });
 ```
+
+### Requirements Coverage Rules
+- Every test file MUST include REQ-* header
+- REQ-* IDs MUST map to actual project requirements
+- No test without requirements traceability
+- Link tests to frozen requirements baseline
+- Document in `requirements-coverage.md`
+
+## Implementation Rules
+
+### Before Writing Tests
+- Check existing utilities for reusable patterns
+- Validate against API documentation
+- Plan shared mock strategy
+- Identify architecture integration points
+
+### During Implementation
+- Use established patterns from utils/
+- Follow naming conventions
+- Add requirements traceability
+- Validate against documented APIs
+
+### After Implementation
+- Verify no duplicate patterns
+- Check coverage thresholds
+- Test against real endpoints
+- Document new shared utilities
+
+---
+
+**Architecture Integration**: Follows go-architecture-guide.md principles adapted for client testing  
+**Maintenance Focus**: Centralized patterns prevent server-side bloat and duplication issues

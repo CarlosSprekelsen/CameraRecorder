@@ -58,7 +58,7 @@ const CameraPage: React.FC = memo(() => {
           'camera_status_update',
           (notification: JsonRpcNotification) => {
             if (notification.params) {
-              handleCameraStatusUpdate(notification.params as any);
+              handleCameraStatusUpdate(notification.params as Record<string, unknown>);
             }
           },
         );
@@ -68,7 +68,7 @@ const CameraPage: React.FC = memo(() => {
           'recording_status_update',
           (notification: JsonRpcNotification) => {
             if (notification.params) {
-              handleRecordingStatusUpdate(notification.params as any);
+              handleRecordingStatusUpdate(notification.params as Record<string, unknown>);
             }
           },
         );
@@ -92,7 +92,15 @@ const CameraPage: React.FC = memo(() => {
     };
 
     initializeDeviceService();
-  }, [isAuthenticated, getCameraList, getStreams, setDeviceService]);
+  }, [
+    isAuthenticated,
+    getCameraList,
+    getStreams,
+    setDeviceService,
+    handleCameraStatusUpdate,
+    handleRecordingStatusUpdate,
+    setRecordingService,
+  ]);
 
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
@@ -140,5 +148,7 @@ const CameraPage: React.FC = memo(() => {
     </Container>
   );
 });
+
+CameraPage.displayName = 'CameraPage';
 
 export default CameraPage;

@@ -148,7 +148,9 @@ const CameraTable: React.FC<CameraTableProps> = ({ cameras, streams, onRefresh }
                   <TableCell>
                     <Chip
                       label={camera.status}
-                      color={getStatusColor(camera.status) as any}
+                      color={
+                        getStatusColor(camera.status) as 'success' | 'error' | 'warning' | 'info'
+                      }
                       size="small"
                     />
                   </TableCell>

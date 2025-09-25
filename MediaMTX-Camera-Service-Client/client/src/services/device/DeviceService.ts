@@ -128,7 +128,7 @@ export class DeviceService implements IDiscovery {
    * Get detailed capabilities and supported formats for a specific camera device
    * Implements get_camera_capabilities RPC method
    */
-  async getCameraCapabilities(device: string): Promise<any> {
+  async getCameraCapabilities(device: string): Promise<Record<string, unknown>> {
     try {
       this.logger.info(`Getting capabilities for device: ${device}`);
 
@@ -146,7 +146,7 @@ export class DeviceService implements IDiscovery {
    * Get detailed status information for a specific camera stream
    * Implements get_stream_status RPC method
    */
-  async getStreamStatus(device: string): Promise<any> {
+  async getStreamStatus(device: string): Promise<Record<string, unknown>> {
     try {
       this.logger.info(`Getting stream status for device: ${device}`);
 

@@ -1,4 +1,5 @@
 import React, { useState, memo } from 'react';
+import PropTypes from 'prop-types';
 import {
   Box,
   Card,
@@ -106,7 +107,10 @@ const LoginPage: React.FC<LoginPageProps> = memo(({ authService }) => {
             </Typography>
           </Box>
 
-          <Alert severity={getConnectionStatusColor() as any} sx={{ mb: 2 }}>
+          <Alert
+            severity={getConnectionStatusColor() as 'success' | 'error' | 'warning' | 'info'}
+            sx={{ mb: 2 }}
+          >
             Status: {getConnectionStatusText()}
           </Alert>
 
@@ -148,5 +152,11 @@ const LoginPage: React.FC<LoginPageProps> = memo(({ authService }) => {
     </Box>
   );
 });
+
+LoginPage.displayName = 'LoginPage';
+
+LoginPage.propTypes = {
+  authService: PropTypes.instanceOf(AuthService).isRequired,
+};
 
 export default LoginPage;

@@ -38,7 +38,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
             Access Denied
           </Alert>
           <Typography variant="h6" color="text.secondary">
-            You don't have permission to access this page.
+            You don&apos;t have permission to access this page.
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
             Required role: {requiredRole}

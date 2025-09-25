@@ -149,7 +149,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, authService }) => {
           {/* Connection Status */}
           <Chip
             label={getConnectionStatusText()}
-            color={getConnectionStatusColor() as any}
+            color={getConnectionStatusColor() as 'success' | 'error' | 'warning' | 'info'}
             size="small"
             sx={{ mr: 2 }}
           />
@@ -165,7 +165,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, authService }) => {
           <Box display="flex" alignItems="center">
             <Chip
               label={role?.toUpperCase() || 'UNKNOWN'}
-              color={getRoleColor(role || '') as any}
+              color={getRoleColor(role || '') as 'success' | 'error' | 'warning' | 'info'}
               size="small"
               sx={{ mr: 1 }}
             />

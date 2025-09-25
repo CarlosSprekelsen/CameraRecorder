@@ -25,7 +25,7 @@ interface PerformanceEntryWithInput extends PerformanceEntry {
  * usePerformanceMonitor - Performance monitoring hook for Core Web Vitals
  * Implements performance monitoring from architecture section 10.1
  */
-export const usePerformanceMonitor = () => {
+export const usePerformanceMonitor = (): void => {
   const trackMetric = useCallback((name: string, value: number, delta: number) => {
     logger.info('Performance metric', {
       metric: name,

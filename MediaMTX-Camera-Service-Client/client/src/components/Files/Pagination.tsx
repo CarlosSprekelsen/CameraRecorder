@@ -34,7 +34,7 @@ const Pagination: React.FC<PaginationProps> = ({ pagination, onPageChange, onLim
     onPageChange(page);
   };
 
-  const handleLimitChange = (event: React.ChangeEvent<HTMLInputElement> | any) => {
+  const handleLimitChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const newLimit = parseInt(event.target.value, 10);
     if (onLimitChange) {
       onLimitChange(newLimit);

@@ -19,6 +19,35 @@ export default [
           jsx: true,
         },
       },
+      globals: {
+        // Browser globals
+        window: 'readonly',
+        document: 'readonly',
+        navigator: 'readonly',
+        console: 'readonly',
+        sessionStorage: 'readonly',
+        localStorage: 'readonly',
+        WebSocket: 'readonly',
+        HTMLElement: 'readonly',
+        HTMLInputElement: 'readonly',
+        KeyboardEvent: 'readonly',
+        MediaQueryListEvent: 'readonly',
+        PerformanceEntry: 'readonly',
+        PerformanceObserver: 'readonly',
+        PerformanceNavigationTiming: 'readonly',
+        // Node.js globals
+        process: 'readonly',
+        NodeJS: 'readonly',
+        setTimeout: 'readonly',
+        setInterval: 'readonly',
+        clearTimeout: 'readonly',
+        clearInterval: 'readonly',
+        // Additional browser globals
+        Window: 'readonly',
+        performance: 'readonly',
+        // React globals
+        JSX: 'readonly',
+      },
     },
     plugins: {
       '@typescript-eslint': tseslint,
