@@ -19,19 +19,15 @@ import { WebSocketService } from '../../../src/services/websocket/WebSocketServi
 import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { MockDataFactory } from '../../utils/mocks';
 
-// Mock the dependencies
-jest.mock('../../../src/services/websocket/WebSocketService');
-jest.mock('../../../src/services/logger/LoggerService');
+// Use centralized mocks - eliminates duplication
+const mockWebSocketService = MockDataFactory.createMockWebSocketService();
+const mockLoggerService = MockDataFactory.createMockLoggerService();
 
 describe('RecordingService Unit Tests', () => {
   let recordingService: RecordingService;
-  let mockWebSocketService: jest.Mocked<WebSocketService>;
-  let mockLoggerService: jest.Mocked<LoggerService>;
 
   beforeEach(() => {
     // Use centralized mocks - eliminates duplication
-    mockWebSocketService = MockDataFactory.createMockWebSocketService();
-    mockLoggerService = MockDataFactory.createMockLoggerService();
 
     // Create service instance
     recordingService = new RecordingService(mockWebSocketService, mockLoggerService);

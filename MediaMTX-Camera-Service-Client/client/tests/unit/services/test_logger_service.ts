@@ -319,7 +319,8 @@ describe('LoggerService Unit Tests', () => {
       process.env.NODE_ENV = 'development';
       // Mock console with missing methods
       const originalConsole = console;
-      (global as any).console = { log: jest.fn() };
+      const mockConsole = MockDataFactory.createMockConsole();
+      (global as any).console = { log: mockConsole.log };
 
       loggerService.debug('Debug message');
 

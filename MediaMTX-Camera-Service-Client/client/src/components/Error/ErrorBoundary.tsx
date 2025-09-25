@@ -110,7 +110,7 @@ const ErrorFallback: React.FC<FallbackProps> = ({ error, resetErrorBoundary }) =
 const ErrorBoundary: React.FC<Props> = ({ children, fallback, onError }) => {
   const handleError = (error: Error, errorInfo: ErrorInfo) => {
     // Log error to service
-    logger.error('ErrorBoundary caught an error', error as Record<string, unknown>);
+    logger.error('ErrorBoundary caught an error', error as unknown as Record<string, unknown>);
 
     // Call custom error handler if provided
     if (onError) {

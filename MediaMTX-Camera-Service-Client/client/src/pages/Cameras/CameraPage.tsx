@@ -1,6 +1,6 @@
 import React, { useEffect, memo } from 'react';
 import { Box, Typography, Paper, Alert, CircularProgress, Container } from '@mui/material';
-import { useDeviceStore } from '../../stores/device/deviceStore';
+import { useDeviceStore, Camera } from '../../stores/device/deviceStore';
 import { useAuthStore } from '../../stores/auth/authStore';
 import { serviceFactory } from '../../services/ServiceFactory';
 import CameraTable from '../../components/Cameras/CameraTable';
@@ -78,7 +78,7 @@ const CameraPage: React.FC = memo(() => {
           'camera_status_update',
           (notification: JsonRpcNotification) => {
             if (notification.params) {
-              handleCameraStatusUpdate(notification.params as Record<string, unknown>);
+              handleCameraStatusUpdate(notification.params as unknown as Camera);
             }
           },
         );
@@ -88,7 +88,7 @@ const CameraPage: React.FC = memo(() => {
           'recording_status_update',
           (notification: JsonRpcNotification) => {
             if (notification.params) {
-              handleRecordingStatusUpdate(notification.params as Record<string, unknown>);
+              handleRecordingStatusUpdate(notification.params as unknown as any);
             }
           },
         );
@@ -107,7 +107,7 @@ const CameraPage: React.FC = memo(() => {
           unsubscribeRecordingUpdates();
         };
       } catch (error) {
-        logger.error('Failed to initialize camera page', error as Error);
+        logger.error('Failed to initialize camera page', error as Record<string, unknown>);
       }
     };
 

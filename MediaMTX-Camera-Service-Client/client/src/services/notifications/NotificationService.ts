@@ -67,7 +67,7 @@ export class NotificationService {
         try {
           handler(notification);
         } catch (error) {
-          logger.error(`Error in notification handler for ${method}`, { error }, error as Error);
+          logger.error(`Error in notification handler for ${method}`, error as Record<string, unknown>);
         }
       });
     } else {

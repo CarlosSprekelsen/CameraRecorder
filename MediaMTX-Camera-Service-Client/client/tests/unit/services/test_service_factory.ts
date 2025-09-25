@@ -25,20 +25,33 @@ import { DeviceService } from '../../../src/services/device/DeviceService';
 import { RecordingService } from '../../../src/services/recording/RecordingService';
 import { FileService } from '../../../src/services/file/FileService';
 
-// Mock all services
-jest.mock('../../../src/services/websocket/WebSocketService');
-jest.mock('../../../src/services/auth/AuthService');
-jest.mock('../../../src/services/server/ServerService');
-jest.mock('../../../src/services/notifications/NotificationService');
-jest.mock('../../../src/services/device/DeviceService');
-jest.mock('../../../src/services/recording/RecordingService');
-jest.mock('../../../src/services/file/FileService');
+// Use centralized mocks - eliminates duplication
+import { MockDataFactory } from '../../utils/mocks';
+
+// Mock all services using centralized approach
+jest.mock('../../../src/services/websocket/WebSocketService', () => ({
+  WebSocketService: () => MockDataFactory.createMockWebSocketService()
+}));
+jest.mock('../../../src/services/auth/AuthService', () => ({
+  AuthService: () => MockDataFactory.createMockAuthService()
+}));
+jest.mock('../../../src/services/server/ServerService', () => ({
+  ServerService: () => MockDataFactory.createMockServerService()
+}));
+jest.mock('../../../src/services/notifications/NotificationService', () => ({
+  NotificationService: () => MockDataFactory.createMockEventHandler()
+}));
+jest.mock('../../../src/services/device/DeviceService', () => ({
+  DeviceService: () => MockDataFactory.createMockDeviceService()
+}));
+jest.mock('../../../src/services/recording/RecordingService', () => ({
+  RecordingService: () => MockDataFactory.createMockRecordingService()
+}));
+jest.mock('../../../src/services/file/FileService', () => ({
+  FileService: () => MockDataFactory.createMockFileService()
+}));
 jest.mock('../../../src/services/logger/LoggerService', () => ({
-  logger: {
-    info: jest.fn(),
-    debug: jest.fn(),
-    error: jest.fn()
-  }
+  logger: MockDataFactory.createMockLoggerService()
 }));
 
 describe('ServiceFactory Unit Tests', () => {

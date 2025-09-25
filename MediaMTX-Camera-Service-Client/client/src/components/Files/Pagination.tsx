@@ -7,6 +7,7 @@ import {
   MenuItem,
   FormControl,
   InputLabel,
+  SelectChangeEvent,
 } from '@mui/material';
 
 interface PaginationProps {
@@ -34,8 +35,8 @@ const Pagination: React.FC<PaginationProps> = ({ pagination, onPageChange, onLim
     onPageChange(page);
   };
 
-  const handleLimitChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const newLimit = parseInt(event.target.value, 10);
+  const handleLimitChange = (event: SelectChangeEvent<number>) => {
+    const newLimit = typeof event.target.value === 'number' ? event.target.value : parseInt(event.target.value, 10);
     if (onLimitChange) {
       onLimitChange(newLimit);
     }

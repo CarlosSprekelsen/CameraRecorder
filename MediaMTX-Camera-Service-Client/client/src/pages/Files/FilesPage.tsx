@@ -68,7 +68,7 @@ const FilesPage: React.FC = () => {
 
         logger.info('Files page initialized successfully');
       } catch (error) {
-        logger.error('Failed to initialize files page', error as Error);
+        logger.error('Failed to initialize files page', error as Record<string, unknown>);
       }
     };
 

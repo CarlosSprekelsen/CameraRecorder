@@ -26,13 +26,9 @@ jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate
 }));
 
-// Mock logger service - centralized pattern (no duplicate implementations)
+// Mock logger service - use centralized pattern
 jest.mock('../../../src/services/logger/LoggerService', () => ({
-  logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn()
-  }
+  logger: MockDataFactory.createMockLoggerService()
 }));
 
 describe('useKeyboardShortcuts Hook Unit Tests', () => {
@@ -135,8 +131,10 @@ describe('useKeyboardShortcuts Hook Unit Tests', () => {
   test('REQ-HOOK-005: Should handle Escape key shortcut', () => {
     // Arrange
     const mockElement = document.createElement('input');
-    mockElement.focus = jest.fn();
-    mockElement.blur = jest.fn();
+    const mockFocus = MockDataFactory.createMockEventHandler();
+    const mockBlur = MockDataFactory.createMockEventHandler();
+    mockElement.focus = mockFocus;
+    mockElement.blur = mockBlur;
     Object.defineProperty(document, 'activeElement', {
       value: mockElement,
       writable: true

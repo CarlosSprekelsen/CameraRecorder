@@ -1,6 +1,7 @@
 import { WebSocketService } from '../websocket/WebSocketService';
 import { LoggerService } from '../logger/LoggerService';
 import { IFileCatalog, IFileActions } from '../interfaces/ServiceInterfaces';
+import { FileListResult, RecordingInfo, SnapshotInfo, DeleteResult } from '../../types/api';
 
 /**
  * File Service - File management and operations
@@ -57,7 +58,7 @@ export class FileService implements IFileCatalog, IFileActions {
   }> {
     try {
       this.logger.info(`Listing recordings: limit=${limit}, offset=${offset}`);
-      const response = await this.wsService.sendRPC('list_recordings', { limit, offset });
+      const response = await this.wsService.sendRPC('list_recordings', { limit, offset }) as FileListResult;
       this.logger.info(`Found ${response.files?.length || 0} recordings`);
       return response;
     } catch (error) {
@@ -84,7 +85,7 @@ export class FileService implements IFileCatalog, IFileActions {
   }> {
     try {
       this.logger.info(`Listing snapshots: limit=${limit}, offset=${offset}`);
-      const response = await this.wsService.sendRPC('list_snapshots', { limit, offset });
+      const response = await this.wsService.sendRPC('list_snapshots', { limit, offset }) as FileListResult;
       this.logger.info(`Found ${response.files?.length || 0} snapshots`);
       return response;
     } catch (error) {
@@ -108,9 +109,16 @@ export class FileService implements IFileCatalog, IFileActions {
   }> {
     try {
       this.logger.info(`Getting recording info for: ${filename}`);
-      const response = await this.wsService.sendRPC('get_recording_info', { filename });
+      const response = await this.wsService.sendRPC('get_recording_info', { filename }) as RecordingInfo;
       this.logger.info(`Recording info retrieved for ${filename}`);
-      return response;
+      // Transform API response to expected format
+      return {
+        filename: response.filename,
+        file_size: response.file_size,
+        modified_time: response.created_time,
+        download_url: response.download_url,
+        duration: response.duration
+      };
     } catch (error) {
       this.logger.error(`Failed to get recording info for ${filename}`, error as Record<string, unknown>);
       throw error;
@@ -131,9 +139,15 @@ export class FileService implements IFileCatalog, IFileActions {
   }> {
     try {
       this.logger.info(`Getting snapshot info for: ${filename}`);
-      const response = await this.wsService.sendRPC('get_snapshot_info', { filename });
+      const response = await this.wsService.sendRPC('get_snapshot_info', { filename }) as SnapshotInfo;
       this.logger.info(`Snapshot info retrieved for ${filename}`);
-      return response;
+      // Transform API response to expected format
+      return {
+        filename: response.filename,
+        file_size: response.file_size,
+        modified_time: response.created_time,
+        download_url: response.download_url
+      };
     } catch (error) {
       this.logger.error(`Failed to get snapshot info for ${filename}`, error as Record<string, unknown>);
       throw error;
@@ -147,9 +161,12 @@ export class FileService implements IFileCatalog, IFileActions {
   async deleteRecording(filename: string): Promise<{ success: boolean; message: string }> {
     try {
       this.logger.info(`Deleting recording: ${filename}`);
-      const response = await this.wsService.sendRPC('delete_recording', { filename });
+      const response = await this.wsService.sendRPC('delete_recording', { filename }) as DeleteResult;
       this.logger.info(`Recording deleted: ${filename}`);
-      return response;
+      return {
+        success: response.deleted,
+        message: response.message
+      };
     } catch (error) {
       this.logger.error(`Failed to delete recording ${filename}`, error as Record<string, unknown>);
       throw error;
@@ -163,9 +180,12 @@ export class FileService implements IFileCatalog, IFileActions {
   async deleteSnapshot(filename: string): Promise<{ success: boolean; message: string }> {
     try {
       this.logger.info(`Deleting snapshot: ${filename}`);
-      const response = await this.wsService.sendRPC('delete_snapshot', { filename });
+      const response = await this.wsService.sendRPC('delete_snapshot', { filename }) as DeleteResult;
       this.logger.info(`Snapshot deleted: ${filename}`);
-      return response;
+      return {
+        success: response.deleted,
+        message: response.message
+      };
     } catch (error) {
       this.logger.error(`Failed to delete snapshot ${filename}`, error as Record<string, unknown>);
       throw error;

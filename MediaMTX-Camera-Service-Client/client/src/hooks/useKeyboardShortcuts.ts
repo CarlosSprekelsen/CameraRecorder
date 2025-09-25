@@ -16,7 +16,7 @@ interface KeyboardShortcut {
  * useKeyboardShortcuts - Keyboard navigation and shortcuts
  * Implements accessibility from Sprint 5 requirements
  */
-export const useKeyboardShortcuts = (): void => {
+export const useKeyboardShortcuts = () => {
   const navigate = useNavigate();
 
   const shortcuts: KeyboardShortcut[] = useMemo(

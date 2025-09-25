@@ -138,7 +138,7 @@ describe('NotificationService Unit Tests', () => {
   describe('REQ-NOTIF-003: Error handling in notification handlers', () => {
     test('Should handle errors in notification handlers gracefully', () => {
       // Arrange
-      const errorHandler = jest.fn().mockImplementation(() => {
+      const errorHandler = MockDataFactory.createMockEventHandler().mockImplementation(() => {
         throw new Error('Handler error');
       });
       const notification: JsonRpcNotification = {
@@ -162,10 +162,10 @@ describe('NotificationService Unit Tests', () => {
 
     test('Should continue executing other handlers when one fails', () => {
       // Arrange
-      const errorHandler = jest.fn().mockImplementation(() => {
+      const errorHandler = MockDataFactory.createMockEventHandler().mockImplementation(() => {
         throw new Error('Handler error');
       });
-      const successHandler = jest.fn();
+      const successHandler = MockDataFactory.createMockEventHandler();
       const notification: JsonRpcNotification = {
         jsonrpc: '2.0',
         method: 'camera_status_update',
@@ -239,10 +239,9 @@ describe('NotificationService Unit Tests', () => {
 
   describe('REQ-NOTIF-005: WebSocket integration', () => {
     test('Should setup WebSocket handlers on construction', () => {
-      // Arrange
-      const mockWsService = {
-        events: {} as any
-      } as jest.Mocked<WebSocketService>;
+      // Arrange - Use centralized mock instead of local duplication
+      const mockWsService = MockDataFactory.createMockWebSocketService();
+      mockWsService.events = {} as any;
 
       // Act
       new NotificationService(mockWsService);
@@ -253,10 +252,9 @@ describe('NotificationService Unit Tests', () => {
     });
 
     test('Should handle WebSocket notifications through setup handler', () => {
-      // Arrange
-      const mockWsService = {
-        events: {} as any
-      } as jest.Mocked<WebSocketService>;
+      // Arrange - Use centralized mock instead of local duplication
+      const mockWsService = MockDataFactory.createMockWebSocketService();
+      mockWsService.events = {} as any;
       const service = new NotificationService(mockWsService);
       const notification: JsonRpcNotification = {
         jsonrpc: '2.0',
@@ -282,7 +280,7 @@ describe('NotificationService Unit Tests', () => {
       // Arrange
       const handler1 = MockDataFactory.createMockEventHandler();
       const handler2 = MockDataFactory.createMockEventHandler();
-      const handler3 = jest.fn();
+      const handler3 = MockDataFactory.createMockEventHandler();
 
       // Act
       notificationService.subscribe('camera_status_update', handler1);

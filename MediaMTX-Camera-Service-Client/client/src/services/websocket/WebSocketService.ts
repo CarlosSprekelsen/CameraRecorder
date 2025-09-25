@@ -149,7 +149,7 @@ export class WebSocketService {
     return new Promise((resolve, reject) => {
       // Store pending request
       this.pendingRequests.set(id, {
-        resolve,
+        resolve: resolve as <T>(value: T) => void,
         reject,
         timestamp: Date.now(),
       });
@@ -186,17 +186,18 @@ export class WebSocketService {
   }
 
   private handleMessage(data: unknown): void {
-    if (data.jsonrpc !== '2.0') {
+    const message = data as any;
+    if (message.jsonrpc !== '2.0') {
       // Invalid JSON-RPC message - handled by error boundary
       return;
     }
 
-    if (data.id !== undefined) {
+    if (message.id !== undefined) {
       // Response to a request
-      this.handleResponse(data as JsonRpcResponse);
+      this.handleResponse(message as JsonRpcResponse);
     } else {
       // Notification
-      this.handleNotification(data as JsonRpcNotification);
+      this.handleNotification(message as JsonRpcNotification);
     }
   }
 

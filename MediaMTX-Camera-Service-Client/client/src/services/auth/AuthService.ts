@@ -31,7 +31,7 @@ export class AuthService {
     }
 
     const params: AuthenticateParams = { auth_token: token };
-    const result = await this.wsService.sendRPC<AuthenticateResult>('authenticate', params);
+    const result = await this.wsService.sendRPC<AuthenticateResult>('authenticate', params as unknown as Record<string, unknown>);
 
     // Store token in session storage
     if (result.authenticated) {

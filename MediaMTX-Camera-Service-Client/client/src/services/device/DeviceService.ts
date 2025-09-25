@@ -2,6 +2,7 @@ import { WebSocketService } from '../websocket/WebSocketService';
 import { LoggerService } from '../logger/LoggerService';
 import { Camera, StreamInfo } from '../../stores/device/deviceStore';
 import { IDiscovery } from '../interfaces/ServiceInterfaces';
+import { CameraListResult, StreamUrlResult, CameraCapabilitiesResult, StreamStatusResult } from '../../types/api';
 
 /**
  * Device Service - Camera discovery and stream management
@@ -37,11 +38,19 @@ export class DeviceService implements IDiscovery {
     try {
       this.logger.info('Getting camera list');
 
-      const response = await this.wsService.sendRPC('get_camera_list');
+      const response = await this.wsService.sendRPC('get_camera_list') as CameraListResult;
 
       if (response.cameras) {
         this.logger.info(`Retrieved ${response.cameras.length} cameras`);
-        return response.cameras;
+        // Transform API cameras to store cameras with required fields
+        return response.cameras.map(apiCamera => ({
+          device: apiCamera.device,
+          status: apiCamera.status,
+          name: apiCamera.name || `Camera ${apiCamera.device}`,
+          resolution: apiCamera.resolution || 'Unknown',
+          fps: apiCamera.fps || 30,
+          streams: apiCamera.streams || { rtsp: '', hls: '' }
+        }));
       }
 
       this.logger.warn('No cameras found in response');
@@ -60,7 +69,7 @@ export class DeviceService implements IDiscovery {
     try {
       this.logger.info(`Getting stream URL for device: ${device}`);
 
-      const response = await this.wsService.sendRPC('get_stream_url', { device });
+      const response = await this.wsService.sendRPC('get_stream_url', { device }) as StreamUrlResult;
 
       if (response.stream_url) {
         this.logger.info(`Retrieved stream URL for ${device}`);
@@ -83,7 +92,7 @@ export class DeviceService implements IDiscovery {
     try {
       this.logger.info('Getting active streams');
 
-      const response = await this.wsService.sendRPC('get_streams');
+      const response = await this.wsService.sendRPC('get_streams') as StreamInfo[];
 
       if (Array.isArray(response)) {
         this.logger.info(`Retrieved ${response.length} active streams`);
@@ -140,11 +149,11 @@ export class DeviceService implements IDiscovery {
    * Get detailed capabilities and supported formats for a specific camera device
    * Implements get_camera_capabilities RPC method
    */
-  async getCameraCapabilities(device: string): Promise<Record<string, unknown>> {
+  async getCameraCapabilities(device: string): Promise<CameraCapabilitiesResult> {
     try {
       this.logger.info(`Getting capabilities for device: ${device}`);
 
-      const response = await this.wsService.sendRPC('get_camera_capabilities', { device });
+      const response = await this.wsService.sendRPC('get_camera_capabilities', { device }) as CameraCapabilitiesResult;
 
       this.logger.info(`Retrieved capabilities for ${device}`);
       return response;
@@ -158,11 +167,11 @@ export class DeviceService implements IDiscovery {
    * Get detailed status information for a specific camera stream
    * Implements get_stream_status RPC method
    */
-  async getStreamStatus(device: string): Promise<Record<string, unknown>> {
+  async getStreamStatus(device: string): Promise<StreamStatusResult> {
     try {
       this.logger.info(`Getting stream status for device: ${device}`);
 
-      const response = await this.wsService.sendRPC('get_stream_status', { device });
+      const response = await this.wsService.sendRPC('get_stream_status', { device }) as StreamStatusResult;
 
       this.logger.info(`Retrieved stream status for ${device}`);
       return response;

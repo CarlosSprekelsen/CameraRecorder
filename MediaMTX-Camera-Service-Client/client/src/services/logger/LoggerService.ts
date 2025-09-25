@@ -10,10 +10,6 @@
  * @version 1.0.0
  */
 
-/**
- * Utility type for logging Error objects
- */
-type LoggableError = Error & Record<string, unknown>;
 
 /**
  * Log Level Enumeration

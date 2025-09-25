@@ -23,13 +23,9 @@ import { MockDataFactory } from '../../utils/mocks';
 // Mock the auth store - centralized pattern
 jest.mock('../../../src/stores/auth/authStore');
 
-// Mock logger service - centralized pattern (no duplicate implementations)
+// Mock logger service - use centralized pattern
 jest.mock('../../../src/services/logger/LoggerService', () => ({
-  logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn()
-  }
+  logger: MockDataFactory.createMockLoggerService()
 }));
 
 describe('usePermissions Hook Unit Tests', () => {

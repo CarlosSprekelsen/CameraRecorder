@@ -4,7 +4,7 @@ import { useAuthStore } from '../stores/auth/authStore';
  * usePermissions - Role-based access control hook
  * Implements security architecture from section 8.3
  */
-export const usePermissions = (): { hasPermission: (permission: string) => boolean } => {
+export const usePermissions = () => {
   const { role, permissions, isAuthenticated } = useAuthStore();
 
   // Role-based permissions
