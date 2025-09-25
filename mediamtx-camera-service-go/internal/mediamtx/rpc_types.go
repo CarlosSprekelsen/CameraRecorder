@@ -22,7 +22,7 @@ package mediamtx
 type TakeSnapshotResponse struct {
 	Device    string `json:"device"`    // Camera device identifier (e.g., "camera0")
 	Filename  string `json:"filename"`  // Generated snapshot filename
-	Status    string `json:"status"`    // Snapshot status ("COMPLETED", "FAILED")
+	Status    string `json:"status"`    // Snapshot status ("SUCCESS", "FAILED")
 	Timestamp string `json:"timestamp"` // Snapshot capture timestamp (ISO 8601)
 	FileSize  int64  `json:"file_size"` // File size in bytes
 	FilePath  string `json:"file_path"` // Full file path to saved snapshot

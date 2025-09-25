@@ -1,6 +1,6 @@
 # JSON-RPC API Reference
 
-**Version:** 2.0  
+**Version:** 1.0.0  
 **Date:** 2025-01-15  
 **Status:** Camera Service API Reference  
 
@@ -8,7 +8,7 @@
 
 ### Version Compatibility
 
-- **Current Version**: 1.0
+- **Current Version**: 1.0.0
 - **Deprecation Policy**: 12-month notice for breaking changes
 - **Migration Path**: Clear upgrade guides for major versions
 
@@ -2493,7 +2493,7 @@ Responses MAY include a top-level `"metadata"` object with:
 
 ---
 
-**API Version:** 2.0 (Go Implementation)  
+**API Version:** 1.0.0 (Go Implementation)  
 **Last Updated:** 2025-01-15  
 **Implementation Status:** All core methods, notifications, and event subscription system implemented and operational  
 **Performance Status:** 5x improvement over Python implementation achieved, 100x+ event system performance improvement

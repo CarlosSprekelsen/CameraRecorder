@@ -40,7 +40,7 @@ type VersionInfo struct {
 // Build-time variables - these will be set via -ldflags during build
 // These are package-level variables that will be injected by the build process
 var (
-	Version   = "dev"     // Injected by -ldflags "-X github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx.Version=..."
+	Version   = "1.0.0"   // Injected by -ldflags "-X github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx.Version=..."
 	BuildDate = "unknown" // Injected by -ldflags "-X github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx.BuildDate=..."
 	GitCommit = "unknown" // Injected by -ldflags "-X github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx.GitCommit=..."
 )

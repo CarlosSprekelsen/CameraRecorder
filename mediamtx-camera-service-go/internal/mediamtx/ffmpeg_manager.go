@@ -695,7 +695,7 @@ func (fm *ffmpegManager) monitorProcess(process *FFmpegProcess) {
 	err := process.cmd.Wait()
 
 	// Update status
-	process.Status = "COMPLETED"
+	process.Status = "SUCCESS"
 	if err != nil {
 		process.Status = "FAILED"
 		fm.logger.WithError(err).WithField("pid", strconv.Itoa(process.PID)).Error("FFmpeg process failed")

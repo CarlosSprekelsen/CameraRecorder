@@ -170,7 +170,8 @@
               "type": "integer"
             },
             "file_path": {
-              "type": "string"
+              "type": "string",
+              "description": "Full file path to saved snapshot"
             }
           },
           "required": [
@@ -984,7 +985,7 @@
           {
             "name": "duration",
             "schema": {
-              "type": "integer",
+              "type": "number",
               "nullable": true
             }
           },
