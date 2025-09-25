@@ -346,7 +346,7 @@ describe('REQ-SRV01: Server Integration Validation', () => {
 
     it('should handle camera not found errors gracefully', async () => {
       try {
-        await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device: '/dev/video999' }, true);
+        await wsService.call(RPC_METHODS.GET_CAMERA_STATUS, { device: 'camera999' }, true);
         fail('Expected error for non-existent camera');
       } catch (error: any) {
         expect(error).toHaveProperty('code');

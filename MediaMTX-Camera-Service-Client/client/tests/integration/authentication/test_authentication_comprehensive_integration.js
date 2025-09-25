@@ -184,7 +184,7 @@ describe('Authentication Integration Tests', () => {
       
       // Operator should be able to take snapshots
       const id = Math.floor(Math.random() * 1000000);
-      fixture.sendRequest(ws, 'take_snapshot', id, { device: '/dev/video0' });
+      fixture.sendRequest(ws, 'take_snapshot', id, { device: 'camera0' });
       
       // Should either succeed or fail with proper error (not auth error)
       try {

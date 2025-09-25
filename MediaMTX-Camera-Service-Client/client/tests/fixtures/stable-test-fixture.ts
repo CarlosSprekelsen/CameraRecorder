@@ -978,7 +978,7 @@ export class WebSocketTestFixture extends StableTestFixture {
         // Try to call protected method without authentication
         const id = Math.floor(Math.random() * 1000000);
         this.sendRequest(ws, 'start_recording', id, { 
-          device: '/dev/video0', 
+          device: 'camera0', 
           duration_seconds: 5, 
           format: 'mp4' 
         });
@@ -1275,7 +1275,7 @@ export class WebSocketTestFixture extends StableTestFixture {
         
         // Try to access protected method
         const id = Math.floor(Math.random() * 1000000);
-        this.sendRequest(ws, 'take_snapshot', id, { device: '/dev/video0' });
+        this.sendRequest(ws, 'take_snapshot', id, { device: 'camera0' });
         
         try {
           await this.waitForResponse(ws, id);

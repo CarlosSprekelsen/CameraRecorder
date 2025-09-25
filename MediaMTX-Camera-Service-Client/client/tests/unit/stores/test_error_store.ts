@@ -290,7 +290,7 @@ describe('Error Store', () => {
       const rpcError: JSONRPCError = {
         code: -32001,
         message: 'Camera not found',
-        data: { device: '/dev/video0' }
+        data: { device: 'camera0' }
       };
       const context = 'camera-operation';
       const mockErrorInfo = {
@@ -301,7 +301,7 @@ describe('Error Store', () => {
         userFriendly: 'Camera device not found',
         severity: 'error' as const,
         recoverable: true,
-        data: { device: '/dev/video0' }
+        data: { device: 'camera0' }
       };
 
       mockErrorService.handleError.mockResolvedValue(mockErrorInfo);

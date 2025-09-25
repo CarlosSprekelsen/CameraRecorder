@@ -245,7 +245,7 @@ describe('Real Camera Operations Integration', () => {
       // Test with non-existent camera
       try {
         await sendRequest('take_snapshot', {
-          device: '/dev/video999',
+          device: 'camera999',
           format: 'jpg',
           quality: 80
         });
@@ -358,7 +358,7 @@ describe('Real Camera Operations Integration', () => {
       // Test recording on non-existent camera
       try {
         await sendRequest('start_recording', {
-          device: '/dev/video999',
+          device: 'camera999',
           format: 'mp4',
           duration_seconds: 10
         });

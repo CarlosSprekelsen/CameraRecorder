@@ -34,7 +34,7 @@ export const MOCK_RESPONSES = {
   [RPC_METHODS.GET_CAMERA_LIST]: {
     cameras: [
       {
-        device: '/dev/video0',
+        device: 'camera0',
         status: 'CONNECTED',
         name: 'Test Camera 1',
         resolution: '1920x1080',
@@ -46,7 +46,7 @@ export const MOCK_RESPONSES = {
         }
       },
       {
-        device: '/dev/video1',
+        device: 'camera1',
         status: 'CONNECTED',
         name: 'Test Camera 2',
         resolution: '1280x720',
@@ -63,7 +63,7 @@ export const MOCK_RESPONSES = {
   },
   
   [RPC_METHODS.GET_CAMERA_STATUS]: {
-    device: '/dev/video0',
+    device: 'camera0',
     status: 'CONNECTED',
     name: 'Test Camera 1',
     resolution: '1920x1080',
@@ -85,7 +85,7 @@ export const MOCK_RESPONSES = {
   },
   
   [RPC_METHODS.TAKE_SNAPSHOT]: {
-    device: '/dev/video0',
+    device: 'camera0',
     filename: 'snapshot_2025-01-15_14-30-00.jpg',
     status: 'COMPLETED',
     timestamp: '2025-01-15T14:30:00Z',
@@ -94,7 +94,7 @@ export const MOCK_RESPONSES = {
   },
   
   [RPC_METHODS.START_RECORDING]: {
-    device: '/dev/video0',
+    device: 'camera0',
     session_id: '550e8400-e29b-41d4-a716-446655440000',
     filename: 'camera0_2025-01-15_14-30-00.mp4',
     status: 'STARTED',
@@ -104,7 +104,7 @@ export const MOCK_RESPONSES = {
   },
   
   [RPC_METHODS.STOP_RECORDING]: {
-    device: '/dev/video0',
+    device: 'camera0',
     session_id: '550e8400-e29b-41d4-a716-446655440000',
     filename: 'camera0_2025-01-15_14-30-00.mp4',
     status: 'STOPPED',
@@ -216,7 +216,7 @@ export class MockWebSocketService {
     const requestId = ++this.requestId;
 
     // Handle specific error cases
-    if (method === RPC_METHODS.GET_CAMERA_STATUS && (!params.device || params.device === '/dev/video999')) {
+    if (method === RPC_METHODS.GET_CAMERA_STATUS && (!params.device || params.device === 'camera999')) {
       throw new Error('Camera not found');
     }
 
@@ -256,7 +256,7 @@ export class MockWebSocketService {
         jsonrpc: '2.0',
         method: 'camera_status_update',
         params: {
-          device: '/dev/video0',
+          device: 'camera0',
           status: 'CONNECTED',
           name: 'Test Camera 1',
           resolution: '1920x1080',

@@ -74,7 +74,7 @@ async function testTakeSnapshotEndToEnd() {
         console.log('\n📸 Step 3: Testing snapshot with all parameters...');
         try {
           const snapshotResult = await sendRequest(ws, 'take_snapshot', {
-            device: '/dev/video0',
+            device: 'camera0',
             format: 'jpg',
             quality: 85,
             filename: 'test_e2e_snapshot.jpg'
@@ -151,7 +151,7 @@ async function testParameterValidation(ws) {
   // Test invalid quality
   try {
     await sendRequest(ws, 'take_snapshot', {
-      device: '/dev/video0',
+      device: 'camera0',
       quality: 150 // Invalid: > 100
     });
     console.log('   ❌ Invalid quality should have been rejected');
@@ -162,7 +162,7 @@ async function testParameterValidation(ws) {
   // Test invalid format
   try {
     await sendRequest(ws, 'take_snapshot', {
-      device: '/dev/video0',
+      device: 'camera0',
       format: 'bmp' // Invalid format
     });
     console.log('   ❌ Invalid format should have been rejected');

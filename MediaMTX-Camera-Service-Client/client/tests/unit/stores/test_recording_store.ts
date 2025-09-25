@@ -63,7 +63,7 @@ describe('Recording Store', () => {
 
   describe('Recording State Management', () => {
     it('should set recording state for device', () => {
-      const device = '/dev/video0';
+      const device = 'camera0';
       const status: RecordingStatus = 'recording';
       
       store.setRecordingState(device, status);
@@ -73,7 +73,7 @@ describe('Recording Store', () => {
     });
 
     it('should get recording state for device', () => {
-      const device = '/dev/video0';
+      const device = 'camera0';
       const status: RecordingStatus = 'idle';
       
       store.setRecordingState(device, status);
@@ -86,7 +86,7 @@ describe('Recording Store', () => {
     });
 
     it('should check if device is recording', () => {
-      const device = '/dev/video0';
+      const device = 'camera0';
       
       store.setRecordingState(device, 'recording');
       expect(store.isRecording(device)).toBe(true);
@@ -96,21 +96,21 @@ describe('Recording Store', () => {
     });
 
     it('should get all recording states', () => {
-      store.setRecordingState('/dev/video0', 'recording');
-      store.setRecordingState('/dev/video1', 'idle');
-      store.setRecordingState('/dev/video2', 'error');
+      store.setRecordingState('camera0', 'recording');
+      store.setRecordingState('camera1', 'idle');
+      store.setRecordingState('camera2', 'error');
       
       const states = store.getAllRecordingStates();
       expect(states.size).toBe(3);
-      expect(states.get('/dev/video0')).toBe('recording');
-      expect(states.get('/dev/video1')).toBe('idle');
-      expect(states.get('/dev/video2')).toBe('error');
+      expect(states.get('camera0')).toBe('recording');
+      expect(states.get('camera1')).toBe('idle');
+      expect(states.get('camera2')).toBe('error');
     });
   });
 
   describe('Active Session Management', () => {
     it('should add active session', () => {
-      const device = '/dev/video0';
+      const device = 'camera0';
       const session: RecordingSession = {
         session_id: 'session-123',
         device,
@@ -129,7 +129,7 @@ describe('Recording Store', () => {
     });
 
     it('should remove active session', () => {
-      const device = '/dev/video0';
+      const device = 'camera0';
       const session: RecordingSession = {
         session_id: 'session-123',
         device,
@@ -149,7 +149,7 @@ describe('Recording Store', () => {
     });
 
     it('should get active session for device', () => {
-      const device = '/dev/video0';
+      const device = 'camera0';
       const session: RecordingSession = {
         session_id: 'session-123',
         device,
@@ -173,7 +173,7 @@ describe('Recording Store', () => {
     it('should get all active sessions', () => {
       const session1: RecordingSession = {
         session_id: 'session-1',
-        device: '/dev/video0',
+        device: 'camera0',
         filename: 'recording1.mp4',
         status: 'recording',
         start_time: new Date().toISOString(),
@@ -184,7 +184,7 @@ describe('Recording Store', () => {
       
       const session2: RecordingSession = {
         session_id: 'session-2',
-        device: '/dev/video1',
+        device: 'camera1',
         filename: 'recording2.mp4',
         status: 'recording',
         start_time: new Date().toISOString(),
@@ -193,17 +193,17 @@ describe('Recording Store', () => {
         file_size: 0
       };
       
-      store.addActiveSession('/dev/video0', session1);
-      store.addActiveSession('/dev/video1', session2);
+      store.addActiveSession('camera0', session1);
+      store.addActiveSession('camera1', session2);
       
       const sessions = store.getAllActiveSessions();
       expect(sessions.size).toBe(2);
-      expect(sessions.get('/dev/video0')).toEqual(session1);
-      expect(sessions.get('/dev/video1')).toEqual(session2);
+      expect(sessions.get('camera0')).toEqual(session1);
+      expect(sessions.get('camera1')).toEqual(session2);
     });
 
     it('should check if device has active session', () => {
-      const device = '/dev/video0';
+      const device = 'camera0';
       const session: RecordingSession = {
         session_id: 'session-123',
         device,
@@ -224,7 +224,7 @@ describe('Recording Store', () => {
 
   describe('Progress Tracking', () => {
     it('should set progress for device', () => {
-      const device = '/dev/video0';
+      const device = 'camera0';
       const progress: RecordingProgress = {
         session_id: 'session-123',
         duration: 30,
@@ -240,7 +240,7 @@ describe('Recording Store', () => {
     });
 
     it('should get progress for device', () => {
-      const device = '/dev/video0';
+      const device = 'camera0';
       const progress: RecordingProgress = {
         session_id: 'session-123',
         duration: 30,
@@ -259,7 +259,7 @@ describe('Recording Store', () => {
     });
 
     it('should clear progress for device', () => {
-      const device = '/dev/video0';
+      const device = 'camera0';
       const progress: RecordingProgress = {
         session_id: 'session-123',
         duration: 30,
@@ -292,19 +292,19 @@ describe('Recording Store', () => {
         fps: 30
       };
       
-      store.setProgress('/dev/video0', progress1);
-      store.setProgress('/dev/video1', progress2);
+      store.setProgress('camera0', progress1);
+      store.setProgress('camera1', progress2);
       
       const allProgress = store.getAllProgress();
       expect(allProgress.size).toBe(2);
-      expect(allProgress.get('/dev/video0')).toEqual(progress1);
-      expect(allProgress.get('/dev/video1')).toEqual(progress2);
+      expect(allProgress.get('camera0')).toEqual(progress1);
+      expect(allProgress.get('camera1')).toEqual(progress2);
     });
   });
 
   describe('Error Management', () => {
     it('should set error for device', () => {
-      const device = '/dev/video0';
+      const device = 'camera0';
       const error: JSONRPCError = {
         code: -32001,
         message: 'Camera not found',
@@ -318,7 +318,7 @@ describe('Recording Store', () => {
     });
 
     it('should get error for device', () => {
-      const device = '/dev/video0';
+      const device = 'camera0';
       const error: JSONRPCError = {
         code: -32001,
         message: 'Camera not found',
@@ -335,7 +335,7 @@ describe('Recording Store', () => {
     });
 
     it('should clear error for device', () => {
-      const device = '/dev/video0';
+      const device = 'camera0';
       const error: JSONRPCError = {
         code: -32001,
         message: 'Camera not found',
@@ -353,22 +353,22 @@ describe('Recording Store', () => {
       const error1: JSONRPCError = {
         code: -32001,
         message: 'Camera not found',
-        data: { device: '/dev/video0' }
+        data: { device: 'camera0' }
       };
       
       const error2: JSONRPCError = {
         code: -32002,
         message: 'Recording failed',
-        data: { device: '/dev/video1' }
+        data: { device: 'camera1' }
       };
       
-      store.setError('/dev/video0', error1);
-      store.setError('/dev/video1', error2);
+      store.setError('camera0', error1);
+      store.setError('camera1', error2);
       
       const allErrors = store.getAllErrors();
       expect(allErrors.size).toBe(2);
-      expect(allErrors.get('/dev/video0')).toEqual(error1);
-      expect(allErrors.get('/dev/video1')).toEqual(error2);
+      expect(allErrors.get('camera0')).toEqual(error1);
+      expect(allErrors.get('camera1')).toEqual(error2);
     });
   });
 
@@ -428,7 +428,7 @@ describe('Recording Store', () => {
     it('should clear all errors', () => {
       store.setGlobalError('Global error');
       store.setLastError('Last error');
-      store.setError('/dev/video0', {
+      store.setError('camera0', {
         code: -32001,
         message: 'Device error',
         data: {}
@@ -445,7 +445,7 @@ describe('Recording Store', () => {
 
   describe('Recording Operations', () => {
     it('should start recording successfully', async () => {
-      const device = '/dev/video0';
+      const device = 'camera0';
       const mockSession: RecordingSession = {
         session_id: 'session-123',
         device,
@@ -469,7 +469,7 @@ describe('Recording Store', () => {
     });
 
     it('should handle start recording failure', async () => {
-      const device = '/dev/video0';
+      const device = 'camera0';
       const error = new Error('Recording failed');
 
       mockRecordingService.startRecording.mockRejectedValue(error);
@@ -483,7 +483,7 @@ describe('Recording Store', () => {
     });
 
     it('should stop recording successfully', async () => {
-      const device = '/dev/video0';
+      const device = 'camera0';
       const mockSession: RecordingSession = {
         session_id: 'session-123',
         device,
@@ -507,7 +507,7 @@ describe('Recording Store', () => {
     });
 
     it('should handle stop recording failure', async () => {
-      const device = '/dev/video0';
+      const device = 'camera0';
       const error = new Error('Stop recording failed');
 
       mockRecordingService.stopRecording.mockRejectedValue(error);
@@ -524,10 +524,10 @@ describe('Recording Store', () => {
   describe('State Reset', () => {
     it('should reset all state to initial values', () => {
       // Set some state
-      store.setRecordingState('/dev/video0', 'recording');
-      store.addActiveSession('/dev/video0', {
+      store.setRecordingState('camera0', 'recording');
+      store.addActiveSession('camera0', {
         session_id: 'session-123',
-        device: '/dev/video0',
+        device: 'camera0',
         filename: 'recording.mp4',
         status: 'recording',
         start_time: new Date().toISOString(),

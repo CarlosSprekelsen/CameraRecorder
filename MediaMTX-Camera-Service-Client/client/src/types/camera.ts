@@ -407,7 +407,7 @@ export interface FileListParams {
  * Aligned with server authenticate method
  */
 export interface AuthenticateParams {
-  token: string;
+  auth_token: string;
 }
 
 /**

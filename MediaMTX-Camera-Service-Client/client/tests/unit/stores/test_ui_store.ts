@@ -57,14 +57,14 @@ describe('UI Store', () => {
 
   describe('Navigation Management', () => {
     it('should select camera', () => {
-      store.selectCamera('/dev/video0');
+      store.selectCamera('camera0');
       
       const state = useUIStore.getState();
-      expect(state.selectedCamera).toBe('/dev/video0');
+      expect(state.selectedCamera).toBe('camera0');
     });
 
     it('should clear camera selection', () => {
-      store.selectCamera('/dev/video0');
+      store.selectCamera('camera0');
       store.selectCamera(null);
       
       const state = useUIStore.getState();
@@ -91,7 +91,7 @@ describe('UI Store', () => {
     it('should check if camera is selected', () => {
       expect(store.isCameraSelected()).toBe(false);
       
-      store.selectCamera('/dev/video0');
+      store.selectCamera('camera0');
       expect(store.isCameraSelected()).toBe(true);
     });
 
@@ -455,7 +455,7 @@ describe('UI Store', () => {
 
   describe('UI State Analysis', () => {
     it('should get UI state summary', () => {
-      store.selectCamera('/dev/video0');
+      store.selectCamera('camera0');
       store.setTheme('dark');
       store.setViewMode('list');
       store.addNotification({
@@ -470,7 +470,7 @@ describe('UI Store', () => {
 
       const summary = store.getUIStateSummary();
       
-      expect(summary).toHaveProperty('selected_camera', '/dev/video0');
+      expect(summary).toHaveProperty('selected_camera', 'camera0');
       expect(summary).toHaveProperty('view_mode', 'list');
       expect(summary).toHaveProperty('theme', 'dark');
       expect(summary).toHaveProperty('sidebar_open', true);
@@ -480,13 +480,13 @@ describe('UI Store', () => {
     });
 
     it('should get navigation state', () => {
-      store.selectCamera('/dev/video0');
+      store.selectCamera('camera0');
       store.setViewMode('list');
 
       const navState = store.getNavigationState();
       
       expect(navState).toEqual({
-        selected_camera: '/dev/video0',
+        selected_camera: 'camera0',
         view_mode: 'list'
       });
     });
@@ -540,7 +540,7 @@ describe('UI Store', () => {
   describe('State Reset', () => {
     it('should reset all state to initial values', () => {
       // Set some state
-      store.selectCamera('/dev/video0');
+      store.selectCamera('camera0');
       store.setTheme('dark');
       store.setViewMode('list');
       store.setSidebarOpen(false);
