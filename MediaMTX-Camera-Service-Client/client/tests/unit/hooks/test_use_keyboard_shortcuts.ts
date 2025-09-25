@@ -18,9 +18,10 @@
 
 import { renderHook } from '@testing-library/react';
 import { useKeyboardShortcuts } from '../../../src/hooks/useKeyboardShortcuts';
+import { MockDataFactory } from '../../utils/mocks';
 
 // Mock react-router-dom - centralized pattern
-const mockNavigate = jest.fn();
+const mockNavigate = MockDataFactory.createMockEventHandler();
 jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate
 }));

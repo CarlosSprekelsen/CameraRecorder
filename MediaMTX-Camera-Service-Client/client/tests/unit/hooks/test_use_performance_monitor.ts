@@ -18,6 +18,7 @@
 
 import { renderHook } from '@testing-library/react';
 import { usePerformanceMonitor } from '../../../src/hooks/usePerformanceMonitor';
+import { MockDataFactory } from '../../utils/mocks';
 
 // Mock logger service - centralized pattern (no duplicate implementations)
 jest.mock('../../../src/services/logger/LoggerService', () => ({
@@ -28,19 +29,16 @@ jest.mock('../../../src/services/logger/LoggerService', () => ({
   }
 }));
 
-// Mock PerformanceObserver
-const mockPerformanceObserver = jest.fn();
-const mockObserve = jest.fn();
-const mockDisconnect = jest.fn();
+// Mock PerformanceObserver - use centralized mocks
+const mockPerformanceObserver = MockDataFactory.createMockEventHandler();
+const mockObserve = MockDataFactory.createMockEventHandler();
+const mockDisconnect = MockDataFactory.createMockEventHandler();
 
-// Mock Performance API
-const mockPerformance = {
-  getEntriesByType: jest.fn(),
-  now: jest.fn(() => Date.now())
-};
+// Mock Performance API - use centralized mocks
+const mockPerformance = MockDataFactory.createMockPerformanceMonitor();
 
 // Mock window.gtag
-const mockGtag = jest.fn();
+const mockGtag = MockDataFactory.createMockEventHandler();
 
 describe('usePerformanceMonitor Hook Unit Tests', () => {
   const mockLogger = require('../../../src/services/logger/LoggerService').logger;

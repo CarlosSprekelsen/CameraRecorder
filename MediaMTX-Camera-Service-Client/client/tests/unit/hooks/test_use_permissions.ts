@@ -195,15 +195,10 @@ describe('usePermissions Hook Unit Tests', () => {
 
   test('REQ-HOOK-006: Should return raw data correctly', () => {
     // Arrange
-    const mockAuthData = {
+    const mockAuthData = MockDataFactory.createMockAuthStore({
       role: 'admin' as const,
-      permissions: ['read', 'write', 'delete', 'admin'],
-      isAuthenticated: true,
-      login: jest.fn(),
-      logout: jest.fn(),
-      setRole: jest.fn(),
-      setPermissions: jest.fn()
-    };
+      permissions: ['read', 'write', 'delete', 'admin']
+    });
     mockUseAuthStore.mockReturnValue(mockAuthData);
 
     // Act
@@ -217,15 +212,10 @@ describe('usePermissions Hook Unit Tests', () => {
 
   test('REQ-HOOK-007: Should handle role hierarchy correctly', () => {
     // Test admin role hierarchy
-    mockUseAuthStore.mockReturnValue({
+    mockUseAuthStore.mockReturnValue(MockDataFactory.createMockAuthStore({
       role: 'admin',
-      permissions: ['read', 'write', 'delete', 'admin'],
-      isAuthenticated: true,
-      login: jest.fn(),
-      logout: jest.fn(),
-      setRole: jest.fn(),
-      setPermissions: jest.fn()
-    });
+      permissions: ['read', 'write', 'delete', 'admin']
+    }));
 
     const { result: adminResult } = renderHook(() => usePermissions());
     expect(adminResult.current.hasRole('admin')).toBe(true);
@@ -233,15 +223,10 @@ describe('usePermissions Hook Unit Tests', () => {
     expect(adminResult.current.hasRole('viewer')).toBe(true);
 
     // Test operator role hierarchy
-    mockUseAuthStore.mockReturnValue({
+    mockUseAuthStore.mockReturnValue(MockDataFactory.createMockAuthStore({
       role: 'operator',
-      permissions: ['read', 'write'],
-      isAuthenticated: true,
-      login: jest.fn(),
-      logout: jest.fn(),
-      setRole: jest.fn(),
-      setPermissions: jest.fn()
-    });
+      permissions: ['read', 'write']
+    }));
 
     const { result: operatorResult } = renderHook(() => usePermissions());
     expect(operatorResult.current.hasRole('admin')).toBe(false);
@@ -249,15 +234,10 @@ describe('usePermissions Hook Unit Tests', () => {
     expect(operatorResult.current.hasRole('viewer')).toBe(true);
 
     // Test viewer role hierarchy
-    mockUseAuthStore.mockReturnValue({
+    mockUseAuthStore.mockReturnValue(MockDataFactory.createMockAuthStore({
       role: 'viewer',
-      permissions: ['read'],
-      isAuthenticated: true,
-      login: jest.fn(),
-      logout: jest.fn(),
-      setRole: jest.fn(),
-      setPermissions: jest.fn()
-    });
+      permissions: ['read']
+    }));
 
     const { result: viewerResult } = renderHook(() => usePermissions());
     expect(viewerResult.current.hasRole('admin')).toBe(false);
