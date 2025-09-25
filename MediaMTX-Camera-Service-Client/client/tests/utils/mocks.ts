@@ -28,7 +28,7 @@ import {
   StorageInfo,
   AuthResult,
   RecordingFile
-} from '@/types/api';
+} from '../../../src/types/api';
 
 export class APIMocks {
   /**
@@ -298,17 +298,17 @@ export class APIMocks {
    */
   static getErrorResponse(code: number, message?: string): any {
     const errorMessages: { [key: number]: string } = {
-      -32600: 'Invalid Request',
-      -32601: 'Method Not Found',
-      -32602: 'Invalid Params',
-      -32603: 'Internal Error',
-      -32001: 'Auth Failed',
-      -32002: 'Permission Denied',
-      -32010: 'Not Found',
-      -32020: 'Invalid State',
-      -32030: 'Unsupported',
-      -32040: 'Rate Limited',
-      -32050: 'Dependency Failed'
+      [-32600]: 'Invalid Request',
+      [-32601]: 'Method Not Found',
+      [-32602]: 'Invalid Params',
+      [-32603]: 'Internal Error',
+      [-32001]: 'Auth Failed',
+      [-32002]: 'Permission Denied',
+      [-32010]: 'Not Found',
+      [-32020]: 'Invalid State',
+      [-32030]: 'Unsupported',
+      [-32040]: 'Rate Limited',
+      [-32050]: 'Dependency Failed'
     };
 
     return {
@@ -372,6 +372,191 @@ export class APIMocks {
       jsonrpc: '2.0',
       method,
       params
+    };
+  }
+
+  /**
+   * Create mock device store
+   * MANDATORY: Use this mock for all device store tests
+   */
+  static createMockDeviceStore() {
+    return {
+      cameras: [],
+      streams: [],
+      loading: false,
+      error: null,
+      lastUpdated: null,
+      getCameraList: () => Promise.resolve(),
+      getStreamUrl: () => Promise.resolve(null),
+      getStreams: () => Promise.resolve(),
+      setLoading: () => {},
+      setError: () => {},
+      updateCameraStatus: () => {},
+      updateStreamStatus: () => {},
+      handleCameraStatusUpdate: () => {},
+      handleStreamUpdate: () => {},
+      setDeviceService: () => {},
+      reset: () => {}
+    };
+  }
+
+  /**
+   * Create mock file store
+   * MANDATORY: Use this mock for all file store tests
+   */
+  static createMockFileStore() {
+    return {
+      recordings: [],
+      snapshots: [],
+      loading: false,
+      error: null,
+      pagination: { limit: 20, offset: 0, total: 0 },
+      selectedFiles: [],
+      currentTab: 'recordings' as const,
+      loadRecordings: () => Promise.resolve(),
+      loadSnapshots: () => Promise.resolve(),
+      getRecordingInfo: () => Promise.resolve(null),
+      getSnapshotInfo: () => Promise.resolve(null),
+      downloadFile: () => Promise.resolve(),
+      deleteRecording: () => Promise.resolve(false),
+      deleteSnapshot: () => Promise.resolve(false),
+      setLoading: () => {},
+      setError: () => {},
+      setCurrentTab: () => {},
+      setSelectedFiles: () => {},
+      toggleFileSelection: () => {},
+      clearSelection: () => {},
+      setPagination: () => {},
+      nextPage: () => {},
+      prevPage: () => {},
+      goToPage: () => {},
+      setFileService: () => {},
+      reset: () => {}
+    };
+  }
+
+  /**
+   * Create mock recording store
+   * MANDATORY: Use this mock for all recording store tests
+   */
+  static createMockRecordingStore() {
+    return {
+      activeRecordings: {},
+      history: [],
+      loading: false,
+      error: null,
+      setService: jest.fn(),
+      takeSnapshot: jest.fn(),
+      startRecording: jest.fn(),
+      stopRecording: jest.fn(),
+      handleRecordingStatusUpdate: jest.fn(),
+      reset: jest.fn()
+    };
+  }
+
+  /**
+   * Create mock connection store
+   * MANDATORY: Use this mock for all connection store tests
+   */
+  static createMockConnectionStore() {
+    return {
+      status: 'disconnected' as const,
+      lastError: null,
+      reconnectAttempts: 0,
+      lastConnected: null,
+      setStatus: jest.fn(),
+      setError: jest.fn(),
+      setReconnectAttempts: jest.fn(),
+      setLastConnected: jest.fn(),
+      reset: jest.fn()
+    };
+  }
+
+  /**
+   * Create mock auth store
+   * MANDATORY: Use this mock for all auth store tests
+   */
+  static createMockAuthStore() {
+    return {
+      token: null,
+      role: null,
+      session_id: null,
+      isAuthenticated: false,
+      expires_at: null,
+      permissions: [],
+      setToken: jest.fn(),
+      setRole: jest.fn(),
+      setSessionId: jest.fn(),
+      setExpiresAt: jest.fn(),
+      setPermissions: jest.fn(),
+      setAuthenticated: jest.fn(),
+      login: jest.fn(),
+      logout: jest.fn(),
+      reset: jest.fn()
+    };
+  }
+
+  /**
+   * Create mock server store
+   * MANDATORY: Use this mock for all server store tests
+   */
+  static createMockServerStore() {
+    return {
+      info: null,
+      status: null,
+      storage: null,
+      loading: false,
+      error: null,
+      lastUpdated: null,
+      setInfo: jest.fn(),
+      setStatus: jest.fn(),
+      setStorage: jest.fn(),
+      setLoading: jest.fn(),
+      setError: jest.fn(),
+      setLastUpdated: jest.fn(),
+      reset: jest.fn()
+    };
+  }
+
+  /**
+   * Create mock device service
+   * MANDATORY: Use this mock for all device service tests
+   */
+  static createMockDeviceService() {
+    return {
+      getCameraList: jest.fn(),
+      getStreamUrl: jest.fn(),
+      getStreams: jest.fn(),
+      getCameraStatus: jest.fn(),
+      getCameraCapabilities: jest.fn()
+    };
+  }
+
+  /**
+   * Create mock file service
+   * MANDATORY: Use this mock for all file service tests
+   */
+  static createMockFileService() {
+    return {
+      listRecordings: jest.fn(),
+      listSnapshots: jest.fn(),
+      getRecordingInfo: jest.fn(),
+      getSnapshotInfo: jest.fn(),
+      downloadFile: jest.fn(),
+      deleteRecording: jest.fn(),
+      deleteSnapshot: jest.fn()
+    };
+  }
+
+  /**
+   * Create mock recording service
+   * MANDATORY: Use this mock for all recording service tests
+   */
+  static createMockRecordingService() {
+    return {
+      takeSnapshot: jest.fn(),
+      startRecording: jest.fn(),
+      stopRecording: jest.fn()
     };
   }
 }

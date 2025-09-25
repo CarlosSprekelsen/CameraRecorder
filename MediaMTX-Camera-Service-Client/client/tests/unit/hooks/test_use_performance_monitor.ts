@@ -1,0 +1,454 @@
+/**
+ * usePerformanceMonitor hook unit tests
+ * 
+ * Ground Truth References:
+ * - Client Architecture: ../docs/architecture/client-architechture.md
+ * - API Documentation: ../mediamtx-camera-service-go/docs/api/mediamtx_camera_service_openrpc.json
+ * 
+ * Requirements Coverage:
+ * - REQ-HOOK-001: Performance monitoring setup and cleanup
+ * - REQ-HOOK-002: Core Web Vitals tracking
+ * - REQ-HOOK-003: Custom metrics tracking
+ * - REQ-HOOK-004: Logger integration
+ * - REQ-HOOK-005: Analytics integration
+ * 
+ * Test Categories: Unit
+ * API Documentation Reference: mediamtx_camera_service_openrpc.json
+ */
+
+import { renderHook } from '@testing-library/react';
+import { usePerformanceMonitor } from '../../../src/hooks/usePerformanceMonitor';
+import { logger } from '../../../src/services/logger/LoggerService';
+
+// Mock logger service
+jest.mock('../../../src/services/logger/LoggerService', () => ({
+  logger: {
+    info: jest.fn(),
+    warn: jest.fn(),
+    error: jest.fn()
+  }
+}));
+
+// Mock PerformanceObserver
+const mockPerformanceObserver = jest.fn();
+const mockObserve = jest.fn();
+const mockDisconnect = jest.fn();
+
+// Mock Performance API
+const mockPerformance = {
+  getEntriesByType: jest.fn(),
+  now: jest.fn(() => Date.now())
+};
+
+// Mock window.gtag
+const mockGtag = jest.fn();
+
+describe('usePerformanceMonitor Hook Unit Tests', () => {
+  const mockLogger = logger as jest.Mocked<typeof logger>;
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    
+    // Reset mocks
+    mockPerformanceObserver.mockImplementation((callback) => ({
+      observe: mockObserve,
+      disconnect: mockDisconnect,
+      callback
+    }));
+    
+    // Mock global objects
+    Object.defineProperty(window, 'PerformanceObserver', {
+      value: mockPerformanceObserver,
+      writable: true
+    });
+    
+    Object.defineProperty(window, 'performance', {
+      value: mockPerformance,
+      writable: true
+    });
+    
+    Object.defineProperty(window, 'gtag', {
+      value: mockGtag,
+      writable: true
+    });
+  });
+
+  test('REQ-HOOK-001: Should initialize performance monitoring', () => {
+    // Arrange & Act
+    const { result } = renderHook(() => usePerformanceMonitor());
+
+    // Assert
+    expect(result.current.trackMetric).toBeDefined();
+    expect(result.current.trackCustomMetric).toBeDefined();
+    expect(typeof result.current.trackMetric).toBe('function');
+    expect(typeof result.current.trackCustomMetric).toBe('function');
+  });
+
+  test('REQ-HOOK-002: Should track custom metrics correctly', () => {
+    // Arrange
+    const { result } = renderHook(() => usePerformanceMonitor());
+    const metricName = 'CUSTOM_METRIC';
+    const metricValue = 123.45;
+    const metadata = { source: 'test' };
+
+    // Act
+    result.current.trackCustomMetric(metricName, metricValue, metadata);
+
+    // Assert
+    expect(mockLogger.info).toHaveBeenCalledWith('Custom performance metric', {
+      metric: metricName,
+      value: metricValue,
+      metadata,
+      timestamp: expect.any(Number)
+    });
+  });
+
+  test('REQ-HOOK-003: Should track metrics with logger integration', () => {
+    // Arrange
+    const { result } = renderHook(() => usePerformanceMonitor());
+    const metricName = 'TEST_METRIC';
+    const metricValue = 100;
+    const delta = 50;
+
+    // Act
+    result.current.trackMetric(metricName, metricValue, delta);
+
+    // Assert
+    expect(mockLogger.info).toHaveBeenCalledWith('Performance metric', {
+      metric: metricName,
+      value: metricValue,
+      delta,
+      timestamp: expect.any(Number)
+    });
+  });
+
+  test('REQ-HOOK-004: Should integrate with analytics when gtag is available', () => {
+    // Arrange
+    const { result } = renderHook(() => usePerformanceMonitor());
+    const metricName = 'LCP';
+    const metricValue = 100;
+    const delta = 50;
+
+    // Act
+    result.current.trackMetric(metricName, metricValue, delta);
+
+    // Assert
+    expect(mockGtag).toHaveBeenCalledWith('event', metricName, {
+      value: delta,
+      event_category: 'Web Vitals',
+      event_label: metricName,
+      non_interaction: true
+    });
+  });
+
+  test('REQ-HOOK-005: Should handle CLS metric with special rounding', () => {
+    // Arrange
+    const { result } = renderHook(() => usePerformanceMonitor());
+    const metricName = 'CLS';
+    const metricValue = 0.123;
+    const delta = 0.123;
+
+    // Act
+    result.current.trackMetric(metricName, metricValue, delta);
+
+    // Assert
+    expect(mockGtag).toHaveBeenCalledWith('event', metricName, {
+      value: 123, // 0.123 * 1000
+      event_category: 'Web Vitals',
+      event_label: metricName,
+      non_interaction: true
+    });
+  });
+
+  test('REQ-HOOK-006: Should handle missing gtag gracefully', () => {
+    // Arrange
+    Object.defineProperty(window, 'gtag', {
+      value: undefined,
+      writable: true
+    });
+
+    const { result } = renderHook(() => usePerformanceMonitor());
+    const metricName = 'TEST_METRIC';
+    const metricValue = 100;
+    const delta = 50;
+
+    // Act & Assert (should not throw)
+    expect(() => {
+      result.current.trackMetric(metricName, metricValue, delta);
+    }).not.toThrow();
+
+    expect(mockLogger.info).toHaveBeenCalledWith('Performance metric', {
+      metric: metricName,
+      value: metricValue,
+      delta,
+      timestamp: expect.any(Number)
+    });
+  });
+
+  test('REQ-HOOK-007: Should set up PerformanceObserver for LCP', () => {
+    // Arrange
+    renderHook(() => usePerformanceMonitor());
+
+    // Assert
+    expect(mockPerformanceObserver).toHaveBeenCalledWith(expect.any(Function));
+    expect(mockObserve).toHaveBeenCalledWith({ entryTypes: ['largest-contentful-paint'] });
+  });
+
+  test('REQ-HOOK-008: Should set up PerformanceObserver for FID', () => {
+    // Arrange
+    renderHook(() => usePerformanceMonitor());
+
+    // Assert
+    expect(mockPerformanceObserver).toHaveBeenCalledWith(expect.any(Function));
+    expect(mockObserve).toHaveBeenCalledWith({ entryTypes: ['first-input'] });
+  });
+
+  test('REQ-HOOK-009: Should set up PerformanceObserver for CLS', () => {
+    // Arrange
+    renderHook(() => usePerformanceMonitor());
+
+    // Assert
+    expect(mockPerformanceObserver).toHaveBeenCalledWith(expect.any(Function));
+    expect(mockObserve).toHaveBeenCalledWith({ entryTypes: ['layout-shift'] });
+  });
+
+  test('REQ-HOOK-010: Should handle LCP observer callback correctly', () => {
+    // Arrange
+    renderHook(() => usePerformanceMonitor());
+    
+    const mockEntries = [
+      { startTime: 1000, name: 'test' },
+      { startTime: 2000, name: 'test2' }
+    ];
+    
+    const mockList = {
+      getEntries: () => mockEntries
+    };
+
+    // Get the callback from the PerformanceObserver constructor
+    const observerCallback = mockPerformanceObserver.mock.calls[0][0];
+
+    // Act
+    observerCallback(mockList);
+
+    // Assert
+    expect(mockLogger.info).toHaveBeenCalledWith('Performance metric', {
+      metric: 'LCP',
+      value: 2000,
+      delta: 2000,
+      timestamp: expect.any(Number)
+    });
+  });
+
+  test('REQ-HOOK-011: Should handle FID observer callback correctly', () => {
+    // Arrange
+    renderHook(() => usePerformanceMonitor());
+    
+    const mockEntries = [
+      { 
+        startTime: 1000, 
+        processingStart: 1200,
+        name: 'test'
+      }
+    ];
+    
+    const mockList = {
+      getEntries: () => mockEntries
+    };
+
+    // Get the FID callback (second PerformanceObserver call)
+    const fidCallback = mockPerformanceObserver.mock.calls[1][0];
+
+    // Act
+    fidCallback(mockList);
+
+    // Assert
+    expect(mockLogger.info).toHaveBeenCalledWith('Performance metric', {
+      metric: 'FID',
+      value: 200, // 1200 - 1000
+      delta: 200,
+      timestamp: expect.any(Number)
+    });
+  });
+
+  test('REQ-HOOK-012: Should handle CLS observer callback correctly', () => {
+    // Arrange
+    renderHook(() => usePerformanceMonitor());
+    
+    const mockEntries = [
+      { 
+        value: 0.1,
+        hadRecentInput: false,
+        name: 'test'
+      },
+      { 
+        value: 0.2,
+        hadRecentInput: false,
+        name: 'test2'
+      }
+    ];
+    
+    const mockList = {
+      getEntries: () => mockEntries
+    };
+
+    // Get the CLS callback (third PerformanceObserver call)
+    const clsCallback = mockPerformanceObserver.mock.calls[2][0];
+
+    // Act
+    clsCallback(mockList);
+
+    // Assert
+    expect(mockLogger.info).toHaveBeenCalledWith('Performance metric', {
+      metric: 'CLS',
+      value: 0.3, // 0.1 + 0.2
+      delta: 0.3,
+      timestamp: expect.any(Number)
+    });
+  });
+
+  test('REQ-HOOK-013: Should ignore CLS entries with recent input', () => {
+    // Arrange
+    renderHook(() => usePerformanceMonitor());
+    
+    const mockEntries = [
+      { 
+        value: 0.1,
+        hadRecentInput: true, // Should be ignored
+        name: 'test'
+      },
+      { 
+        value: 0.2,
+        hadRecentInput: false,
+        name: 'test2'
+      }
+    ];
+    
+    const mockList = {
+      getEntries: () => mockEntries
+    };
+
+    // Get the CLS callback
+    const clsCallback = mockPerformanceObserver.mock.calls[2][0];
+
+    // Act
+    clsCallback(mockList);
+
+    // Assert
+    expect(mockLogger.info).toHaveBeenCalledWith('Performance metric', {
+      metric: 'CLS',
+      value: 0.2, // Only 0.2, 0.1 ignored
+      delta: 0.2,
+      timestamp: expect.any(Number)
+    });
+  });
+
+  test('REQ-HOOK-014: Should handle PerformanceObserver errors gracefully', () => {
+    // Arrange
+    mockPerformanceObserver.mockImplementation(() => {
+      throw new Error('PerformanceObserver not supported');
+    });
+
+    // Act & Assert (should not throw)
+    expect(() => renderHook(() => usePerformanceMonitor())).not.toThrow();
+  });
+
+  test('REQ-HOOK-015: Should track page load metrics', () => {
+    // Arrange
+    const mockNavigation = {
+      responseStart: 100,
+      requestStart: 50,
+      domContentLoadedEventEnd: 200,
+      fetchStart: 0,
+      loadEventEnd: 300
+    };
+    
+    mockPerformance.getEntriesByType.mockReturnValue([mockNavigation]);
+    
+    renderHook(() => usePerformanceMonitor());
+
+    // Assert
+    expect(mockLogger.info).toHaveBeenCalledWith('Custom performance metric', {
+      metric: 'TTFB',
+      value: 50, // 100 - 50
+      metadata: { type: 'page_load' },
+      timestamp: expect.any(Number)
+    });
+    
+    expect(mockLogger.info).toHaveBeenCalledWith('Custom performance metric', {
+      metric: 'DOM_LOAD',
+      value: 200, // 200 - 0
+      metadata: { type: 'page_load' },
+      timestamp: expect.any(Number)
+    });
+    
+    expect(mockLogger.info).toHaveBeenCalledWith('Custom performance metric', {
+      metric: 'PAGE_LOAD',
+      value: 300, // 300 - 0
+      metadata: { type: 'page_load' },
+      timestamp: expect.any(Number)
+    });
+  });
+
+  test('REQ-HOOK-016: Should handle missing navigation timing gracefully', () => {
+    // Arrange
+    mockPerformance.getEntriesByType.mockReturnValue([]);
+    
+    // Act & Assert (should not throw)
+    expect(() => renderHook(() => usePerformanceMonitor())).not.toThrow();
+  });
+
+  test('REQ-HOOK-017: Should handle missing performance API gracefully', () => {
+    // Arrange
+    Object.defineProperty(window, 'performance', {
+      value: undefined,
+      writable: true
+    });
+
+    // Act & Assert (should not throw)
+    expect(() => renderHook(() => usePerformanceMonitor())).not.toThrow();
+  });
+
+  test('REQ-HOOK-018: Should clean up observers on unmount', () => {
+    // Arrange
+    const { unmount } = renderHook(() => usePerformanceMonitor());
+
+    // Act
+    unmount();
+
+    // Assert
+    expect(mockDisconnect).toHaveBeenCalledTimes(3); // LCP, FID, CLS observers
+  });
+
+  test('REQ-HOOK-019: Should handle observer callback errors gracefully', () => {
+    // Arrange
+    renderHook(() => usePerformanceMonitor());
+    
+    const mockList = {
+      getEntries: () => {
+        throw new Error('Observer error');
+      }
+    };
+
+    // Get the LCP callback
+    const lcpCallback = mockPerformanceObserver.mock.calls[0][0];
+
+    // Act & Assert (should not throw)
+    expect(() => lcpCallback(mockList)).not.toThrow();
+  });
+
+  test('REQ-HOOK-020: Should handle empty observer entries', () => {
+    // Arrange
+    renderHook(() => usePerformanceMonitor());
+    
+    const mockList = {
+      getEntries: () => []
+    };
+
+    // Get the LCP callback
+    const lcpCallback = mockPerformanceObserver.mock.calls[0][0];
+
+    // Act & Assert (should not throw)
+    expect(() => lcpCallback(mockList)).not.toThrow();
+  });
+});

@@ -18,12 +18,12 @@
 /** @type {import('jest').Config} */
 module.exports = {
   testEnvironment: 'jsdom',
-  setupFilesAfterEnv: ['<rootDir>/../setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
   testMatch: [
-    '<rootDir>/../unit/**/*.test.{js,ts,tsx}',
-    '<rootDir>/../unit/**/test_*.{js,ts,tsx}',
-    '<rootDir>/../../src/**/*.test.{js,ts,tsx}',
-    '<rootDir>/../../src/**/test_*.{js,ts,tsx}'
+    '<rootDir>/tests/unit/**/*.test.{js,ts,tsx}',
+    '<rootDir>/tests/unit/**/test_*.{js,ts,tsx}',
+    '<rootDir>/src/**/*.test.{js,ts,tsx}',
+    '<rootDir>/src/**/test_*.{js,ts,tsx}'
   ],
   transform: {
     '^.+\\.(ts|tsx)$': ['ts-jest', {
@@ -37,7 +37,7 @@ module.exports = {
     '^.+\\.js$': 'babel-jest'
   },
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/../../src/$1',
+    '^@/(.*)$': '<rootDir>/src/$1',
     '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
   },
   testTimeout: 30000,
@@ -56,10 +56,10 @@ module.exports = {
     }
   },
   collectCoverageFrom: [
-    '<rootDir>/../../src/**/*.{ts,tsx}',
-    '!<rootDir>/../../src/**/*.d.ts',
-    '!<rootDir>/../../src/main.tsx',
-    '!<rootDir>/../../src/vite-env.d.ts'
+    '<rootDir>/src/**/*.{ts,tsx}',
+    '!<rootDir>/src/**/*.d.ts',
+    '!<rootDir>/src/main.tsx',
+    '!<rootDir>/src/vite-env.d.ts'
   ],
   coveragePathIgnorePatterns: [
     '/node_modules/',
