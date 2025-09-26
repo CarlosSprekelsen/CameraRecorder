@@ -924,12 +924,55 @@ func (rm *RecordingManager) getRecordFormat() string {
 	return recordingConfig.Format
 }
 
+// getEffectiveConfigName resolves the actual config name that governs a path
+// This addresses the MediaMTX quirk where paths under "all_others" can't be patched directly
+func (rm *RecordingManager) getEffectiveConfigName(ctx context.Context, cameraID string) (string, error) {
+	// Check runtime path to get the effective confName
+	runtimeEndpoint := fmt.Sprintf("/v3/paths/get/%s", cameraID)
+	data, err := rm.client.Get(ctx, runtimeEndpoint)
+	if err != nil {
+		// If runtime path doesn't exist, assume dedicated config
+		rm.logger.WithFields(logging.Fields{
+			"camera_id": cameraID,
+			"error":     err,
+		}).Debug("Runtime path not found, assuming dedicated config")
+		return cameraID, nil
+	}
+
+	var runtimePath map[string]interface{}
+	if err := json.Unmarshal(data, &runtimePath); err != nil {
+		return cameraID, fmt.Errorf("failed to parse runtime path: %w", err)
+	}
+
+	confName, exists := runtimePath["confName"]
+	if !exists {
+		rm.logger.WithField("camera_id", cameraID).Debug("No confName found, using camera ID")
+		return cameraID, nil
+	}
+
+	effectiveConf := fmt.Sprintf("%v", confName)
+	rm.logger.WithFields(logging.Fields{
+		"camera_id":      cameraID,
+		"effective_conf": effectiveConf,
+	}).Debug("Resolved effective config name")
+
+	return effectiveConf, nil
+}
+
 // isPathRecording checks if a path is currently recording by querying MediaMTX
+// Uses effective config name to handle "all_others" quirk
 func (rm *RecordingManager) isPathRecording(ctx context.Context, cameraID string) (bool, error) {
-	endpoint := FormatConfigPathsGet(cameraID)
+	// CRITICAL: Resolve effective config name first
+	effectiveConf, err := rm.getEffectiveConfigName(ctx, cameraID)
+	if err != nil {
+		return false, fmt.Errorf("failed to resolve effective config: %w", err)
+	}
+
+	// Query the effective config, not the path name
+	endpoint := fmt.Sprintf("/v3/config/paths/get/%s", effectiveConf)
 	data, err := rm.client.Get(ctx, endpoint)
 	if err != nil {
-		return false, fmt.Errorf("failed to get path config: %w", err)
+		return false, fmt.Errorf("failed to get config for %s: %w", effectiveConf, err)
 	}
 
 	// Use PathConf from api_types.go - single source of truth with MediaMTX swagger.json
@@ -938,7 +981,50 @@ func (rm *RecordingManager) isPathRecording(ctx context.Context, cameraID string
 		return false, fmt.Errorf("failed to parse path config: %w", err)
 	}
 
+	// CRITICAL: Log raw response when record=true to debug MediaMTX API state
+	if pathConfig.Record {
+		rm.logger.WithFields(logging.Fields{
+			"camera_id":     cameraID,
+			"effective_conf": effectiveConf,
+			"record_flag":   pathConfig.Record,
+			"raw_response":  string(data),
+		}).Warn("MediaMTX reports recording enabled - check for stale config")
+	}
+
 	return pathConfig.Record, nil
+}
+
+// patchRecordingOnPath patches recording flag using effective config name
+func (rm *RecordingManager) patchRecordingOnPath(ctx context.Context, cameraID string, record bool) error {
+	// CRITICAL: Resolve effective config name first
+	effectiveConf, err := rm.getEffectiveConfigName(ctx, cameraID)
+	if err != nil {
+		return fmt.Errorf("failed to resolve effective config: %w", err)
+	}
+
+	// Patch the effective config, not the path name
+	endpoint := fmt.Sprintf("/v3/config/paths/patch/%s", effectiveConf)
+	patchData := map[string]interface{}{
+		"record": record,
+	}
+
+	jsonData, err := json.Marshal(patchData)
+	if err != nil {
+		return fmt.Errorf("failed to marshal patch data: %w", err)
+	}
+
+	err = rm.client.Patch(ctx, endpoint, jsonData)
+	if err != nil {
+		return fmt.Errorf("failed to patch config for %s: %w", effectiveConf, err)
+	}
+
+	rm.logger.WithFields(logging.Fields{
+		"camera_id":      cameraID,
+		"effective_conf": effectiveConf,
+		"record":         record,
+	}).Info("Successfully patched recording flag using effective config name")
+
+	return nil
 }
 
 // pollUntilRecordingDisabled polls MediaMTX config until record=false is confirmed
@@ -1031,36 +1117,14 @@ func (rm *RecordingManager) isPathRecordingWithRetry(ctx context.Context, pathNa
 
 // enableRecordingOnPath enables recording on a MediaMTX path
 func (rm *RecordingManager) enableRecordingOnPath(ctx context.Context, cameraID string, options *PathConf) error {
-	// Use PathConf from api_types.go - single source of truth with MediaMTX swagger.json
-	// PATCH requests should only send the fields that need to be changed
-	recordConfig := &PathConf{
-		Record: true, // Only send the record flag for PATCH requests
-	}
-
-	endpoint := FormatConfigPathsPatch(cameraID)
-	jsonData, err := marshalUpdatePathRequest(recordConfig)
-	if err != nil {
-		return fmt.Errorf("failed to marshal PathConf record config: %w", err)
-	}
-
-	// PATCH request now sends only the required fields
-
-	return rm.client.Patch(ctx, endpoint, jsonData)
+	// Use config name-aware patching
+	return rm.patchRecordingOnPath(ctx, cameraID, true)
 }
 
 // disableRecordingOnPath disables recording on a MediaMTX path
 func (rm *RecordingManager) disableRecordingOnPath(ctx context.Context, cameraID string) error {
-	// Use PathConf from api_types.go - single source of truth with MediaMTX swagger.json
-	recordConfig := &PathConf{
-		Record: false,
-	}
-
-	endpoint := FormatConfigPathsPatch(cameraID)
-	jsonData, err := marshalUpdatePathRequest(recordConfig)
-	if err != nil {
-		return fmt.Errorf("failed to marshal PathConf record config: %w", err)
-	}
-	return rm.client.Patch(ctx, endpoint, jsonData)
+	// Use config name-aware patching
+	return rm.patchRecordingOnPath(ctx, cameraID, false)
 }
 
 // startRTSPKeepalive starts an RTSP reader to keep on-demand sources alive

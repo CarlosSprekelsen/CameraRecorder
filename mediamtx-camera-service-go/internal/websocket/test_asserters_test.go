@@ -1521,10 +1521,6 @@ func (a *WebSocketIntegrationAsserter) ensureRecordingStopped(device string) {
 
 	// CRITICAL: Verify clean status across all MediaMTX layers
 	a.verifyCleanRecordingStatus(device)
-	
-	// If verification fails, generate debug commands
-	debugCommands := a.generateDebugCommands(device)
-	a.t.Logf("Debug commands for %s:\n%s", device, debugCommands)
 }
 
 // getEffectiveConfigName resolves the actual config name that governs a path
@@ -1631,6 +1627,45 @@ func (a *WebSocketIntegrationAsserter) verifyCleanRecordingStatus(device string)
 	}
 	
 	a.t.Logf("🎯 Clean recording status verification completed for %s (effective config: %s)", device, effectiveConf)
+}
+
+// EnhancedCleanup performs comprehensive cleanup with MediaMTX state verification
+func (a *WebSocketIntegrationAsserter) EnhancedCleanup() {
+	a.t.Log("🧹 Starting enhanced cleanup with comprehensive MediaMTX state verification")
+	
+	// Standard cleanup first
+	if a.client != nil {
+		a.client.Close()
+	}
+	
+	// Test cameras we might have used
+	testCameras := []string{"camera0", "test_camera", "integration_test_camera"}
+	
+	for _, cameraID := range testCameras {
+		a.t.Logf("🔍 Enhanced cleanup for %s", cameraID)
+		
+		// Force stop recording using the enhanced method
+		if a.client != nil {
+			// Attempt to stop recording (ignore errors - might already be stopped)
+			_, _ = a.client.StopRecording(cameraID)
+			
+			// Small delay for MediaMTX to process
+			time.Sleep(100 * time.Millisecond)
+		}
+		
+		// Verify clean status across all layers
+		a.verifyCleanRecordingStatus(cameraID)
+		
+		// Generate debug commands for manual verification
+		debugCommands := a.generateDebugCommands(cameraID)
+		a.t.Logf("Debug commands for %s:\n%s", cameraID, debugCommands)
+	}
+	
+	if a.helper != nil {
+		a.helper.Cleanup()
+	}
+	
+	a.t.Log("🎯 Enhanced cleanup completed")
 }
 
 // generateDebugCommands generates curl commands for debugging MediaMTX state
