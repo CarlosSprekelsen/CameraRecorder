@@ -260,8 +260,9 @@ func (rm *RecordingManager) executeStartRecording(ctx context.Context, cameraID 
 		}
 	}
 
-	// Check current recording state by querying MediaMTX
-	isRecording, err := rm.isPathRecording(ctx, pathName)
+	// Check current recording state by querying MediaMTX with retry logic
+	// This addresses propagation delays where config shows record=true temporarily
+	isRecording, err := rm.isPathRecordingWithRetry(ctx, pathName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to check recording status: %w", err)
 	}
@@ -554,6 +555,13 @@ func (rm *RecordingManager) StopRecording(ctx context.Context, cameraID string) 
 	err = rm.disableRecordingOnPath(ctx, pathName)
 	if err != nil {
 		return nil, fmt.Errorf("failed to disable recording on path: %w", err)
+	}
+
+	// CRITICAL: Poll until MediaMTX config converges to record=false
+	// This addresses the "already recording" race condition
+	err = rm.pollUntilRecordingDisabled(ctx, pathName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to confirm recording disabled: %w", err)
 	}
 
 	// Get timer info for accurate duration calculation using enhanced timer manager
@@ -931,6 +939,94 @@ func (rm *RecordingManager) isPathRecording(ctx context.Context, cameraID string
 	}
 
 	return pathConfig.Record, nil
+}
+
+// pollUntilRecordingDisabled polls MediaMTX config until record=false is confirmed
+// This addresses the race condition where PATCH succeeds but GET still returns record=true
+func (rm *RecordingManager) pollUntilRecordingDisabled(ctx context.Context, pathName string) error {
+	maxAttempts := 10 // 10 attempts * 200ms = 2 seconds max
+	attempt := 0
+
+	for attempt < maxAttempts {
+		attempt++
+
+		// Check if recording is actually disabled
+		isRecording, err := rm.isPathRecording(ctx, pathName)
+		if err != nil {
+			rm.logger.WithFields(logging.Fields{
+				"path":    pathName,
+				"attempt": attempt,
+				"error":   err,
+			}).Warn("Failed to check recording status during polling")
+			time.Sleep(200 * time.Millisecond)
+			continue
+		}
+
+		if !isRecording {
+			rm.logger.WithFields(logging.Fields{
+				"path":    pathName,
+				"attempt": attempt,
+			}).Info("Recording successfully disabled and confirmed")
+			return nil
+		}
+
+		rm.logger.WithFields(logging.Fields{
+			"path":    pathName,
+			"attempt": attempt,
+		}).Debug("Recording still enabled, polling again...")
+
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	return fmt.Errorf("recording still enabled after %d attempts (2 seconds)", maxAttempts)
+}
+
+// isPathRecordingWithRetry checks if a path is recording with retry logic
+// This addresses propagation delays where config might show stale record=true
+func (rm *RecordingManager) isPathRecordingWithRetry(ctx context.Context, pathName string) (bool, error) {
+	maxAttempts := 3 // 3 attempts * 100ms = 300ms max
+	attempt := 0
+
+	for attempt < maxAttempts {
+		attempt++
+
+		isRecording, err := rm.isPathRecording(ctx, pathName)
+		if err != nil {
+			rm.logger.WithFields(logging.Fields{
+				"path":    pathName,
+				"attempt": attempt,
+				"error":   err,
+			}).Warn("Failed to check recording status during retry")
+			if attempt == maxAttempts {
+				return false, err
+			}
+			time.Sleep(100 * time.Millisecond)
+			continue
+		}
+
+		if !isRecording {
+			rm.logger.WithFields(logging.Fields{
+				"path":    pathName,
+				"attempt": attempt,
+			}).Debug("Recording confirmed disabled")
+			return false, nil
+		}
+
+		rm.logger.WithFields(logging.Fields{
+			"path":    pathName,
+			"attempt": attempt,
+		}).Debug("Recording still enabled, retrying...")
+
+		if attempt < maxAttempts {
+			time.Sleep(100 * time.Millisecond)
+		}
+	}
+
+	rm.logger.WithFields(logging.Fields{
+		"path":     pathName,
+		"attempts": maxAttempts,
+	}).Info("Recording confirmed enabled after retries")
+	return true, nil
 }
 
 // enableRecordingOnPath enables recording on a MediaMTX path
