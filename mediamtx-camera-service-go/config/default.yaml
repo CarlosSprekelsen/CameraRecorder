@@ -12,6 +12,11 @@ server:
   ping_interval: 60s   # Increased from 30s for power efficiency
   pong_wait: 120s      # Increased from 60s for power efficiency
   max_message_size: 524288  # Reduced to 512KB for edge devices
+  read_buffer_size: 1024    # Default buffer size
+  write_buffer_size: 1024   # Default buffer size
+  shutdown_timeout: 30s     # Graceful shutdown timeout
+  client_cleanup_timeout: 10s  # Client cleanup timeout
+  auto_close_after: 0s      # Disabled for edge devices
 
 mediamtx:
   host: "localhost"
@@ -51,6 +56,12 @@ mediamtx:
     check_interval: 2.0  # Increased from 1.0
     enable_progress_notifications: false  # Disabled for efficiency
     graceful_fallback: true
+    max_check_interval: 2.0  # Maximum polling interval
+    initial_check_interval: 0.2  # Initial check interval
+    # CRITICAL: Performance fine-tuning options (prevents panic)
+    controller_ticker_interval: 0.1        # 100ms for fast controller readiness
+    stream_manager_ticker_interval: 0.1   # 100ms for fast stream readiness
+    path_manager_retry_intervals: [0.1, 0.2, 0.4, 0.8]  # Retry backoffs
 
 camera:
   poll_interval: 2.0  # Increased from 5.0 to 2.0 seconds for power efficiency
@@ -61,6 +72,12 @@ camera:
   capability_timeout: 10.0  # Increased from 5.0
   capability_retry_interval: 2.0  # Increased from 1.0
   capability_max_retries: 2  # Reduced from 3
+  # Device discovery configuration
+  discovery_mode: "event-first"  # Event-driven discovery with polling fallback
+  fallback_poll_interval: 90.0    # 90 seconds for reconcile fallback
+  # Resource management configuration
+  max_event_handler_goroutines: 10  # Maximum event handler goroutines
+  event_handler_timeout: 5s         # Event handler timeout
 
 logging:
   level: "warn"  # Changed from "info" to reduce log overhead
@@ -91,6 +108,9 @@ recording:
   # Pagination configuration
   default_page_size: 50
   max_page_size: 100
+  # Resource management configuration
+  max_restart_count: 3  # Maximum restart count for RTSP keepalive processes
+  process_timeout: 5s    # Process timeout
 
 snapshots:
   enabled: true
@@ -157,6 +177,18 @@ performance:
     cache_ttl: 60  # Reduced to 1 minute from 5 minutes
     max_concurrent_operations: 3  # Reduced from 10
     connection_pool_size: 2  # Reduced from 5
+  # Monitoring thresholds for edge devices
+  monitoring_thresholds:
+    memory_usage_percent: 90.0      # Memory usage threshold
+    error_rate_percent: 5.0         # Error rate threshold
+    average_response_time_ms: 1000.0 # Response time threshold
+    active_connections_limit: 900   # Connection limit
+    goroutines_limit: 1000          # Goroutine limit
+  # Debounce configuration for notifications
+  debounce:
+    health_monitor_seconds: 15      # Health monitor debounce
+    storage_monitor_seconds: 30     # Storage monitor debounce
+    performance_monitor_seconds: 45 # Performance monitor debounce
 
 # Security configuration optimized for edge devices
 security:
@@ -189,7 +221,7 @@ retention_policy:
 # External discovery configuration (disabled by default for edge devices)
 external_discovery:
   enabled: false                      # Disabled by default for edge devices
-  scan_interval: 0                    # On-demand only (0 = disabled)
+  scan_interval: 30                   # 30 seconds for testing (not 0 to prevent issues)
   scan_timeout: 30                    # 30 seconds max scan time
   max_concurrent_scans: 3             # Reduced from 5 for edge devices
   enable_startup_scan: false          # Disabled for edge devices

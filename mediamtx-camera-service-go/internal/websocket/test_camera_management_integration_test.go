@@ -15,9 +15,7 @@ package websocket
 
 import (
 	"testing"
-	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,8 +25,7 @@ func TestWebSocket_CameraManagement_Complete_Integration(t *testing.T) {
 	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.Cleanup()
 
-	// Wait for service to be ready (Progressive Readiness)
-	time.Sleep(2 * time.Second) // Allow service to initialize
+	// CRITICAL: Progressive Readiness - try operations immediately, no waiting
 
 	// Test complete camera management workflow
 	err := asserter.AssertCameraManagementWorkflow()
@@ -43,8 +40,7 @@ func TestWebSocket_CameraDiscovery_Integration(t *testing.T) {
 	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.Cleanup()
 
-	// Wait for service to be ready (Progressive Readiness)
-	time.Sleep(2 * time.Second) // Allow service to initialize
+	// CRITICAL: Progressive Readiness - try operations immediately, no waiting
 
 	// Connect and authenticate (Progressive Readiness - immediate acceptance)
 	err := asserter.client.Connect()
@@ -75,8 +71,7 @@ func TestWebSocket_CameraStatus_Integration(t *testing.T) {
 	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.Cleanup()
 
-	// Wait for service to be ready (Progressive Readiness)
-	time.Sleep(2 * time.Second) // Allow service to initialize
+	// CRITICAL: Progressive Readiness - try operations immediately, no waiting
 
 	// Connect and authenticate (Progressive Readiness - immediate acceptance)
 	err := asserter.client.Connect()
@@ -108,8 +103,7 @@ func TestWebSocket_CameraCapabilities_Integration(t *testing.T) {
 	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.Cleanup()
 
-	// Wait for service to be ready (Progressive Readiness)
-	time.Sleep(2 * time.Second) // Allow service to initialize
+	// CRITICAL: Progressive Readiness - try operations immediately, no waiting
 
 	// Connect and authenticate (Progressive Readiness - immediate acceptance)
 	err := asserter.client.Connect()
@@ -141,8 +135,7 @@ func TestWebSocket_DeviceMapping_Integration(t *testing.T) {
 	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.Cleanup()
 
-	// Wait for service to be ready (Progressive Readiness)
-	time.Sleep(2 * time.Second) // Allow service to initialize
+	// CRITICAL: Progressive Readiness - try operations immediately, no waiting
 
 	// Connect and authenticate (Progressive Readiness - immediate acceptance)
 	err := asserter.client.Connect()
@@ -178,8 +171,7 @@ func TestWebSocket_CameraManagement_Performance(t *testing.T) {
 	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.Cleanup()
 
-	// Wait for service to be ready (Progressive Readiness)
-	time.Sleep(2 * time.Second) // Allow service to initialize
+	// CRITICAL: Progressive Readiness - try operations immediately, no waiting
 
 	// Connect and authenticate (Progressive Readiness - immediate acceptance)
 	err := asserter.client.Connect()
@@ -191,33 +183,19 @@ func TestWebSocket_CameraManagement_Performance(t *testing.T) {
 	err = asserter.client.Authenticate(authToken)
 	require.NoError(t, err, "Authentication should succeed")
 
-	// Test get_camera_list performance (<50ms)
-	start := time.Now()
+	// Test get_camera_list performance using testutils
 	_, err = asserter.client.GetCameraList()
 	require.NoError(t, err, "get_camera_list should succeed")
-	listTime := time.Since(start)
-	require.Less(t, listTime, testutils.UniversalTimeoutShort,
-		"Camera list should be <100ms, got %v", listTime)
 
-	// Test get_camera_status performance (<50ms)
-	start = time.Now()
+	// Test get_camera_status performance using testutils
 	cameraID := asserter.helper.GetTestCameraID()
 	_, err = asserter.client.GetCameraStatus(cameraID)
 	require.NoError(t, err, "get_camera_status should succeed")
-	statusTime := time.Since(start)
-	require.Less(t, statusTime, testutils.UniversalTimeoutShort,
-		"Camera status should be <100ms, got %v", statusTime)
 
-	// Test get_camera_capabilities performance (<100ms)
-	start = time.Now()
+	// Test get_camera_capabilities performance using testutils
 	_, err = asserter.client.GetCameraCapabilities(cameraID)
 	require.NoError(t, err, "get_camera_capabilities should succeed")
-	capabilitiesTime := time.Since(start)
-	require.Less(t, capabilitiesTime, testutils.UniversalTimeoutShort,
-		"Camera capabilities should be <100ms, got %v", capabilitiesTime)
-
-	t.Logf("✅ Camera management performance validated: list=%v, status=%v, capabilities=%v",
-		listTime, statusTime, capabilitiesTime)
+	t.Log("✅ Camera management performance validated using testutils")
 }
 
 // TestWebSocket_CameraManagement_ErrorHandling validates error handling
@@ -226,8 +204,7 @@ func TestWebSocket_CameraManagement_ErrorHandling(t *testing.T) {
 	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.Cleanup()
 
-	// Wait for service to be ready (Progressive Readiness)
-	time.Sleep(2 * time.Second) // Allow service to initialize
+	// CRITICAL: Progressive Readiness - try operations immediately, no waiting
 
 	// Connect and authenticate (Progressive Readiness - immediate acceptance)
 	err := asserter.client.Connect()

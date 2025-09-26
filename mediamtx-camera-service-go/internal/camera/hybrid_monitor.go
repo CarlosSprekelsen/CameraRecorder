@@ -903,9 +903,10 @@ func (m *HybridCameraMonitor) TakeDirectSnapshot(ctx context.Context, devicePath
 
 // buildV4L2SnapshotArgs builds V4L2 command arguments for direct snapshot capture
 func (m *HybridCameraMonitor) buildV4L2SnapshotArgs(devicePath, outputPath, format string, width, height int) string {
-	// FIXED: Remove devicePath from args (RealV4L2CommandExecutor adds --device automatically)
+	// QUALITY FIRST: Use default 3 buffers for optimal image quality
+	// --stream-mmap is REQUIRED for actual capture, using default buffer count for best quality
 	args := []string{
-		"--stream-mmap",           // Use memory-mapped streaming
+		"--stream-mmap",           // Use default 3 buffers for optimal quality
 		"--stream-to", outputPath, // Output file path
 		"--stream-count", "1", // Capture only 1 frame
 	}

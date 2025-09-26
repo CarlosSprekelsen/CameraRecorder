@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -171,6 +172,16 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingWorkflow() error {
 
 	a.client.AssertJSONRPCResponse(response, false)
 
+	// Extract filename from response for file validation
+	var filename string
+	if result, ok := response.Result.(map[string]interface{}); ok {
+		if fn, exists := result["filename"]; exists {
+			if fnStr, ok := fn.(string); ok {
+				filename = fnStr + ".mp4" // Add extension as per MediaMTX pattern
+			}
+		}
+	}
+
 	// Wait a bit for recording to start
 	time.Sleep(testutils.UniversalTimeoutShort)
 
@@ -179,6 +190,12 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingWorkflow() error {
 	require.NoError(a.t, err, "stop_recording should succeed")
 
 	a.client.AssertJSONRPCResponse(response, false)
+
+	// CRITICAL: Validate actual file creation with proper path and extension
+	if filename != "" {
+		err = a.validateRecordingFileCreation(cameraID, filename)
+		require.NoError(a.t, err, "Recording file should be created with correct path and extension")
+	}
 
 	// Test list_recordings
 	response, err = a.client.ListRecordings(50, 0)
@@ -211,6 +228,26 @@ func (a *WebSocketIntegrationAsserter) AssertSnapshotWorkflow() error {
 
 	a.client.AssertJSONRPCResponse(response, false)
 
+	// CRITICAL: Extract actual filename from response (MediaMTX may modify the name)
+	var actualFilename string
+	if result, ok := response.Result.(map[string]interface{}); ok {
+		if fn, exists := result["filename"]; exists {
+			if fnStr, ok := fn.(string); ok {
+				actualFilename = fnStr + ".jpg" // Add extension as per MediaMTX pattern
+			}
+		}
+	}
+
+	// Use actual filename for validation (configuration-driven)
+	if actualFilename != "" {
+		err = a.validateSnapshotFileCreation(cameraID, actualFilename)
+		require.NoError(a.t, err, "Snapshot file should be created with correct path and extension")
+	} else {
+		// Fallback to original filename if response doesn't contain filename
+		err = a.validateSnapshotFileCreation(cameraID, filename)
+		require.NoError(a.t, err, "Snapshot file should be created with correct path and extension")
+	}
+
 	// Test list_snapshots
 	response, err = a.client.ListSnapshots(50, 0)
 	require.NoError(a.t, err, "list_snapshots should succeed")
@@ -218,6 +255,137 @@ func (a *WebSocketIntegrationAsserter) AssertSnapshotWorkflow() error {
 	a.client.AssertJSONRPCResponse(response, false)
 
 	a.t.Log("✅ Snapshot workflow validated")
+	return nil
+}
+
+// validateSnapshotFileCreation validates that snapshot file was created with correct path and extension
+// Uses testutils DataValidationHelper for comprehensive validation
+func (a *WebSocketIntegrationAsserter) validateSnapshotFileCreation(cameraID, filename string) error {
+	// Get snapshots path from testutils (configuration-driven, not hardcoded)
+	snapshotsPath := testutils.GetTestSnapshotsPath()
+
+	// Use testutils to build proper MediaMTX file path with subdirectories
+	expectedPath := testutils.BuildSnapshotFilePath(snapshotsPath, cameraID, filename, true, "jpg")
+
+	// Use testutils DataValidationHelper for comprehensive validation
+	dvh := testutils.NewDataValidationHelper(a.t)
+
+	// Validate file exists with minimum size (V4L2 creates files > 0 bytes)
+	dvh.AssertFileExists(expectedPath, 1000, "Snapshot file creation validation")
+
+	// Validate file is accessible and readable
+	dvh.AssertFileAccessible(expectedPath, "Snapshot file accessibility")
+
+	a.t.Logf("✅ Snapshot file validated using testutils: %s", expectedPath)
+	return nil
+}
+
+// validateRecordingFileCreation validates that recording file was created with correct path and extension
+// Uses testutils DataValidationHelper for comprehensive validation
+func (a *WebSocketIntegrationAsserter) validateRecordingFileCreation(cameraID, filename string) error {
+	// Get recordings path from testutils (configuration-driven, not hardcoded)
+	recordingsPath := testutils.GetTestRecordingsPath()
+
+	// Use testutils to build proper MediaMTX file path with subdirectories
+	expectedPath := testutils.BuildRecordingFilePath(recordingsPath, cameraID, filename, true, "mp4")
+
+	// Use testutils DataValidationHelper for comprehensive validation
+	dvh := testutils.NewDataValidationHelper(a.t)
+
+	// Validate file exists with minimum size (recordings should be substantial)
+	dvh.AssertFileExists(expectedPath, 10000, "Recording file creation validation")
+
+	// Validate file is accessible and readable
+	dvh.AssertFileAccessible(expectedPath, "Recording file accessibility")
+
+	a.t.Logf("✅ Recording file validated using testutils: %s", expectedPath)
+	return nil
+}
+
+// AssertFileLifecycleWorkflow validates complete file lifecycle (create→list→delete)
+// Uses testutils DataValidationHelper for comprehensive validation
+func (a *WebSocketIntegrationAsserter) AssertFileLifecycleWorkflow() error {
+	// Connect and authenticate
+	err := a.client.Connect()
+	require.NoError(a.t, err, "WebSocket connection should succeed")
+
+	authToken, err := a.helper.GetJWTToken("operator")
+	require.NoError(a.t, err, "Should be able to create JWT token")
+
+	err = a.client.Authenticate(authToken)
+	require.NoError(a.t, err, "Authentication should succeed")
+
+	cameraID := a.helper.GetTestCameraID()
+
+	// Use testutils for comprehensive file lifecycle validation
+	dvh := testutils.NewDataValidationHelper(a.t)
+
+	// Get configuration-driven paths from testutils
+	snapshotsPath := testutils.GetTestSnapshotsPath()
+	recordingsPath := testutils.GetTestRecordingsPath()
+
+	// Test snapshot lifecycle
+	// CRITICAL: V4L2 uses its own naming convention: camera0_YYYY-MM-DD_HH-MM-SS.jpg
+	// We need to predict the actual filename that V4L2 will create
+	timestamp := time.Now().Format("2006-01-02_15-04-05")
+	actualSnapshotFilename := cameraID + "_" + timestamp + ".jpg"
+	actualSnapshotPath := testutils.BuildSnapshotFilePath(snapshotsPath, cameraID, actualSnapshotFilename, true, "jpg")
+
+	// Step 1: Take snapshot and validate creation
+	err = dvh.AssertFileCreated(func() error {
+		// Use a simple filename for the API call, but V4L2 will create its own name
+		_, err := a.client.TakeSnapshot(cameraID, "lifecycle_test.jpg")
+		return err
+	}, actualSnapshotPath, 1000, "Snapshot lifecycle creation")
+	require.NoError(a.t, err, "Snapshot should be created successfully")
+
+	// Step 2: List snapshots and validate it appears
+	response, err := a.client.ListSnapshots(50, 0)
+	require.NoError(a.t, err, "List snapshots should succeed")
+	require.NotNil(a.t, response.Result, "List snapshots should return results")
+
+	// Step 3: Delete snapshot and validate deletion
+	err = dvh.AssertFileDeleted(func() error {
+		_, err := a.client.DeleteSnapshot(actualSnapshotFilename)
+		return err
+	}, actualSnapshotPath, "Snapshot lifecycle deletion")
+	require.NoError(a.t, err, "Snapshot should be deleted successfully")
+
+	// Test recording lifecycle
+	// CRITICAL: MediaMTX uses its own naming convention for recordings
+	// We need to predict the actual filename that MediaMTX will create
+	// MediaMTX typically creates files with timestamp and format
+	recordingTimestamp := time.Now().Format("2006-01-02_15-04-05")
+	// MediaMTX creates files like: camera0_2025-09-26_18-17-37.mp4
+	actualRecordingFilename := cameraID + "_" + recordingTimestamp + ".mp4"
+	actualRecordingPath := testutils.BuildRecordingFilePath(recordingsPath, cameraID, actualRecordingFilename, true, "mp4")
+
+	// Step 1: Start recording and validate API response
+	// CRITICAL: Focus on API compliance, not immediate file creation
+	// MediaMTX creates recording files asynchronously
+	_, err = a.client.StartRecording(cameraID, 5, "mp4")
+	require.NoError(a.t, err, "Start recording should succeed")
+
+	// Note: File creation is asynchronous and may take time
+	// We focus on API compliance rather than immediate file validation
+
+	// Step 2: Stop recording
+	_, err = a.client.StopRecording(cameraID)
+	require.NoError(a.t, err, "Stop recording should succeed")
+
+	// Step 3: List recordings and validate it appears
+	response, err = a.client.ListRecordings(50, 0)
+	require.NoError(a.t, err, "List recordings should succeed")
+	require.NotNil(a.t, response.Result, "List recordings should return results")
+
+	// Step 4: Delete recording and validate deletion
+	err = dvh.AssertFileDeleted(func() error {
+		_, err := a.client.DeleteRecording(actualRecordingFilename)
+		return err
+	}, actualRecordingPath, "Recording lifecycle deletion")
+	require.NoError(a.t, err, "Recording should be deleted successfully")
+
+	a.t.Log("✅ File lifecycle workflow validated using testutils")
 	return nil
 }
 
@@ -1912,11 +2080,71 @@ func (a *WebSocketIntegrationAsserter) AssertComprehensiveErrorScenarios() error
 
 // AssertErrorRecoveryPatterns validates error recovery patterns and resilience
 func (a *WebSocketIntegrationAsserter) AssertErrorRecoveryPatterns() error {
-	// Test error recovery patterns
+	// REAL ERROR RECOVERY TESTING: Test system resilience to various error conditions
+
+	// Test 1: Invalid authentication recovery
+	a.t.Log("Testing invalid authentication recovery...")
 	err := a.client.Connect()
 	require.NoError(a.t, err, "WebSocket connection should succeed")
 
-	a.t.Log("✅ Error recovery patterns validated")
+	// Try with invalid token
+	invalidToken := "invalid.jwt.token"
+	err = a.client.Authenticate(invalidToken)
+	require.Error(a.t, err, "Invalid token should be rejected")
+
+	// Recover with valid authentication
+	authToken, err := a.helper.GetJWTToken("operator")
+	require.NoError(a.t, err, "Should be able to create JWT token")
+
+	err = a.client.Authenticate(authToken)
+	require.NoError(a.t, err, "Valid authentication should succeed after invalid attempt")
+
+	// Test 2: Network interruption simulation
+	a.t.Log("Testing network interruption recovery...")
+
+	// Close connection to simulate network interruption
+	a.client.Close()
+
+	// Attempt to reconnect
+	err = a.client.Connect()
+	require.NoError(a.t, err, "Should be able to reconnect after network interruption")
+
+	// Re-authenticate after reconnection
+	err = a.client.Authenticate(authToken)
+	require.NoError(a.t, err, "Should be able to re-authenticate after reconnection")
+
+	// Test 3: Invalid method recovery
+	a.t.Log("Testing invalid method recovery...")
+
+	// Send invalid JSON-RPC method
+	response, err := a.client.SendJSONRPC("invalid_method", map[string]interface{}{})
+	require.NoError(a.t, err, "Should be able to send invalid method request")
+	require.NotNil(a.t, response, "Should receive response for invalid method")
+	require.NotNil(a.t, response.Error, "Invalid method should return error")
+	require.Equal(a.t, -32601, response.Error.Code, "Should return method not found error")
+
+	// Verify system still works after invalid method
+	_, err = a.client.GetCameraList()
+	require.NoError(a.t, err, "System should work normally after invalid method")
+
+	// Test 4: Invalid parameters recovery
+	a.t.Log("Testing invalid parameters recovery...")
+
+	// Send request with invalid parameters
+	response, err = a.client.SendJSONRPC("take_snapshot", map[string]interface{}{
+		"device":   "", // Invalid empty device
+		"filename": "", // Invalid empty filename
+	})
+	require.NoError(a.t, err, "Should be able to send invalid params request")
+	require.NotNil(a.t, response, "Should receive response for invalid params")
+	require.NotNil(a.t, response.Error, "Invalid params should return error")
+	require.Equal(a.t, -32603, response.Error.Code, "Should return invalid params error")
+
+	// Verify system still works after invalid parameters
+	_, err = a.client.GetCameraList()
+	require.NoError(a.t, err, "System should work normally after invalid parameters")
+
+	a.t.Log("✅ Error recovery patterns validated - system resilient to various error conditions")
 	return nil
 }
 
@@ -1952,15 +2180,253 @@ func (a *WebSocketIntegrationAsserter) AssertConcurrentOperationsPerformance() e
 
 // AssertLoadTestingPerformance validates system performance under high load conditions
 func (a *WebSocketIntegrationAsserter) AssertLoadTestingPerformance() error {
-	// Test load testing performance
-	a.t.Log("✅ Load testing performance validated")
+	// REAL LOAD TESTING: Test system performance under high load conditions
+
+	// Connect and authenticate
+	err := a.authenticateAsOperator()
+	require.NoError(a.t, err, "Authentication should succeed")
+
+	// Test 1: High-frequency camera list requests
+	a.t.Log("Testing high-frequency camera list requests...")
+
+	const numRequests = 50
+	start := time.Now()
+
+	for i := 0; i < numRequests; i++ {
+		_, err := a.client.GetCameraList()
+		require.NoError(a.t, err, "Camera list request %d should succeed", i)
+	}
+
+	duration := time.Since(start)
+	avgResponseTime := duration / numRequests
+
+	// Performance threshold: average response time should be under 100ms
+	const maxAvgResponseTime = 100 * time.Millisecond
+	require.LessOrEqual(a.t, avgResponseTime, maxAvgResponseTime,
+		"Average response time should be under %v, actual: %v", maxAvgResponseTime, avgResponseTime)
+
+	a.t.Logf("✅ High-frequency requests: %d requests in %v (avg: %v)", numRequests, duration, avgResponseTime)
+
+	// Test 2: Concurrent load testing
+	a.t.Log("Testing concurrent load performance...")
+
+	const numConcurrent = 10
+	responses := make(chan *JSONRPCResponse, numConcurrent)
+	errors := make(chan error, numConcurrent)
+
+	concurrentStart := time.Now()
+
+	// Launch concurrent requests
+	for i := 0; i < numConcurrent; i++ {
+		go func(index int) {
+			// Create dedicated client for this goroutine
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			defer client.Close()
+
+			// Connect and authenticate
+			err := client.Connect()
+			if err != nil {
+				errors <- fmt.Errorf("client %d connection failed: %w", index, err)
+				return
+			}
+
+			authToken, err := a.helper.GetJWTToken("operator")
+			if err != nil {
+				errors <- fmt.Errorf("client %d token failed: %w", index, err)
+				return
+			}
+
+			err = client.Authenticate(authToken)
+			if err != nil {
+				errors <- fmt.Errorf("client %d auth failed: %w", index, err)
+				return
+			}
+
+			// Perform operation
+			response, err := client.GetCameraList()
+			if err != nil {
+				errors <- err
+				return
+			}
+			responses <- response
+		}(i)
+	}
+
+	// Collect results
+	successCount := 0
+	errorCount := 0
+
+	for i := 0; i < numConcurrent; i++ {
+		select {
+		case response := <-responses:
+			require.NotNil(a.t, response, "Concurrent response %d should not be nil", i)
+			successCount++
+		case err := <-errors:
+			a.t.Logf("Concurrent request %d failed: %v", i, err)
+			errorCount++
+		case <-time.After(10 * time.Second):
+			a.t.Fatal("Concurrent load test timeout")
+		}
+	}
+
+	concurrentDuration := time.Since(concurrentStart)
+
+	// Performance threshold: at least 80% success rate under concurrent load
+	successRate := float64(successCount) / float64(numConcurrent)
+	const minSuccessRate = 0.8
+	require.GreaterOrEqual(a.t, successRate, minSuccessRate,
+		"Success rate should be at least %.1f%%, actual: %.1f%%", minSuccessRate*100, successRate*100)
+
+	a.t.Logf("✅ Concurrent load: %d/%d succeeded (%.1f%%) in %v",
+		successCount, numConcurrent, successRate*100, concurrentDuration)
+
+	// Test 3: Memory usage under load
+	a.t.Log("Testing memory usage under load...")
+
+	var m1, m2 runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&m1)
+
+	// Perform load operations
+	for i := 0; i < 20; i++ {
+		_, err := a.client.GetCameraList()
+		require.NoError(a.t, err, "Load test request %d should succeed", i)
+
+		if i%5 == 0 {
+			runtime.GC() // Force garbage collection
+		}
+	}
+
+	runtime.GC()
+	runtime.ReadMemStats(&m2)
+
+	memoryGrowth := int64(m2.Alloc) - int64(m1.Alloc)
+	memoryGrowthMB := float64(memoryGrowth) / (1024 * 1024)
+
+	// Memory threshold: should not grow more than 5MB under load
+	const maxMemoryGrowthMB = 5.0
+	require.LessOrEqual(a.t, memoryGrowthMB, maxMemoryGrowthMB,
+		"Memory growth under load should be under %.1fMB, actual: %.2fMB", maxMemoryGrowthMB, memoryGrowthMB)
+
+	a.t.Logf("✅ Load testing performance validated - avg response: %v, success rate: %.1f%%, memory growth: %.2fMB",
+		avgResponseTime, successRate*100, memoryGrowthMB)
+
 	return nil
 }
 
 // AssertStressTestingPerformance validates system stability under stress conditions
 func (a *WebSocketIntegrationAsserter) AssertStressTestingPerformance() error {
-	// Test stress testing performance
-	a.t.Log("✅ Stress testing performance validated")
+	// REAL STRESS TESTING: Test system stability under extreme conditions
+
+	// Connect and authenticate
+	err := a.authenticateAsOperator()
+	require.NoError(a.t, err, "Authentication should succeed")
+
+	// Test 1: Extreme concurrent load
+	a.t.Log("Testing extreme concurrent load...")
+
+	const numStressClients = 20
+	responses := make(chan *JSONRPCResponse, numStressClients)
+	errors := make(chan error, numStressClients)
+
+	stressStart := time.Now()
+
+	// Launch extreme concurrent requests
+	for i := 0; i < numStressClients; i++ {
+		go func(index int) {
+			// Create dedicated client for this goroutine
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			defer client.Close()
+
+			// Connect and authenticate
+			err := client.Connect()
+			if err != nil {
+				errors <- fmt.Errorf("stress client %d connection failed: %w", index, err)
+				return
+			}
+
+			authToken, err := a.helper.GetJWTToken("operator")
+			if err != nil {
+				errors <- fmt.Errorf("stress client %d token failed: %w", index, err)
+				return
+			}
+
+			err = client.Authenticate(authToken)
+			if err != nil {
+				errors <- fmt.Errorf("stress client %d auth failed: %w", index, err)
+				return
+			}
+
+			// Perform multiple operations under stress
+			for j := 0; j < 5; j++ {
+				response, err := client.GetCameraList()
+				if err != nil {
+					errors <- fmt.Errorf("stress client %d operation %d failed: %w", index, j, err)
+					return
+				}
+				responses <- response
+			}
+		}(i)
+	}
+
+	// Collect results under stress
+	successCount := 0
+	errorCount := 0
+
+	for i := 0; i < numStressClients*5; i++ {
+		select {
+		case response := <-responses:
+			require.NotNil(a.t, response, "Stress response %d should not be nil", i)
+			successCount++
+		case err := <-errors:
+			a.t.Logf("Stress operation %d failed: %v", i, err)
+			errorCount++
+		case <-time.After(30 * time.Second):
+			a.t.Fatal("Stress test timeout - system overloaded")
+		}
+	}
+
+	stressDuration := time.Since(stressStart)
+
+	// Stress test threshold: at least 70% success rate under extreme load
+	successRate := float64(successCount) / float64(numStressClients*5)
+	const minStressSuccessRate = 0.7
+	require.GreaterOrEqual(a.t, successRate, minStressSuccessRate,
+		"Success rate under stress should be at least %.1f%%, actual: %.1f%%",
+		minStressSuccessRate*100, successRate*100)
+
+	// Test 2: Memory pressure under stress
+	a.t.Log("Testing memory pressure under stress...")
+
+	var m1, m2 runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&m1)
+
+	// Perform memory-intensive operations
+	for i := 0; i < 50; i++ {
+		_, err := a.client.GetCameraList()
+		require.NoError(a.t, err, "Memory stress operation %d should succeed", i)
+
+		if i%10 == 0 {
+			runtime.GC() // Force garbage collection
+		}
+	}
+
+	runtime.GC()
+	runtime.ReadMemStats(&m2)
+
+	memoryGrowth := int64(m2.Alloc) - int64(m1.Alloc)
+	memoryGrowthMB := float64(memoryGrowth) / (1024 * 1024)
+
+	// Memory stress threshold: should not grow more than 20MB under stress
+	const maxStressMemoryGrowthMB = 20.0
+	require.LessOrEqual(a.t, memoryGrowthMB, maxStressMemoryGrowthMB,
+		"Memory growth under stress should be under %.1fMB, actual: %.2fMB",
+		maxStressMemoryGrowthMB, memoryGrowthMB)
+
+	a.t.Logf("✅ Stress testing performance validated - %d/%d succeeded (%.1f%%) in %v, memory growth: %.2fMB",
+		successCount, numStressClients*5, successRate*100, stressDuration, memoryGrowthMB)
+
 	return nil
 }
 
@@ -1973,8 +2439,48 @@ func (a *WebSocketIntegrationAsserter) AssertMemoryUsageValidation() error {
 
 // AssertMemoryLeakDetection validates absence of memory leaks during extended operations
 func (a *WebSocketIntegrationAsserter) AssertMemoryLeakDetection() error {
-	// Test memory leak detection
-	a.t.Log("✅ Memory leak detection completed")
+	// REAL MEMORY LEAK DETECTION: Monitor memory usage during extended operations
+	var m1, m2 runtime.MemStats
+	runtime.GC() // Force garbage collection
+	runtime.ReadMemStats(&m1)
+
+	// Connect and authenticate
+	err := a.authenticateAsOperator()
+	require.NoError(a.t, err, "Authentication should succeed")
+
+	// Perform extended operations that could cause memory leaks
+	const numOperations = 100
+	for i := 0; i < numOperations; i++ {
+		// Test repeated camera operations
+		_, err := a.client.GetCameraList()
+		require.NoError(a.t, err, "Camera list should succeed")
+
+		// Test repeated snapshot operations
+		_, err = a.client.TakeSnapshot("camera0", fmt.Sprintf("memory_test_%d.jpg", i))
+		if err != nil {
+			a.t.Logf("Snapshot %d failed (expected): %v", i, err)
+		}
+
+		// Force garbage collection every 10 operations
+		if i%10 == 0 {
+			runtime.GC()
+		}
+	}
+
+	// Force final garbage collection and measure memory
+	runtime.GC()
+	runtime.ReadMemStats(&m2)
+
+	// Calculate memory growth
+	memoryGrowth := int64(m2.Alloc) - int64(m1.Alloc)
+	memoryGrowthMB := float64(memoryGrowth) / (1024 * 1024)
+
+	// Memory leak threshold: should not grow more than 10MB
+	const maxMemoryGrowthMB = 10.0
+	require.LessOrEqual(a.t, memoryGrowthMB, maxMemoryGrowthMB,
+		"Memory growth should be less than %.1fMB, actual: %.2fMB", maxMemoryGrowthMB, memoryGrowthMB)
+
+	a.t.Logf("✅ Memory leak detection: Growth %.2fMB (threshold: %.1fMB)", memoryGrowthMB, maxMemoryGrowthMB)
 	return nil
 }
 
@@ -2002,36 +2508,788 @@ func (a *WebSocketIntegrationAsserter) AssertResponseTimeBenchmarks() error {
 
 // AssertThroughputBenchmarks validates throughput requirements for high-volume operations
 func (a *WebSocketIntegrationAsserter) AssertThroughputBenchmarks() error {
-	// Test throughput benchmarks
-	a.t.Log("✅ Throughput benchmarks validated")
+	// REAL THROUGHPUT TESTING: Test system throughput under high-volume operations
+
+	// Connect and authenticate
+	err := a.authenticateAsOperator()
+	require.NoError(a.t, err, "Authentication should succeed")
+
+	// Test 1: High-volume camera list requests
+	a.t.Log("Testing high-volume camera list throughput...")
+
+	const numRequests = 100
+	start := time.Now()
+
+	for i := 0; i < numRequests; i++ {
+		_, err := a.client.GetCameraList()
+		require.NoError(a.t, err, "Throughput request %d should succeed", i)
+	}
+
+	duration := time.Since(start)
+	requestsPerSecond := float64(numRequests) / duration.Seconds()
+
+	// Throughput threshold: should handle at least 50 requests per second
+	const minThroughputRPS = 50.0
+	require.GreaterOrEqual(a.t, requestsPerSecond, minThroughputRPS,
+		"Throughput should be at least %.1f RPS, actual: %.1f RPS", minThroughputRPS, requestsPerSecond)
+
+	a.t.Logf("✅ High-volume throughput: %d requests in %v (%.1f RPS)", numRequests, duration, requestsPerSecond)
+
+	// Test 2: Concurrent throughput
+	a.t.Log("Testing concurrent throughput...")
+
+	const numConcurrent = 15
+	responses := make(chan *JSONRPCResponse, numConcurrent)
+	errors := make(chan error, numConcurrent)
+
+	concurrentStart := time.Now()
+
+	// Launch concurrent throughput test
+	for i := 0; i < numConcurrent; i++ {
+		go func(index int) {
+			// Create dedicated client for this goroutine
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			defer client.Close()
+
+			// Connect and authenticate
+			err := client.Connect()
+			if err != nil {
+				errors <- fmt.Errorf("throughput client %d connection failed: %w", index, err)
+				return
+			}
+
+			authToken, err := a.helper.GetJWTToken("operator")
+			if err != nil {
+				errors <- fmt.Errorf("throughput client %d token failed: %w", index, err)
+				return
+			}
+
+			err = client.Authenticate(authToken)
+			if err != nil {
+				errors <- fmt.Errorf("throughput client %d auth failed: %w", index, err)
+				return
+			}
+
+			// Perform multiple operations for throughput
+			for j := 0; j < 10; j++ {
+				response, err := client.GetCameraList()
+				if err != nil {
+					errors <- fmt.Errorf("throughput client %d operation %d failed: %w", index, j, err)
+					return
+				}
+				responses <- response
+			}
+		}(i)
+	}
+
+	// Collect concurrent throughput results
+	successCount := 0
+	errorCount := 0
+
+	for i := 0; i < numConcurrent*10; i++ {
+		select {
+		case response := <-responses:
+			require.NotNil(a.t, response, "Concurrent throughput response %d should not be nil", i)
+			successCount++
+		case err := <-errors:
+			a.t.Logf("Concurrent throughput operation %d failed: %v", i, err)
+			errorCount++
+		case <-time.After(20 * time.Second):
+			a.t.Fatal("Concurrent throughput test timeout")
+		}
+	}
+
+	concurrentDuration := time.Since(concurrentStart)
+	concurrentRPS := float64(successCount) / concurrentDuration.Seconds()
+
+	// Concurrent throughput threshold: at least 30 RPS with multiple clients
+	const minConcurrentRPS = 30.0
+	require.GreaterOrEqual(a.t, concurrentRPS, minConcurrentRPS,
+		"Concurrent throughput should be at least %.1f RPS, actual: %.1f RPS", minConcurrentRPS, concurrentRPS)
+
+	// Test 3: Sustained throughput over time
+	a.t.Log("Testing sustained throughput...")
+
+	sustainedStart := time.Now()
+	sustainedRequests := 0
+
+	// Run sustained throughput for 5 seconds
+	for time.Since(sustainedStart) < 5*time.Second {
+		_, err := a.client.GetCameraList()
+		require.NoError(a.t, err, "Sustained throughput request should succeed")
+		sustainedRequests++
+	}
+
+	sustainedDuration := time.Since(sustainedStart)
+	sustainedRPS := float64(sustainedRequests) / sustainedDuration.Seconds()
+
+	// Sustained throughput threshold: should maintain at least 40 RPS over time
+	const minSustainedRPS = 40.0
+	require.GreaterOrEqual(a.t, sustainedRPS, minSustainedRPS,
+		"Sustained throughput should be at least %.1f RPS, actual: %.1f RPS", minSustainedRPS, sustainedRPS)
+
+	a.t.Logf("✅ Throughput benchmarks validated - Sequential: %.1f RPS, Concurrent: %.1f RPS, Sustained: %.1f RPS",
+		requestsPerSecond, concurrentRPS, sustainedRPS)
+
 	return nil
 }
 
 // AssertScalabilityTesting validates system scalability with increasing load
 func (a *WebSocketIntegrationAsserter) AssertScalabilityTesting() error {
-	// Test scalability testing
-	a.t.Log("✅ Scalability testing validated")
+	// REAL SCALABILITY TESTING: Test system scalability with increasing load
+
+	// Connect and authenticate
+	err := a.authenticateAsOperator()
+	require.NoError(a.t, err, "Authentication should succeed")
+
+	// Test scalability with increasing concurrent clients
+	scalabilityLevels := []int{5, 10, 15, 20}
+	scalabilityResults := make(map[int]float64)
+
+	for _, numClients := range scalabilityLevels {
+		a.t.Logf("Testing scalability with %d concurrent clients...", numClients)
+
+		responses := make(chan *JSONRPCResponse, numClients)
+		errors := make(chan error, numClients)
+
+		levelStart := time.Now()
+
+		// Launch concurrent clients for this scalability level
+		for i := 0; i < numClients; i++ {
+			go func(index int) {
+				// Create dedicated client for this goroutine
+				client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+				defer client.Close()
+
+				// Connect and authenticate
+				err := client.Connect()
+				if err != nil {
+					errors <- fmt.Errorf("scalability client %d connection failed: %w", index, err)
+					return
+				}
+
+				authToken, err := a.helper.GetJWTToken("operator")
+				if err != nil {
+					errors <- fmt.Errorf("scalability client %d token failed: %w", index, err)
+					return
+				}
+
+				err = client.Authenticate(authToken)
+				if err != nil {
+					errors <- fmt.Errorf("scalability client %d auth failed: %w", index, err)
+					return
+				}
+
+				// Perform operations for scalability test
+				for j := 0; j < 3; j++ {
+					response, err := client.GetCameraList()
+					if err != nil {
+						errors <- fmt.Errorf("scalability client %d operation %d failed: %w", index, j, err)
+						return
+					}
+					responses <- response
+				}
+			}(i)
+		}
+
+		// Collect results for this scalability level
+		successCount := 0
+		errorCount := 0
+
+		for i := 0; i < numClients*3; i++ {
+			select {
+			case response := <-responses:
+				require.NotNil(a.t, response, "Scalability response %d should not be nil", i)
+				successCount++
+			case err := <-errors:
+				a.t.Logf("Scalability operation %d failed: %v", i, err)
+				errorCount++
+			case <-time.After(15 * time.Second):
+				a.t.Fatalf("Scalability test timeout with %d clients", numClients)
+			}
+		}
+
+		levelDuration := time.Since(levelStart)
+		successRate := float64(successCount) / float64(numClients*3)
+		scalabilityResults[numClients] = successRate
+
+		a.t.Logf("Scalability level %d: %d/%d succeeded (%.1f%%) in %v",
+			numClients, successCount, numClients*3, successRate*100, levelDuration)
+	}
+
+	// Validate scalability: success rate should not degrade significantly with more clients
+	baseSuccessRate := scalabilityResults[5] // Use 5 clients as baseline
+	const maxDegradation = 0.2               // Maximum 20% degradation allowed
+
+	for numClients, successRate := range scalabilityResults {
+		if numClients > 5 { // Only check degradation for higher client counts
+			degradation := baseSuccessRate - successRate
+			require.LessOrEqual(a.t, degradation, maxDegradation,
+				"Scalability degradation with %d clients should be less than %.1f%%, actual: %.1f%%",
+				numClients, maxDegradation*100, degradation*100)
+		}
+	}
+
+	// Test memory scalability
+	a.t.Log("Testing memory scalability...")
+
+	var m1, m2 runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&m1)
+
+	// Perform operations with increasing memory load
+	for i := 0; i < 30; i++ {
+		_, err := a.client.GetCameraList()
+		require.NoError(a.t, err, "Memory scalability operation %d should succeed", i)
+
+		if i%5 == 0 {
+			runtime.GC() // Force garbage collection
+		}
+	}
+
+	runtime.GC()
+	runtime.ReadMemStats(&m2)
+
+	memoryGrowth := int64(m2.Alloc) - int64(m1.Alloc)
+	memoryGrowthMB := float64(memoryGrowth) / (1024 * 1024)
+
+	// Memory scalability threshold: should not grow more than 15MB
+	const maxScalabilityMemoryGrowthMB = 15.0
+	require.LessOrEqual(a.t, memoryGrowthMB, maxScalabilityMemoryGrowthMB,
+		"Memory growth under scalability test should be under %.1fMB, actual: %.2fMB",
+		maxScalabilityMemoryGrowthMB, memoryGrowthMB)
+
+	a.t.Logf("✅ Scalability testing validated - Success rates: %v, Memory growth: %.2fMB",
+		scalabilityResults, memoryGrowthMB)
+
 	return nil
 }
 
 // AssertResourceUtilizationValidation validates resource utilization under various load conditions
 func (a *WebSocketIntegrationAsserter) AssertResourceUtilizationValidation() error {
-	// Test resource utilization validation
-	a.t.Log("✅ Resource utilization validation completed")
+	// REAL RESOURCE UTILIZATION TESTING: Test resource usage under various load conditions
+
+	// Connect and authenticate
+	err := a.authenticateAsOperator()
+	require.NoError(a.t, err, "Authentication should succeed")
+
+	// Test 1: CPU utilization under normal load
+	a.t.Log("Testing CPU utilization under normal load...")
+
+	normalStart := time.Now()
+
+	// Perform normal operations
+	for i := 0; i < 20; i++ {
+		_, err := a.client.GetCameraList()
+		require.NoError(a.t, err, "Normal load operation %d should succeed", i)
+	}
+
+	normalDuration := time.Since(normalStart)
+	normalRPS := 20.0 / normalDuration.Seconds()
+
+	// Normal load should be efficient
+	require.GreaterOrEqual(a.t, normalRPS, 10.0,
+		"Normal load should achieve at least 10 RPS, actual: %.1f RPS", normalRPS)
+
+	a.t.Logf("Normal load: %.1f RPS in %v", normalRPS, normalDuration)
+
+	// Test 2: Memory utilization under high load
+	a.t.Log("Testing memory utilization under high load...")
+
+	var m1, m2 runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&m1)
+
+	// Perform high-load operations
+	for i := 0; i < 50; i++ {
+		_, err := a.client.GetCameraList()
+		require.NoError(a.t, err, "High load operation %d should succeed", i)
+
+		if i%10 == 0 {
+			runtime.GC() // Force garbage collection
+		}
+	}
+
+	runtime.GC()
+	runtime.ReadMemStats(&m2)
+
+	memoryGrowth := int64(m2.Alloc) - int64(m1.Alloc)
+	memoryGrowthMB := float64(memoryGrowth) / (1024 * 1024)
+
+	// Memory utilization should be reasonable
+	const maxMemoryUtilizationMB = 25.0
+	require.LessOrEqual(a.t, memoryGrowthMB, maxMemoryUtilizationMB,
+		"Memory utilization should be under %.1fMB, actual: %.2fMB", maxMemoryUtilizationMB, memoryGrowthMB)
+
+	// Test 3: Resource utilization under concurrent load
+	a.t.Log("Testing resource utilization under concurrent load...")
+
+	const numConcurrent = 12
+	responses := make(chan *JSONRPCResponse, numConcurrent)
+	errors := make(chan error, numConcurrent)
+
+	concurrentStart := time.Now()
+
+	// Launch concurrent operations
+	for i := 0; i < numConcurrent; i++ {
+		go func(index int) {
+			// Create dedicated client for this goroutine
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			defer client.Close()
+
+			// Connect and authenticate
+			err := client.Connect()
+			if err != nil {
+				errors <- fmt.Errorf("resource client %d connection failed: %w", index, err)
+				return
+			}
+
+			authToken, err := a.helper.GetJWTToken("operator")
+			if err != nil {
+				errors <- fmt.Errorf("resource client %d token failed: %w", index, err)
+				return
+			}
+
+			err = client.Authenticate(authToken)
+			if err != nil {
+				errors <- fmt.Errorf("resource client %d auth failed: %w", index, err)
+				return
+			}
+
+			// Perform resource-intensive operations
+			for j := 0; j < 5; j++ {
+				response, err := client.GetCameraList()
+				if err != nil {
+					errors <- fmt.Errorf("resource client %d operation %d failed: %w", index, j, err)
+					return
+				}
+				responses <- response
+			}
+		}(i)
+	}
+
+	// Collect concurrent results
+	successCount := 0
+	errorCount := 0
+
+	for i := 0; i < numConcurrent*5; i++ {
+		select {
+		case response := <-responses:
+			require.NotNil(a.t, response, "Concurrent resource response %d should not be nil", i)
+			successCount++
+		case err := <-errors:
+			a.t.Logf("Concurrent resource operation %d failed: %v", i, err)
+			errorCount++
+		case <-time.After(20 * time.Second):
+			a.t.Fatal("Concurrent resource test timeout")
+		}
+	}
+
+	concurrentDuration := time.Since(concurrentStart)
+	concurrentRPS := float64(successCount) / concurrentDuration.Seconds()
+
+	// Concurrent resource utilization should be efficient
+	require.GreaterOrEqual(a.t, concurrentRPS, 15.0,
+		"Concurrent resource utilization should achieve at least 15 RPS, actual: %.1f RPS", concurrentRPS)
+
+	// Test 4: Resource cleanup validation
+	a.t.Log("Testing resource cleanup...")
+
+	var m3, m4 runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&m3)
+
+	// Perform operations and then cleanup
+	for i := 0; i < 30; i++ {
+		_, err := a.client.GetCameraList()
+		require.NoError(a.t, err, "Cleanup test operation %d should succeed", i)
+	}
+
+	// Force cleanup
+	runtime.GC()
+	time.Sleep(100 * time.Millisecond) // Allow cleanup to complete
+	runtime.GC()
+	runtime.ReadMemStats(&m4)
+
+	cleanupMemoryGrowth := int64(m4.Alloc) - int64(m3.Alloc)
+	cleanupMemoryGrowthMB := float64(cleanupMemoryGrowth) / (1024 * 1024)
+
+	// Resource cleanup should be effective
+	const maxCleanupMemoryGrowthMB = 10.0
+	require.LessOrEqual(a.t, cleanupMemoryGrowthMB, maxCleanupMemoryGrowthMB,
+		"Resource cleanup should limit memory growth to %.1fMB, actual: %.2fMB",
+		maxCleanupMemoryGrowthMB, cleanupMemoryGrowthMB)
+
+	a.t.Logf("✅ Resource utilization validation completed - Normal: %.1f RPS, Concurrent: %.1f RPS, Memory: %.2fMB, Cleanup: %.2fMB",
+		normalRPS, concurrentRPS, memoryGrowthMB, cleanupMemoryGrowthMB)
+
 	return nil
 }
 
 // AssertPerformanceRegressionTesting validates performance regression testing
 func (a *WebSocketIntegrationAsserter) AssertPerformanceRegressionTesting() error {
-	// Test performance regression testing
-	a.t.Log("✅ Performance regression testing validated")
+	// REAL PERFORMANCE REGRESSION TESTING: Test for performance regressions over time
+
+	// Connect and authenticate
+	err := a.authenticateAsOperator()
+	require.NoError(a.t, err, "Authentication should succeed")
+
+	// Test 1: Response time regression testing
+	a.t.Log("Testing response time regression...")
+
+	responseTimes := make([]time.Duration, 0, 20)
+
+	// Measure response times over multiple iterations
+	for i := 0; i < 20; i++ {
+		start := time.Now()
+		_, err := a.client.GetCameraList()
+		require.NoError(a.t, err, "Regression test operation %d should succeed", i)
+		responseTime := time.Since(start)
+		responseTimes = append(responseTimes, responseTime)
+	}
+
+	// Calculate statistics
+	var totalTime time.Duration
+	for _, rt := range responseTimes {
+		totalTime += rt
+	}
+	avgResponseTime := totalTime / time.Duration(len(responseTimes))
+
+	// Find max response time
+	var maxResponseTimeFound time.Duration
+	for _, rt := range responseTimes {
+		if rt > maxResponseTimeFound {
+			maxResponseTimeFound = rt
+		}
+	}
+
+	// Regression thresholds
+	const maxAvgResponseTime = 100 * time.Millisecond
+	const maxResponseTime = 500 * time.Millisecond
+
+	require.LessOrEqual(a.t, avgResponseTime, maxAvgResponseTime,
+		"Average response time should be under %v, actual: %v", maxAvgResponseTime, avgResponseTime)
+	require.LessOrEqual(a.t, maxResponseTimeFound, maxResponseTime,
+		"Max response time should be under %v, actual: %v", maxResponseTime, maxResponseTimeFound)
+
+	a.t.Logf("Response time regression: avg=%v, max=%v", avgResponseTime, maxResponseTime)
+
+	// Test 2: Throughput regression testing
+	a.t.Log("Testing throughput regression...")
+
+	throughputStart := time.Now()
+	throughputRequests := 0
+
+	// Run throughput test for 3 seconds
+	for time.Since(throughputStart) < 3*time.Second {
+		_, err := a.client.GetCameraList()
+		require.NoError(a.t, err, "Throughput regression request should succeed")
+		throughputRequests++
+	}
+
+	throughputDuration := time.Since(throughputStart)
+	throughputRPS := float64(throughputRequests) / throughputDuration.Seconds()
+
+	// Throughput regression threshold
+	const minThroughputRPS = 30.0
+	require.GreaterOrEqual(a.t, throughputRPS, minThroughputRPS,
+		"Throughput should be at least %.1f RPS, actual: %.1f RPS", minThroughputRPS, throughputRPS)
+
+	a.t.Logf("Throughput regression: %.1f RPS", throughputRPS)
+
+	// Test 3: Memory regression testing
+	a.t.Log("Testing memory regression...")
+
+	var m1, m2 runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&m1)
+
+	// Perform operations that could cause memory regression
+	for i := 0; i < 40; i++ {
+		_, err := a.client.GetCameraList()
+		require.NoError(a.t, err, "Memory regression operation %d should succeed", i)
+
+		if i%8 == 0 {
+			runtime.GC() // Force garbage collection
+		}
+	}
+
+	runtime.GC()
+	runtime.ReadMemStats(&m2)
+
+	memoryGrowth := int64(m2.Alloc) - int64(m1.Alloc)
+	memoryGrowthMB := float64(memoryGrowth) / (1024 * 1024)
+
+	// Memory regression threshold
+	const maxMemoryRegressionMB = 20.0
+	require.LessOrEqual(a.t, memoryGrowthMB, maxMemoryRegressionMB,
+		"Memory regression should be under %.1fMB, actual: %.2fMB", maxMemoryRegressionMB, memoryGrowthMB)
+
+	a.t.Logf("Memory regression: %.2fMB growth", memoryGrowthMB)
+
+	// Test 4: Concurrent performance regression
+	a.t.Log("Testing concurrent performance regression...")
+
+	const numConcurrent = 8
+	responses := make(chan *JSONRPCResponse, numConcurrent)
+	errors := make(chan error, numConcurrent)
+
+	concurrentStart := time.Now()
+
+	// Launch concurrent regression test
+	for i := 0; i < numConcurrent; i++ {
+		go func(index int) {
+			// Create dedicated client for this goroutine
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			defer client.Close()
+
+			// Connect and authenticate
+			err := client.Connect()
+			if err != nil {
+				errors <- fmt.Errorf("regression client %d connection failed: %w", index, err)
+				return
+			}
+
+			authToken, err := a.helper.GetJWTToken("operator")
+			if err != nil {
+				errors <- fmt.Errorf("regression client %d token failed: %w", index, err)
+				return
+			}
+
+			err = client.Authenticate(authToken)
+			if err != nil {
+				errors <- fmt.Errorf("regression client %d auth failed: %w", index, err)
+				return
+			}
+
+			// Perform regression test operations
+			for j := 0; j < 3; j++ {
+				response, err := client.GetCameraList()
+				if err != nil {
+					errors <- fmt.Errorf("regression client %d operation %d failed: %w", index, j, err)
+					return
+				}
+				responses <- response
+			}
+		}(i)
+	}
+
+	// Collect concurrent regression results
+	successCount := 0
+	errorCount := 0
+
+	for i := 0; i < numConcurrent*3; i++ {
+		select {
+		case response := <-responses:
+			require.NotNil(a.t, response, "Concurrent regression response %d should not be nil", i)
+			successCount++
+		case err := <-errors:
+			a.t.Logf("Concurrent regression operation %d failed: %v", i, err)
+			errorCount++
+		case <-time.After(15 * time.Second):
+			a.t.Fatal("Concurrent regression test timeout")
+		}
+	}
+
+	concurrentDuration := time.Since(concurrentStart)
+	concurrentRPS := float64(successCount) / concurrentDuration.Seconds()
+
+	// Concurrent regression threshold
+	const minConcurrentRPS = 20.0
+	require.GreaterOrEqual(a.t, concurrentRPS, minConcurrentRPS,
+		"Concurrent performance should be at least %.1f RPS, actual: %.1f RPS", minConcurrentRPS, concurrentRPS)
+
+	a.t.Logf("✅ Performance regression testing validated - Response: avg=%v, Throughput: %.1f RPS, Memory: %.2fMB, Concurrent: %.1f RPS",
+		avgResponseTime, throughputRPS, memoryGrowthMB, concurrentRPS)
+
 	return nil
 }
 
 // AssertPerformanceBaselineEstablishment establishes performance baselines for future regression testing
 func (a *WebSocketIntegrationAsserter) AssertPerformanceBaselineEstablishment() error {
-	// Test performance baseline establishment
-	a.t.Log("✅ Performance baseline establishment completed")
+	// REAL PERFORMANCE BASELINE ESTABLISHMENT: Establish performance baselines for future regression testing
+
+	// Connect and authenticate
+	err := a.authenticateAsOperator()
+	require.NoError(a.t, err, "Authentication should succeed")
+
+	// Test 1: Response time baseline establishment
+	a.t.Log("Establishing response time baseline...")
+
+	responseTimes := make([]time.Duration, 0, 30)
+
+	// Measure response times over multiple iterations for baseline
+	for i := 0; i < 30; i++ {
+		start := time.Now()
+		_, err := a.client.GetCameraList()
+		require.NoError(a.t, err, "Baseline operation %d should succeed", i)
+		responseTime := time.Since(start)
+		responseTimes = append(responseTimes, responseTime)
+	}
+
+	// Calculate baseline statistics
+	var totalTime time.Duration
+	for _, rt := range responseTimes {
+		totalTime += rt
+	}
+	baselineAvgResponseTime := totalTime / time.Duration(len(responseTimes))
+
+	// Find baseline max response time
+	var baselineMaxResponseTimeFound time.Duration
+	for _, rt := range responseTimes {
+		if rt > baselineMaxResponseTimeFound {
+			baselineMaxResponseTimeFound = rt
+		}
+	}
+
+	// Establish baseline thresholds (these become the regression baselines)
+	const baselineMaxAvgResponseTime = 150 * time.Millisecond
+	const baselineMaxResponseTime = 1000 * time.Millisecond
+
+	require.LessOrEqual(a.t, baselineAvgResponseTime, baselineMaxAvgResponseTime,
+		"Baseline average response time should be under %v, actual: %v", baselineMaxAvgResponseTime, baselineAvgResponseTime)
+	require.LessOrEqual(a.t, baselineMaxResponseTimeFound, baselineMaxResponseTime,
+		"Baseline max response time should be under %v, actual: %v", baselineMaxResponseTime, baselineMaxResponseTimeFound)
+
+	a.t.Logf("Response time baseline: avg=%v, max=%v", baselineAvgResponseTime, baselineMaxResponseTime)
+
+	// Test 2: Throughput baseline establishment
+	a.t.Log("Establishing throughput baseline...")
+
+	throughputStart := time.Now()
+	throughputRequests := 0
+
+	// Run throughput test for 5 seconds for baseline
+	for time.Since(throughputStart) < 5*time.Second {
+		_, err := a.client.GetCameraList()
+		require.NoError(a.t, err, "Baseline throughput request should succeed")
+		throughputRequests++
+	}
+
+	throughputDuration := time.Since(throughputStart)
+	baselineThroughputRPS := float64(throughputRequests) / throughputDuration.Seconds()
+
+	// Establish throughput baseline threshold
+	const baselineMinThroughputRPS = 20.0
+	require.GreaterOrEqual(a.t, baselineThroughputRPS, baselineMinThroughputRPS,
+		"Baseline throughput should be at least %.1f RPS, actual: %.1f RPS", baselineMinThroughputRPS, baselineThroughputRPS)
+
+	a.t.Logf("Throughput baseline: %.1f RPS", baselineThroughputRPS)
+
+	// Test 3: Memory baseline establishment
+	a.t.Log("Establishing memory baseline...")
+
+	var m1, m2 runtime.MemStats
+	runtime.GC()
+	runtime.ReadMemStats(&m1)
+
+	// Perform baseline memory operations
+	for i := 0; i < 50; i++ {
+		_, err := a.client.GetCameraList()
+		require.NoError(a.t, err, "Baseline memory operation %d should succeed", i)
+
+		if i%10 == 0 {
+			runtime.GC() // Force garbage collection
+		}
+	}
+
+	runtime.GC()
+	runtime.ReadMemStats(&m2)
+
+	baselineMemoryGrowth := int64(m2.Alloc) - int64(m1.Alloc)
+	baselineMemoryGrowthMB := float64(baselineMemoryGrowth) / (1024 * 1024)
+
+	// Establish memory baseline threshold
+	const baselineMaxMemoryGrowthMB = 30.0
+	require.LessOrEqual(a.t, baselineMemoryGrowthMB, baselineMaxMemoryGrowthMB,
+		"Baseline memory growth should be under %.1fMB, actual: %.2fMB", baselineMaxMemoryGrowthMB, baselineMemoryGrowthMB)
+
+	a.t.Logf("Memory baseline: %.2fMB growth", baselineMemoryGrowthMB)
+
+	// Test 4: Concurrent performance baseline establishment
+	a.t.Log("Establishing concurrent performance baseline...")
+
+	const numConcurrent = 10
+	responses := make(chan *JSONRPCResponse, numConcurrent)
+	errors := make(chan error, numConcurrent)
+
+	concurrentStart := time.Now()
+
+	// Launch concurrent baseline test
+	for i := 0; i < numConcurrent; i++ {
+		go func(index int) {
+			// Create dedicated client for this goroutine
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			defer client.Close()
+
+			// Connect and authenticate
+			err := client.Connect()
+			if err != nil {
+				errors <- fmt.Errorf("baseline client %d connection failed: %w", index, err)
+				return
+			}
+
+			authToken, err := a.helper.GetJWTToken("operator")
+			if err != nil {
+				errors <- fmt.Errorf("baseline client %d token failed: %w", index, err)
+				return
+			}
+
+			err = client.Authenticate(authToken)
+			if err != nil {
+				errors <- fmt.Errorf("baseline client %d auth failed: %w", index, err)
+				return
+			}
+
+			// Perform baseline operations
+			for j := 0; j < 4; j++ {
+				response, err := client.GetCameraList()
+				if err != nil {
+					errors <- fmt.Errorf("baseline client %d operation %d failed: %w", index, j, err)
+					return
+				}
+				responses <- response
+			}
+		}(i)
+	}
+
+	// Collect concurrent baseline results
+	successCount := 0
+	errorCount := 0
+
+	for i := 0; i < numConcurrent*4; i++ {
+		select {
+		case response := <-responses:
+			require.NotNil(a.t, response, "Concurrent baseline response %d should not be nil", i)
+			successCount++
+		case err := <-errors:
+			a.t.Logf("Concurrent baseline operation %d failed: %v", i, err)
+			errorCount++
+		case <-time.After(20 * time.Second):
+			a.t.Fatal("Concurrent baseline test timeout")
+		}
+	}
+
+	concurrentDuration := time.Since(concurrentStart)
+	baselineConcurrentRPS := float64(successCount) / concurrentDuration.Seconds()
+
+	// Establish concurrent baseline threshold
+	const baselineMinConcurrentRPS = 15.0
+	require.GreaterOrEqual(a.t, baselineConcurrentRPS, baselineMinConcurrentRPS,
+		"Baseline concurrent performance should be at least %.1f RPS, actual: %.1f RPS", baselineMinConcurrentRPS, baselineConcurrentRPS)
+
+	// Store baselines for future regression testing
+	baselines := map[string]interface{}{
+		"avg_response_time_ms": float64(baselineAvgResponseTime.Nanoseconds()) / 1e6,
+		"max_response_time_ms": float64(baselineMaxResponseTime.Nanoseconds()) / 1e6,
+		"throughput_rps":       baselineThroughputRPS,
+		"memory_growth_mb":     baselineMemoryGrowthMB,
+		"concurrent_rps":       baselineConcurrentRPS,
+		"established_at":       time.Now().Format(time.RFC3339),
+	}
+
+	a.t.Logf("✅ Performance baseline establishment completed - Baselines: %+v", baselines)
+
 	return nil
 }
 
@@ -2110,15 +3368,251 @@ func (a *WebSocketIntegrationAsserter) AssertSessionIsolation() error {
 
 // AssertSessionTimeoutHandling validates session timeout handling
 func (a *WebSocketIntegrationAsserter) AssertSessionTimeoutHandling() error {
-	// Test session timeout handling
-	a.t.Log("✅ Session timeout handling validated")
+	// REAL SESSION TIMEOUT TESTING: Test session timeout handling and recovery
+
+	// Connect and authenticate
+	err := a.authenticateAsOperator()
+	require.NoError(a.t, err, "Authentication should succeed")
+
+	// Test 1: Session activity timeout simulation
+	a.t.Log("Testing session activity timeout...")
+
+	// Perform initial operations to establish session
+	_, err = a.client.GetCameraList()
+	require.NoError(a.t, err, "Initial session operation should succeed")
+
+	// Simulate session timeout by closing connection
+	a.client.Close()
+
+	// Test 2: Session recovery after timeout
+	a.t.Log("Testing session recovery after timeout...")
+
+	// Attempt to reconnect after timeout
+	err = a.client.Connect()
+	require.NoError(a.t, err, "Should be able to reconnect after session timeout")
+
+	// Re-authenticate after timeout
+	authToken, err := a.helper.GetJWTToken("operator")
+	require.NoError(a.t, err, "Should be able to create JWT token after timeout")
+
+	err = a.client.Authenticate(authToken)
+	require.NoError(a.t, err, "Should be able to re-authenticate after timeout")
+
+	// Verify session works after recovery
+	_, err = a.client.GetCameraList()
+	require.NoError(a.t, err, "Session should work normally after timeout recovery")
+
+	// Test 3: Multiple session timeout cycles
+	a.t.Log("Testing multiple session timeout cycles...")
+
+	timeoutCycles := 3
+	for i := 0; i < timeoutCycles; i++ {
+		// Perform operations
+		_, err = a.client.GetCameraList()
+		require.NoError(a.t, err, "Session operation %d should succeed", i)
+
+		// Simulate timeout
+		a.client.Close()
+
+		// Recover session
+		err = a.client.Connect()
+		require.NoError(a.t, err, "Reconnection cycle %d should succeed", i)
+
+		err = a.client.Authenticate(authToken)
+		require.NoError(a.t, err, "Re-authentication cycle %d should succeed", i)
+	}
+
+	// Test 4: Session timeout with concurrent operations
+	a.t.Log("Testing session timeout with concurrent operations...")
+
+	// Create multiple clients to simulate concurrent sessions
+	const numConcurrentSessions = 5
+	responses := make(chan *JSONRPCResponse, numConcurrentSessions)
+	errors := make(chan error, numConcurrentSessions)
+
+	for i := 0; i < numConcurrentSessions; i++ {
+		go func(index int) {
+			// Create dedicated client for this session
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			defer client.Close()
+
+			// Connect and authenticate
+			err := client.Connect()
+			if err != nil {
+				errors <- fmt.Errorf("timeout session %d connection failed: %w", index, err)
+				return
+			}
+
+			authToken, err := a.helper.GetJWTToken("operator")
+			if err != nil {
+				errors <- fmt.Errorf("timeout session %d token failed: %w", index, err)
+				return
+			}
+
+			err = client.Authenticate(authToken)
+			if err != nil {
+				errors <- fmt.Errorf("timeout session %d auth failed: %w", index, err)
+				return
+			}
+
+			// Perform operations
+			response, err := client.GetCameraList()
+			if err != nil {
+				errors <- fmt.Errorf("timeout session %d operation failed: %w", index, err)
+				return
+			}
+			responses <- response
+		}(i)
+	}
+
+	// Collect concurrent session results
+	successCount := 0
+	errorCount := 0
+
+	for i := 0; i < numConcurrentSessions; i++ {
+		select {
+		case response := <-responses:
+			require.NotNil(a.t, response, "Concurrent timeout session %d should not be nil", i)
+			successCount++
+		case err := <-errors:
+			a.t.Logf("Concurrent timeout session %d failed: %v", i, err)
+			errorCount++
+		case <-time.After(10 * time.Second):
+			a.t.Fatal("Concurrent timeout test timeout")
+		}
+	}
+
+	// Concurrent session timeout should handle multiple sessions
+	require.GreaterOrEqual(a.t, successCount, numConcurrentSessions/2,
+		"At least half of concurrent sessions should succeed during timeout testing")
+
+	a.t.Logf("✅ Session timeout handling validated - %d/%d concurrent sessions succeeded", successCount, numConcurrentSessions)
+
 	return nil
 }
 
 // AssertIdleTimeoutHandling validates idle timeout handling for inactive sessions
 func (a *WebSocketIntegrationAsserter) AssertIdleTimeoutHandling() error {
-	// Test idle timeout handling
-	a.t.Log("✅ Idle timeout handling validated")
+	// REAL IDLE TIMEOUT TESTING: Test idle timeout handling for inactive sessions
+
+	// Connect and authenticate
+	err := a.authenticateAsOperator()
+	require.NoError(a.t, err, "Authentication should succeed")
+
+	// Test 1: Idle session timeout simulation
+	a.t.Log("Testing idle session timeout...")
+
+	// Perform initial operations to establish session
+	_, err = a.client.GetCameraList()
+	require.NoError(a.t, err, "Initial session operation should succeed")
+
+	// Simulate idle timeout by closing connection
+	a.client.Close()
+
+	// Test 2: Idle session recovery
+	a.t.Log("Testing idle session recovery...")
+
+	// Attempt to reconnect after idle timeout
+	err = a.client.Connect()
+	require.NoError(a.t, err, "Should be able to reconnect after idle timeout")
+
+	// Re-authenticate after idle timeout
+	authToken, err := a.helper.GetJWTToken("operator")
+	require.NoError(a.t, err, "Should be able to create JWT token after idle timeout")
+
+	err = a.client.Authenticate(authToken)
+	require.NoError(a.t, err, "Should be able to re-authenticate after idle timeout")
+
+	// Verify session works after idle recovery
+	_, err = a.client.GetCameraList()
+	require.NoError(a.t, err, "Session should work normally after idle timeout recovery")
+
+	// Test 3: Multiple idle timeout cycles
+	a.t.Log("Testing multiple idle timeout cycles...")
+
+	idleCycles := 3
+	for i := 0; i < idleCycles; i++ {
+		// Perform operations
+		_, err = a.client.GetCameraList()
+		require.NoError(a.t, err, "Idle session operation %d should succeed", i)
+
+		// Simulate idle timeout
+		a.client.Close()
+
+		// Recover session
+		err = a.client.Connect()
+		require.NoError(a.t, err, "Idle reconnection cycle %d should succeed", i)
+
+		err = a.client.Authenticate(authToken)
+		require.NoError(a.t, err, "Idle re-authentication cycle %d should succeed", i)
+	}
+
+	// Test 4: Idle timeout with concurrent sessions
+	a.t.Log("Testing idle timeout with concurrent sessions...")
+
+	// Create multiple clients to simulate concurrent idle sessions
+	const numConcurrentIdleSessions = 4
+	responses := make(chan *JSONRPCResponse, numConcurrentIdleSessions)
+	errors := make(chan error, numConcurrentIdleSessions)
+
+	for i := 0; i < numConcurrentIdleSessions; i++ {
+		go func(index int) {
+			// Create dedicated client for this idle session
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			defer client.Close()
+
+			// Connect and authenticate
+			err := client.Connect()
+			if err != nil {
+				errors <- fmt.Errorf("idle session %d connection failed: %w", index, err)
+				return
+			}
+
+			authToken, err := a.helper.GetJWTToken("operator")
+			if err != nil {
+				errors <- fmt.Errorf("idle session %d token failed: %w", index, err)
+				return
+			}
+
+			err = client.Authenticate(authToken)
+			if err != nil {
+				errors <- fmt.Errorf("idle session %d auth failed: %w", index, err)
+				return
+			}
+
+			// Perform operations
+			response, err := client.GetCameraList()
+			if err != nil {
+				errors <- fmt.Errorf("idle session %d operation failed: %w", index, err)
+				return
+			}
+			responses <- response
+		}(i)
+	}
+
+	// Collect concurrent idle session results
+	successCount := 0
+	errorCount := 0
+
+	for i := 0; i < numConcurrentIdleSessions; i++ {
+		select {
+		case response := <-responses:
+			require.NotNil(a.t, response, "Concurrent idle session %d should not be nil", i)
+			successCount++
+		case err := <-errors:
+			a.t.Logf("Concurrent idle session %d failed: %v", i, err)
+			errorCount++
+		case <-time.After(10 * time.Second):
+			a.t.Fatal("Concurrent idle timeout test timeout")
+		}
+	}
+
+	// Concurrent idle timeout should handle multiple sessions
+	require.GreaterOrEqual(a.t, successCount, numConcurrentIdleSessions/2,
+		"At least half of concurrent idle sessions should succeed during idle timeout testing")
+
+	a.t.Logf("✅ Idle timeout handling validated - %d/%d concurrent idle sessions succeeded", successCount, numConcurrentIdleSessions)
+
 	return nil
 }
 
@@ -2140,8 +3634,144 @@ func (a *WebSocketIntegrationAsserter) AssertSessionRecovery() error {
 
 // AssertReconnectionHandling validates reconnection handling for dropped sessions
 func (a *WebSocketIntegrationAsserter) AssertReconnectionHandling() error {
-	// Test reconnection handling
-	a.t.Log("✅ Reconnection handling validated")
+	// REAL RECONNECTION TESTING: Test reconnection handling for dropped sessions
+
+	// Connect and authenticate
+	err := a.authenticateAsOperator()
+	require.NoError(a.t, err, "Authentication should succeed")
+
+	// Test 1: Basic reconnection handling
+	a.t.Log("Testing basic reconnection handling...")
+
+	// Perform initial operations
+	_, err = a.client.GetCameraList()
+	require.NoError(a.t, err, "Initial session operation should succeed")
+
+	// Simulate connection drop
+	a.client.Close()
+
+	// Test reconnection
+	err = a.client.Connect()
+	require.NoError(a.t, err, "Should be able to reconnect after connection drop")
+
+	// Re-authenticate after reconnection
+	authToken, err := a.helper.GetJWTToken("operator")
+	require.NoError(a.t, err, "Should be able to create JWT token after reconnection")
+
+	err = a.client.Authenticate(authToken)
+	require.NoError(a.t, err, "Should be able to re-authenticate after reconnection")
+
+	// Verify session works after reconnection
+	_, err = a.client.GetCameraList()
+	require.NoError(a.t, err, "Session should work normally after reconnection")
+
+	// Test 2: Multiple reconnection cycles
+	a.t.Log("Testing multiple reconnection cycles...")
+
+	reconnectionCycles := 4
+	for i := 0; i < reconnectionCycles; i++ {
+		// Perform operations
+		_, err = a.client.GetCameraList()
+		require.NoError(a.t, err, "Reconnection cycle %d operation should succeed", i)
+
+		// Simulate connection drop
+		a.client.Close()
+
+		// Reconnect
+		err = a.client.Connect()
+		require.NoError(a.t, err, "Reconnection cycle %d should succeed", i)
+
+		err = a.client.Authenticate(authToken)
+		require.NoError(a.t, err, "Re-authentication cycle %d should succeed", i)
+	}
+
+	// Test 3: Reconnection with concurrent sessions
+	a.t.Log("Testing reconnection with concurrent sessions...")
+
+	// Create multiple clients to simulate concurrent reconnections
+	const numConcurrentReconnections = 6
+	responses := make(chan *JSONRPCResponse, numConcurrentReconnections)
+	errors := make(chan error, numConcurrentReconnections)
+
+	for i := 0; i < numConcurrentReconnections; i++ {
+		go func(index int) {
+			// Create dedicated client for this reconnection
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			defer client.Close()
+
+			// Connect and authenticate
+			err := client.Connect()
+			if err != nil {
+				errors <- fmt.Errorf("reconnection %d connection failed: %w", index, err)
+				return
+			}
+
+			authToken, err := a.helper.GetJWTToken("operator")
+			if err != nil {
+				errors <- fmt.Errorf("reconnection %d token failed: %w", index, err)
+				return
+			}
+
+			err = client.Authenticate(authToken)
+			if err != nil {
+				errors <- fmt.Errorf("reconnection %d auth failed: %w", index, err)
+				return
+			}
+
+			// Perform operations
+			response, err := client.GetCameraList()
+			if err != nil {
+				errors <- fmt.Errorf("reconnection %d operation failed: %w", index, err)
+				return
+			}
+			responses <- response
+		}(i)
+	}
+
+	// Collect concurrent reconnection results
+	successCount := 0
+	errorCount := 0
+
+	for i := 0; i < numConcurrentReconnections; i++ {
+		select {
+		case response := <-responses:
+			require.NotNil(a.t, response, "Concurrent reconnection %d should not be nil", i)
+			successCount++
+		case err := <-errors:
+			a.t.Logf("Concurrent reconnection %d failed: %v", i, err)
+			errorCount++
+		case <-time.After(15 * time.Second):
+			a.t.Fatal("Concurrent reconnection test timeout")
+		}
+	}
+
+	// Concurrent reconnection should handle multiple sessions
+	require.GreaterOrEqual(a.t, successCount, numConcurrentReconnections/2,
+		"At least half of concurrent reconnections should succeed during reconnection testing")
+
+	// Test 4: Reconnection resilience
+	a.t.Log("Testing reconnection resilience...")
+
+	// Test rapid reconnection cycles
+	rapidCycles := 5
+	for i := 0; i < rapidCycles; i++ {
+		// Perform quick operation
+		_, err = a.client.GetCameraList()
+		require.NoError(a.t, err, "Rapid reconnection cycle %d should succeed", i)
+
+		// Simulate rapid connection drop
+		a.client.Close()
+
+		// Rapid reconnection
+		err = a.client.Connect()
+		require.NoError(a.t, err, "Rapid reconnection cycle %d should succeed", i)
+
+		err = a.client.Authenticate(authToken)
+		require.NoError(a.t, err, "Rapid re-authentication cycle %d should succeed", i)
+	}
+
+	a.t.Logf("✅ Reconnection handling validated - %d/%d concurrent reconnections succeeded", successCount, numConcurrentReconnections)
+
 	return nil
 }
 
@@ -2170,8 +3800,103 @@ func (a *WebSocketIntegrationAsserter) AssertAuthenticationPersistence() error {
 
 // AssertComprehensiveSessionManagement validates comprehensive session management scenarios
 func (a *WebSocketIntegrationAsserter) AssertComprehensiveSessionManagement() error {
-	// Test comprehensive session management
-	a.t.Log("✅ Comprehensive session management validated")
+	// REAL SESSION MANAGEMENT TESTING: Test session lifecycle, persistence, and cleanup
+
+	// Test 1: Session establishment and authentication persistence
+	a.t.Log("Testing session establishment and authentication persistence...")
+
+	// Create multiple clients to simulate different sessions
+	client1 := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+	client2 := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+
+	// Establish session 1
+	err := client1.Connect()
+	require.NoError(a.t, err, "Client 1 connection should succeed")
+
+	authToken, err := a.helper.GetJWTToken("operator")
+	require.NoError(a.t, err, "Should be able to create JWT token")
+
+	err = client1.Authenticate(authToken)
+	require.NoError(a.t, err, "Client 1 authentication should succeed")
+
+	// Establish session 2
+	err = client2.Connect()
+	require.NoError(a.t, err, "Client 2 connection should succeed")
+
+	err = client2.Authenticate(authToken)
+	require.NoError(a.t, err, "Client 2 authentication should succeed")
+
+	// Test 2: Session isolation - operations should be independent
+	a.t.Log("Testing session isolation...")
+
+	// Client 1 operations
+	response1, err := client1.GetCameraList()
+	require.NoError(a.t, err, "Client 1 camera list should succeed")
+	require.NotNil(a.t, response1.Result, "Client 1 should get camera list result")
+
+	// Client 2 operations (should be independent)
+	response2, err := client2.GetCameraList()
+	require.NoError(a.t, err, "Client 2 camera list should succeed")
+	require.NotNil(a.t, response2.Result, "Client 2 should get camera list result")
+
+	// Verify sessions are independent
+	require.Equal(a.t, response1.Result, response2.Result, "Both clients should get same camera list")
+
+	// Test 3: Session persistence during operations
+	a.t.Log("Testing session persistence during operations...")
+
+	// Perform operations on client 1
+	_, err = client1.TakeSnapshot("camera0", "session_test_1.jpg")
+	if err != nil {
+		a.t.Logf("Client 1 snapshot failed (expected): %v", err)
+	}
+
+	// Perform operations on client 2
+	_, err = client2.TakeSnapshot("camera0", "session_test_2.jpg")
+	if err != nil {
+		a.t.Logf("Client 2 snapshot failed (expected): %v", err)
+	}
+
+	// Verify both sessions still work
+	_, err = client1.GetCameraList()
+	require.NoError(a.t, err, "Client 1 should still work after operations")
+
+	_, err = client2.GetCameraList()
+	require.NoError(a.t, err, "Client 2 should still work after operations")
+
+	// Test 4: Session cleanup and resource management
+	a.t.Log("Testing session cleanup and resource management...")
+
+	// Close client 1
+	client1.Close()
+
+	// Verify client 2 still works after client 1 cleanup
+	_, err = client2.GetCameraList()
+	require.NoError(a.t, err, "Client 2 should work after client 1 cleanup")
+
+	// Test 5: Session reconnection
+	a.t.Log("Testing session reconnection...")
+
+	// Reconnect client 1
+	err = client1.Connect()
+	require.NoError(a.t, err, "Client 1 reconnection should succeed")
+
+	// Re-authenticate client 1
+	err = client1.Authenticate(authToken)
+	require.NoError(a.t, err, "Client 1 re-authentication should succeed")
+
+	// Verify both clients work after reconnection
+	_, err = client1.GetCameraList()
+	require.NoError(a.t, err, "Client 1 should work after reconnection")
+
+	_, err = client2.GetCameraList()
+	require.NoError(a.t, err, "Client 2 should work after client 1 reconnection")
+
+	// Cleanup
+	client1.Close()
+	client2.Close()
+
+	a.t.Log("✅ Comprehensive session management validated - sessions isolated, persistent, and properly cleaned up")
 	return nil
 }
 

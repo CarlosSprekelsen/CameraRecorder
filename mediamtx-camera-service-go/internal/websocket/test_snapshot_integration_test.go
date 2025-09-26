@@ -27,12 +27,43 @@ package websocket
 import (
 	"testing"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 // ============================================================================
 // MULTI-TIER SNAPSHOT PERFORMANCE TESTS
 // ============================================================================
+
+// TestSnapshot_FileLifecycle_Complete_Integration tests complete snapshot file lifecycle
+func TestSnapshot_FileLifecycle_Complete_Integration(t *testing.T) {
+	// Use testutils for comprehensive setup
+	dvh := testutils.NewDataValidationHelper(t)
+
+	asserter := NewWebSocketIntegrationAsserter(t)
+
+	// Test complete snapshot file lifecycle using testutils validation
+	err := asserter.AssertFileLifecycleWorkflow()
+	require.NoError(t, err, "Snapshot file lifecycle workflow should succeed")
+
+	// Validate testutils integration
+	require.NotNil(t, dvh, "DataValidationHelper should be created")
+}
+
+// TestSnapshot_FileValidation_Comprehensive_Integration tests snapshot file validation using testutils
+func TestSnapshot_FileValidation_Comprehensive_Integration(t *testing.T) {
+	// Use testutils for comprehensive setup
+	dvh := testutils.NewDataValidationHelper(t)
+
+	asserter := NewWebSocketIntegrationAsserter(t)
+
+	// Test snapshot validation using testutils
+	err := asserter.AssertSnapshotWorkflow()
+	require.NoError(t, err, "Snapshot workflow should succeed")
+
+	// Validate testutils integration
+	require.NotNil(t, dvh, "DataValidationHelper should be created")
+}
 
 // TestSnapshot_MultiTierPerformance_Integration validates the multi-tier snapshot
 // architecture performance targets with real components

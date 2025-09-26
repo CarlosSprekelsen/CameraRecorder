@@ -299,6 +299,41 @@ func (c *WebSocketTestClient) GetCameraCapabilities(device string) (*JSONRPCResp
 	return c.SendJSONRPC("get_camera_capabilities", params)
 }
 
+// DeleteRecording deletes a recording file by filename
+func (c *WebSocketTestClient) DeleteRecording(filename string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{
+		"filename": filename,
+	}
+	return c.SendJSONRPC("delete_recording", params)
+}
+
+// DeleteSnapshot deletes a snapshot file by filename
+func (c *WebSocketTestClient) DeleteSnapshot(filename string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{
+		"filename": filename,
+	}
+	return c.SendJSONRPC("delete_snapshot", params)
+}
+
+// GetStorageInfo returns storage information and statistics
+func (c *WebSocketTestClient) GetStorageInfo() (*JSONRPCResponse, error) {
+	return c.SendJSONRPC("get_storage_info", nil)
+}
+
+// SetRetentionPolicy sets file retention policy
+func (c *WebSocketTestClient) SetRetentionPolicy(maxAgeDays int, maxFiles int) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{
+		"max_age_days": maxAgeDays,
+		"max_files":    maxFiles,
+	}
+	return c.SendJSONRPC("set_retention_policy", params)
+}
+
+// CleanupOldFiles removes old files based on retention policy
+func (c *WebSocketTestClient) CleanupOldFiles() (*JSONRPCResponse, error) {
+	return c.SendJSONRPC("cleanup_old_files", nil)
+}
+
 // Close closes the WebSocket connection
 func (c *WebSocketTestClient) Close() {
 	if c.conn != nil {

@@ -171,3 +171,44 @@ func GetStandardRetryConfig() (attempts int, delay time.Duration) {
 func GetStandardConcurrencyConfig() (goroutines, iterations int) {
 	return UniversalConcurrencyGoroutines, UniversalConcurrencyIterations
 }
+
+// =============================================================================
+// UNIVERSAL TEST PATH CONSTANTS
+// =============================================================================
+// Path-related constants for test setup and file management.
+
+const (
+	// Test Path Constants - Universal across all modules
+	UniversalTestSnapshotsPath  = "/tmp/snapshots"
+	UniversalTestRecordingsPath = "/tmp/recordings"
+	UniversalTestCameraID       = "camera0"
+
+	// Test File Extension Constants - Universal across all modules
+	UniversalSnapshotExtensions  = ".jpg,.jpeg,.png,.bmp"
+	UniversalRecordingExtensions = ".mp4,.mkv,.avi,.mov"
+)
+
+// GetTestSnapshotsPath returns the standard test snapshots path
+func GetTestSnapshotsPath() string {
+	return UniversalTestSnapshotsPath
+}
+
+// GetTestRecordingsPath returns the standard test recordings path
+func GetTestRecordingsPath() string {
+	return UniversalTestRecordingsPath
+}
+
+// GetTestCameraID returns the standard test camera ID
+func GetTestCameraID() string {
+	return UniversalTestCameraID
+}
+
+// GetSupportedSnapshotExtensions returns supported snapshot file extensions
+func GetSupportedSnapshotExtensions() []string {
+	return []string{".jpg", ".jpeg", ".png", ".bmp"}
+}
+
+// GetSupportedRecordingExtensions returns supported recording file extensions
+func GetSupportedRecordingExtensions() []string {
+	return []string{".mp4", ".mkv", ".avi", ".mov"}
+}

@@ -28,12 +28,43 @@ package websocket
 import (
 	"testing"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/require"
 )
 
 // ============================================================================
 // STATELESS RECORDING ARCHITECTURE TESTS
 // ============================================================================
+
+// TestRecording_FileLifecycle_Complete_Integration tests complete recording file lifecycle
+func TestRecording_FileLifecycle_Complete_Integration(t *testing.T) {
+	// Use testutils for comprehensive setup
+	dvh := testutils.NewDataValidationHelper(t)
+
+	asserter := NewWebSocketIntegrationAsserter(t)
+
+	// Test complete recording file lifecycle using testutils validation
+	err := asserter.AssertFileLifecycleWorkflow()
+	require.NoError(t, err, "Recording file lifecycle workflow should succeed")
+
+	// Validate testutils integration
+	require.NotNil(t, dvh, "DataValidationHelper should be created")
+}
+
+// TestRecording_FileValidation_Comprehensive_Integration tests recording file validation using testutils
+func TestRecording_FileValidation_Comprehensive_Integration(t *testing.T) {
+	// Use testutils for comprehensive setup
+	dvh := testutils.NewDataValidationHelper(t)
+
+	asserter := NewWebSocketIntegrationAsserter(t)
+
+	// Test recording validation using testutils
+	err := asserter.AssertRecordingWorkflow()
+	require.NoError(t, err, "Recording workflow should succeed")
+
+	// Validate testutils integration
+	require.NotNil(t, dvh, "DataValidationHelper should be created")
+}
 
 // TestRecording_StatelessArchitecture_Integration validates the stateless recording
 // architecture where MediaMTX is the source of truth
