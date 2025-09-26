@@ -963,7 +963,8 @@ export class MockDataFactory {
       measure: jest.fn(),
       getEntries: jest.fn(() => []),
       getEntriesByName: jest.fn(() => []),
-      getEntriesByType: jest.fn(() => [])
+      getEntriesByType: jest.fn(() => []),
+      now: jest.fn(() => Date.now())
     };
   }
 

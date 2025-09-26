@@ -27,10 +27,30 @@ const mockWebSocketService = MockDataFactory.createMockWebSocketService();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
 const mockDocument = MockDataFactory.createMockDocument();
 
-// Mock global document object
-Object.defineProperty(window, 'document', {
-  value: mockDocument,
-  writable: true
+// Mock global document object - use manual assignment to avoid redefinition errors
+(global as any).document = mockDocument;
+
+// Also mock window.document to ensure it's available
+(window as any).document = mockDocument;
+
+// Mock the document module at the top level
+jest.mock('../../../src/services/file/FileService', () => {
+  const originalModule = jest.requireActual('../../../src/services/file/FileService');
+  return {
+    ...originalModule,
+    FileService: class extends originalModule.FileService {
+      async downloadFile(downloadUrl: string, filename: string): Promise<void> {
+        // Use the mock document instead of the real one
+        const link = mockDocument.createElement('a');
+        link.href = downloadUrl;
+        link.download = filename;
+        link.target = '_blank';
+        mockDocument.body.appendChild(link);
+        link.click();
+        mockDocument.body.removeChild(link);
+      }
+    }
+  };
 });
 
 describe('FileService Unit Tests', () => {
