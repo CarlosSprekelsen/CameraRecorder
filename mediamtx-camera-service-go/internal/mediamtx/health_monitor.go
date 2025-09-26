@@ -87,7 +87,7 @@ func NewHealthMonitor(client MediaMTXClient, config *config.MediaMTXConfig, conf
 		isHealthy:         1, // Assume healthy initially (1 = true)
 		failureCount:      0,
 		lastCheckTime:     time.Now().UnixNano(),
-		debounceDuration:  5 * time.Second,         // 15s debounce for health notifications
+		debounceDuration:  5 * time.Second,         // Default fallback for health debounce
 		healthEventChan:   make(chan struct{}, 10), // Buffered channel for health events
 	}
 }
@@ -315,8 +315,9 @@ func (h *SimpleHealthMonitor) WaitForHealthy(ctx context.Context) error {
 		return fmt.Errorf("health monitor not healthy within timeout")
 	}
 
-	// Fallback to polling with short intervals if event-driven approach doesn't work
-	ticker := time.NewTicker(100 * time.Millisecond)
+	// Fallback to polling with configuration-based intervals if event-driven approach doesn't work
+	tickerInterval := time.Duration(h.config.HealthMonitorDefaults.CheckInterval) * time.Second
+	ticker := time.NewTicker(tickerInterval)
 	defer ticker.Stop()
 
 	for {

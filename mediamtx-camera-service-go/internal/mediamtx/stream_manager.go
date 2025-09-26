@@ -736,8 +736,9 @@ func (sm *streamManager) WaitForStreamReadiness(ctx context.Context, streamName 
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
-	// Check readiness periodically
-	ticker := time.NewTicker(100 * time.Millisecond)
+	// Use dedicated stream manager ticker interval for optimal performance (configurable)
+	tickerInterval := time.Duration(sm.config.StreamReadiness.StreamManagerTickerInterval) * time.Second
+	ticker := time.NewTicker(tickerInterval)
 	defer ticker.Stop()
 
 	for {
@@ -896,7 +897,7 @@ func (sm *streamManager) EnableRecording(ctx context.Context, cameraID string) e
 
 	// Wait for the FFmpeg publisher to start using context-aware timeout
 	select {
-	case <-time.After(TestTimeoutVeryLong):
+	case <-time.After(time.Duration(sm.config.StreamReadiness.CheckInterval) * time.Second):
 		// FFmpeg publisher should be started now
 	case <-ctx.Done():
 		// Context cancelled, return early

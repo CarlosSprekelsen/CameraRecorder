@@ -781,6 +781,11 @@ func (cm *ConfigManager) setDefaults(v *viper.Viper) {
 	v.SetDefault("mediamtx.stream_readiness.enable_progress_notifications", true)
 	v.SetDefault("mediamtx.stream_readiness.graceful_fallback", true)
 
+	// Performance fine-tuning defaults
+	v.SetDefault("mediamtx.stream_readiness.controller_ticker_interval", 0.1)                             // 100ms for fast controller readiness
+	v.SetDefault("mediamtx.stream_readiness.stream_manager_ticker_interval", 0.1)                         // 100ms for fast stream readiness
+	v.SetDefault("mediamtx.stream_readiness.path_manager_retry_intervals", []float64{0.1, 0.2, 0.4, 0.8}) // Retry backoffs
+
 	// FFmpeg defaults
 	v.SetDefault("ffmpeg.snapshot.process_creation_timeout", 5.0)
 	v.SetDefault("ffmpeg.snapshot.execution_timeout", 8.0)

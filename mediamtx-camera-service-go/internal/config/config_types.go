@@ -39,6 +39,11 @@ type StreamReadinessConfig struct {
 	GracefulFallback            bool    `mapstructure:"graceful_fallback"`             // Default: true
 	MaxCheckInterval            float64 `mapstructure:"max_check_interval"`            // Default: 2.0 seconds (max polling interval)
 	InitialCheckInterval        float64 `mapstructure:"initial_check_interval"`        // Default: 0.2 seconds (200ms)
+
+	// Performance fine-tuning options
+	ControllerTickerInterval    float64   `mapstructure:"controller_ticker_interval"`     // Default: 0.1 seconds (100ms) - Fast controller readiness
+	StreamManagerTickerInterval float64   `mapstructure:"stream_manager_ticker_interval"` // Default: 0.1 seconds (100ms) - Fast stream readiness
+	PathManagerRetryIntervals   []float64 `mapstructure:"path_manager_retry_intervals"`   // Default: [0.1, 0.2, 0.4, 0.8] seconds - Retry backoffs
 }
 
 // SecurityConfig represents security configuration settings.

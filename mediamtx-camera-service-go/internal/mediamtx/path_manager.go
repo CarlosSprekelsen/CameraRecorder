@@ -418,8 +418,15 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config *PathC
 		return NewPathErrorWithErr(name, "patch_path", "failed to marshal config", err)
 	}
 
-	// Retry with jitter: 100ms → 200ms → 400ms → 800ms (cap at ~2s total)
-	backoffs := []time.Duration{100 * time.Millisecond, 200 * time.Millisecond, 400 * time.Millisecond, 800 * time.Millisecond}
+	// Retry with configurable jitter intervals (default: 100ms → 200ms → 400ms → 800ms)
+	backoffs := []time.Duration{100 * time.Millisecond, 200 * time.Millisecond, 400 * time.Millisecond, 800 * time.Millisecond} // Default fallback
+	if len(pm.config.StreamReadiness.PathManagerRetryIntervals) > 0 {
+		// Use configured retry intervals
+		backoffs = make([]time.Duration, len(pm.config.StreamReadiness.PathManagerRetryIntervals))
+		for i, interval := range pm.config.StreamReadiness.PathManagerRetryIntervals {
+			backoffs[i] = time.Duration(interval) * time.Second
+		}
+	}
 
 	for attempt, backoff := range backoffs {
 		pm.logger.WithFields(logging.Fields{

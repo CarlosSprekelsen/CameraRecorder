@@ -91,8 +91,7 @@ type controller struct {
 	cancel    context.CancelFunc
 
 	// Event-Driven Readiness System
-	readinessEventChan chan struct{} // Readiness notification channel
-	readinessMutex     sync.RWMutex  // Protects readiness event channel access
+	readinessMutex sync.RWMutex // Protects readiness state access
 }
 
 // checkRunningState safely checks if the controller is running using atomic operations.
@@ -133,19 +132,8 @@ func (c *controller) IsReady() bool {
 }
 
 // emitReadinessEvent emits a readiness event to all subscribers
-func (c *controller) emitReadinessEvent() {
-	c.readinessMutex.RLock()
-	defer c.readinessMutex.RUnlock()
-
-	// Send to the main readiness channel if it exists
-	if c.readinessEventChan != nil {
-		select {
-		case c.readinessEventChan <- struct{}{}:
-		default:
-			// Channel is full, skip this event
-		}
-	}
-}
+// emitReadinessEvent is no longer needed with per-subscriber channels
+// Each subscriber gets their own channel, so no shared channel broadcasting
 
 // SubscribeToReadiness subscribes to controller readiness events
 // FIXED: Creates per-subscriber channel instead of returning shared channel
@@ -330,7 +318,6 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 		systemMetricsManager:      systemMetricsManager,
 		// externalDiscovery: nil - intentionally not initialized (optional component)
 		// No local recording state - query MediaMTX directly
-		readinessEventChan: make(chan struct{}, 10), // Buffered channel for readiness events
 	}, nil
 }
 
@@ -400,7 +387,9 @@ func (c *controller) Start(ctx context.Context) error {
 // monitorReadiness monitors controller readiness and emits events when ready
 // This implements the Progressive Readiness pattern - components become ready as they initialize
 func (c *controller) monitorReadiness() {
-	ticker := time.NewTicker(100 * time.Millisecond)
+	// Use dedicated controller ticker interval for optimal performance (configurable)
+	tickerInterval := time.Duration(c.config.StreamReadiness.ControllerTickerInterval) * time.Second
+	ticker := time.NewTicker(tickerInterval)
 	defer ticker.Stop()
 
 	lastReadyState := false
@@ -416,10 +405,9 @@ func (c *controller) monitorReadiness() {
 
 			currentReadyState := c.IsReady()
 
-			// Emit readiness event only once when controller becomes ready
+			// Controller readiness state changed
 			if !lastReadyState && currentReadyState && !readyEventEmitted {
-				c.logger.Info("Controller became ready - emitting readiness event")
-				c.emitReadinessEvent()
+				c.logger.Info("Controller became ready - readiness state updated")
 				readyEventEmitted = true
 			}
 

@@ -106,7 +106,8 @@ func (rrs *RecordingRecoveryStrategy) Recover(ctx context.Context, errorCtx *Err
 
 // GetRecoveryDelay returns the delay before attempting recovery
 func (rrs *RecordingRecoveryStrategy) GetRecoveryDelay() time.Duration {
-	return 2 * time.Second // Wait 2 seconds before attempting recovery
+	// Use default recovery delay (1 second)
+	return 1 * time.Second
 }
 
 // GetStrategyName returns the name of this recovery strategy
@@ -279,7 +280,8 @@ func (srs *StreamRecoveryStrategy) Recover(ctx context.Context, errorCtx *ErrorC
 
 // GetRecoveryDelay returns the delay before attempting recovery
 func (srs *StreamRecoveryStrategy) GetRecoveryDelay() time.Duration {
-	return 3 * time.Second // Wait 3 seconds before attempting recovery
+	// Use default recovery delay (1 second)
+	return 1 * time.Second
 }
 
 // GetStrategyName returns the name of this recovery strategy

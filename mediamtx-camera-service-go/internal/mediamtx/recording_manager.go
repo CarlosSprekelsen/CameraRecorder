@@ -1140,7 +1140,8 @@ func getCircuitBreakerConfig(configIntegration ConfigIntegration) CircuitBreaker
 		cbConfig.FailureThreshold = 5 // Default: 5 failures before opening
 	}
 	if cbConfig.RecoveryTimeout == 0 {
-		cbConfig.RecoveryTimeout = 60 * time.Second // Default: 60 seconds recovery
+		// Use configuration-based recovery timeout
+		cbConfig.RecoveryTimeout = time.Duration(config.CircuitBreaker.RecoveryTimeout) * time.Second
 	}
 	if cbConfig.MaxFailures == 0 {
 		cbConfig.MaxFailures = 15 // Default: 15 failures before permanent open

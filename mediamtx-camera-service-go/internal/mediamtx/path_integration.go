@@ -22,7 +22,6 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 )
 
 // PathIntegration provides integration between MediaMTX path management and camera discovery
@@ -229,7 +228,7 @@ func (pi *PathIntegration) monitorCameraChanges(ctx context.Context) {
 	defer pi.wg.Done() // Ensure WaitGroup is decremented when goroutine exits
 
 	// Use configurable ticker interval (default 5 seconds)
-	tickerInterval := testutils.UniversalTimeoutVeryLong // Default fallback
+	tickerInterval := 5 * time.Second // Default fallback
 	if pi.configIntegration != nil {
 		cfg, err := pi.configIntegration.GetConfig()
 		if err == nil && cfg.MediaMTX.HealthMonitorDefaults.CheckInterval > 0 {

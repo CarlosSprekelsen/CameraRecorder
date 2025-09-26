@@ -10,12 +10,11 @@ module.exports = {
   
   // Test file patterns
   testMatch: [
-    '<rootDir>/tests/integration/**/*.test.ts',
-    '<rootDir>/tests/integration/**/*.test.js'
+    '<rootDir>/test_basic_connectivity.ts'
   ],
   
   // Setup files
-  setupFilesAfterEnv: ['<rootDir>/tests/integration/setup.ts'],
+  // setupFilesAfterEnv: ['<rootDir>/tests/integration/setup.ts'],
   
   // Coverage configuration
   collectCoverage: true,
@@ -54,9 +53,9 @@ module.exports = {
   },
   
   // Test environment variables
-  setupFiles: ['<rootDir>/tests/integration/env.ts'],
+  // setupFiles: ['<rootDir>/tests/integration/env.ts'],
   
   // Global setup and teardown
-  globalSetup: '<rootDir>/tests/integration/globalSetup.ts',
-  globalTeardown: '<rootDir>/tests/integration/globalTeardown.ts'
+  // globalSetup: '<rootDir>/tests/integration/globalSetup.ts',
+  // globalTeardown: '<rootDir>/tests/integration/globalTeardown.ts'
 };

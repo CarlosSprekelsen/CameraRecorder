@@ -69,9 +69,19 @@ check_server_connectivity() {
     # Check if server is running on port 8002
     if ! nc -z localhost 8002 2>/dev/null; then
         print_warning "Server not running on port 8002"
-        print_status "Please ensure MediaMTX server is running before starting tests"
-        print_status "You can start the server with: ./scripts/start-server.sh"
-        read -p "Press Enter to continue anyway, or Ctrl+C to abort..."
+        print_status "Attempting to start MediaMTX server..."
+        
+        # Try to start the server
+        if [ -f "./scripts/start-server.sh" ]; then
+            print_status "Starting server with ./scripts/start-server.sh"
+            ./scripts/start-server.sh
+        else
+            print_status "Server startup script not found. Please start the server manually:"
+            print_status "  cd /home/carlossprekelsen/CameraRecorder/mediamtx-camera-service-go"
+            print_status "  sudo ./deployment/scripts/install.sh"
+            print_status "  sudo systemctl start mediamtx camera-service"
+            read -p "Press Enter to continue anyway, or Ctrl+C to abort..."
+        fi
     else
         print_success "Server connectivity confirmed"
     fi

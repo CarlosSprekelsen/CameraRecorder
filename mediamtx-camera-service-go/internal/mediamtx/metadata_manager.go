@@ -209,13 +209,11 @@ func (mm *MetadataManager) ExtractImageMetadata(ctx context.Context, filePath st
 // executeFFprobe executes ffprobe command with timeout and returns parsed JSON
 func (mm *MetadataManager) executeFFprobe(ctx context.Context, filePath string) (*FFprobeResult, error) {
 	// Get timeout from configuration
-	timeout := 10 * time.Second // Default timeout
+	timeout := 10 * time.Second // Default fallback
 	if mm.configIntegration != nil {
 		if cfg, err := mm.configIntegration.GetConfig(); err == nil && cfg != nil {
-			// Use performance configuration for timeout if available
-			// For now, use default timeout as performance config structure may not be fully defined
-			// This can be enhanced when performance configuration is fully implemented
-			timeout = 10 * time.Second
+			// Use FFmpeg snapshot configuration for timeout
+			timeout = time.Duration(cfg.MediaMTX.FFmpeg.Snapshot.ExecutionTimeout) * time.Second
 		}
 	}
 

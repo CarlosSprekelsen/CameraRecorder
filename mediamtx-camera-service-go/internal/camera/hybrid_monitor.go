@@ -29,7 +29,6 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 )
 
 // HybridCameraMonitor provides hybrid camera discovery and monitoring
@@ -63,6 +62,10 @@ type HybridCameraMonitor struct {
 
 	// Concurrency control
 	startStopMutex sync.Mutex // Protects start/stop operations from concurrent access
+
+	// Device-level mutex protection for V4L2 operations
+	deviceMutexes map[string]*sync.Mutex // Per-device mutexes for V4L2 access
+	mutexesLock   sync.RWMutex           // Protects deviceMutexes map
 
 	// Caching
 	capabilityCache map[string]*V4L2Capabilities
@@ -205,6 +208,9 @@ func NewHybridCameraMonitor(
 		stopChan:           make(chan struct{}, 10), // Buffered to prevent deadlock during shutdown
 		readinessEventChan: make(chan struct{}, 1),  // Initialize readiness event channel
 
+		// Device-level mutex protection
+		deviceMutexes: make(map[string]*sync.Mutex),
+
 		// Caching
 		capabilityCache: make(map[string]*V4L2Capabilities),
 
@@ -235,8 +241,8 @@ func NewHybridCameraMonitor(
 
 	// Initialize bounded worker pool for event handlers
 	// Use configuration values or defaults
-	maxWorkers := 10                                  // Default
-	taskTimeout := testutils.UniversalTimeoutVeryLong // Default
+	maxWorkers := 10                // Default
+	taskTimeout := 10 * time.Second // Default fallback
 	if cfg.Camera.MaxEventHandlerGoroutines > 0 {
 		maxWorkers = cfg.Camera.MaxEventHandlerGoroutines
 	}
@@ -690,6 +696,32 @@ func (m *HybridCameraMonitor) GetResourceStats() map[string]interface{} {
 	return stats
 }
 
+// getDeviceMutex returns a device-specific mutex for V4L2 operations
+// This ensures only one concurrent operation per device to prevent V4L2 locking errors
+func (m *HybridCameraMonitor) getDeviceMutex(devicePath string) *sync.Mutex {
+	m.mutexesLock.RLock()
+	deviceMutex, exists := m.deviceMutexes[devicePath]
+	if exists {
+		m.mutexesLock.RUnlock()
+		return deviceMutex
+	}
+	m.mutexesLock.RUnlock()
+
+	// Create new mutex for this device
+	m.mutexesLock.Lock()
+	defer m.mutexesLock.Unlock()
+
+	// Double-check in case another goroutine created it
+	if deviceMutex, exists := m.deviceMutexes[devicePath]; exists {
+		return deviceMutex
+	}
+
+	// Create and store new mutex
+	deviceMutex = &sync.Mutex{}
+	m.deviceMutexes[devicePath] = deviceMutex
+	return deviceMutex
+}
+
 // TakeDirectSnapshot captures a snapshot directly via V4L2 (Tier 0 - Fastest)
 func (m *HybridCameraMonitor) TakeDirectSnapshot(ctx context.Context, devicePath, outputPath string, options map[string]interface{}) (*DirectSnapshot, error) {
 	startTime := time.Now()
@@ -700,6 +732,11 @@ func (m *HybridCameraMonitor) TakeDirectSnapshot(ctx context.Context, devicePath
 		"options":     options,
 		"tier":        0,
 	}).Info("Taking V4L2 direct snapshot")
+
+	// Get device-specific mutex for V4L2 operations
+	deviceMutex := m.getDeviceMutex(devicePath)
+	deviceMutex.Lock()
+	defer deviceMutex.Unlock()
 
 	// Validate device exists using existing infrastructure
 	if !m.deviceChecker.Exists(devicePath) {
