@@ -92,10 +92,6 @@ type WebSocketServer struct {
 	clientCounter int64                        // Atomic counter for unique client ID generation
 	clientCount   int64                        // Atomic counter for fast client count queries
 
-	// Cleanup State Protection
-	cleanupMutex   sync.Mutex // Protects cleanup channel operations
-	cleanupStarted bool       // Tracks if cleanup has started
-
 	// JSON-RPC Method Registration
 	methods             map[string]MethodHandler // Registered JSON-RPC methods
 	methodsMutex        sync.RWMutex             // Protects method map modifications
@@ -733,16 +729,8 @@ func (s *WebSocketServer) closeAllClientConnections() {
 	// Close connections concurrently with timeout
 	var wg sync.WaitGroup
 
-	// Protect channel operations from race conditions
-	s.cleanupMutex.Lock()
-	if s.cleanupStarted {
-		s.cleanupMutex.Unlock()
-		s.logger.Debug("Cleanup already started, skipping")
-		return
-	}
-	s.cleanupStarted = true
+	// Create channel for cleanup results
 	cleanupResults := make(chan error, len(clientsToClose))
-	s.cleanupMutex.Unlock()
 
 	for _, client := range clientsToClose {
 		wg.Add(1)
@@ -762,14 +750,12 @@ func (s *WebSocketServer) closeAllClientConnections() {
 
 			// Close connection
 			if err := client.Conn.Close(); err != nil {
-				// Protect channel send operation
-				s.cleanupMutex.Lock()
+				// Safe channel send - won't panic if channel is closed
 				select {
 				case cleanupResults <- fmt.Errorf("failed to close connection for client %s: %w", client.ClientID, err):
 				default:
-					// Channel is closed or full, skip send
+					// Channel closed or full, ignore
 				}
-				s.cleanupMutex.Unlock()
 				return
 			}
 
@@ -787,14 +773,12 @@ func (s *WebSocketServer) closeAllClientConnections() {
 			// Use atomic operation for metrics update
 			atomic.AddInt64(&s.metrics.ActiveConnections, -1)
 
-			// Protect channel send operation
-			s.cleanupMutex.Lock()
+			// Safe channel send - won't panic if channel is closed
 			select {
 			case cleanupResults <- nil:
 			default:
-				// Channel is closed or full, skip send
+				// Channel closed or full, ignore
 			}
-			s.cleanupMutex.Unlock()
 		}(client)
 	}
 
@@ -819,15 +803,17 @@ func (s *WebSocketServer) closeAllClientConnections() {
 	}
 
 	// Check cleanup results
-	s.cleanupMutex.Lock()
-	close(cleanupResults)
-	s.cleanupMutex.Unlock()
-
 	errorCount := 0
-	for err := range cleanupResults {
-		if err != nil {
-			errorCount++
-			s.logger.WithError(err).Warn("Client cleanup error")
+	for i := 0; i < len(clientsToClose); i++ {
+		select {
+		case err := <-cleanupResults:
+			if err != nil {
+				errorCount++
+				s.logger.WithError(err).Warn("Client cleanup error")
+			}
+		case <-time.After(5 * time.Second):
+			s.logger.Warn("Timeout waiting for cleanup result")
+			break
 		}
 	}
 

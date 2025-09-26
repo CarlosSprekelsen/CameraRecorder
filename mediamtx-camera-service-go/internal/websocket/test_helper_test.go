@@ -25,6 +25,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -35,6 +36,10 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 )
+
+// Global mutex to prevent parallel test execution
+// WebSocket tests must run sequentially because they share the same MediaMTX controller resources
+var testMutex sync.Mutex
 
 // WebSocketTestHelper provides real WebSocket server setup for integration testing
 type WebSocketTestHelper struct {
@@ -51,7 +56,12 @@ type WebSocketTestHelper struct {
 
 // NewWebSocketTestHelper creates a new WebSocket test helper with real components
 // Follows main.go orchestration pattern exactly
+// CRITICAL: Uses global mutex to prevent parallel test execution due to shared MediaMTX controller resources
 func NewWebSocketTestHelper(t *testing.T) *WebSocketTestHelper {
+	// CRITICAL: Lock to prevent parallel test execution
+	// WebSocket tests share the same MediaMTX controller, camera devices, and file paths
+	testMutex.Lock()
+	t.Cleanup(func() { testMutex.Unlock() })
 	// Use testutils.UniversalTestSetup for fixture-based configuration
 	setup := testutils.SetupTest(t, "config_clean_minimal.yaml")
 	configManager := setup.GetConfigManager()
@@ -101,8 +111,23 @@ func NewWebSocketTestHelper(t *testing.T) *WebSocketTestHelper {
 		t.Fatalf("Failed to start MediaMTX controller: %v", err)
 	}
 
-	// Progressive Readiness Pattern - Controller started, operations will handle readiness
-	logger.Info("MediaMTX controller started - WebSocket server ready for connections")
+	// DETERMINISTIC SETUP: Wait for controller to be truly ready
+	// This ensures camera monitor completes discovery before tests run
+	maxWait := 30 * time.Second
+	start := time.Now()
+	for time.Since(start) < maxWait {
+		if mediaMTXController.IsReady() {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	if !mediaMTXController.IsReady() {
+		t.Fatalf("MediaMTX controller not ready within %v", maxWait)
+	}
+
+	// Controller is now truly ready - tests can run deterministically
+	logger.Info("MediaMTX controller started and ready - WebSocket server ready for connections")
 
 	// Register cleanup
 	t.Cleanup(func() {
@@ -145,6 +170,7 @@ func (h *WebSocketTestHelper) CreateRealServer() error {
 }
 
 // Cleanup stops the server and cleans up resources
+// Uses MediaMTX cleanup pattern for proper test isolation
 func (h *WebSocketTestHelper) Cleanup() {
 	if h.server != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -158,6 +184,17 @@ func (h *WebSocketTestHelper) Cleanup() {
 	if h.mediaMTXController != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
+
+		// Use MediaMTX cleanup pattern: force stop all active recordings
+		// This follows the existing MediaMTX test helper cleanup mechanism
+		if recordingManager := h.mediaMTXController.GetRecordingManager(); recordingManager != nil {
+			if err := recordingManager.Cleanup(ctx); err != nil {
+				h.t.Logf("Warning: Failed to cleanup recording manager: %v", err)
+			} else {
+				h.t.Log("Recording manager cleanup completed")
+			}
+		}
+
 		// Cast to full interface to access Stop method
 		if fullController, ok := h.mediaMTXController.(interface{ Stop(context.Context) error }); ok {
 			fullController.Stop(ctx)

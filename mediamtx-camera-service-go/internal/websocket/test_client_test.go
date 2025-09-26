@@ -200,7 +200,44 @@ func (c *WebSocketTestClient) StartRecording(device string, duration int, format
 		"duration": duration,
 		"format":   format,
 	}
-	return c.SendJSONRPC("start_recording", params)
+
+	response, err := c.SendJSONRPC("start_recording", params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check for error response first
+	if response.Error != nil {
+		// Enhanced error logging for investigation
+		fmt.Printf("DEBUG: StartRecording error details:\n")
+		fmt.Printf("  Code: %d\n", response.Error.Code)
+		fmt.Printf("  Message: %s\n", response.Error.Message)
+		if response.Error.Data != nil {
+			fmt.Printf("  Data: %+v\n", response.Error.Data)
+		}
+		return nil, fmt.Errorf("start_recording failed: %s", response.Error.Message)
+	}
+
+	// Add response validation to prevent nil result
+	if response.Result == nil {
+		return nil, fmt.Errorf("start_recording response missing result field")
+	}
+
+	// Validate response structure
+	resultMap, ok := response.Result.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("start_recording result is not a map: %T", response.Result)
+	}
+
+	// Validate required fields per API documentation
+	requiredFields := []string{"device", "filename", "status", "start_time", "format"}
+	for _, field := range requiredFields {
+		if _, exists := resultMap[field]; !exists {
+			return nil, fmt.Errorf("start_recording result missing required field: %s", field)
+		}
+	}
+
+	return response, nil
 }
 
 // StopRecording stops recording a camera
@@ -208,7 +245,32 @@ func (c *WebSocketTestClient) StopRecording(device string) (*JSONRPCResponse, er
 	params := map[string]interface{}{
 		"device": device,
 	}
-	return c.SendJSONRPC("stop_recording", params)
+
+	response, err := c.SendJSONRPC("stop_recording", params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Add response validation to prevent nil result
+	if response.Result == nil {
+		return nil, fmt.Errorf("stop_recording response missing result field")
+	}
+
+	// Validate response structure
+	resultMap, ok := response.Result.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("stop_recording result is not a map: %T", response.Result)
+	}
+
+	// Validate required fields per API documentation
+	requiredFields := []string{"device", "status"}
+	for _, field := range requiredFields {
+		if _, exists := resultMap[field]; !exists {
+			return nil, fmt.Errorf("stop_recording result missing required field: %s", field)
+		}
+	}
+
+	return response, nil
 }
 
 // ListRecordings lists recording files
@@ -227,6 +289,14 @@ func (c *WebSocketTestClient) ListSnapshots(limit int, offset int) (*JSONRPCResp
 		"offset": offset,
 	}
 	return c.SendJSONRPC("list_snapshots", params)
+}
+
+// GetCameraCapabilities gets camera capabilities
+func (c *WebSocketTestClient) GetCameraCapabilities(device string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{
+		"device": device,
+	}
+	return c.SendJSONRPC("get_camera_capabilities", params)
 }
 
 // Close closes the WebSocket connection
@@ -277,4 +347,206 @@ func (c *WebSocketTestClient) AssertCameraListResult(result interface{}) {
 		require.True(c.t, ok, "Camera %d device should be string", i)
 		require.Regexp(c.t, `^camera[0-9]+$`, device, "Camera %d device should match pattern", i)
 	}
+}
+
+// AssertCameraStatusResult validates CameraStatusResult structure
+func (c *WebSocketTestClient) AssertCameraStatusResult(result interface{}) {
+	resultMap, ok := result.(map[string]interface{})
+	require.True(c.t, ok, "Result should be a map")
+
+	// Check required fields according to OpenRPC spec
+	require.Contains(c.t, resultMap, "device", "Result should contain 'device' field")
+	require.Contains(c.t, resultMap, "status", "Result should contain 'status' field")
+	require.Contains(c.t, resultMap, "capabilities", "Result should contain 'capabilities' field")
+
+	// Validate device field
+	device, ok := resultMap["device"].(string)
+	require.True(c.t, ok, "Device should be string")
+	require.Regexp(c.t, `^camera[0-9]+$`, device, "Device should match pattern")
+
+	// Validate status field
+	status, ok := resultMap["status"].(string)
+	require.True(c.t, ok, "Status should be string")
+	require.Contains(c.t, []string{"connected", "disconnected", "error"}, status, "Status should be valid")
+
+	// Validate capabilities field
+	capabilities, ok := resultMap["capabilities"].(map[string]interface{})
+	require.True(c.t, ok, "Capabilities should be a map")
+	require.Contains(c.t, capabilities, "formats", "Capabilities should contain 'formats' field")
+	require.Contains(c.t, capabilities, "resolutions", "Capabilities should contain 'resolutions' field")
+}
+
+// AssertCameraCapabilitiesResult validates CameraCapabilitiesResult structure
+func (c *WebSocketTestClient) AssertCameraCapabilitiesResult(result interface{}) {
+	resultMap, ok := result.(map[string]interface{})
+	require.True(c.t, ok, "Result should be a map")
+
+	// Check required fields according to OpenRPC spec
+	require.Contains(c.t, resultMap, "device", "Result should contain 'device' field")
+	require.Contains(c.t, resultMap, "formats", "Result should contain 'formats' field")
+	require.Contains(c.t, resultMap, "resolutions", "Result should contain 'resolutions' field")
+	require.Contains(c.t, resultMap, "frame_rates", "Result should contain 'frame_rates' field")
+
+	// Validate device field
+	device, ok := resultMap["device"].(string)
+	require.True(c.t, ok, "Device should be string")
+	require.Regexp(c.t, `^camera[0-9]+$`, device, "Device should match pattern")
+
+	// Validate formats array
+	formats, ok := resultMap["formats"].([]interface{})
+	require.True(c.t, ok, "Formats should be an array")
+
+	// Validate resolutions array
+	_, ok = resultMap["resolutions"].([]interface{})
+	require.True(c.t, ok, "Resolutions should be an array")
+
+	// Validate frame_rates array
+	_, ok = resultMap["frame_rates"].([]interface{})
+	require.True(c.t, ok, "Frame rates should be an array")
+
+	// At least one format should be available
+	require.GreaterOrEqual(c.t, len(formats), 1, "At least one format should be available")
+}
+
+// AssertCameraListResultAPICompliant validates CameraListResult structure per API specification
+func (c *WebSocketTestClient) AssertCameraListResultAPICompliant(result interface{}) {
+	resultMap, ok := result.(map[string]interface{})
+	require.True(c.t, ok, "Result should be a map")
+
+	// Check required fields per API spec: cameras, total, connected
+	require.Contains(c.t, resultMap, "cameras", "Result should contain 'cameras' field per API spec")
+	require.Contains(c.t, resultMap, "total", "Result should contain 'total' field per API spec")
+	require.Contains(c.t, resultMap, "connected", "Result should contain 'connected' field per API spec")
+
+	// Validate cameras array
+	cameras, ok := resultMap["cameras"].([]interface{})
+	require.True(c.t, ok, "Cameras should be an array per API spec")
+
+	// Validate each camera structure per API spec
+	for i, camera := range cameras {
+		cameraMap, ok := camera.(map[string]interface{})
+		require.True(c.t, ok, "Camera %d should be a map", i)
+
+		// Required fields per API spec: device, status, name, resolution, fps, streams
+		require.Contains(c.t, cameraMap, "device", "Camera %d should have 'device' field per API spec", i)
+		require.Contains(c.t, cameraMap, "status", "Camera %d should have 'status' field per API spec", i)
+		require.Contains(c.t, cameraMap, "name", "Camera %d should have 'name' field per API spec", i)
+		require.Contains(c.t, cameraMap, "resolution", "Camera %d should have 'resolution' field per API spec", i)
+		require.Contains(c.t, cameraMap, "fps", "Camera %d should have 'fps' field per API spec", i)
+		require.Contains(c.t, cameraMap, "streams", "Camera %d should have 'streams' field per API spec", i)
+
+		// Validate device ID pattern per API spec: camera0, camera1, etc.
+		device, ok := cameraMap["device"].(string)
+		require.True(c.t, ok, "Camera %d device should be string", i)
+		require.Regexp(c.t, `^camera[0-9]+$`, device, "Camera %d device should match pattern per API spec", i)
+
+		// Validate status values per API spec
+		status, ok := cameraMap["status"].(string)
+		require.True(c.t, ok, "Camera %d status should be string", i)
+		require.Contains(c.t, []string{"CONNECTED", "DISCONNECTED", "ERROR"}, status,
+			"Camera %d status should be valid per API spec", i)
+
+		// Validate streams object per API spec
+		streams, ok := cameraMap["streams"].(map[string]interface{})
+		require.True(c.t, ok, "Camera %d streams should be a map per API spec", i)
+		require.Contains(c.t, streams, "rtsp", "Camera %d should have 'rtsp' stream per API spec", i)
+		require.Contains(c.t, streams, "hls", "Camera %d should have 'hls' stream per API spec", i)
+	}
+
+	// Validate total and connected are integers per API spec
+	total, ok := resultMap["total"].(float64) // JSON numbers are float64
+	require.True(c.t, ok, "Total should be a number per API spec")
+	require.GreaterOrEqual(c.t, int(total), 0, "Total should be non-negative per API spec")
+
+	connected, ok := resultMap["connected"].(float64) // JSON numbers are float64
+	require.True(c.t, ok, "Connected should be a number per API spec")
+	require.GreaterOrEqual(c.t, int(connected), 0, "Connected should be non-negative per API spec")
+	require.LessOrEqual(c.t, int(connected), int(total), "Connected should not exceed total per API spec")
+}
+
+// AssertCameraStatusResultAPICompliant validates CameraStatusResult structure per API specification
+func (c *WebSocketTestClient) AssertCameraStatusResultAPICompliant(result interface{}) {
+	resultMap, ok := result.(map[string]interface{})
+	require.True(c.t, ok, "Result should be a map")
+
+	// Check required fields per API spec: device, status, name, resolution, fps, streams
+	require.Contains(c.t, resultMap, "device", "Result should contain 'device' field per API spec")
+	require.Contains(c.t, resultMap, "status", "Result should contain 'status' field per API spec")
+	require.Contains(c.t, resultMap, "name", "Result should contain 'name' field per API spec")
+	require.Contains(c.t, resultMap, "resolution", "Result should contain 'resolution' field per API spec")
+	require.Contains(c.t, resultMap, "fps", "Result should contain 'fps' field per API spec")
+	require.Contains(c.t, resultMap, "streams", "Result should contain 'streams' field per API spec")
+
+	// Validate device field per API spec
+	device, ok := resultMap["device"].(string)
+	require.True(c.t, ok, "Device should be string per API spec")
+	require.Regexp(c.t, `^camera[0-9]+$`, device, "Device should match pattern per API spec")
+
+	// Validate status field per API spec
+	status, ok := resultMap["status"].(string)
+	require.True(c.t, ok, "Status should be string per API spec")
+	require.Contains(c.t, []string{"CONNECTED", "DISCONNECTED", "ERROR"}, status,
+		"Status should be valid per API spec")
+
+	// Validate streams object per API spec
+	streams, ok := resultMap["streams"].(map[string]interface{})
+	require.True(c.t, ok, "Streams should be a map per API spec")
+	require.Contains(c.t, streams, "rtsp", "Should have 'rtsp' stream per API spec")
+	require.Contains(c.t, streams, "hls", "Should have 'hls' stream per API spec")
+
+	// Validate optional metrics field if present per API spec
+	if metrics, exists := resultMap["metrics"]; exists {
+		metricsMap, ok := metrics.(map[string]interface{})
+		require.True(c.t, ok, "Metrics should be a map per API spec")
+		require.Contains(c.t, metricsMap, "bytes_sent", "Metrics should contain 'bytes_sent' per API spec")
+		require.Contains(c.t, metricsMap, "readers", "Metrics should contain 'readers' per API spec")
+		require.Contains(c.t, metricsMap, "uptime", "Metrics should contain 'uptime' per API spec")
+	}
+
+	// Validate optional capabilities field if present per API spec
+	if capabilities, exists := resultMap["capabilities"]; exists {
+		capabilitiesMap, ok := capabilities.(map[string]interface{})
+		require.True(c.t, ok, "Capabilities should be a map per API spec")
+		require.Contains(c.t, capabilitiesMap, "formats", "Capabilities should contain 'formats' per API spec")
+		require.Contains(c.t, capabilitiesMap, "resolutions", "Capabilities should contain 'resolutions' per API spec")
+	}
+}
+
+// AssertCameraCapabilitiesResultAPICompliant validates CameraCapabilitiesResult structure per API specification
+func (c *WebSocketTestClient) AssertCameraCapabilitiesResultAPICompliant(result interface{}) {
+	resultMap, ok := result.(map[string]interface{})
+	require.True(c.t, ok, "Result should be a map")
+
+	// Check required fields per API spec: device, formats, resolutions, fps_options, validation_status
+	require.Contains(c.t, resultMap, "device", "Result should contain 'device' field per API spec")
+	require.Contains(c.t, resultMap, "formats", "Result should contain 'formats' field per API spec")
+	require.Contains(c.t, resultMap, "resolutions", "Result should contain 'resolutions' field per API spec")
+	require.Contains(c.t, resultMap, "fps_options", "Result should contain 'fps_options' field per API spec")
+	require.Contains(c.t, resultMap, "validation_status", "Result should contain 'validation_status' field per API spec")
+
+	// Validate device field per API spec
+	device, ok := resultMap["device"].(string)
+	require.True(c.t, ok, "Device should be string per API spec")
+	require.Regexp(c.t, `^camera[0-9]+$`, device, "Device should match pattern per API spec")
+
+	// Validate formats array per API spec
+	formats, ok := resultMap["formats"].([]interface{})
+	require.True(c.t, ok, "Formats should be an array per API spec")
+	require.GreaterOrEqual(c.t, len(formats), 1, "At least one format should be available per API spec")
+
+	// Validate resolutions array per API spec
+	resolutions, ok := resultMap["resolutions"].([]interface{})
+	require.True(c.t, ok, "Resolutions should be an array per API spec")
+	require.GreaterOrEqual(c.t, len(resolutions), 1, "At least one resolution should be available per API spec")
+
+	// Validate fps_options array per API spec
+	fpsOptions, ok := resultMap["fps_options"].([]interface{})
+	require.True(c.t, ok, "FPS options should be an array per API spec")
+	require.GreaterOrEqual(c.t, len(fpsOptions), 1, "At least one FPS option should be available per API spec")
+
+	// Validate validation_status per API spec
+	validationStatus, ok := resultMap["validation_status"].(string)
+	require.True(c.t, ok, "Validation status should be string per API spec")
+	require.Contains(c.t, []string{"NONE", "DISCONNECTED", "CONFIRMED"}, validationStatus,
+		"Validation status should be valid per API spec")
 }
