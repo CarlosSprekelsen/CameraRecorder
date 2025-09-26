@@ -19,7 +19,7 @@ SERVICE_USER="camera-service"
 SERVICE_GROUP="camera-service"
 INSTALL_DIR="/opt/camera-service"
 MEDIAMTX_DIR="/opt/mediamtx"
-BINARY_NAME="mediamtx-camera-service-go"
+BINARY_NAME="camera-service"
 
 # Function to log messages
 log_message() {
@@ -187,50 +187,42 @@ install_mediamtx() {
     # Create MediaMTX directory
     mkdir -p "$MEDIAMTX_DIR"
     
-    # Download MediaMTX
+    # Get the script directory to find dependencies BEFORE changing directory
+    # Use absolute path resolution to handle different calling contexts
+    SCRIPT_DIR="$(dirname "$(readlink -f "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")")"
+    PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
+    DEPENDENCIES_DIR="$PROJECT_ROOT/dependencies"
+    
+    # Copy MediaMTX from local dependencies
     cd "$MEDIAMTX_DIR"
     if [ ! -f "mediamtx" ]; then
-        wget -O mediamtx https://github.com/bluenviron/mediamtx/releases/latest/download/mediamtx_linux_amd64
-        chmod +x mediamtx
-        log_success "MediaMTX downloaded"
+        
+        if [ -f "$DEPENDENCIES_DIR/mediamtx_v1.15.1_linux_amd64.tar.gz" ]; then
+            cp "$DEPENDENCIES_DIR/mediamtx_v1.15.1_linux_amd64.tar.gz" .
+            tar -xzf mediamtx_v1.15.1_linux_amd64.tar.gz
+            rm -f mediamtx_v1.15.1_linux_amd64.tar.gz
+            chmod +x mediamtx
+            log_success "MediaMTX copied from local dependencies"
+        else
+            log_error "MediaMTX dependency not found at $DEPENDENCIES_DIR/mediamtx_v1.15.1_linux_amd64.tar.gz"
+            exit 1
+        fi
     else
         log_message "MediaMTX already exists"
     fi
     
-    # Create MediaMTX configuration
-    cat > "$MEDIAMTX_DIR/config/mediamtx.yml" << 'EOF'
-# MediaMTX Configuration
-paths:
-  all:
-    source: publisher
-    sourceOnDemand: yes
-    sourceOnDemandStartTimeout: 10s
-    sourceOnDemandCloseAfter: 10s
-
-# API Configuration
-api: yes
-apiAddress: :9997
-
-# RTSP Configuration
-rtsp: yes
-rtspAddress: :8554
-
-# RTMP Configuration
-rtmp: yes
-rtmpAddress: :1935
-
-# HLS Configuration
-hls: yes
-hlsAddress: :8888
-
-# WebRTC Configuration
-webrtc: yes
-webrtcAddress: :8889
-
-# Logging
-logLevel: info
-logDestinations: stdout
-EOF
+    # Create MediaMTX configuration directory and copy default config
+    mkdir -p "$MEDIAMTX_DIR/config"
+    
+    # Extract and use the default MediaMTX configuration from the downloaded package
+    if [ -f "$DEPENDENCIES_DIR/mediamtx_v1.15.1_linux_amd64.tar.gz" ]; then
+        log_message "Extracting default MediaMTX configuration..."
+        tar -xf "$DEPENDENCIES_DIR/mediamtx_v1.15.1_linux_amd64.tar.gz" -C "$MEDIAMTX_DIR/config" mediamtx.yml
+        log_success "Default MediaMTX configuration extracted"
+    else
+        log_error "MediaMTX package not found for configuration extraction"
+        exit 1
+    fi
     
     # Set ownership
     chown -R mediamtx:mediamtx "$MEDIAMTX_DIR"
@@ -284,10 +276,76 @@ EOF
 # Function to build and install Camera Service
 install_camera_service() {
     log_message "Installing Camera Service..."
+    set -x  # Enable debug mode
     
     # Get the script directory to find source files
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    log_message "Getting script directory..."
+    SCRIPT_DIR="$(dirname "${BASH_SOURCE[0]}")"
+    log_message "Initial SCRIPT_DIR: $SCRIPT_DIR"
+    
+    # Convert to absolute path if relative
+    if [[ "$SCRIPT_DIR" != /* ]]; then
+        log_message "Converting relative path to absolute..."
+        # Use readlink to get absolute path without cd
+        ABSOLUTE_SCRIPT="$(readlink -f "${BASH_SOURCE[0]}")"
+        log_message "ABSOLUTE_SCRIPT: $ABSOLUTE_SCRIPT"
+        if [[ -n "$ABSOLUTE_SCRIPT" ]]; then
+            SCRIPT_DIR="$(dirname "$ABSOLUTE_SCRIPT")"
+            log_message "Using readlink result: $SCRIPT_DIR"
+        else
+            # Fallback: use pwd and relative path
+            SCRIPT_DIR="$(pwd)/$SCRIPT_DIR"
+            log_message "Using fallback: $SCRIPT_DIR"
+        fi
+    fi
+    
+    # Clean up the path and get project root
+    SCRIPT_DIR="$(realpath "$SCRIPT_DIR" 2>/dev/null || echo "$SCRIPT_DIR")"
     PROJECT_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
+    
+    # If the calculated project root doesn't have the expected structure,
+    # try to find the actual project root by looking for go.mod
+    if [[ ! -d "$PROJECT_ROOT/cmd" ]]; then
+        log_message "Calculated project root doesn't have expected structure, searching for go.mod..."
+        
+        # Search for go.mod file starting from script location
+        SEARCH_DIR="$SCRIPT_DIR"
+        while [[ "$SEARCH_DIR" != "/" ]]; do
+            if [[ -f "$SEARCH_DIR/../go.mod" ]]; then
+                PROJECT_ROOT="$(dirname "$SEARCH_DIR")"
+                log_message "Found go.mod at: $PROJECT_ROOT"
+                break
+            fi
+            SEARCH_DIR="$(dirname "$SEARCH_DIR")"
+        done
+        
+        # If still not found, try to find it from common locations
+        if [[ ! -d "$PROJECT_ROOT/cmd" ]]; then
+            log_message "Searching for project in common locations..."
+            for possible_root in "/home/carlossprekelsen/CameraRecorder/mediamtx-camera-service-go" "/opt/camera-service" "$(dirname "$(dirname "$(dirname "$(realpath "${BASH_SOURCE[0]}" 2>/dev/null || echo "${BASH_SOURCE[0]}")")")")"; do
+                if [[ -d "$possible_root/cmd" && -f "$possible_root/go.mod" ]]; then
+                    PROJECT_ROOT="$possible_root"
+                    log_message "Found project at: $PROJECT_ROOT"
+                    break
+                fi
+            done
+        fi
+    fi
+    
+    # Final verification
+    if [[ ! -d "$PROJECT_ROOT/cmd" ]]; then
+        log_error "Project root verification failed: $PROJECT_ROOT/cmd not found"
+        log_message "Current working directory: $(pwd)"
+        log_message "Script location: ${BASH_SOURCE[0]}"
+        log_message "Resolved SCRIPT_DIR: $SCRIPT_DIR"
+        log_message "Calculated PROJECT_ROOT: $PROJECT_ROOT"
+        log_message "Please run the script from the project root directory"
+        exit 1
+    fi
+    
+    # Debug output
+    log_message "Script directory: $SCRIPT_DIR"
+    log_message "Project root: $PROJECT_ROOT"
     
     # Create installation directory
     mkdir -p "$INSTALL_DIR"
@@ -332,12 +390,12 @@ install_camera_service() {
     
     # Build the Go application
     log_message "Building Go application..."
-    cd "$INSTALL_DIR"
+    cd "$PROJECT_ROOT"
     
     # Set Go environment
     export PATH=$PATH:/usr/local/go/bin
-    export GOPATH="$INSTALL_DIR"
-    export GOCACHE="$INSTALL_DIR/.cache"
+    export GOPATH="$PROJECT_ROOT"
+    export GOCACHE="$PROJECT_ROOT/.cache"
     
     # Download dependencies
     go mod download
@@ -345,11 +403,14 @@ install_camera_service() {
     # Build the binary
     go build -o "$BINARY_NAME" cmd/server/main.go
     
+    # Move binary to installation directory
+    mv "$BINARY_NAME" "$INSTALL_DIR/"
+    
     # Make binary executable
-    chmod +x "$BINARY_NAME"
+    chmod +x "$INSTALL_DIR/$BINARY_NAME"
     
     # Set ownership
-    chown "$SERVICE_USER:$SERVICE_GROUP" "$BINARY_NAME"
+    chown "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR/$BINARY_NAME"
     
     # Copy UltraEfficient configuration for edge/IoT devices
     log_message "Installing UltraEfficient configuration for edge/IoT devices..."
@@ -376,6 +437,11 @@ server:
   ping_interval: 60s
   pong_wait: 120s
   max_message_size: 524288
+  read_buffer_size: 1024
+  write_buffer_size: 1024
+  shutdown_timeout: 30s
+  client_cleanup_timeout: 10s
+  auto_close_after: 0s
 
 mediamtx:
   host: "localhost"
@@ -383,7 +449,7 @@ mediamtx:
   rtsp_port: 8554
   webrtc_port: 8889
   hls_port: 8888
-  config_path: "/etc/mediamtx/mediamtx.yml"
+  config_path: "/opt/mediamtx/config/mediamtx.yml"
   recordings_path: "/opt/camera-service/recordings"
   snapshots_path: "/opt/camera-service/snapshots"
   health_check_interval: 60
@@ -396,6 +462,20 @@ mediamtx:
   process_termination_timeout: 15.0
   process_kill_timeout: 10.0
   health_check_timeout: 10s
+  
+  # CRITICAL: Stream readiness configuration (prevents panic)
+  stream_readiness:
+    timeout: 60.0
+    retry_attempts: 2
+    retry_delay: 2.0
+    check_interval: 2.0
+    enable_progress_notifications: false
+    graceful_fallback: true
+    max_check_interval: 2.0
+    initial_check_interval: 0.2
+    controller_ticker_interval: 0.1        # CRITICAL: Prevents panic
+    stream_manager_ticker_interval: 0.1   # CRITICAL: Prevents panic
+    path_manager_retry_intervals: [0.1, 0.2, 0.4, 0.8]
 
 camera:
   poll_interval: 2.0
@@ -406,6 +486,10 @@ camera:
   capability_timeout: 10.0
   capability_retry_interval: 2.0
   capability_max_retries: 2
+  discovery_mode: "event-first"
+  fallback_poll_interval: 90.0
+  max_event_handler_goroutines: 10
+  event_handler_timeout: 5s
 
 logging:
   level: "warn"
@@ -429,6 +513,8 @@ recording:
   default_rotation_size: 52428800
   default_max_duration: 12h
   default_retention_days: 30
+  max_restart_count: 3
+  process_timeout: 5s
 
 snapshots:
   enabled: true
@@ -440,6 +526,37 @@ snapshots:
   cleanup_interval: 7200
   max_age: 2592000
   max_count: 500
+
+performance:
+  response_time_targets:
+    snapshot_capture: 5.0
+    recording_start: 10.0
+    recording_stop: 5.0
+    file_listing: 2.0
+  snapshot_tiers:
+    tier1_usb_direct_timeout: 2.0
+    tier2_rtsp_ready_check_timeout: 5.0
+    tier3_activation_timeout: 10.0
+    tier3_activation_trigger_timeout: 20.0
+    total_operation_timeout: 30.0
+    immediate_response_threshold: 1.0
+    acceptable_response_threshold: 5.0
+    slow_response_threshold: 10.0
+  optimization:
+    enable_caching: false
+    cache_ttl: 60
+    max_concurrent_operations: 3
+    connection_pool_size: 2
+  monitoring_thresholds:
+    memory_usage_percent: 90.0
+    error_rate_percent: 5.0
+    average_response_time_ms: 1000.0
+    active_connections_limit: 900
+    goroutines_limit: 1000
+  debounce:
+    health_monitor_seconds: 15
+    storage_monitor_seconds: 30
+    performance_monitor_seconds: 45
 
 security:
   rate_limit_requests: 50
@@ -459,6 +576,17 @@ retention_policy:
   max_age_days: 30
   max_size_gb: 0.5
   auto_cleanup: true
+
+external_discovery:
+  enabled: false
+  scan_interval: 30
+  timeout: 5.0
+  max_concurrent_scans: 2
+  generic_uav:
+    enabled: false
+    common_ports: [554, 8554]
+    stream_paths: ["/stream", "/live", "/video"]
+    known_ips: []
 
 health_port: 8080
 EOF
@@ -617,7 +745,12 @@ main() {
     install_mediamtx
     
     # Install Camera Service
-    install_camera_service
+    log_message "Starting camera service installation..."
+    if ! install_camera_service; then
+        log_error "Camera service installation failed"
+        exit 1
+    fi
+    log_success "Camera service installation completed"
     
     # Setup HTTPS if enabled
     setup_https_configuration

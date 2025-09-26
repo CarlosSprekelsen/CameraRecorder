@@ -315,23 +315,145 @@ func (c *WebSocketTestClient) DeleteSnapshot(filename string) (*JSONRPCResponse,
 	return c.SendJSONRPC("delete_snapshot", params)
 }
 
-// GetStorageInfo returns storage information and statistics
+// ============================================================================
+// MISSING STREAMING METHODS
+// ============================================================================
+
+// GetStreamUrl gets the stream URL for a camera
+// CRITICAL: JSON-RPC API uses "device" parameter, not "camera_id"
+func (c *WebSocketTestClient) GetStreamUrl(device string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{
+		"device": device,
+	}
+	return c.SendJSONRPC("get_stream_url", params)
+}
+
+// GetStreamStatus gets the stream status for a camera
+// CRITICAL: JSON-RPC API uses "device" parameter, not "camera_id"
+func (c *WebSocketTestClient) GetStreamStatus(device string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{
+		"device": device,
+	}
+	return c.SendJSONRPC("get_stream_status", params)
+}
+
+// ============================================================================
+// MISSING SYSTEM MONITORING METHODS
+// ============================================================================
+
+// GetMetrics gets system metrics
+func (c *WebSocketTestClient) GetMetrics() (*JSONRPCResponse, error) {
+	return c.SendJSONRPC("get_metrics", nil)
+}
+
+// GetStreams gets all active streams
+func (c *WebSocketTestClient) GetStreams() (*JSONRPCResponse, error) {
+	return c.SendJSONRPC("get_streams", nil)
+}
+
+// ============================================================================
+// MISSING SYSTEM STATUS METHODS
+// ============================================================================
+
+// GetStatus gets system status
+func (c *WebSocketTestClient) GetStatus() (*JSONRPCResponse, error) {
+	return c.SendJSONRPC("get_status", nil)
+}
+
+// GetServerInfo gets server information
+func (c *WebSocketTestClient) GetServerInfo() (*JSONRPCResponse, error) {
+	return c.SendJSONRPC("get_server_info", nil)
+}
+
+// ============================================================================
+// MISSING STORAGE MANAGEMENT METHODS
+// ============================================================================
+
+// GetStorageInfo gets storage information
 func (c *WebSocketTestClient) GetStorageInfo() (*JSONRPCResponse, error) {
 	return c.SendJSONRPC("get_storage_info", nil)
 }
 
-// SetRetentionPolicy sets file retention policy
-func (c *WebSocketTestClient) SetRetentionPolicy(maxAgeDays int, maxFiles int) (*JSONRPCResponse, error) {
+// SetRetentionPolicy sets retention policy
+// CRITICAL: JSON-RPC API uses specific parameters, not nested "policy" object
+func (c *WebSocketTestClient) SetRetentionPolicy(policyType string, maxAgeDays int, maxSizeGb int, enabled bool) (*JSONRPCResponse, error) {
 	params := map[string]interface{}{
+		"policy_type":  policyType,
 		"max_age_days": maxAgeDays,
-		"max_files":    maxFiles,
+		"max_size_gb":  maxSizeGb,
+		"enabled":      enabled,
 	}
 	return c.SendJSONRPC("set_retention_policy", params)
 }
 
-// CleanupOldFiles removes old files based on retention policy
+// CleanupOldFiles cleans up old files
 func (c *WebSocketTestClient) CleanupOldFiles() (*JSONRPCResponse, error) {
 	return c.SendJSONRPC("cleanup_old_files", nil)
+}
+
+// ============================================================================
+// MISSING FILE INFO METHODS
+// ============================================================================
+
+// GetRecordingInfo gets recording file information
+func (c *WebSocketTestClient) GetRecordingInfo(filename string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{
+		"filename": filename,
+	}
+	return c.SendJSONRPC("get_recording_info", params)
+}
+
+// GetSnapshotInfo gets snapshot file information
+func (c *WebSocketTestClient) GetSnapshotInfo(filename string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{
+		"filename": filename,
+	}
+	return c.SendJSONRPC("get_snapshot_info", params)
+}
+
+// ============================================================================
+// MISSING EVENT SUBSCRIPTION METHODS
+// ============================================================================
+
+// SubscribeEvents subscribes to events
+func (c *WebSocketTestClient) SubscribeEvents(eventTypes []string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{
+		"event_types": eventTypes,
+	}
+	return c.SendJSONRPC("subscribe_events", params)
+}
+
+// UnsubscribeEvents unsubscribes from events
+func (c *WebSocketTestClient) UnsubscribeEvents() (*JSONRPCResponse, error) {
+	return c.SendJSONRPC("unsubscribe_events", nil)
+}
+
+// GetSubscriptionStats gets subscription statistics
+func (c *WebSocketTestClient) GetSubscriptionStats() (*JSONRPCResponse, error) {
+	return c.SendJSONRPC("get_subscription_stats", nil)
+}
+
+// ============================================================================
+// MISSING EXTERNAL STREAM METHODS
+// ============================================================================
+
+// DiscoverExternalStreams discovers external streams
+func (c *WebSocketTestClient) DiscoverExternalStreams() (*JSONRPCResponse, error) {
+	return c.SendJSONRPC("discover_external_streams", nil)
+}
+
+// GetExternalStreams gets external streams
+func (c *WebSocketTestClient) GetExternalStreams() (*JSONRPCResponse, error) {
+	return c.SendJSONRPC("get_external_streams", nil)
+}
+
+// SetDiscoveryInterval sets discovery interval
+// CRITICAL: JSON-RPC API uses "scan_interval" parameter, not "interval"
+func (c *WebSocketTestClient) SetDiscoveryInterval(scanInterval int) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{
+		"scan_interval": scanInterval,
+	}
+	return c.SendJSONRPC("set_discovery_interval", params)
 }
 
 // Close closes the WebSocket connection

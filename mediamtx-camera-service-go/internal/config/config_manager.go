@@ -81,6 +81,12 @@ func (cm *ConfigManager) LoadConfig(configPath string) error {
 		return fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
+	// CRITICAL: Apply defaults after unmarshaling to prevent zero values from overriding defaults
+	// This fixes the bug where incomplete YAML sections cause zero values to override Viper defaults
+	fmt.Printf("DEBUG: Before applyDefaults - ControllerTickerInterval: %v\n", config.MediaMTX.StreamReadiness.ControllerTickerInterval)
+	cm.applyDefaultsAfterUnmarshal(&config)
+	fmt.Printf("DEBUG: After applyDefaults - ControllerTickerInterval: %v\n", config.MediaMTX.StreamReadiness.ControllerTickerInterval)
+
 	// REQ-CONFIG-001: Validate final configuration values after environment variable overrides
 	// REQ-CONFIG-002: Fail fast on configuration errors
 	// REQ-CONFIG-003: Early detection and clear error reporting
@@ -1032,5 +1038,38 @@ func getDefaultConfig() *Config {
 			MaxAge:          86400,
 			MaxCount:        1000,
 		},
+	}
+}
+
+// applyDefaultsAfterUnmarshal applies default values to configuration fields that are zero
+// This fixes the critical bug where incomplete YAML sections cause zero values to override Viper defaults
+func (cm *ConfigManager) applyDefaultsAfterUnmarshal(config *Config) {
+	// Apply defaults to StreamReadinessConfig if any critical fields are zero
+	if config.MediaMTX.StreamReadiness.ControllerTickerInterval <= 0 {
+		config.MediaMTX.StreamReadiness.ControllerTickerInterval = 0.1 // 100ms default
+	}
+	if config.MediaMTX.StreamReadiness.StreamManagerTickerInterval <= 0 {
+		config.MediaMTX.StreamReadiness.StreamManagerTickerInterval = 0.1 // 100ms default
+	}
+	if config.MediaMTX.StreamReadiness.Timeout <= 0 {
+		config.MediaMTX.StreamReadiness.Timeout = 15.0 // 15 seconds default
+	}
+	if config.MediaMTX.StreamReadiness.RetryAttempts <= 0 {
+		config.MediaMTX.StreamReadiness.RetryAttempts = 3 // 3 attempts default
+	}
+	if config.MediaMTX.StreamReadiness.RetryDelay <= 0 {
+		config.MediaMTX.StreamReadiness.RetryDelay = 1.0 // 1 second default
+	}
+	if config.MediaMTX.StreamReadiness.CheckInterval <= 0 {
+		config.MediaMTX.StreamReadiness.CheckInterval = 0.5 // 500ms default
+	}
+	if config.MediaMTX.StreamReadiness.MaxCheckInterval <= 0 {
+		config.MediaMTX.StreamReadiness.MaxCheckInterval = 2.0 // 2 seconds default
+	}
+	if config.MediaMTX.StreamReadiness.InitialCheckInterval <= 0 {
+		config.MediaMTX.StreamReadiness.InitialCheckInterval = 0.2 // 200ms default
+	}
+	if len(config.MediaMTX.StreamReadiness.PathManagerRetryIntervals) == 0 {
+		config.MediaMTX.StreamReadiness.PathManagerRetryIntervals = []float64{0.1, 0.2, 0.4, 0.8} // Default retry backoffs
 	}
 }

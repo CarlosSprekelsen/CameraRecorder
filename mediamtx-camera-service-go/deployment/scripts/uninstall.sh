@@ -19,7 +19,7 @@ SERVICE_USER="camera-service"
 SERVICE_GROUP="camera-service"
 INSTALL_DIR="/opt/camera-service"
 MEDIAMTX_DIR="/opt/mediamtx"
-BINARY_NAME="mediamtx-camera-service-go"
+BINARY_NAME="camera-service"
 
 # Function to log messages
 log_message() {
