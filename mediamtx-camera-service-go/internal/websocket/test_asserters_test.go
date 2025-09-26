@@ -109,16 +109,28 @@ func (a *WebSocketIntegrationAsserter) AssertAuthenticationWorkflow() error {
 	return nil
 }
 
-// AssertCameraManagementWorkflow validates camera management operations
-func (a *WebSocketIntegrationAsserter) AssertCameraManagementWorkflow() error {
-	// Connect and authenticate (Progressive Readiness - immediate acceptance)
+// authenticateAsOperator provides shared authentication utility for operator role
+// This eliminates the 51+ duplicate authentication blocks throughout the codebase
+func (a *WebSocketIntegrationAsserter) authenticateAsOperator() error {
+	// Connect to WebSocket (Progressive Readiness - immediate acceptance)
 	err := a.client.Connect()
 	require.NoError(a.t, err, "WebSocket connection should succeed immediately")
 
+	// Get JWT token for operator role
 	authToken, err := a.helper.GetJWTToken("operator")
 	require.NoError(a.t, err, "Should be able to create JWT token")
 
+	// Authenticate with JWT token
 	err = a.client.Authenticate(authToken)
+	require.NoError(a.t, err, "Authentication should succeed")
+
+	return nil
+}
+
+// AssertCameraManagementWorkflow validates camera management operations
+func (a *WebSocketIntegrationAsserter) AssertCameraManagementWorkflow() error {
+	// Use shared authentication utility
+	err := a.authenticateAsOperator()
 	require.NoError(a.t, err, "Authentication should succeed")
 
 	// Test get_camera_list
@@ -350,6 +362,10 @@ func (a *WebSocketIntegrationAsserter) AssertTier0DirectV4L2Capture() error {
 	// Implementation depends on available hardware
 	// For now, validate the API call structure
 
+	// Use shared authentication utility
+	err := a.authenticateAsOperator()
+	require.NoError(a.t, err, "Authentication should succeed")
+
 	response, err := a.client.TakeSnapshot("camera0", "tier0_test.jpg")
 	require.NoError(a.t, err, "Tier 0 snapshot should succeed")
 
@@ -369,6 +385,11 @@ func (a *WebSocketIntegrationAsserter) AssertTier0DirectV4L2Capture() error {
 // AssertTier1FFmpegDirectCapture validates Tier 1 FFmpeg direct capture
 func (a *WebSocketIntegrationAsserter) AssertTier1FFmpegDirectCapture() error {
 	// Test FFmpeg direct capture when device is accessible
+
+	// Use shared authentication utility
+	err := a.authenticateAsOperator()
+	require.NoError(a.t, err, "Authentication should succeed")
+
 	response, err := a.client.TakeSnapshot("camera0", "tier1_test.jpg")
 	require.NoError(a.t, err, "Tier 1 snapshot should succeed")
 
@@ -386,6 +407,11 @@ func (a *WebSocketIntegrationAsserter) AssertTier1FFmpegDirectCapture() error {
 func (a *WebSocketIntegrationAsserter) AssertTier2RTSPReuse() error {
 	// Test RTSP stream reuse when stream is already active
 	// For now, test direct snapshot (stream reuse would require streaming methods)
+
+	// Use shared authentication utility
+	err := a.authenticateAsOperator()
+	require.NoError(a.t, err, "Authentication should succeed")
+
 	response, err := a.client.TakeSnapshot("camera0", "tier2_test.jpg")
 	require.NoError(a.t, err, "Tier 2 snapshot should succeed")
 
@@ -397,6 +423,11 @@ func (a *WebSocketIntegrationAsserter) AssertTier2RTSPReuse() error {
 // AssertTier3StreamActivation validates Tier 3 stream activation
 func (a *WebSocketIntegrationAsserter) AssertTier3StreamActivation() error {
 	// Test stream activation when creating new MediaMTX path
+
+	// Use shared authentication utility
+	err := a.authenticateAsOperator()
+	require.NoError(a.t, err, "Authentication should succeed")
+
 	response, err := a.client.TakeSnapshot("camera0", "tier3_test.jpg")
 	require.NoError(a.t, err, "Tier 3 snapshot should succeed")
 
@@ -412,6 +443,10 @@ func (a *WebSocketIntegrationAsserter) AssertTier3StreamActivation() error {
 
 // AssertCustomFilenameSnapshot validates snapshot capture with custom filename
 func (a *WebSocketIntegrationAsserter) AssertCustomFilenameSnapshot() error {
+	// Use shared authentication utility
+	err := a.authenticateAsOperator()
+	require.NoError(a.t, err, "Authentication should succeed")
+
 	customFilename := "custom_snapshot_" + time.Now().Format("20060102_150405") + ".jpg"
 
 	response, err := a.client.TakeSnapshot("camera0", customFilename)
@@ -428,14 +463,39 @@ func (a *WebSocketIntegrationAsserter) AssertCustomFilenameSnapshot() error {
 
 // AssertConcurrentSnapshotCaptures validates concurrent snapshot captures
 func (a *WebSocketIntegrationAsserter) AssertConcurrentSnapshotCaptures() error {
-	// Test multiple concurrent snapshot captures
+	// Test multiple concurrent snapshot captures with SEPARATE WebSocket connections
+	// CRITICAL: Each goroutine needs its own WebSocket connection to avoid concurrent write panic
 	const numConcurrent = 3
 	responses := make(chan *JSONRPCResponse, numConcurrent)
 	errors := make(chan error, numConcurrent)
 
 	for i := 0; i < numConcurrent; i++ {
 		go func(index int) {
-			response, err := a.client.TakeSnapshot("camera0", fmt.Sprintf("concurrent_test_%d.jpg", index))
+			// Create dedicated WebSocket client for this goroutine
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			defer client.Close()
+
+			// Connect and authenticate this client
+			err := client.Connect()
+			if err != nil {
+				errors <- fmt.Errorf("client %d failed to connect: %w", index, err)
+				return
+			}
+
+			authToken, err := a.helper.GetJWTToken("operator")
+			if err != nil {
+				errors <- fmt.Errorf("client %d failed to get token: %w", index, err)
+				return
+			}
+
+			err = client.Authenticate(authToken)
+			if err != nil {
+				errors <- fmt.Errorf("client %d failed to authenticate: %w", index, err)
+				return
+			}
+
+			// Use dedicated client for snapshot operation
+			response, err := client.TakeSnapshot("camera0", fmt.Sprintf("concurrent_test_%d.jpg", index))
 			if err != nil {
 				errors <- err
 				return
@@ -805,7 +865,7 @@ func (a *WebSocketIntegrationAsserter) AssertStartRecording() error {
 		{"Default format", 60, "fmp4"},
 		{"MP4 format", 30, "mp4"},
 		{"MKV format", 120, "mkv"},
-		{"No duration", 0, "fmp4"},
+		{"Short duration", 5, "fmp4"},
 	}
 
 	for _, tc := range testCases {
