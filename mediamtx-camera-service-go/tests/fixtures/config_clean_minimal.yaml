@@ -22,6 +22,10 @@ mediamtx:
   snapshots_path: "/tmp/snapshots"
   override_mediamtx_paths: true  # CRITICAL: Override MediaMTX global config with fixture paths
   
+  # Stream readiness settings
+  stream_readiness:
+    controller_ticker_interval: 1  # 1 second for tests
+  
   # Health monitoring (actually used)
   health_check_interval: 30
   health_failure_threshold: 3
