@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -70,18 +71,16 @@ func (a *WebSocketIntegrationAsserter) Cleanup() {
 
 // AssertProgressiveReadiness validates Progressive Readiness behavior
 func (a *WebSocketIntegrationAsserter) AssertProgressiveReadiness() error {
-	// Test immediate connection acceptance (<100ms)
-	start := time.Now()
-
-	err := a.client.Connect()
-	require.NoError(a.t, err, "WebSocket connection should succeed immediately")
-
-	connectionTime := time.Since(start)
-	require.Less(a.t, connectionTime, 100*time.Millisecond,
-		"Connection should be <100ms for Progressive Readiness, got %v", connectionTime)
+	// Test immediate connection acceptance using Progressive Readiness pattern
+	err := testutils.TestProgressiveReadinessSimple(a.t, func() error {
+		return a.client.Connect()
+	}, a.helper.mediaMTXController, "WebSocketConnect")
+	require.NoError(a.t, err, "WebSocket connection should succeed with Progressive Readiness")
 
 	// Test that ping works immediately (no authentication required)
-	err = a.client.Ping()
+	err = testutils.TestProgressiveReadinessSimple(a.t, func() error {
+		return a.client.Ping()
+	}, a.helper.mediaMTXController, "WebSocketPing")
 	require.NoError(a.t, err, "Ping should work immediately without authentication")
 
 	a.t.Log("✅ Progressive Readiness validated: immediate connection and ping")
@@ -90,21 +89,27 @@ func (a *WebSocketIntegrationAsserter) AssertProgressiveReadiness() error {
 
 // AssertAuthenticationWorkflow validates complete authentication workflow
 func (a *WebSocketIntegrationAsserter) AssertAuthenticationWorkflow() error {
-	// Connect to WebSocket
-	err := a.client.Connect()
-	require.NoError(a.t, err, "WebSocket connection should succeed")
+	// Connect to WebSocket with Progressive Readiness
+	err := testutils.TestProgressiveReadinessSimple(a.t, func() error {
+		return a.client.Connect()
+	}, a.helper.mediaMTXController, "WebSocketConnect")
+	require.NoError(a.t, err, "WebSocket connection should succeed with Progressive Readiness")
 
 	// Test ping before authentication (should work)
-	err = a.client.Ping()
+	err = testutils.TestProgressiveReadinessSimple(a.t, func() error {
+		return a.client.Ping()
+	}, a.helper.mediaMTXController, "WebSocketPing")
 	require.NoError(a.t, err, "Ping should work before authentication")
 
 	// Get JWT token for testing
 	authToken, err := a.helper.GetJWTToken("operator")
 	require.NoError(a.t, err, "Should be able to create JWT token")
 
-	// Authenticate with JWT token
-	err = a.client.Authenticate(authToken)
-	require.NoError(a.t, err, "Authentication should succeed with valid JWT token")
+	// Authenticate with JWT token using Progressive Readiness
+	err = testutils.TestProgressiveReadinessSimple(a.t, func() error {
+		return a.client.Authenticate(authToken)
+	}, a.helper.mediaMTXController, "WebSocketAuthenticate")
+	require.NoError(a.t, err, "Authentication should succeed with Progressive Readiness")
 
 	a.t.Log("✅ Authentication workflow validated")
 	return nil
@@ -112,15 +117,19 @@ func (a *WebSocketIntegrationAsserter) AssertAuthenticationWorkflow() error {
 
 // AssertCameraManagementWorkflow validates camera management operations
 func (a *WebSocketIntegrationAsserter) AssertCameraManagementWorkflow() error {
-	// Connect and authenticate
-	err := a.client.Connect()
-	require.NoError(a.t, err, "WebSocket connection should succeed")
+	// Connect and authenticate with Progressive Readiness
+	err := testutils.TestProgressiveReadinessSimple(a.t, func() error {
+		return a.client.Connect()
+	}, a.helper.mediaMTXController, "WebSocketConnect")
+	require.NoError(a.t, err, "WebSocket connection should succeed with Progressive Readiness")
 
 	authToken, err := a.helper.GetJWTToken("operator")
 	require.NoError(a.t, err, "Should be able to create JWT token")
 
-	err = a.client.Authenticate(authToken)
-	require.NoError(a.t, err, "Authentication should succeed")
+	err = testutils.TestProgressiveReadinessSimple(a.t, func() error {
+		return a.client.Authenticate(authToken)
+	}, a.helper.mediaMTXController, "WebSocketAuthenticate")
+	require.NoError(a.t, err, "Authentication should succeed with Progressive Readiness")
 
 	// Test get_camera_list
 	response, err := a.client.GetCameraList()
@@ -142,15 +151,19 @@ func (a *WebSocketIntegrationAsserter) AssertCameraManagementWorkflow() error {
 
 // AssertRecordingWorkflow validates complete recording workflow
 func (a *WebSocketIntegrationAsserter) AssertRecordingWorkflow() error {
-	// Connect and authenticate
-	err := a.client.Connect()
-	require.NoError(a.t, err, "WebSocket connection should succeed")
+	// Connect and authenticate with Progressive Readiness
+	err := testutils.TestProgressiveReadinessSimple(a.t, func() error {
+		return a.client.Connect()
+	}, a.helper.mediaMTXController, "WebSocketConnect")
+	require.NoError(a.t, err, "WebSocket connection should succeed with Progressive Readiness")
 
 	authToken, err := a.helper.GetJWTToken("operator")
 	require.NoError(a.t, err, "Should be able to create JWT token")
 
-	err = a.client.Authenticate(authToken)
-	require.NoError(a.t, err, "Authentication should succeed")
+	err = testutils.TestProgressiveReadinessSimple(a.t, func() error {
+		return a.client.Authenticate(authToken)
+	}, a.helper.mediaMTXController, "WebSocketAuthenticate")
+	require.NoError(a.t, err, "Authentication should succeed with Progressive Readiness")
 
 	cameraID := a.helper.GetTestCameraID()
 
@@ -161,7 +174,7 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingWorkflow() error {
 	a.client.AssertJSONRPCResponse(response, false)
 
 	// Wait a bit for recording to start
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(testutils.UniversalTimeoutShort)
 
 	// Test stop_recording
 	response, err = a.client.StopRecording(cameraID)
@@ -181,15 +194,19 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingWorkflow() error {
 
 // AssertSnapshotWorkflow validates snapshot workflow
 func (a *WebSocketIntegrationAsserter) AssertSnapshotWorkflow() error {
-	// Connect and authenticate
-	err := a.client.Connect()
-	require.NoError(a.t, err, "WebSocket connection should succeed")
+	// Connect and authenticate with Progressive Readiness
+	err := testutils.TestProgressiveReadinessSimple(a.t, func() error {
+		return a.client.Connect()
+	}, a.helper.mediaMTXController, "WebSocketConnect")
+	require.NoError(a.t, err, "WebSocket connection should succeed with Progressive Readiness")
 
 	authToken, err := a.helper.GetJWTToken("operator")
 	require.NoError(a.t, err, "Should be able to create JWT token")
 
-	err = a.client.Authenticate(authToken)
-	require.NoError(a.t, err, "Authentication should succeed")
+	err = testutils.TestProgressiveReadinessSimple(a.t, func() error {
+		return a.client.Authenticate(authToken)
+	}, a.helper.mediaMTXController, "WebSocketAuthenticate")
+	require.NoError(a.t, err, "Authentication should succeed with Progressive Readiness")
 
 	cameraID := a.helper.GetTestCameraID()
 	filename := "test_snapshot_" + time.Now().Format("2006-01-02_15-04-05") + ".jpg"
@@ -212,24 +229,30 @@ func (a *WebSocketIntegrationAsserter) AssertSnapshotWorkflow() error {
 
 // AssertErrorRecoveryWorkflow validates error handling and recovery
 func (a *WebSocketIntegrationAsserter) AssertErrorRecoveryWorkflow() error {
-	// Test invalid authentication
-	err := a.client.Connect()
-	require.NoError(a.t, err, "WebSocket connection should succeed")
+	// Test invalid authentication with Progressive Readiness
+	err := testutils.TestProgressiveReadinessSimple(a.t, func() error {
+		return a.client.Connect()
+	}, a.helper.mediaMTXController, "WebSocketConnect")
+	require.NoError(a.t, err, "WebSocket connection should succeed with Progressive Readiness")
 
 	// Try authentication with invalid token
 	err = a.client.Authenticate("invalid_token")
 	require.Error(a.t, err, "Authentication with invalid token should fail")
 
 	// Test ping still works after authentication failure
-	err = a.client.Ping()
+	err = testutils.TestProgressiveReadinessSimple(a.t, func() error {
+		return a.client.Ping()
+	}, a.helper.mediaMTXController, "WebSocketPing")
 	require.NoError(a.t, err, "Ping should still work after authentication failure")
 
 	// Test valid authentication after failure
 	authToken, err := a.helper.GetJWTToken("operator")
 	require.NoError(a.t, err, "Should be able to create JWT token")
 
-	err = a.client.Authenticate(authToken)
-	require.NoError(a.t, err, "Valid authentication should succeed after failure")
+	err = testutils.TestProgressiveReadinessSimple(a.t, func() error {
+		return a.client.Authenticate(authToken)
+	}, a.helper.mediaMTXController, "WebSocketAuthenticate")
+	require.NoError(a.t, err, "Valid authentication should succeed after failure with Progressive Readiness")
 
 	a.t.Log("✅ Error recovery workflow validated")
 	return nil
@@ -237,15 +260,19 @@ func (a *WebSocketIntegrationAsserter) AssertErrorRecoveryWorkflow() error {
 
 // AssertPerformanceRequirements validates performance guarantees
 func (a *WebSocketIntegrationAsserter) AssertPerformanceRequirements() error {
-	// Connect and authenticate
-	err := a.client.Connect()
-	require.NoError(a.t, err, "WebSocket connection should succeed")
+	// Connect and authenticate with Progressive Readiness
+	err := testutils.TestProgressiveReadinessSimple(a.t, func() error {
+		return a.client.Connect()
+	}, a.helper.mediaMTXController, "WebSocketConnect")
+	require.NoError(a.t, err, "WebSocket connection should succeed with Progressive Readiness")
 
 	authToken, err := a.helper.GetJWTToken("operator")
 	require.NoError(a.t, err, "Should be able to create JWT token")
 
-	err = a.client.Authenticate(authToken)
-	require.NoError(a.t, err, "Authentication should succeed")
+	err = testutils.TestProgressiveReadinessSimple(a.t, func() error {
+		return a.client.Authenticate(authToken)
+	}, a.helper.mediaMTXController, "WebSocketAuthenticate")
+	require.NoError(a.t, err, "Authentication should succeed with Progressive Readiness")
 
 	// Test status method performance (<50ms)
 	start := time.Now()

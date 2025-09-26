@@ -186,7 +186,7 @@ func TestWebSocket_ConcurrentClients_Integration(t *testing.T) {
 		select {
 		case err := <-results:
 			require.NoError(t, err, "Concurrent client %d should work", i)
-		case <-time.After(10 * time.Second):
+		case <-time.After(testutils.UniversalTimeoutExtreme):
 			t.Fatal("Concurrent client test timed out")
 		}
 	}
@@ -222,7 +222,7 @@ func TestWebSocket_SessionManagement_Integration(t *testing.T) {
 	require.NoError(t, err, "get_camera_list should work in authenticated session")
 
 	// Test session persistence
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(testutils.UniversalTimeoutShort)
 
 	err = client.Ping()
 	require.NoError(t, err, "Ping should still work after delay")
@@ -323,7 +323,7 @@ func TestWebSocket_ProgressiveReadiness_Performance(t *testing.T) {
 			successCount++
 			require.Less(t, duration, 100*time.Millisecond,
 				"Connection %d took %v, should be <100ms", i, duration)
-		case <-time.After(5 * time.Second):
+		case <-time.After(testutils.UniversalTimeoutVeryLong):
 			t.Fatal("Performance test timed out")
 		}
 	}

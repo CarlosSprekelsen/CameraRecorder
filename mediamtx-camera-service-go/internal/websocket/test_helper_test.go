@@ -101,24 +101,8 @@ func NewWebSocketTestHelper(t *testing.T) *WebSocketTestHelper {
 		t.Fatalf("Failed to start MediaMTX controller: %v", err)
 	}
 
-	// Progressive Readiness Pattern - Wait for controller readiness using event-driven approach (main.go lines 170-190)
-	readinessChan := mediaMTXController.SubscribeToReadiness()
-	readinessCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-
-	select {
-	case <-readinessChan:
-		logger.Info("Controller readiness event received - all services ready")
-	case <-readinessCtx.Done():
-		logger.Warn("Controller readiness timeout - proceeding anyway")
-	}
-
-	// Verify actual readiness state from controller
-	if mediaMTXController.IsReady() {
-		logger.Info("Controller reports ready - all services operational")
-	} else {
-		logger.Warn("Controller not ready - some services may not be operational")
-	}
+	// Progressive Readiness Pattern - Controller started, operations will handle readiness
+	logger.Info("MediaMTX controller started - WebSocket server ready for connections")
 
 	// Register cleanup
 	t.Cleanup(func() {

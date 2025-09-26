@@ -25,6 +25,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/gorilla/websocket"
 	"github.com/stretchr/testify/require"
 )
@@ -78,7 +79,7 @@ func (c *WebSocketTestClient) Connect() error {
 
 	// Create WebSocket connection with timeout
 	dialer := websocket.Dialer{
-		HandshakeTimeout: 10 * time.Second,
+		HandshakeTimeout: testutils.UniversalTimeoutExtreme,
 	}
 
 	conn, _, err := dialer.Dial(u.String(), nil)
@@ -112,7 +113,7 @@ func (c *WebSocketTestClient) SendJSONRPC(method string, params interface{}) (*J
 	}
 
 	// Read response with timeout
-	c.conn.SetReadDeadline(time.Now().Add(10 * time.Second))
+	c.conn.SetReadDeadline(time.Now().Add(testutils.UniversalTimeoutExtreme))
 
 	var response JSONRPCResponse
 	err = c.conn.ReadJSON(&response)
