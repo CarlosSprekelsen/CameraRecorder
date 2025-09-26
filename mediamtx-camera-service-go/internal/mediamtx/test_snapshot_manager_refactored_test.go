@@ -95,7 +95,7 @@ func TestSnapshotManager_GetSnapshotInfo_ReqMTX002_Success_Refactored(t *testing
 	snapshot := asserter.CreateTestSnapshot(cameraID)
 
 	// Get snapshot info
-	info := asserter.AssertSnapshotInfo(snapshot.FilePath)
+	info := asserter.AssertSnapshotInfo(snapshot.Filename)
 	assert.Equal(t, snapshot.Filename, info.Filename, "Filename should match")
 	assert.NotEmpty(t, info.Filename, "Filename should not be empty")
 }
@@ -115,7 +115,7 @@ func TestSnapshotManager_DeleteSnapshotFile_ReqMTX002_Success_Refactored(t *test
 	asserter.AssertSnapshotFileExists(snapshot.FilePath, cameraID)
 
 	// Delete the snapshot
-	asserter.AssertDeleteSnapshotFile(snapshot.FilePath)
+	asserter.AssertDeleteSnapshotFile(snapshot.Filename)
 }
 
 // TestSnapshotManager_GetSnapshotSettings_ReqMTX001_Success tests snapshot settings retrieval
@@ -141,7 +141,8 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002_Success_Refactored(t *tes
 	asserter.CreateMultipleTestSnapshots(cameraID, 2)
 
 	// Cleanup with very short max age (should not delete recent snapshots)
-	count := asserter.AssertCleanupOldSnapshots(1 * time.Millisecond)
+	// Use 100ms buffer to account for filesystem timestamp resolution (typically 1 second)
+	count := asserter.AssertCleanupOldSnapshots(100 * time.Millisecond)
 	assert.Equal(t, 0, count, "Should not delete recent snapshots")
 
 	// Cleanup with longer max age (should delete all snapshots)

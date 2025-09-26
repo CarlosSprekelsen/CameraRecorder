@@ -1293,18 +1293,48 @@ func (sm *SnapshotManager) DeleteSnapshotFile(ctx context.Context, filename stri
 		return fmt.Errorf("snapshots path not configured")
 	}
 
-	// Construct full file path
+	// Try direct path first
 	filePath := filepath.Join(snapshotsDir, filename)
+	fileInfo, err := os.Stat(filePath)
 
-	// Check if file exists
-	if _, err := os.Stat(filePath); os.IsNotExist(err) {
-		return fmt.Errorf("snapshot file not found: %s", filename)
+	// If direct path fails, search in subdirectories
+	if err != nil {
+		sm.logger.WithFields(logging.Fields{
+			"filename":    filename,
+			"direct_path": filePath,
+			"error":       err,
+		}).Info("DeleteSnapshotFile: Direct path failed, searching subdirectories")
+
+		// Search in device subdirectories
+		entries, err := os.ReadDir(snapshotsDir)
+		if err != nil {
+			return fmt.Errorf("failed to read snapshots directory: %w", err)
+		}
+
+		found := false
+		for _, entry := range entries {
+			if entry.IsDir() {
+				subDirPath := filepath.Join(snapshotsDir, entry.Name())
+				filePath = filepath.Join(subDirPath, filename)
+				if fileInfo, err = os.Stat(filePath); err == nil {
+					found = true
+					break
+				}
+			}
+		}
+
+		// If still not found
+		if !found {
+			return fmt.Errorf("snapshot file not found: %s", filename)
+		}
 	}
 
 	// Check if it's a file (not a directory)
-	fileInfo, err := os.Stat(filePath)
-	if err != nil {
-		return fmt.Errorf("error accessing file: %w", err)
+	if fileInfo == nil {
+		fileInfo, err = os.Stat(filePath)
+		if err != nil {
+			return fmt.Errorf("error accessing file: %w", err)
+		}
 	}
 
 	if fileInfo.IsDir() {

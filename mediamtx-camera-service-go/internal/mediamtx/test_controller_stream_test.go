@@ -68,6 +68,12 @@ func TestController_GetStream_ReqMTX002_Success_Refactored(t *testing.T) {
 	// Get camera ID for stream operations
 	cameraID := asserter.MustGetCameraID()
 
+	// Create stream first (required for GetStream to work)
+	_ = asserter.AssertCreateStream(cameraID)
+
+	// Wait briefly for stream to be active
+	time.Sleep(testutils.UniversalTimeoutShort)
+
 	// Get specific stream (eliminates 30+ lines of Progressive Readiness + validation)
 	stream := asserter.AssertGetStream(cameraID)
 

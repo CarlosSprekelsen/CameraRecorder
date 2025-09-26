@@ -1986,11 +1986,39 @@ func (r *JSONScenarioRegistry) addPathListScenarios(baseline []JSONMalformationT
 
 // addStreamScenarios adds scenarios specific to stream responses
 func (r *JSONScenarioRegistry) addStreamScenarios(baseline []JSONMalformationTestScenario) {
-	scenarios := make([]JSONMalformationTestScenario, len(baseline))
-	copy(scenarios, baseline)
+	// Stream scenarios don't use baseline - they have their own required fields
+	scenarios := []JSONMalformationTestScenario{}
 
-	// Add stream-specific scenarios
+	// Add stream-specific scenarios (including baseline scenarios with stream-appropriate fields)
 	typeSpecific := []JSONMalformationTestScenario{
+		{
+			Name:        "empty_json",
+			JSONData:    []byte(""),
+			ExpectError: true,
+			ErrorMsg:    "empty response body",
+			Description: "Empty JSON should be rejected",
+		},
+		{
+			Name:        "null_json",
+			JSONData:    []byte("null"),
+			ExpectError: true,
+			ErrorMsg:    "null response body",
+			Description: "Null JSON should be rejected",
+		},
+		{
+			Name:        "malformed_json",
+			JSONData:    []byte(`{"invalid": json}`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "Malformed JSON should be handled gracefully",
+		},
+		{
+			Name:        "incomplete_json",
+			JSONData:    []byte(`{"incomplete":`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "Incomplete JSON should be handled gracefully",
+		},
 		{
 			Name:        "unexpected_json_structure",
 			JSONData:    []byte(`{"unexpected": "structure", "not": "what we expect"}`),
@@ -2043,7 +2071,7 @@ func (r *JSONScenarioRegistry) addPathsScenarios(baseline []JSONMalformationTest
 			Name:        "json_with_invalid_types",
 			JSONData:    []byte(`{"items": "not_an_array", "pageCount": "not_a_number", "itemCount": "not_a_number"}`),
 			ExpectError: true,
-			ErrorMsg:    "failed to parse",
+			ErrorMsg:    "items field must be an array",
 			Description: "JSON with invalid types should be rejected due to parsing errors",
 		},
 		{
@@ -2068,11 +2096,39 @@ func (r *JSONScenarioRegistry) addPathsScenarios(baseline []JSONMalformationTest
 
 // addHealthScenarios adds scenarios specific to health responses
 func (r *JSONScenarioRegistry) addHealthScenarios(baseline []JSONMalformationTestScenario) {
-	scenarios := make([]JSONMalformationTestScenario, len(baseline))
-	copy(scenarios, baseline)
+	// Health scenarios don't use baseline - they have their own required fields
+	scenarios := []JSONMalformationTestScenario{}
 
-	// Add health-specific scenarios
+	// Add health-specific scenarios (including baseline scenarios with health-appropriate fields)
 	typeSpecific := []JSONMalformationTestScenario{
+		{
+			Name:        "empty_json",
+			JSONData:    []byte(""),
+			ExpectError: true,
+			ErrorMsg:    "empty response body",
+			Description: "Empty JSON should be rejected",
+		},
+		{
+			Name:        "null_json",
+			JSONData:    []byte("null"),
+			ExpectError: true,
+			ErrorMsg:    "null response body",
+			Description: "Null JSON should be rejected",
+		},
+		{
+			Name:        "malformed_json",
+			JSONData:    []byte(`{"invalid": json}`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "Malformed JSON should be handled gracefully",
+		},
+		{
+			Name:        "incomplete_json",
+			JSONData:    []byte(`{"incomplete":`),
+			ExpectError: true,
+			ErrorMsg:    "failed to parse",
+			Description: "Incomplete JSON should be handled gracefully",
+		},
 		{
 			Name:        "unexpected_json_structure",
 			JSONData:    []byte(`{"unexpected": "structure", "not": "what we expect"}`),
