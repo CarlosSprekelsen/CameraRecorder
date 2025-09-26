@@ -72,9 +72,9 @@ type WebSocketServer struct {
 	config *ServerConfig // Server-specific configuration (ports, timeouts, etc.)
 
 	// Dependency Injection - All external dependencies injected via constructor
-	configManager      *config.ConfigManager          // Configuration management
-	logger             *logging.Logger                // Structured logging
-	jwtHandler         *security.JWTHandler           // JWT authentication and rate limiting
+	configManager      *config.ConfigManager       // Configuration management
+	logger             *logging.Logger             // Structured logging
+	jwtHandler         *security.JWTHandler        // JWT authentication and rate limiting
 	mediaMTXController mediamtx.MediaMTXController // Business logic delegation target
 
 	// Security Framework Components
@@ -91,6 +91,10 @@ type WebSocketServer struct {
 	clientsMutex  sync.RWMutex                 // Protects clients map modifications
 	clientCounter int64                        // Atomic counter for unique client ID generation
 	clientCount   int64                        // Atomic counter for fast client count queries
+
+	// Cleanup State Protection
+	cleanupMutex   sync.Mutex // Protects cleanup channel operations
+	cleanupStarted bool       // Tracks if cleanup has started
 
 	// JSON-RPC Method Registration
 	methods             map[string]MethodHandler // Registered JSON-RPC methods
@@ -123,7 +127,7 @@ func (s *WebSocketServer) isSystemReady() bool {
 		return false
 	}
 
-	// Use the IsReady method from MediaMTXControllerAPI interface
+	// Use the IsReady method from MediaMTXController interface
 	return s.mediaMTXController.IsReady()
 }
 
@@ -728,7 +732,17 @@ func (s *WebSocketServer) closeAllClientConnections() {
 
 	// Close connections concurrently with timeout
 	var wg sync.WaitGroup
+
+	// Protect channel operations from race conditions
+	s.cleanupMutex.Lock()
+	if s.cleanupStarted {
+		s.cleanupMutex.Unlock()
+		s.logger.Debug("Cleanup already started, skipping")
+		return
+	}
+	s.cleanupStarted = true
 	cleanupResults := make(chan error, len(clientsToClose))
+	s.cleanupMutex.Unlock()
 
 	for _, client := range clientsToClose {
 		wg.Add(1)
@@ -748,7 +762,14 @@ func (s *WebSocketServer) closeAllClientConnections() {
 
 			// Close connection
 			if err := client.Conn.Close(); err != nil {
-				cleanupResults <- fmt.Errorf("failed to close connection for client %s: %w", client.ClientID, err)
+				// Protect channel send operation
+				s.cleanupMutex.Lock()
+				select {
+				case cleanupResults <- fmt.Errorf("failed to close connection for client %s: %w", client.ClientID, err):
+				default:
+					// Channel is closed or full, skip send
+				}
+				s.cleanupMutex.Unlock()
 				return
 			}
 
@@ -766,7 +787,14 @@ func (s *WebSocketServer) closeAllClientConnections() {
 			// Use atomic operation for metrics update
 			atomic.AddInt64(&s.metrics.ActiveConnections, -1)
 
-			cleanupResults <- nil
+			// Protect channel send operation
+			s.cleanupMutex.Lock()
+			select {
+			case cleanupResults <- nil:
+			default:
+				// Channel is closed or full, skip send
+			}
+			s.cleanupMutex.Unlock()
 		}(client)
 	}
 
@@ -791,7 +819,10 @@ func (s *WebSocketServer) closeAllClientConnections() {
 	}
 
 	// Check cleanup results
+	s.cleanupMutex.Lock()
 	close(cleanupResults)
+	s.cleanupMutex.Unlock()
+
 	errorCount := 0
 	for err := range cleanupResults {
 		if err != nil {
