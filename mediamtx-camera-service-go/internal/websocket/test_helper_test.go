@@ -45,7 +45,7 @@ type WebSocketTestHelper struct {
 	baseURL            string
 	jwtHandler         *security.JWTHandler
 	configManager      *config.ConfigManager
-	mediaMTXController mediamtx.MediaMTXControllerAPI
+	mediaMTXController mediamtx.MediaMTXController
 	logger             *logging.Logger
 }
 

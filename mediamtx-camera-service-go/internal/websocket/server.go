@@ -75,7 +75,7 @@ type WebSocketServer struct {
 	configManager      *config.ConfigManager          // Configuration management
 	logger             *logging.Logger                // Structured logging
 	jwtHandler         *security.JWTHandler           // JWT authentication and rate limiting
-	mediaMTXController mediamtx.MediaMTXControllerAPI // Business logic delegation target
+	mediaMTXController mediamtx.MediaMTXController // Business logic delegation target
 
 	// Security Framework Components
 	permissionChecker *security.PermissionChecker // Role-based access control
@@ -464,7 +464,7 @@ func NewWebSocketServer(
 	configManager *config.ConfigManager,
 	logger *logging.Logger,
 	jwtHandler *security.JWTHandler,
-	mediaMTXController mediamtx.MediaMTXControllerAPI,
+	mediaMTXController mediamtx.MediaMTXController,
 ) (*WebSocketServer, error) {
 	if configManager == nil {
 		return nil, fmt.Errorf("configManager cannot be nil")
@@ -1307,7 +1307,7 @@ func (s *WebSocketServer) SetConfig(config *ServerConfig) {
 }
 
 // SetMediaMTXController sets the MediaMTX controller (for testing purposes)
-func (s *WebSocketServer) SetMediaMTXController(controller mediamtx.MediaMTXControllerAPI) {
+func (s *WebSocketServer) SetMediaMTXController(controller mediamtx.MediaMTXController) {
 	s.mediaMTXController = controller
 }
 
