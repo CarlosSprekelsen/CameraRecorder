@@ -123,13 +123,8 @@ func (s *WebSocketServer) isSystemReady() bool {
 		return false
 	}
 
-	// Check if controller implements IsReady method
-	if readyChecker, ok := s.mediaMTXController.(interface{ IsReady() bool }); ok {
-		return readyChecker.IsReady()
-	}
-
-	// Fallback: assume ready if controller exists
-	return true
+	// Use the IsReady method from MediaMTXControllerAPI interface
+	return s.mediaMTXController.IsReady()
 }
 
 // getSystemReadinessResponse returns a standardized readiness response

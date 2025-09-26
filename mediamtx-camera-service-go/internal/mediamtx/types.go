@@ -389,6 +389,9 @@ type MediaMTXControllerAPI interface {
 	GetServerInfo(ctx context.Context) (*GetServerInfoResponse, error)
 	GetHealthMonitor() HealthMonitor
 
+	// System readiness
+	IsReady() bool
+
 	// Streaming (uses Path from api_types.go)
 	GetStreams(ctx context.Context) (*GetStreamsResponse, error)
 	StartStreaming(ctx context.Context, device string) (*StartStreamingResponse, error)
