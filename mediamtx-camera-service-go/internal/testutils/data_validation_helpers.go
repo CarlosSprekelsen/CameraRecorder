@@ -349,6 +349,51 @@ func BuildSnapshotFilePath(basePath, cameraID, filename string, useSubdirs bool,
 	return BuildMediaMTXFilePath(basePath, cameraID, filename, useSubdirs, format)
 }
 
+// GetExtensionFromFormat translates MediaMTX recording format parameter to file extension
+// This matches the format translation logic used in recording_manager.go
+func GetExtensionFromFormat(recordFormat string) string {
+	switch strings.ToLower(recordFormat) {
+	case "fmp4", "mp4":
+		return "mp4"
+	case "mpegts", "ts":
+		return "ts"
+	default:
+		return "mp4" // Default fallback
+	}
+}
+
+// FindRecordingFile searches for recording files with the correct pattern
+// MediaMTX creates files like: camera0_2025-09-26_03-00-42.mp4
+// This function searches for files matching the pattern: cameraID_*.extension
+func FindRecordingFile(recordingsPath, cameraID, recordFormat string) (string, error) {
+	extension := GetExtensionFromFormat(recordFormat)
+	pattern := filepath.Join(recordingsPath, cameraID, cameraID+"_*."+extension)
+
+	matches, err := filepath.Glob(pattern)
+	if err != nil {
+		return "", fmt.Errorf("failed to search for recording files: %w", err)
+	}
+
+	if len(matches) == 0 {
+		return "", fmt.Errorf("no recording files found matching pattern: %s", pattern)
+	}
+
+	// Return the most recent file (MediaMTX creates files with timestamps)
+	// Sort by modification time to get the latest
+	latestFile := matches[0]
+	for _, match := range matches[1:] {
+		if stat1, err1 := os.Stat(latestFile); err1 == nil {
+			if stat2, err2 := os.Stat(match); err2 == nil {
+				if stat2.ModTime().After(stat1.ModTime()) {
+					latestFile = match
+				}
+			}
+		}
+	}
+
+	return latestFile, nil
+}
+
 // WaitForFileCreation waits for a file to be created with timeout
 func (dvh *DataValidationHelper) WaitForFileCreation(filePath string, timeout time.Duration, description string) bool {
 	deadline := time.Now().Add(timeout)

@@ -137,16 +137,14 @@ func TestSnapshotManager_CleanupOldSnapshots_ReqMTX002_Success_Refactored(t *tes
 
 	cameraID := asserter.MustGetCameraID()
 
-	// Create some test snapshots
+	// Test 1: Cleanup with very short max age (should not delete recent snapshots)
 	asserter.CreateMultipleTestSnapshots(cameraID, 2)
-
-	// Cleanup with very short max age (should not delete recent snapshots)
-	// Use 100ms buffer to account for filesystem timestamp resolution (typically 1 second)
-	count := asserter.AssertCleanupOldSnapshots(100 * time.Millisecond)
+	count := asserter.AssertCleanupOldSnapshots(1 * time.Second)
 	assert.Equal(t, 0, count, "Should not delete recent snapshots")
 
-	// Cleanup with longer max age (should delete all snapshots)
-	count = asserter.AssertCleanupOldSnapshots(1 * time.Second)
+	// Test 2: Cleanup with longer max age (should delete all snapshots)
+	asserter.CreateMultipleTestSnapshots(cameraID, 2)
+	count = asserter.AssertCleanupOldSnapshots(1 * time.Millisecond)
 	assert.GreaterOrEqual(t, count, 2, "Should delete recent snapshots")
 }
 

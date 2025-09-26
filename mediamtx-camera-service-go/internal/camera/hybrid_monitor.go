@@ -1043,12 +1043,24 @@ func (m *HybridCameraMonitor) AddEventCallback(callback func(CameraEventData)) {
 }
 
 // SubscribeToReadiness subscribes to camera monitor readiness events
+// FIXED: Creates per-subscriber channel instead of returning shared channel
 func (m *HybridCameraMonitor) SubscribeToReadiness() <-chan struct{} {
-	m.readinessMutex.RLock()
-	defer m.readinessMutex.RUnlock()
+	m.readinessMutex.Lock()
+	defer m.readinessMutex.Unlock()
 
-	// Return the ACTUAL readiness channel, not a new one
-	return m.readinessEventChan
+	// Create unique channel for this subscriber
+	subscriberChan := make(chan struct{}, 1)
+
+	// If already ready, send immediate notification
+	if m.IsReady() {
+		select {
+		case subscriberChan <- struct{}{}:
+		default:
+			// Channel is full, skip notification
+		}
+	}
+
+	return subscriberChan
 }
 
 // emitReadinessEvent emits a readiness event to all subscribers

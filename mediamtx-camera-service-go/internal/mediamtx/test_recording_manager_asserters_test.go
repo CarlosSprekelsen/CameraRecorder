@@ -62,6 +62,8 @@ func NewRecordingManagerAsserter(t *testing.T) *RecordingManagerAsserter {
 func (rma *RecordingManagerAsserter) Cleanup() {
 	rma.controller.Stop(rma.ctx)
 	rma.cancel()
+	// Ensure proper cleanup of recording state to prevent test contamination
+	rma.helper.Cleanup(rma.t)
 }
 
 // GetHelper returns the underlying MediaMTXTestHelper
@@ -101,22 +103,24 @@ func (rma *RecordingManagerAsserter) AssertCompleteRecordingLifecycle(cameraID s
 	require.NoError(rma.t, err, "StartRecording should succeed")
 	require.NotNil(rma.t, session, "Recording session should not be nil")
 
-	// Verify recording file exists and has content
-	expectedFilePath := testutils.BuildRecordingFilePath(
-		rma.helper.GetConfiguredRecordingPath(),
-		cameraID,
-		rma.helper.GetConfiguredRecordingFormat(),
-		true, // use_device_subdirs
-		"",   // timestamp
-	)
-
-	// Wait for file creation with Progressive Readiness
+	// Wait for file creation with Progressive Readiness using pattern matching
 	result := testutils.TestProgressiveReadiness(rma.t, func() (bool, error) {
-		fileInfo, err := os.Stat(expectedFilePath)
+		// Find recording file using pattern matching (MediaMTX creates timestamped files)
+		recordingFile, err := testutils.FindRecordingFile(
+			rma.helper.GetConfiguredRecordingPath(),
+			cameraID,
+			rma.helper.GetConfiguredRecordingFormat(),
+		)
 		if err != nil {
 			return false, err
 		}
-		return fileInfo.Size() > testutils.UniversalMinRecordingFileSize, nil
+
+		// Check file size
+		fileInfo, err := os.Stat(recordingFile)
+		if err != nil {
+			return false, err
+		}
+		return fileInfo.Size() > int64(testutils.UniversalMinRecordingFileSize), nil
 	}, rma.controller, "RecordingFileCreation")
 
 	require.NoError(rma.t, result.Error, "Recording file should be created")
@@ -132,13 +136,21 @@ func (rma *RecordingManagerAsserter) AssertCompleteRecordingLifecycle(cameraID s
 	_, err = rma.recordingManager.StopRecording(rma.ctx, cameraID)
 	require.NoError(rma.t, err, "StopRecording should succeed")
 
+	// Find the final recording file to verify
+	recordingFile, err := testutils.FindRecordingFile(
+		rma.helper.GetConfiguredRecordingPath(),
+		cameraID,
+		rma.helper.GetConfiguredRecordingFormat(),
+	)
+	require.NoError(rma.t, err, "Final recording file should exist for camera: %s", cameraID)
+
 	// Verify final file exists and has content
-	fileInfo, err := os.Stat(expectedFilePath)
-	require.NoError(rma.t, err, "Final recording file should exist")
-	assert.Greater(rma.t, fileInfo.Size(), testutils.UniversalMinRecordingFileSize,
+	fileInfo, err := os.Stat(recordingFile)
+	require.NoError(rma.t, err, "Final recording file should be accessible: %s", recordingFile)
+	assert.Greater(rma.t, fileInfo.Size(), int64(testutils.UniversalMinRecordingFileSize),
 		"Final recording file should have meaningful size")
 
-	rma.t.Logf("✅ Complete recording lifecycle validated: %s (%d bytes)", expectedFilePath, fileInfo.Size())
+	rma.t.Logf("✅ Complete recording lifecycle validated: %s (%d bytes)", recordingFile, fileInfo.Size())
 	return session
 }
 
@@ -177,21 +189,21 @@ func (rma *RecordingManagerAsserter) AssertGetRecordingsList(limit, offset int) 
 // AssertRecordingFileExists validates recording file creation
 // Eliminates file validation duplication
 func (rma *RecordingManagerAsserter) AssertRecordingFileExists(cameraID string) string {
-	expectedFilePath := testutils.BuildRecordingFilePath(
+	// Find recording file using pattern matching (MediaMTX creates timestamped files)
+	recordingFile, err := testutils.FindRecordingFile(
 		rma.helper.GetConfiguredRecordingPath(),
 		cameraID,
 		rma.helper.GetConfiguredRecordingFormat(),
-		true, // use_device_subdirs
-		"",   // timestamp
 	)
+	require.NoError(rma.t, err, "Recording file should exist for camera: %s", cameraID)
 
-	fileInfo, err := os.Stat(expectedFilePath)
-	require.NoError(rma.t, err, "Recording file should exist: %s", expectedFilePath)
-	assert.Greater(rma.t, fileInfo.Size(), testutils.UniversalMinRecordingFileSize,
+	fileInfo, err := os.Stat(recordingFile)
+	require.NoError(rma.t, err, "Recording file should be accessible: %s", recordingFile)
+	assert.Greater(rma.t, fileInfo.Size(), int64(testutils.UniversalMinRecordingFileSize),
 		"Recording file should have meaningful size")
 
-	rma.t.Logf("✅ Recording file validated: %s (%d bytes)", expectedFilePath, fileInfo.Size())
-	return expectedFilePath
+	rma.t.Logf("✅ Recording file validated: %s (%d bytes)", recordingFile, fileInfo.Size())
+	return recordingFile
 }
 
 // AssertAPIErrorHandling tests API error handling scenarios

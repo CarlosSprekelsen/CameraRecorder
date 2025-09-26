@@ -759,7 +759,8 @@ func (sm *SnapshotManager) CleanupOldSnapshots(ctx context.Context, maxAge time.
 			}
 
 			// Check count constraint (keep newest files up to maxCount)
-			if len(files)-deletedCount > maxCount {
+			// Only apply count constraint if maxCount > 0 (0 means no limit)
+			if maxCount > 0 && len(files)-deletedCount > maxCount {
 				shouldDelete = true
 			}
 

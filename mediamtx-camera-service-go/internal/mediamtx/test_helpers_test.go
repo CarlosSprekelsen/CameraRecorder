@@ -1301,12 +1301,13 @@ func (h *MediaMTXTestHelper) cleanupMediaMTXPaths(t *testing.T) {
 		}
 	}
 
+	// Normalize recording state for all camera paths to ensure clean test isolation
+	// This must happen BEFORE deletion to prevent "already recording" errors
+	h.normalizePathStates(ctx, t)
+
 	if testPathCount > 0 {
 		t.Logf("Found %d test paths in runtime state - these should be cleaned up automatically by MediaMTX when unused", testPathCount)
 	}
-
-	// Normalize recording state for all camera paths to ensure clean test isolation
-	h.normalizePathStates(ctx, t)
 }
 
 // normalizePathStates normalizes recording state for all camera paths to ensure clean test isolation
@@ -1350,7 +1351,7 @@ func (h *MediaMTXTestHelper) normalizePathStates(ctx context.Context, t *testing
 // isCameraPath determines if a path is a camera path (camera0, camera1, etc.)
 func (h *MediaMTXTestHelper) isCameraPath(pathName string) bool {
 	// Match cameraN pattern (camera0, camera1, camera2, etc.)
-	return strings.HasPrefix(pathName, "camera") && len(pathName) > 6 && pathName[6:] != ""
+	return strings.HasPrefix(pathName, "camera") && len(pathName) >= 6
 }
 
 // normalizePathRecordingState normalizes a single path's recording state to disabled

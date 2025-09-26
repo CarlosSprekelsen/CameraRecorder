@@ -148,10 +148,24 @@ func (c *controller) emitReadinessEvent() {
 }
 
 // SubscribeToReadiness subscribes to controller readiness events
+// FIXED: Creates per-subscriber channel instead of returning shared channel
 func (c *controller) SubscribeToReadiness() <-chan struct{} {
-	c.readinessMutex.RLock()
-	defer c.readinessMutex.RUnlock()
-	return c.readinessEventChan
+	c.readinessMutex.Lock()
+	defer c.readinessMutex.Unlock()
+
+	// Create unique channel for this subscriber
+	subscriberChan := make(chan struct{}, 1)
+
+	// If already ready, send immediate notification
+	if c.IsReady() {
+		select {
+		case subscriberChan <- struct{}{}:
+		default:
+			// Channel is full, skip notification
+		}
+	}
+
+	return subscriberChan
 }
 
 // GetReadinessState returns detailed readiness information
