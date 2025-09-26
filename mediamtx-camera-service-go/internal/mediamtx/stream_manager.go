@@ -738,6 +738,7 @@ func (sm *streamManager) WaitForStreamReadiness(ctx context.Context, streamName 
 
 	// Use dedicated stream manager ticker interval for optimal performance (configurable)
 	tickerInterval := time.Duration(sm.config.StreamReadiness.StreamManagerTickerInterval) * time.Second
+	fmt.Printf("DEBUG: StreamManager - StreamManagerTickerInterval: %v, tickerInterval: %v\n", sm.config.StreamReadiness.StreamManagerTickerInterval, tickerInterval)
 	ticker := time.NewTicker(tickerInterval)
 	defer ticker.Stop()
 

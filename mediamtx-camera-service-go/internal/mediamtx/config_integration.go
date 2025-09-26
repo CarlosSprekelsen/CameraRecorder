@@ -72,6 +72,7 @@ func (ci *ConfigIntegration) GetMediaMTXConfig() (*config.MediaMTXConfig, error)
 	}
 
 	// Convert existing config to MediaMTX config
+	fmt.Printf("DEBUG: GetMediaMTXConfig - Source ControllerTickerInterval: %v\n", cfg.MediaMTX.StreamReadiness.ControllerTickerInterval)
 	mediaMTXConfig := &config.MediaMTXConfig{
 		// Core MediaMTX settings
 		BaseURL:        fmt.Sprintf("http://%s:%d", cfg.MediaMTX.Host, cfg.MediaMTX.APIPort),

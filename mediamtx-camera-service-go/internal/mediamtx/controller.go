@@ -203,16 +203,15 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 	if cfgAll == nil {
 		return nil, fmt.Errorf("failed to get configuration: nil config")
 	}
-	mediaMTXConfig := &cfgAll.MediaMTX
 
-	// Create FFmpeg manager and wire dependencies
-	ffmpegManager := NewFFmpegManager(mediaMTXConfig, logger).(*ffmpegManager)
+	// Create FFmpeg manager and wire dependencies (use direct config reference)
+	ffmpegManager := NewFFmpegManager(&cfgAll.MediaMTX, logger).(*ffmpegManager)
 	ffmpegManager.SetDependencies(configManager, cameraMonitor)
 
 	// Create configuration integration with FFmpegManager injected
 	configIntegration := NewConfigIntegration(configManager, ffmpegManager, logger)
 
-	// Get MediaMTX configuration (validated access path)
+	// Get MediaMTX configuration (validated access path) - FIXED: No variable shadowing
 	mediaMTXConfig, err := configIntegration.GetMediaMTXConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to get MediaMTX configuration: %w", err)
@@ -389,6 +388,7 @@ func (c *controller) Start(ctx context.Context) error {
 func (c *controller) monitorReadiness() {
 	// Use dedicated controller ticker interval for optimal performance (configurable)
 	tickerInterval := time.Duration(c.config.StreamReadiness.ControllerTickerInterval) * time.Second
+	fmt.Printf("DEBUG: Controller - ControllerTickerInterval: %v, tickerInterval: %v\n", c.config.StreamReadiness.ControllerTickerInterval, tickerInterval)
 	ticker := time.NewTicker(tickerInterval)
 	defer ticker.Stop()
 
