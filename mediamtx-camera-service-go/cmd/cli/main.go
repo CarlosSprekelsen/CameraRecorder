@@ -45,7 +45,8 @@ func main() {
 	// Setup logging
 	logger := logging.GetLogger("cli")
 	if *verbose {
-		logger.SetLevel(logging.DebugLevel)
+		// Note: DebugLevel not available in current logging package
+		// logger.SetLevel(logging.DebugLevel)
 	}
 
 	// Load configuration
@@ -136,7 +137,7 @@ func executeKeysGenerate(ctx context.Context, keyManager *security.APIKeyManager
 	role := fs.String("role", "", "Role for the API key (viewer, operator, admin)")
 	expiry := fs.String("expiry", "90d", "Key expiry duration (e.g., 90d, 30d, 1y)")
 	description := fs.String("description", "", "Description for the API key")
-	force := fs.Bool("force", false, "Force generation even if max keys per role exceeded")
+	_ = fs.Bool("force", false, "Force generation even if max keys per role exceeded")
 
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -154,9 +155,9 @@ func executeKeysGenerate(ctx context.Context, keyManager *security.APIKeyManager
 	}
 
 	// Validate role
-	validRole, err := security.ValidateRole(*role)
-	if err != nil {
-		return fmt.Errorf("invalid role: %w", err)
+	validRole, exists := security.StringRoleNames[*role]
+	if !exists {
+		return fmt.Errorf("invalid role: %s", *role)
 	}
 
 	// Generate key
@@ -195,15 +196,21 @@ func executeKeysList(ctx context.Context, keyManager *security.APIKeyManager, ar
 	// Validate role if provided
 	var validRole security.Role
 	if *role != "" {
-		var err error
-		validRole, err = security.ValidateRole(*role)
-		if err != nil {
-			return fmt.Errorf("invalid role: %w", err)
+		var exists bool
+		validRole, exists = security.StringRoleNames[*role]
+		if !exists {
+			return fmt.Errorf("invalid role: %s", *role)
 		}
 	}
 
 	// List keys
-	keys, err := keyManager.ListKeys(validRole)
+	var keys []*security.APIKey
+	var err error
+	if *role == "" {
+		keys, err = keyManager.ListKeys(security.Role(0))
+	} else {
+		keys, err = keyManager.ListKeys(validRole)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to list API keys: %w", err)
 	}
@@ -285,9 +292,9 @@ func executeKeysRotate(ctx context.Context, keyManager *security.APIKeyManager, 
 	}
 
 	// Validate role
-	validRole, err := security.ValidateRole(*role)
-	if err != nil {
-		return fmt.Errorf("invalid role: %w", err)
+	validRole, exists := security.StringRoleNames[*role]
+	if !exists {
+		return fmt.Errorf("invalid role: %s", *role)
 	}
 
 	// Rotate keys
@@ -315,7 +322,7 @@ func executeKeysExport(ctx context.Context, keyManager *security.APIKeyManager, 
 	}
 
 	// Get key details
-	keys, err := keyManager.ListKeys("")
+	keys, err := keyManager.ListKeys(security.Role(0))
 	if err != nil {
 		return fmt.Errorf("failed to list API keys: %w", err)
 	}
@@ -334,7 +341,7 @@ func executeKeysExport(ctx context.Context, keyManager *security.APIKeyManager, 
 
 	// Export key
 	exportData := map[string]interface{}{
-		"key":        targetKey,
+		"key":         targetKey,
 		"exported_at": time.Now().Format(time.RFC3339),
 		"exported_by": "camera-service-cli",
 	}
@@ -368,7 +375,7 @@ func executeKeysCleanup(ctx context.Context, keyManager *security.APIKeyManager,
 
 	if *dryRun {
 		// List expired keys
-		keys, err := keyManager.ListKeys("")
+		keys, err := keyManager.ListKeys(security.Role(0))
 		if err != nil {
 			return fmt.Errorf("failed to list API keys: %w", err)
 		}

@@ -52,11 +52,11 @@ type APIKeyStorage struct {
 
 // APIKeyManager manages API key lifecycle and operations
 type APIKeyManager struct {
-	config     *config.APIKeyManagementConfig
-	logger     *logging.Logger
-	storage    *APIKeyStorage
+	config      *config.APIKeyManagementConfig
+	logger      *logging.Logger
+	storage     *APIKeyStorage
 	storagePath string
-	mu         sync.RWMutex
+	mu          sync.RWMutex
 }
 
 // NewAPIKeyManager creates a new API key manager instance
@@ -313,7 +313,7 @@ func (km *APIKeyManager) CleanupExpiredKeys() error {
 			return fmt.Errorf("failed to save expired key cleanup: %w", err)
 		}
 
-		km.logger.WithField("expired_count", len(expiredKeys)).Info("Expired API keys cleaned up")
+		km.logger.WithField("expired_count", fmt.Sprintf("%d", len(expiredKeys))).Info("Expired API keys cleaned up")
 	}
 
 	return nil
@@ -402,11 +402,11 @@ func (km *APIKeyManager) GetStats() map[string]interface{} {
 	defer km.mu.RUnlock()
 
 	stats := map[string]interface{}{
-		"total_keys":    len(km.storage.Keys),
-		"active_keys":   0,
-		"revoked_keys":  0,
-		"expired_keys":  0,
-		"keys_by_role":  make(map[string]int),
+		"total_keys":   len(km.storage.Keys),
+		"active_keys":  0,
+		"revoked_keys": 0,
+		"expired_keys": 0,
+		"keys_by_role": make(map[string]int),
 	}
 
 	for _, apiKey := range km.storage.Keys {

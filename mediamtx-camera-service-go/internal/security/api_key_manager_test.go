@@ -15,7 +15,6 @@ Tests key generation, validation, revocation, and lifecycle management.
 package security
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -56,7 +55,7 @@ func TestNewAPIKeyManager(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			manager, err := NewAPIKeyManager(tt.config, tt.logger)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Nil(t, manager)
@@ -74,17 +73,17 @@ func TestAPIKeyManager_GenerateKey(t *testing.T) {
 	// Setup
 	tempDir := t.TempDir()
 	storagePath := filepath.Join(tempDir, "test-keys.json")
-	
+
 	config := &config.APIKeyManagementConfig{
-		StoragePath:     storagePath,
-		KeyLength:       16, // Smaller for testing
-		KeyPrefix:       "test_",
-		KeyFormat:       "base64url",
-		MaxKeysPerRole:  5,
-		UsageTracking:   true,
-		AuditLogging:    true,
+		StoragePath:    storagePath,
+		KeyLength:      16, // Smaller for testing
+		KeyPrefix:      "test_",
+		KeyFormat:      "base64url",
+		MaxKeysPerRole: 5,
+		UsageTracking:  true,
+		AuditLogging:   true,
 	}
-	
+
 	logger := logging.GetLogger("test")
 	manager, err := NewAPIKeyManager(config, logger)
 	require.NoError(t, err)
@@ -119,7 +118,7 @@ func TestAPIKeyManager_GenerateKey(t *testing.T) {
 		},
 		{
 			name:        "empty role",
-			role:        "",
+			role:        Role(""),
 			expiry:      90 * 24 * time.Hour,
 			description: "Test key",
 			expectError: true,
@@ -129,7 +128,7 @@ func TestAPIKeyManager_GenerateKey(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			apiKey, err := manager.GenerateKey(tt.role, tt.expiry, tt.description)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Nil(t, apiKey)
@@ -152,7 +151,7 @@ func TestAPIKeyManager_ValidateKey(t *testing.T) {
 	// Setup
 	tempDir := t.TempDir()
 	storagePath := filepath.Join(tempDir, "test-keys.json")
-	
+
 	config := &config.APIKeyManagementConfig{
 		StoragePath:   storagePath,
 		KeyLength:     16,
@@ -160,7 +159,7 @@ func TestAPIKeyManager_ValidateKey(t *testing.T) {
 		KeyFormat:     "base64url",
 		UsageTracking: true,
 	}
-	
+
 	logger := logging.GetLogger("test")
 	manager, err := NewAPIKeyManager(config, logger)
 	require.NoError(t, err)
@@ -194,7 +193,7 @@ func TestAPIKeyManager_ValidateKey(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			validatedKey, err := manager.ValidateKey(tt.key)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Nil(t, validatedKey)
@@ -213,14 +212,14 @@ func TestAPIKeyManager_RevokeKey(t *testing.T) {
 	// Setup
 	tempDir := t.TempDir()
 	storagePath := filepath.Join(tempDir, "test-keys.json")
-	
+
 	config := &config.APIKeyManagementConfig{
 		StoragePath: storagePath,
 		KeyLength:   16,
 		KeyPrefix:   "test_",
 		KeyFormat:   "base64url",
 	}
-	
+
 	logger := logging.GetLogger("test")
 	manager, err := NewAPIKeyManager(config, logger)
 	require.NoError(t, err)
@@ -254,16 +253,16 @@ func TestAPIKeyManager_RevokeKey(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := manager.RevokeKey(tt.keyID)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				
+
 				// Verify key is revoked
 				keys, err := manager.ListKeys("")
 				require.NoError(t, err)
-				
+
 				var revokedKey *APIKey
 				for _, key := range keys {
 					if key.ID == tt.keyID {
@@ -271,7 +270,7 @@ func TestAPIKeyManager_RevokeKey(t *testing.T) {
 						break
 					}
 				}
-				
+
 				assert.NotNil(t, revokedKey)
 				assert.Equal(t, "revoked", revokedKey.Status)
 			}
@@ -283,26 +282,26 @@ func TestAPIKeyManager_ListKeys(t *testing.T) {
 	// Setup
 	tempDir := t.TempDir()
 	storagePath := filepath.Join(tempDir, "test-keys.json")
-	
+
 	config := &config.APIKeyManagementConfig{
 		StoragePath: storagePath,
 		KeyLength:   16,
 		KeyPrefix:   "test_",
 		KeyFormat:   "base64url",
 	}
-	
+
 	logger := logging.GetLogger("test")
 	manager, err := NewAPIKeyManager(config, logger)
 	require.NoError(t, err)
 
 	// Generate test keys
-	adminKey, err := manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key")
+	_, err := manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key")
 	require.NoError(t, err)
-	
-	operatorKey, err := manager.GenerateKey(RoleOperator, 30*24*time.Hour, "Operator key")
+
+	_, err = manager.GenerateKey(RoleOperator, 30*24*time.Hour, "Operator key")
 	require.NoError(t, err)
-	
-	viewerKey, err := manager.GenerateKey(RoleViewer, 7*24*time.Hour, "Viewer key")
+
+	_, err = manager.GenerateKey(RoleViewer, 7*24*time.Hour, "Viewer key")
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -312,7 +311,7 @@ func TestAPIKeyManager_ListKeys(t *testing.T) {
 	}{
 		{
 			name:     "all keys",
-			role:     "",
+			role:     Role(""),
 			expected: 3,
 		},
 		{
@@ -332,7 +331,7 @@ func TestAPIKeyManager_ListKeys(t *testing.T) {
 		},
 		{
 			name:     "non-existent role",
-			role:     "nonexistent",
+			role:     Role("nonexistent"),
 			expected: 0,
 		},
 	}
@@ -342,10 +341,10 @@ func TestAPIKeyManager_ListKeys(t *testing.T) {
 			keys, err := manager.ListKeys(tt.role)
 			assert.NoError(t, err)
 			assert.Len(t, keys, tt.expected)
-			
+
 			// Verify all returned keys have the correct role
 			for _, key := range keys {
-				if tt.role != "" {
+				if tt.role != Role("") {
 					assert.Equal(t, tt.role, key.Role)
 				}
 			}
@@ -357,23 +356,23 @@ func TestAPIKeyManager_RotateKeys(t *testing.T) {
 	// Setup
 	tempDir := t.TempDir()
 	storagePath := filepath.Join(tempDir, "test-keys.json")
-	
+
 	config := &config.APIKeyManagementConfig{
 		StoragePath: storagePath,
 		KeyLength:   16,
 		KeyPrefix:   "test_",
 		KeyFormat:   "base64url",
 	}
-	
+
 	logger := logging.GetLogger("test")
 	manager, err := NewAPIKeyManager(config, logger)
 	require.NoError(t, err)
 
 	// Generate test keys
-	adminKey1, err := manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key 1")
+	_, err := manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key 1")
 	require.NoError(t, err)
-	
-	adminKey2, err := manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key 2")
+
+	_, err = manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key 2")
 	require.NoError(t, err)
 
 	tests := []struct {
@@ -390,7 +389,7 @@ func TestAPIKeyManager_RotateKeys(t *testing.T) {
 		},
 		{
 			name:        "rotate non-existent role",
-			role:        "nonexistent",
+			role:        Role("nonexistent"),
 			force:       false,
 			expectError: true,
 		},
@@ -399,16 +398,16 @@ func TestAPIKeyManager_RotateKeys(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := manager.RotateKeys(tt.role, tt.force)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 			} else {
 				assert.NoError(t, err)
-				
+
 				// Verify old keys are revoked
 				keys, err := manager.ListKeys(tt.role)
 				require.NoError(t, err)
-				
+
 				// Should have new keys (rotated) and old keys should be revoked
 				var activeKeys, revokedKeys int
 				for _, key := range keys {
@@ -418,7 +417,7 @@ func TestAPIKeyManager_RotateKeys(t *testing.T) {
 						revokedKeys++
 					}
 				}
-				
+
 				assert.Greater(t, activeKeys, 0, "Should have active keys after rotation")
 				assert.Greater(t, revokedKeys, 0, "Should have revoked keys after rotation")
 			}
@@ -430,14 +429,14 @@ func TestAPIKeyManager_CleanupExpiredKeys(t *testing.T) {
 	// Setup
 	tempDir := t.TempDir()
 	storagePath := filepath.Join(tempDir, "test-keys.json")
-	
+
 	config := &config.APIKeyManagementConfig{
 		StoragePath: storagePath,
 		KeyLength:   16,
 		KeyPrefix:   "test_",
 		KeyFormat:   "base64url",
 	}
-	
+
 	logger := logging.GetLogger("test")
 	manager, err := NewAPIKeyManager(config, logger)
 	require.NoError(t, err)
@@ -482,22 +481,22 @@ func TestAPIKeyManager_GetStats(t *testing.T) {
 	// Setup
 	tempDir := t.TempDir()
 	storagePath := filepath.Join(tempDir, "test-keys.json")
-	
+
 	config := &config.APIKeyManagementConfig{
 		StoragePath: storagePath,
 		KeyLength:   16,
 		KeyPrefix:   "test_",
 		KeyFormat:   "base64url",
 	}
-	
+
 	logger := logging.GetLogger("test")
 	manager, err := NewAPIKeyManager(config, logger)
 	require.NoError(t, err)
 
 	// Generate test keys
-	adminKey, err := manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key")
+	_, err := manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key")
 	require.NoError(t, err)
-	
+
 	operatorKey, err := manager.GenerateKey(RoleOperator, 30*24*time.Hour, "Operator key")
 	require.NoError(t, err)
 
@@ -523,7 +522,7 @@ func TestAPIKeyManager_MaxKeysPerRole(t *testing.T) {
 	// Setup
 	tempDir := t.TempDir()
 	storagePath := filepath.Join(tempDir, "test-keys.json")
-	
+
 	config := &config.APIKeyManagementConfig{
 		StoragePath:    storagePath,
 		KeyLength:      16,
@@ -531,7 +530,7 @@ func TestAPIKeyManager_MaxKeysPerRole(t *testing.T) {
 		KeyFormat:      "base64url",
 		MaxKeysPerRole: 2,
 	}
-	
+
 	logger := logging.GetLogger("test")
 	manager, err := NewAPIKeyManager(config, logger)
 	require.NoError(t, err)
@@ -539,7 +538,7 @@ func TestAPIKeyManager_MaxKeysPerRole(t *testing.T) {
 	// Generate keys up to the limit
 	key1, err := manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key 1")
 	require.NoError(t, err)
-	
+
 	key2, err := manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key 2")
 	require.NoError(t, err)
 
@@ -562,7 +561,7 @@ func TestAPIKeyManager_UsageTracking(t *testing.T) {
 	// Setup
 	tempDir := t.TempDir()
 	storagePath := filepath.Join(tempDir, "test-keys.json")
-	
+
 	config := &config.APIKeyManagementConfig{
 		StoragePath:   storagePath,
 		KeyLength:     16,
@@ -570,7 +569,7 @@ func TestAPIKeyManager_UsageTracking(t *testing.T) {
 		KeyFormat:     "base64url",
 		UsageTracking: true,
 	}
-	
+
 	logger := logging.GetLogger("test")
 	manager, err := NewAPIKeyManager(config, logger)
 	require.NoError(t, err)

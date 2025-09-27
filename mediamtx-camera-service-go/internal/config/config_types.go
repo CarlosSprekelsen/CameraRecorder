@@ -425,29 +425,29 @@ type ConnectionPoolConfig struct {
 // APIKeyManagementConfig represents API key management configuration
 type APIKeyManagementConfig struct {
 	// Storage configuration
-	StoragePath     string `mapstructure:"storage_path"`     // Path to key storage file
-	EncryptionKey   string `mapstructure:"encryption_key"`   // Encryption key for key storage
-	BackupEnabled   bool   `mapstructure:"backup_enabled"`   // Enable automatic backups
-	BackupPath      string `mapstructure:"backup_path"`      // Backup directory path
-	BackupInterval  string `mapstructure:"backup_interval"`  // Backup interval (e.g., "24h")
-	
+	StoragePath    string `mapstructure:"storage_path"`    // Path to key storage file
+	EncryptionKey  string `mapstructure:"encryption_key"`  // Encryption key for key storage
+	BackupEnabled  bool   `mapstructure:"backup_enabled"`  // Enable automatic backups
+	BackupPath     string `mapstructure:"backup_path"`     // Backup directory path
+	BackupInterval string `mapstructure:"backup_interval"` // Backup interval (e.g., "24h")
+
 	// Key generation configuration
-	KeyLength       int    `mapstructure:"key_length"`       // Key length in bytes (default: 32)
-	KeyPrefix       string `mapstructure:"key_prefix"`       // Key prefix for identification
-	KeyFormat       string `mapstructure:"key_format"`       // Key format (hex, base64, base64url)
-	
+	KeyLength int    `mapstructure:"key_length"` // Key length in bytes (default: 32)
+	KeyPrefix string `mapstructure:"key_prefix"` // Key prefix for identification
+	KeyFormat string `mapstructure:"key_format"` // Key format (hex, base64, base64url)
+
 	// Expiration and rotation
-	DefaultExpiry   string `mapstructure:"default_expiry"`   // Default key expiry (e.g., "90d")
-	RotationEnabled bool   `mapstructure:"rotation_enabled"` // Enable automatic key rotation
+	DefaultExpiry    string `mapstructure:"default_expiry"`    // Default key expiry (e.g., "90d")
+	RotationEnabled  bool   `mapstructure:"rotation_enabled"`  // Enable automatic key rotation
 	RotationInterval string `mapstructure:"rotation_interval"` // Rotation interval (e.g., "30d")
-	
+
 	// Security settings
-	MaxKeysPerRole  int    `mapstructure:"max_keys_per_role"` // Maximum keys per role
-	AuditLogging    bool   `mapstructure:"audit_logging"`     // Enable audit logging
-	UsageTracking   bool   `mapstructure:"usage_tracking"`    // Enable usage tracking
-	
+	MaxKeysPerRole int  `mapstructure:"max_keys_per_role"` // Maximum keys per role
+	AuditLogging   bool `mapstructure:"audit_logging"`     // Enable audit logging
+	UsageTracking  bool `mapstructure:"usage_tracking"`    // Enable usage tracking
+
 	// CLI configuration
-	CLIEnabled      bool   `mapstructure:"cli_enabled"`       // Enable CLI utility
-	AdminInterface  bool   `mapstructure:"admin_interface"`   // Enable admin web interface
-	AdminPort       int    `mapstructure:"admin_port"`        // Admin interface port
+	CLIEnabled     bool `mapstructure:"cli_enabled"`     // Enable CLI utility
+	AdminInterface bool `mapstructure:"admin_interface"` // Enable admin web interface
+	AdminPort      int  `mapstructure:"admin_port"`      // Admin interface port
 }
