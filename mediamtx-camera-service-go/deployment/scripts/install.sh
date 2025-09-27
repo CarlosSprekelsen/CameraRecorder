@@ -281,7 +281,6 @@ EOF
 # Function to build and install Camera Service
 install_camera_service() {
     log_message "Installing Camera Service..."
-    set -x  # Enable debug mode
     
     # Get the script directory to find source files
     log_message "Getting script directory..."
@@ -392,6 +391,8 @@ install_camera_service() {
     log_message "Creating required directories..."
     mkdir -p "$INSTALL_DIR/recordings" "$INSTALL_DIR/snapshots" "$INSTALL_DIR/logs"
     chown "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR/recordings" "$INSTALL_DIR/snapshots" "$INSTALL_DIR/logs"
+    
+    # Note: Using same directory for fallback to avoid permission issues
     
     # Create API key storage file with proper permissions
     touch "$INSTALL_DIR/api-keys.json"
