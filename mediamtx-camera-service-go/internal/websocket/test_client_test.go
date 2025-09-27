@@ -444,8 +444,45 @@ func (c *WebSocketTestClient) CameraStatusUpdate(params map[string]interface{}) 
 }
 
 // ============================================================================
+// MISSING STREAMING METHODS
+// ============================================================================
+
+// StartStreaming starts streaming for a device
+func (c *WebSocketTestClient) StartStreaming(device string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{
+		"device": device,
+	}
+	return c.SendJSONRPC("start_streaming", params)
+}
+
+// StopStreaming stops streaming for a device
+func (c *WebSocketTestClient) StopStreaming(device string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{
+		"device": device,
+	}
+	return c.SendJSONRPC("stop_streaming", params)
+}
+
+// ============================================================================
 // MISSING EXTERNAL STREAM METHODS
 // ============================================================================
+
+// AddExternalStream adds an external stream
+func (c *WebSocketTestClient) AddExternalStream(streamURL, streamName string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{
+		"stream_url":  streamURL,
+		"stream_name": streamName,
+	}
+	return c.SendJSONRPC("add_external_stream", params)
+}
+
+// RemoveExternalStream removes an external stream
+func (c *WebSocketTestClient) RemoveExternalStream(streamURL string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{
+		"stream_url": streamURL,
+	}
+	return c.SendJSONRPC("remove_external_stream", params)
+}
 
 // DiscoverExternalStreams discovers external streams
 func (c *WebSocketTestClient) DiscoverExternalStreams() (*JSONRPCResponse, error) {

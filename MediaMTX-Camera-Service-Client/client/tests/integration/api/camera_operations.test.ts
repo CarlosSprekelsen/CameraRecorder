@@ -39,10 +39,15 @@ describe('Camera Operations Integration Tests', () => {
   });
 
   test('REQ-INT-001: Authenticate with valid token', async () => {
-    const token = await authHelper.generateTestToken('admin');
+    // Use the real JWT token from the server
+    const token = process.env.TEST_ADMIN_TOKEN;
+    if (!token) {
+      throw new Error('TEST_ADMIN_TOKEN not found in environment');
+    }
+    
     const result = await apiClient.authenticate(token);
     
-    expect(APIResponseValidator.validateAuthResult(result)).toBe(true);
+    expect(APIResponseValidator.validateAuthenticateResult(result)).toBe(true);
     expect(result.authenticated).toBe(true);
     expect(result.role).toBe('admin');
   });

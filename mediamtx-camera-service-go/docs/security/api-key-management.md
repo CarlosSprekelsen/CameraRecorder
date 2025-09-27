@@ -1,25 +1,25 @@
-# API Key Management - MediaMTX Camera Service
+# JWT Token Management - MediaMTX Camera Service
 
 **Version:** 1.0  
-**Date:** 2025-01-18  
-**Status:** Production API Key Management Documentation  
+**Date:** 2025-09-27  
+**Status:** JWT Token Authentication Documentation  
 **Document Type:** Security Architecture Specification
 
 ---
 
 ## 1. Overview
 
-The MediaMTX Camera Service implements production-grade API key management with secure generation, storage, and lifecycle management. This system provides CLI utilities, admin interfaces, and secure key storage following enterprise security standards.
+The MediaMTX Camera Service implements JWT (JSON Web Token) authentication for secure access control. This system provides token generation, validation, and session management following enterprise security standards.
 
-### 1.1 Key Features
+### 1.1 JWT Token Features
 
-- **Cryptographically Secure**: Keys generated using `crypto/rand` with 256-bit entropy
-- **Role-Based Assignment**: Keys assigned to specific roles (viewer, operator, admin)
-- **Expiration Management**: Configurable key expiration with automatic cleanup
-- **Audit Trail**: All key operations logged for security compliance
-- **Secure Storage**: Keys stored encrypted with configurable encryption algorithms
-- **CLI Interface**: Command-line utilities for key management operations
-- **Admin Interface**: Web-based interface for key management (admin role only)
+- **Cryptographically Secure**: Tokens signed with HS256 algorithm using configurable secret
+- **Role-Based Assignment**: Tokens assigned to specific roles (viewer, operator, admin)
+- **Expiration Management**: Configurable token expiration with automatic validation
+- **Audit Trail**: All authentication operations logged for security compliance
+- **Stateless**: Tokens are self-contained and don't require server-side storage
+- **CLI Interface**: Command-line utilities for token generation
+- **Session Management**: Automatic session establishment after successful authentication
 
 ---
 

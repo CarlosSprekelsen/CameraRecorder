@@ -41,7 +41,12 @@ export async function loadTestEnvironment(): Promise<TestEnvironment> {
     timeout: parseInt(process.env.TEST_TIMEOUT || '30000')
   });
 
-  const authHelper = new AuthHelper();
+  // Connect the API client for integration tests
+  if (!process.env.TEST_MOCK_MODE || process.env.TEST_MOCK_MODE === 'false') {
+    await apiClient.connect();
+  }
+
+  const authHelper = AuthHelper;
   const mocks = APIMocks;
 
   return {

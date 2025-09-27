@@ -25,9 +25,9 @@ describe('Authenticated Functionality Tests', () => {
   let loggerService: LoggerService;
 
   // API Keys from test environment
-  const TEST_VIEWER_KEY = process.env.TEST_VIEWER_KEY;
-  const TEST_OPERATOR_KEY = process.env.TEST_OPERATOR_KEY;
-  const TEST_ADMIN_KEY = process.env.TEST_ADMIN_KEY;
+  const TEST_VIEWER_TOKEN = process.env.TEST_VIEWER_TOKEN;
+  const TEST_OPERATOR_TOKEN = process.env.TEST_OPERATOR_TOKEN;
+  const TEST_ADMIN_TOKEN = process.env.TEST_ADMIN_TOKEN;
 
   beforeAll(async () => {
     loggerService = new LoggerService();
@@ -37,14 +37,14 @@ describe('Authenticated Functionality Tests', () => {
     await webSocketService.connect();
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    authService = new AuthService(webSocketService, loggerService);
+    authService = new AuthService(webSocketService);
     deviceService = new DeviceService(webSocketService, loggerService);
     fileService = new FileService(webSocketService, loggerService);
     recordingService = new RecordingService(webSocketService, loggerService);
 
-    // Check if API keys are available
-    if (!TEST_VIEWER_KEY && !TEST_OPERATOR_KEY && !TEST_ADMIN_KEY) {
-      console.warn('⚠️  No API keys available - skipping authenticated tests');
+    // Check if JWT tokens are available
+    if (!TEST_VIEWER_TOKEN && !TEST_OPERATOR_TOKEN && !TEST_ADMIN_TOKEN) {
+      console.warn('⚠️  No JWT tokens available - skipping authenticated tests');
     }
   });
 
@@ -55,18 +55,18 @@ describe('Authenticated Functionality Tests', () => {
     await new Promise(resolve => setTimeout(resolve, 100));
   });
 
-  describe('REQ-AUTH-001: Authentication with API Keys', () => {
-    test('should authenticate with viewer API key', async () => {
-      if (!TEST_VIEWER_KEY) {
-        console.log('⏭️  Skipping viewer authentication test - no API key available');
+  describe('REQ-AUTH-001: Authentication with JWT Tokens', () => {
+    test('should authenticate with viewer JWT token', async () => {
+      if (!TEST_VIEWER_TOKEN) {
+        console.log('⏭️  Skipping viewer authentication test - no JWT token available');
         return;
       }
 
-      console.log(`🔑 Testing authentication with viewer key: ${TEST_VIEWER_KEY.substring(0, 20)}...`);
+      console.log(`🔑 Testing authentication with viewer token: ${TEST_VIEWER_TOKEN.substring(0, 20)}...`);
       
       try {
         const result = await webSocketService.sendRPC('authenticate', { 
-          auth_token: TEST_VIEWER_KEY 
+          auth_token: TEST_VIEWER_TOKEN 
         });
         
         expect(result).toBeDefined();
@@ -80,17 +80,17 @@ describe('Authenticated Functionality Tests', () => {
       }
     });
 
-    test('should authenticate with operator API key', async () => {
-      if (!TEST_OPERATOR_KEY) {
-        console.log('⏭️  Skipping operator authentication test - no API key available');
+    test('should authenticate with operator JWT token', async () => {
+      if (!TEST_OPERATOR_TOKEN) {
+        console.log('⏭️  Skipping operator authentication test - no JWT token available');
         return;
       }
 
-      console.log(`🔑 Testing authentication with operator key: ${TEST_OPERATOR_KEY.substring(0, 20)}...`);
+      console.log(`🔑 Testing authentication with operator token: ${TEST_OPERATOR_TOKEN.substring(0, 20)}...`);
       
       try {
         const result = await webSocketService.sendRPC('authenticate', { 
-          auth_token: TEST_OPERATOR_KEY 
+          auth_token: TEST_OPERATOR_TOKEN 
         });
         
         expect(result).toBeDefined();
@@ -104,17 +104,17 @@ describe('Authenticated Functionality Tests', () => {
       }
     });
 
-    test('should authenticate with admin API key', async () => {
-      if (!TEST_ADMIN_KEY) {
-        console.log('⏭️  Skipping admin authentication test - no API key available');
+    test('should authenticate with admin JWT token', async () => {
+      if (!TEST_ADMIN_TOKEN) {
+        console.log('⏭️  Skipping admin authentication test - no JWT token available');
         return;
       }
 
-      console.log(`🔑 Testing authentication with admin key: ${TEST_ADMIN_KEY.substring(0, 20)}...`);
+      console.log(`🔑 Testing authentication with admin token: ${TEST_ADMIN_TOKEN.substring(0, 20)}...`);
       
       try {
         const result = await webSocketService.sendRPC('authenticate', { 
-          auth_token: TEST_ADMIN_KEY 
+          auth_token: TEST_ADMIN_TOKEN 
         });
         
         expect(result).toBeDefined();
@@ -131,13 +131,13 @@ describe('Authenticated Functionality Tests', () => {
 
   describe('REQ-AUTH-002: Camera Discovery with Authentication', () => {
     test('should get camera list with viewer authentication', async () => {
-      if (!TEST_VIEWER_KEY) {
+      if (!TEST_VIEWER_TOKEN) {
         console.log('⏭️  Skipping camera list test - no viewer API key available');
         return;
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_KEY });
+      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_TOKEN });
       
       try {
         const cameras = await deviceService.getCameraList();
@@ -164,13 +164,13 @@ describe('Authenticated Functionality Tests', () => {
     });
 
     test('should get camera status with authentication', async () => {
-      if (!TEST_VIEWER_KEY) {
+      if (!TEST_VIEWER_TOKEN) {
         console.log('⏭️  Skipping camera status test - no viewer API key available');
         return;
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_KEY });
+      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_TOKEN });
       
       try {
         const status = await deviceService.getCameraStatus('camera0');
@@ -190,13 +190,13 @@ describe('Authenticated Functionality Tests', () => {
 
   describe('REQ-AUTH-003: Stream Operations with Authentication', () => {
     test('should get stream URLs with authentication', async () => {
-      if (!TEST_VIEWER_KEY) {
+      if (!TEST_VIEWER_TOKEN) {
         console.log('⏭️  Skipping stream URL test - no viewer API key available');
         return;
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_KEY });
+      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_TOKEN });
       
       try {
         const streamUrl = await deviceService.getStreamUrl('camera0');
@@ -218,13 +218,13 @@ describe('Authenticated Functionality Tests', () => {
     });
 
     test('should get active streams with authentication', async () => {
-      if (!TEST_VIEWER_KEY) {
+      if (!TEST_VIEWER_TOKEN) {
         console.log('⏭️  Skipping active streams test - no viewer API key available');
         return;
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_KEY });
+      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_TOKEN });
       
       try {
         const streams = await deviceService.getStreams();
@@ -242,13 +242,13 @@ describe('Authenticated Functionality Tests', () => {
 
   describe('REQ-AUTH-004: Snapshot Operations with Authentication', () => {
     test('should capture snapshot with operator authentication', async () => {
-      if (!TEST_OPERATOR_KEY) {
+      if (!TEST_OPERATOR_TOKEN) {
         console.log('⏭️  Skipping snapshot capture test - no operator API key available');
         return;
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_OPERATOR_KEY });
+      await webSocketService.sendRPC('authenticate', { auth_token: TEST_OPERATOR_TOKEN });
       
       try {
         const snapshot = await deviceService.takeSnapshot('camera0', 'test_snapshot.jpg');
@@ -272,13 +272,13 @@ describe('Authenticated Functionality Tests', () => {
     });
 
     test('should list snapshots with authentication', async () => {
-      if (!TEST_VIEWER_KEY) {
+      if (!TEST_VIEWER_TOKEN) {
         console.log('⏭️  Skipping snapshot list test - no viewer API key available');
         return;
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_KEY });
+      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_TOKEN });
       
       try {
         const snapshots = await fileService.listSnapshots(10, 0);
@@ -305,13 +305,13 @@ describe('Authenticated Functionality Tests', () => {
 
   describe('REQ-AUTH-005: Recording Operations with Authentication', () => {
     test('should start recording with operator authentication', async () => {
-      if (!TEST_OPERATOR_KEY) {
+      if (!TEST_OPERATOR_TOKEN) {
         console.log('⏭️  Skipping recording start test - no operator API key available');
         return;
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_OPERATOR_KEY });
+      await webSocketService.sendRPC('authenticate', { auth_token: TEST_OPERATOR_TOKEN });
       
       try {
         const recording = await recordingService.startRecording('camera0', 5); // 5 second recording
@@ -340,13 +340,13 @@ describe('Authenticated Functionality Tests', () => {
     });
 
     test('should list recordings with authentication', async () => {
-      if (!TEST_VIEWER_KEY) {
+      if (!TEST_VIEWER_TOKEN) {
         console.log('⏭️  Skipping recording list test - no viewer API key available');
         return;
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_KEY });
+      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_TOKEN });
       
       try {
         const recordings = await fileService.listRecordings(10, 0);
@@ -372,13 +372,13 @@ describe('Authenticated Functionality Tests', () => {
 
   describe('REQ-AUTH-006: File Operations with Authentication', () => {
     test('should get recording info with authentication', async () => {
-      if (!TEST_VIEWER_KEY) {
+      if (!TEST_VIEWER_TOKEN) {
         console.log('⏭️  Skipping recording info test - no viewer API key available');
         return;
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_KEY });
+      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_TOKEN });
       
       try {
         const info = await fileService.getRecordingInfo('test_recording.mp4');
@@ -399,13 +399,13 @@ describe('Authenticated Functionality Tests', () => {
     });
 
     test('should get snapshot info with authentication', async () => {
-      if (!TEST_VIEWER_KEY) {
+      if (!TEST_VIEWER_TOKEN) {
         console.log('⏭️  Skipping snapshot info test - no viewer API key available');
         return;
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_KEY });
+      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_TOKEN });
       
       try {
         const info = await fileService.getSnapshotInfo('test_snapshot.jpg');
@@ -427,13 +427,13 @@ describe('Authenticated Functionality Tests', () => {
 
   describe('REQ-AUTH-007: Permission Testing', () => {
     test('should enforce viewer permissions', async () => {
-      if (!TEST_VIEWER_KEY) {
+      if (!TEST_VIEWER_TOKEN) {
         console.log('⏭️  Skipping viewer permission test - no viewer API key available');
         return;
       }
 
       // Authenticate as viewer
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_KEY });
+      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_TOKEN });
       
       try {
         // Viewer should be able to read
@@ -456,13 +456,13 @@ describe('Authenticated Functionality Tests', () => {
     });
 
     test('should enforce operator permissions', async () => {
-      if (!TEST_OPERATOR_KEY) {
+      if (!TEST_OPERATOR_TOKEN) {
         console.log('⏭️  Skipping operator permission test - no operator API key available');
         return;
       }
 
       // Authenticate as operator
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_OPERATOR_KEY });
+      await webSocketService.sendRPC('authenticate', { auth_token: TEST_OPERATOR_TOKEN });
       
       try {
         // Operator should be able to read

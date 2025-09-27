@@ -1,0 +1,39 @@
+{
+  "keys": {
+    "test_viewer_1758994690_e5f83b08": {
+      "id": "test_viewer_1758994690_e5f83b08",
+      "key": "csk_ZTVmODNiMDg3M2NjYjUyMTNlNTBjZWM4YzYxMzliMzAxOTYxMzc1MjE3MzExYThkMTYxYjE4N2Y0ZDljNmU0MQo",
+      "role": "viewer",
+      "created_at": "2025-09-27T21:38:10+04:00",
+      "expires_at": "2025-12-26T21:38:10+04:00",
+      "description": "Generated API key for viewer role in test environment",
+      "last_used": "1970-01-01T00:00:00Z",
+      "usage_count": 0,
+      "status": "active"
+    }
+,
+    "test_operator_1758994690_86adc831": {
+      "id": "test_operator_1758994690_86adc831",
+      "key": "csk_ODZhZGM4MzE0ZjAyMzlhOGJhN2Q0MzA5MjZlMzRkYTUyYmQzZmZmYWFhYTg0ZDUzMzkzY2VhZGM4OTYxYjc2Ywo",
+      "role": "operator",
+      "created_at": "2025-09-27T21:38:10+04:00",
+      "expires_at": "2025-12-26T21:38:10+04:00",
+      "description": "Generated API key for operator role in test environment",
+      "last_used": "1970-01-01T00:00:00Z",
+      "usage_count": 0,
+      "status": "active"
+    }
+,
+    "test_admin_1758994690_5fa6cbcc": {
+      "id": "test_admin_1758994690_5fa6cbcc",
+      "key": "csk_NWZhNmNiY2MyMTg4NjhjZDRiNTM3MTFkYzYyNmQ0NGY1NzkxYTk0MWM4NDEzZTBkZmNmYjRiOTRmYmZiMzlkNAo",
+      "role": "admin",
+      "created_at": "2025-09-27T21:38:10+04:00",
+      "expires_at": "2025-12-26T21:38:10+04:00",
+      "description": "Generated API key for admin role in test environment",
+      "last_used": "1970-01-01T00:00:00Z",
+      "usage_count": 0,
+      "status": "active"
+    }
+  }
+}

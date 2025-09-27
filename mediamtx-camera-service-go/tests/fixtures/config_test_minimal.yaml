@@ -176,8 +176,8 @@ http_health:
 
 # External stream discovery configuration
 external_discovery:
-  enabled: false
-  scan_interval: 0
+  enabled: true
+  scan_interval: 30
   scan_timeout: 30
   max_concurrent_scans: 5
   enable_startup_scan: false

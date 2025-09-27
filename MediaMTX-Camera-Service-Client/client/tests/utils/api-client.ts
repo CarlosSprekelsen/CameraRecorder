@@ -134,7 +134,7 @@ export class TestAPIClient {
    * Follows documented authentication flow exactly
    */
   async authenticate(token: string): Promise<AuthResult> {
-    const result = await this.call('authenticate', [token]);
+    const result = await this.call('authenticate', { auth_token: token });
     
     // Validate against documented AuthResult schema
     if (!this.validateAuthResult(result)) {

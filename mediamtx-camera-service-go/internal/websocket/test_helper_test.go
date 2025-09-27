@@ -106,33 +106,30 @@ func NewWebSocketTestHelper(t *testing.T) *WebSocketTestHelper {
 		t.Fatalf("Failed to start MediaMTX controller: %v", err)
 	}
 
-	// HYBRID READINESS: Use both event-driven and polling approach
-	// The controller becomes ready quickly, but the readiness channel may not fire immediately
+	// OPTIMIZED READINESS: Check if already ready first, then use event-driven approach
 	logger.Info("Waiting for controller readiness...")
-	readinessChan := mediaMTXController.SubscribeToReadiness()
 
-	// Apply readiness timeout to prevent indefinite blocking (reduced from 5s to 1s)
-	readinessCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
-	defer cancel()
+	// Quick check if already ready (most common case)
+	if mediaMTXController.IsReady() {
+		logger.Info("Controller already ready - skipping event wait")
+	} else {
+		// Use event-driven approach with minimal timeout
+		readinessChan := mediaMTXController.SubscribeToReadiness()
+		readinessCtx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
 
-	// Use select with both readiness channel and polling
-	ready := false
-	select {
-	case <-readinessChan:
-		logger.Info("Controller readiness event received - all services ready")
-		ready = true
-	case <-readinessCtx.Done():
-		// Fallback to polling if event doesn't arrive
-		logger.Info("Readiness event timeout, checking controller state directly")
-		if mediaMTXController.IsReady() {
-			ready = true
+		select {
+		case <-readinessChan:
+			logger.Info("Controller readiness event received - all services ready")
+		case <-readinessCtx.Done():
+			// Quick fallback check
+			if !mediaMTXController.IsReady() {
+				t.Fatalf("Controller not ready after timeout")
+			}
+			logger.Info("Controller ready via fallback check")
 		}
+		cancel()
 	}
 
-	// Final verification
-	if !ready {
-		t.Fatalf("Controller not ready after timeout")
-	}
 	logger.Info("Controller reports ready - all services operational")
 
 	// Register cleanup

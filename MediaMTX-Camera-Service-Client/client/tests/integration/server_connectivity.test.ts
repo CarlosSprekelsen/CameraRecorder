@@ -25,13 +25,14 @@ describe('Integration Tests: Server Connectivity', () => {
     loggerService = LoggerService.getInstance();
     webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
     
-    // Wait for connection
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Actually connect to the server
+    await webSocketService.connect();
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     authService = new AuthService(webSocketService);
-    deviceService = new DeviceService(webSocketService);
-    fileService = new FileService(webSocketService);
-    serverService = new ServerService(webSocketService);
+    deviceService = new DeviceService(webSocketService, loggerService);
+    fileService = new FileService(webSocketService, loggerService);
+    serverService = new ServerService(webSocketService, loggerService);
   });
 
   afterAll(async () => {

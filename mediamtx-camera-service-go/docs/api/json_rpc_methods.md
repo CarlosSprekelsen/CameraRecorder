@@ -49,12 +49,51 @@ ws://localhost:8002/ws
 
 ## Authentication & Authorization
 
+The MediaMTX Camera Service uses **JWT (JSON Web Token) authentication** for secure access control. All methods except `ping` require authentication.
+
+### JWT Token Authentication
+
+**Token Format**: JWT tokens signed with HS256 algorithm  
+**Secret Key**: Configurable via server configuration  
+**Expiration**: Configurable expiry time (default: 24 hours)  
+**Roles**: `viewer`, `operator`, `admin` (hierarchical permissions)
+
+### Authentication Flow
+
+1. **Connect** to WebSocket endpoint
+2. **Authenticate** using `authenticate` method with JWT token
+3. **Use authenticated session** for all subsequent requests
+
+### Token Generation
+
+JWT tokens are generated using the server's secret key and must contain:
+
+- `user_id`: User identifier
+- `role`: User role (viewer/operator/admin)  
+- `iat`: Issued at timestamp
+- `exp`: Expiration timestamp
+
+**Example JWT Token Structure:**
+```json
+{
+  "user_id": "test_admin",
+  "role": "admin", 
+  "iat": 1758995817,
+  "exp": 1759255017
+}
+```
+
+### Authorization Levels
+
+- **Viewer**: Read-only access to camera feeds and recordings
+- **Operator**: Viewer permissions + camera control and recording management
+- **Admin**: Full system access including configuration and user management
+
 **CRITICAL SECURITY NOTE**: Most API methods require authentication and proper role-based authorization. The `ping` method is the only exception for connectivity testing.
 
-### Authentication Methods
+### Authentication Method
 
 - **JWT Token**: Pass `auth_token` parameter with valid JWT token
-- **API Key**: Pass `auth_token` parameter with valid API key
 
 ### Role-Based Access Control
 
@@ -127,19 +166,19 @@ Call `authenticate` once after opening the WebSocket. If it succeeds, the **conn
 
 ### authenticate
 
-Authenticate with the service using JWT token or API key.
+Authenticate with the service using JWT token.
 
 **Authentication:** Not required (this method handles authentication)
 
 **Parameters:**
 
-- auth_token: string - JWT token or API key (required)
+- auth_token: string - JWT token (required)
 
 **Returns:** Authentication result with user role and session information
 
 **Status:** ✅ Implemented
 
-**Implementation:** Validates JWT tokens or API keys using golang-jwt/jwt/v4, extracts user role and permissions, and establishes authenticated session for subsequent requests.
+**Implementation:** Validates JWT tokens using golang-jwt/jwt/v4, extracts user role and permissions, and establishes authenticated session for subsequent requests.
 
 **Example:**
 

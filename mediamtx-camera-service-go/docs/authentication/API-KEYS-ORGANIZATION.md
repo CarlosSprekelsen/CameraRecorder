@@ -1,8 +1,10 @@
-# 🔑 API Keys Organization Guide
+# 🔑 JWT Token Organization Guide
 
 ## 📁 **Proper File Structure**
 
-This document explains the proper organization of API keys and related files in the MediaMTX Camera Service project.
+This document explains the proper organization of JWT tokens and related files in the MediaMTX Camera Service project.
+
+**⚠️ IMPORTANT**: This system now uses JWT tokens for authentication, not API keys. This document has been updated to reflect the current implementation.
 
 ### ✅ **Current Structure**
 
@@ -12,15 +14,22 @@ This document explains the proper organization of API keys and related files in 
 ├── mediamtx-camera-service-go/                   # Server project
 │   ├── deployment/
 │   │   └── scripts/
-│   │       ├── manage-api-keys.sh               # ✅ Main API key management
+│   │       ├── generate-jwt-tokens.sh           # ✅ JWT token generation
+│   │       ├── reinstall-with-tokens.sh         # ✅ Complete reinstall with tokens
 │   │       ├── install.sh                       # ✅ Server installation
 │   │       └── uninstall.sh                     # ✅ Server uninstallation
+│   ├── cmd/
+│   │   └── jwt-generator/
+│   │       └── main.go                          # ✅ JWT token generator tool
 │   ├── config/
 │   │   ├── default.yaml                         # ✅ Server configuration
 │   │   └── test/                                # ✅ Test configurations
-│   │       └── api-keys/
-│   │           ├── test-keys.json               # ✅ Test API keys
-│   │           └── test-keys.env                # ✅ Test environment
+│   │       └── jwt-tokens/
+│   │           └── jwt-tokens.json              # ✅ Test JWT tokens
+│   ├── docs/
+│   │   └── authentication/
+│   │       ├── jwt-token-guide.md               # ✅ JWT token documentation
+│   │       └── API-KEYS-ORGANIZATION.md         # ✅ This file (updated)
 │   └── tests/
 │       └── tools/
 │           └── setup_test_environment.sh        # ✅ Test environment setup
@@ -29,25 +38,25 @@ This document explains the proper organization of API keys and related files in 
 │   └── client/
 │       ├── tests/
 │       │   └── fixtures/
-│       │       └── test_api_keys.json           # ✅ Client test keys
+│       │       └── test_jwt_tokens.json         # ✅ Client test JWT tokens
 │       ├── scripts/
 │       │   └── setup-test-keys.sh               # ✅ Client test setup
-│       └── .test_env                             # ✅ Client test environment
+│       └── .test_env                             # ✅ Client test environment (JWT tokens)
 │
 └── deployment/                                   # Deployment artifacts
-    └── keys/                                     # Production keys (gitignored)
-        ├── production/                           # Production API keys
-        ├── staging/                              # Staging API keys
-        └── development/                          # Development API keys
+    └── keys/                                     # Production tokens (gitignored)
+        ├── production/                           # Production JWT tokens
+        ├── staging/                              # Staging JWT tokens
+        └── development/                          # Development JWT tokens
 ```
 
 ---
 
-## 🛠️ **API Key Management Scripts**
+## 🛠️ **JWT Token Management Scripts**
 
 ### **Server-Side Management**
 
-#### **Main Script: `manage-api-keys.sh`**
+#### **Main Script: `generate-jwt-tokens.sh`**
 Location: `mediamtx-camera-service-go/deployment/scripts/manage-api-keys.sh`
 
 **Usage:**
