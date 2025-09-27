@@ -435,7 +435,7 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config *PathC
 			"json_payload": string(data),
 			"config":       config,
 			"attempt":      attempt + 1,
-		}).Debug("Sending PATCH request to MediaMTX")
+		}).Info("Sending PATCH request to MediaMTX")
 
 		err = pm.client.Patch(ctx, FormatConfigPathsPatch(name), data)
 		if err == nil {
@@ -456,7 +456,7 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config *PathC
 			"path_name": name,
 			"attempt":   attempt + 1,
 			"error_msg": errorMsg,
-		}).Debug("Checking if error is retryable")
+		}).Info("Checking if error is retryable")
 
 		isRetryable := strings.Contains(errorMsg, "404") ||
 			strings.Contains(errorMsg, "409") ||
@@ -472,7 +472,7 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config *PathC
 			"attempt":      attempt + 1,
 			"is_retryable": isRetryable,
 			"max_attempts": len(backoffs),
-		}).Debug("Retry decision")
+		}).Info("Retry decision")
 
 		if !isRetryable || attempt == len(backoffs)-1 {
 			// Log with comprehensive context including status and response body
@@ -496,18 +496,17 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config *PathC
 			"path_name": name,
 			"attempt":   attempt + 1,
 			"backoff":   backoff,
-		}).Debug("PATCH failed, checking runtime path visibility before retry")
+		}).Info("PATCH failed, checking runtime path visibility before retry")
 
 		// Check runtime path visibility (not config)
 		if _, runtimeErr := pm.GetPath(ctx, name); runtimeErr == nil {
-			pm.logger.WithField("path_name", name).Debug("Path is visible in runtime, retrying PATCH")
 		}
 
 		pm.logger.WithFields(logging.Fields{
 			"path_name": name,
 			"attempt":   attempt + 1,
 			"backoff":   backoff,
-		}).Debug("Retrying PATCH after backoff")
+		}).Info("Retrying PATCH after backoff")
 
 		select {
 		case <-ctx.Done():
@@ -525,7 +524,7 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config *PathC
 func (pm *pathManager) ActivatePathPublisher(ctx context.Context, name string) error {
 	pm.logger.WithFields(logging.Fields{
 		"path_name": name,
-	}).Debug("Activating MediaMTX publisher via RTSP handshake")
+	}).Info("Activating MediaMTX publisher via RTSP handshake")
 
 	// Generate RTSP URL for the path
 	rtspURL := fmt.Sprintf("rtsp://%s:%d/%s", pm.config.Host, pm.config.RTSPPort, name)
@@ -551,14 +550,14 @@ func (pm *pathManager) ActivatePathPublisher(ctx context.Context, name string) e
 			"path_name": name,
 			"rtsp_url":  rtspURL,
 			"error":     err.Error(),
-		}).Debug("RTSP activation failed - publisher may not be ready yet")
+		}).Info("RTSP activation failed - publisher may not be ready yet")
 		return NewPathError(name, "rtsp_activation", fmt.Sprintf("failed to activate publisher via RTSP: %v", err))
 	}
 
 	pm.logger.WithFields(logging.Fields{
 		"path_name": name,
 		"rtsp_url":  rtspURL,
-	}).Debug("RTSP activation successful - publisher should be active")
+	}).Info("RTSP activation successful - publisher should be active")
 	return nil
 }
 
@@ -837,7 +836,7 @@ func (pm *pathManager) GetCameraList(ctx context.Context) (*CameraListResponse, 
 	pm.logger.WithFields(logging.Fields{
 		"total":     response.Total,
 		"connected": response.Connected,
-	}).Debug("PathManager converted camera list to API format")
+	}).Info("PathManager converted camera list to API format")
 
 	return response, nil
 }
@@ -891,7 +890,7 @@ func (pm *pathManager) GetCameraStatus(ctx context.Context, device string) (*Get
 		"device": device,
 		"status": response.Status,
 		"name":   response.Name,
-	}).Debug("PathManager retrieved camera status")
+	}).Info("PathManager retrieved camera status")
 
 	return response, nil
 }
@@ -966,7 +965,7 @@ func (pm *pathManager) GetCameraCapabilities(ctx context.Context, device string)
 		"formats_count":     len(supportedFormats),
 		"resolutions_count": len(supportedResolutions),
 		"fps_options_count": len(fpsOptions),
-	}).Debug("PathManager retrieved camera capabilities")
+	}).Info("PathManager retrieved camera capabilities")
 
 	return response, nil
 }
@@ -987,7 +986,7 @@ func (pm *pathManager) ValidateCameraDevice(ctx context.Context, device string) 
 		"device":      device,
 		"device_path": devicePath,
 		"exists":      exists,
-	}).Debug("PathManager validated camera device")
+	}).Info("PathManager validated camera device")
 
 	return exists, nil
 }
@@ -1094,7 +1093,7 @@ func (pm *pathManager) TrackDeviceEvent(eventType string) {
 	pm.logger.WithFields(logging.Fields{
 		"event_type":   eventType,
 		"total_events": atomic.LoadInt64(&pm.metrics.DeviceEventsTotal),
-	}).Debug("Device event tracked")
+	}).Info("Device event tracked")
 }
 
 // isAlreadyExistsError checks if error indicates path exists

@@ -112,23 +112,19 @@ func (c *controller) hasExternalDiscovery() bool {
 // as components complete their initialization.
 func (c *controller) IsReady() bool {
 	if !c.checkRunningState() {
-		c.logger.Debug("Controller not ready: not running")
 		return false
 	}
 
 	// Camera monitor must complete at least one discovery cycle for hardware readiness
 	if c.cameraMonitor != nil && !c.cameraMonitor.IsReady() {
-		c.logger.Debug("Controller not ready: camera monitor not ready")
 		return false
 	}
 
 	// Health monitor is optional - if nil, consider healthy by default following optional component pattern
 	if c.healthMonitor != nil && !c.healthMonitor.IsHealthy() {
-		c.logger.Debug("Controller not ready: health monitor not healthy")
 		return false
 	}
 
-	c.logger.Debug("Controller is ready: all components ready")
 	return true
 }
 
@@ -1050,7 +1046,6 @@ func (c *controller) DeleteRecording(ctx context.Context, filename string) error
 		return fmt.Errorf("controller is not running")
 	}
 
-	c.logger.WithField("filename", filename).Debug("Deleting recording")
 
 	return c.recordingManager.DeleteRecording(ctx, filename)
 }
@@ -1061,7 +1056,6 @@ func (c *controller) DeleteSnapshot(ctx context.Context, filename string) error 
 		return fmt.Errorf("controller is not running")
 	}
 
-	c.logger.WithField("filename", filename).Debug("Deleting snapshot")
 
 	return c.snapshotManager.DeleteSnapshotFile(ctx, filename)
 }
@@ -1077,7 +1071,7 @@ func (c *controller) ListRTSPConnections(ctx context.Context, page, itemsPerPage
 	c.logger.WithFields(logging.Fields{
 		"page":         strconv.Itoa(page),
 		"itemsPerPage": strconv.Itoa(itemsPerPage),
-	}).Debug("Listing RTSP connections")
+	}).Info("Listing RTSP connections")
 
 	return c.rtspManager.ListConnections(ctx, page, itemsPerPage)
 }
@@ -1088,7 +1082,6 @@ func (c *controller) GetRTSPConnection(ctx context.Context, id string) (*RTSPCon
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	c.logger.WithField("id", id).Debug("Getting RTSP connection")
 
 	return c.rtspManager.GetConnection(ctx, id)
 }
@@ -1102,7 +1095,7 @@ func (c *controller) ListRTSPSessions(ctx context.Context, page, itemsPerPage in
 	c.logger.WithFields(logging.Fields{
 		"page":         strconv.Itoa(page),
 		"itemsPerPage": strconv.Itoa(itemsPerPage),
-	}).Debug("Listing RTSP sessions")
+	}).Info("Listing RTSP sessions")
 
 	return c.rtspManager.ListSessions(ctx, page, itemsPerPage)
 }
@@ -1113,7 +1106,6 @@ func (c *controller) GetRTSPSession(ctx context.Context, id string) (*RTSPConnec
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-	c.logger.WithField("id", id).Debug("Getting RTSP session")
 
 	return c.rtspManager.GetSession(ctx, id)
 }

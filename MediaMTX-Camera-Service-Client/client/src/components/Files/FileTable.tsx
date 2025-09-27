@@ -14,7 +14,6 @@ import {
   TableRow,
   Paper,
   IconButton,
-  Chip,
   Box,
   Typography,
   CircularProgress,
@@ -193,8 +192,6 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
               <TableCell>Filename</TableCell>
               <TableCell>Size</TableCell>
               <TableCell>Modified</TableCell>
-              <TableCell>Format</TableCell>
-              <TableCell>Device</TableCell>
               <TableCell align="center">Actions</TableCell>
             </TableRow>
           </TableHead>

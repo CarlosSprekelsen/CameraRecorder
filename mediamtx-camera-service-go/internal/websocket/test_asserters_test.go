@@ -233,7 +233,7 @@ func (a *WebSocketIntegrationAsserter) AssertSnapshotWorkflow() error {
 	if result, ok := response.Result.(map[string]interface{}); ok {
 		if fn, exists := result["filename"]; exists {
 			if fnStr, ok := fn.(string); ok {
-				actualFilename = fnStr + ".jpg" // Add extension as per MediaMTX pattern
+				actualFilename = fnStr // Don't add extension - BuildSnapshotFilePath will handle it
 			}
 		}
 	}

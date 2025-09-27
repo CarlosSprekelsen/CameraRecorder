@@ -130,7 +130,7 @@ func (h *HealthNotificationManager) shouldNotifyWithDebounce(component, status s
 			"status":            status,
 			"time_since_last":   time.Duration(now - lastTime).String(),
 			"debounce_duration": debounceDuration.String(),
-		}).Debug("Notification suppressed due to debounce period")
+		}).Info("Notification suppressed due to debounce period")
 		return false
 	}
 
@@ -164,7 +164,7 @@ func (h *HealthNotificationManager) shouldNotifyWithDebounce(component, status s
 		"status":      status,
 		"lastStatus":  lastStatus,
 		"statusValue": statusValue,
-	}).Debug("Attempting compare-and-swap")
+	}).Info("Attempting compare-and-swap")
 
 	if atomic.CompareAndSwapInt32(h.lastNotificationStatuses[component], lastStatus, statusValue) {
 		atomic.StoreInt64(h.lastNotificationTimes[component], now)
@@ -182,7 +182,7 @@ func (h *HealthNotificationManager) shouldNotifyWithDebounce(component, status s
 	h.logger.WithFields(logging.Fields{
 		"component": component,
 		"status":    status,
-	}).Debug("Notification suppressed - status changed by another goroutine")
+	}).Info("Notification suppressed - status changed by another goroutine")
 
 	return false
 }
@@ -280,7 +280,7 @@ func (h *HealthNotificationManager) CheckPerformanceThresholds(metrics map[strin
 	h.logger.WithFields(logging.Fields{
 		"thresholds": thresholds,
 		"metrics":    metrics,
-	}).Debug("Checking performance thresholds")
+	}).Info("Checking performance thresholds")
 
 	// Memory usage threshold
 	if memUsage, ok := metrics["memory_usage"].(float64); ok && memUsage > thresholds.MemoryUsagePercent {
@@ -288,7 +288,7 @@ func (h *HealthNotificationManager) CheckPerformanceThresholds(metrics map[strin
 			"metric":    "memory_usage",
 			"value":     memUsage,
 			"threshold": thresholds.MemoryUsagePercent,
-		}).Debug("Memory usage threshold exceeded")
+		}).Info("Memory usage threshold exceeded")
 		h.ShouldNotifyPerformance("performance_warning", "memory_usage", memUsage, thresholds.MemoryUsagePercent, "critical")
 	}
 
@@ -298,7 +298,7 @@ func (h *HealthNotificationManager) CheckPerformanceThresholds(metrics map[strin
 			"metric":    "error_rate",
 			"value":     errorRate,
 			"threshold": thresholds.ErrorRatePercent,
-		}).Debug("Error rate threshold exceeded")
+		}).Info("Error rate threshold exceeded")
 		h.ShouldNotifyPerformance("high_error_rate", "error_rate", errorRate, thresholds.ErrorRatePercent, "warning")
 	}
 
@@ -308,7 +308,7 @@ func (h *HealthNotificationManager) CheckPerformanceThresholds(metrics map[strin
 			"metric":    "average_response_time",
 			"value":     avgResponseTime,
 			"threshold": thresholds.AverageResponseTimeMs,
-		}).Debug("Response time threshold exceeded")
+		}).Info("Response time threshold exceeded")
 		h.ShouldNotifyPerformance("slow_response_time", "average_response_time", avgResponseTime, thresholds.AverageResponseTimeMs, "warning")
 	}
 
@@ -318,7 +318,7 @@ func (h *HealthNotificationManager) CheckPerformanceThresholds(metrics map[strin
 			"metric":    "active_connections",
 			"value":     activeConn,
 			"threshold": thresholds.ActiveConnectionsLimit,
-		}).Debug("Active connections threshold exceeded")
+		}).Info("Active connections threshold exceeded")
 		h.ShouldNotifyPerformance("connection_limit_warning", "active_connections", float64(activeConn), float64(thresholds.ActiveConnectionsLimit), "warning")
 	}
 
@@ -328,7 +328,7 @@ func (h *HealthNotificationManager) CheckPerformanceThresholds(metrics map[strin
 			"metric":    "goroutines",
 			"value":     goroutines,
 			"threshold": thresholds.GoroutinesLimit,
-		}).Debug("Goroutines threshold exceeded")
+		}).Info("Goroutines threshold exceeded")
 		h.ShouldNotifyPerformance("goroutine_leak_warning", "goroutines", float64(goroutines), float64(thresholds.GoroutinesLimit), "warning")
 	}
 }
