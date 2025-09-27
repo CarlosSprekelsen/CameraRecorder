@@ -266,10 +266,12 @@ classDiagram
 #### 5.3.1 RPC Method Alignment (Authoritative - Complete 32 Methods)
 
 **Core Interface (2):**
+
 - `ping` → connectivity health check
 - `authenticate`(auth_token) → JWT/API key authentication
 
 **Discovery Interface (5):**
+
 - `get_camera_list` → cameras with stream fields
 - `get_streams` → MediaMTX active streams
 - `get_stream_url`(device) → URL for specific device
@@ -277,28 +279,33 @@ classDiagram
 - `get_camera_capabilities`(device) → camera feature detection
 
 **Command Interface (3):**
+
 - `take_snapshot`(device[, filename])
 - `start_recording`(device[, duration][, format])
 - `stop_recording`(device)
 
 **Streaming Interface (3):**
+
 - `start_streaming`(device[, format])
 - `stop_streaming`(device)
 - `get_stream_status`(device) → stream monitoring
 
 **File Catalog Interface (4):**
+
 - `list_recordings`(limit, offset)
 - `list_snapshots`(limit, offset)
 - `get_recording_info`(filename)
 - `get_snapshot_info`(filename)
 
 **File Actions Interface (4):**
+
 - `delete_recording`(filename)
 - `delete_snapshot`(filename)
 - `set_retention_policy`(policy)
 - `cleanup_old_files`([criteria])
 
 **Status Interface (5):**
+
 - `get_status` → service status
 - `get_system_status` → system health
 - `get_storage_info` → storage metrics
@@ -306,6 +313,7 @@ classDiagram
 - `get_metrics` → performance metrics
 
 **Notifications Interface (5):**
+
 - `subscribe_events`([event_types])
 - `unsubscribe_events`([event_types])
 - `get_subscription_stats` → notification metrics
@@ -313,6 +321,7 @@ classDiagram
 - `recording_status_update` → real-time recording events
 
 **External Streams Interface (5):**
+
 - `discover_external_streams`([criteria])
 - `add_external_stream`(stream_config)
 - `remove_external_stream`(stream_id)
@@ -537,8 +546,6 @@ graph LR
 **Decision:** Atomic design pattern with hierarchical component structure
 
 **Consequences:** Consistent UI patterns, clear component boundaries, initial development overhead
-
----
 
 ### 9.4 ADR-004: No Embedded Playback
 

@@ -569,12 +569,8 @@ func (rm *RecordingManager) StopRecording(ctx context.Context, cameraID string) 
 		return nil, fmt.Errorf("failed to disable recording on path: %w", err)
 	}
 
-	// CRITICAL: Poll until MediaMTX config converges to record=false
-	// This addresses the "already recording" race condition
-	err = rm.pollUntilRecordingDisabled(ctx, pathName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to confirm recording disabled: %w", err)
-	}
+	// Note: Polling removed to prevent WebSocket handler blocking
+	// With unlimited recording (duration=0), race conditions should not occur
 
 	// Get timer info for accurate duration calculation using enhanced timer manager
 	var startTime time.Time
