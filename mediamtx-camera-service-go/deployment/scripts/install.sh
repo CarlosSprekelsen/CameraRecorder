@@ -391,6 +391,7 @@ install_camera_service() {
     log_message "Creating required directories..."
     mkdir -p "$INSTALL_DIR/recordings" "$INSTALL_DIR/snapshots" "$INSTALL_DIR/logs"
     chown "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR/recordings" "$INSTALL_DIR/snapshots" "$INSTALL_DIR/logs"
+    chmod 755 "$INSTALL_DIR/recordings" "$INSTALL_DIR/snapshots" "$INSTALL_DIR/logs"
     
     # Note: Using same directory for fallback to avoid permission issues
     
