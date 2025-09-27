@@ -1055,6 +1055,26 @@ func getDefaultConfig() *Config {
 			AdminInterface:   false,
 			AdminPort:        8004,
 		},
+		HTTPHealth: HTTPHealthConfig{
+			Enabled:           true,
+			Host:              "0.0.0.0",
+			Port:              8003,
+			ReadTimeout:       "5s",
+			WriteTimeout:      "5s",
+			IdleTimeout:       "30s",
+			BasicEndpoint:     "/health",
+			DetailedEndpoint:  "/health/detailed",
+			ReadyEndpoint:     "/health/ready",
+			LiveEndpoint:      "/health/live",
+			ResponseFormat:    "json",
+			IncludeVersion:    true,
+			IncludeUptime:     true,
+			IncludeComponents: true,
+			MaxResponseTime:   "100ms",
+			EnableMetrics:     false,
+			InternalOnly:      true,
+			AllowedIPs:        []string{},
+		},
 	}
 }
 

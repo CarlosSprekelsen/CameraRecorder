@@ -396,6 +396,8 @@ type Config struct {
 	RetentionPolicy RetentionPolicyConfig `mapstructure:"retention_policy"`
 	// API Key Management configuration (architectural compliance)
 	APIKeyManagement APIKeyManagementConfig `mapstructure:"api_key_management"`
+	// HTTP Health Endpoint configuration (architectural compliance)
+	HTTPHealth HTTPHealthConfig `mapstructure:"http_health"`
 	// External stream discovery configuration (architectural compliance)
 	ExternalDiscovery ExternalDiscoveryConfig `mapstructure:"external_discovery"`
 	// Server operation defaults
@@ -450,4 +452,35 @@ type APIKeyManagementConfig struct {
 	CLIEnabled     bool `mapstructure:"cli_enabled"`     // Enable CLI utility
 	AdminInterface bool `mapstructure:"admin_interface"` // Enable admin web interface
 	AdminPort      int  `mapstructure:"admin_port"`      // Admin interface port
+}
+
+// HTTPHealthConfig represents HTTP health endpoint configuration
+type HTTPHealthConfig struct {
+	// Server configuration
+	Enabled         bool   `mapstructure:"enabled"`          // Enable HTTP health server
+	Host            string `mapstructure:"host"`             // Host to bind to
+	Port            int    `mapstructure:"port"`             // Port to listen on
+	ReadTimeout     string `mapstructure:"read_timeout"`     // Read timeout duration
+	WriteTimeout    string `mapstructure:"write_timeout"`    // Write timeout duration
+	IdleTimeout     string `mapstructure:"idle_timeout"`     // Idle timeout duration
+	
+	// Endpoint configuration
+	BasicEndpoint   string `mapstructure:"basic_endpoint"`   // Basic health endpoint path
+	DetailedEndpoint string `mapstructure:"detailed_endpoint"` // Detailed health endpoint path
+	ReadyEndpoint   string `mapstructure:"ready_endpoint"`   // Readiness probe endpoint path
+	LiveEndpoint    string `mapstructure:"live_endpoint"`    // Liveness probe endpoint path
+	
+	// Response configuration
+	ResponseFormat  string `mapstructure:"response_format"`  // Response format (json, text)
+	IncludeVersion  bool   `mapstructure:"include_version"`  // Include version in response
+	IncludeUptime   bool   `mapstructure:"include_uptime"`   // Include uptime in response
+	IncludeComponents bool `mapstructure:"include_components"` // Include component status
+	
+	// Performance configuration
+	MaxResponseTime string `mapstructure:"max_response_time"` // Maximum response time
+	EnableMetrics   bool   `mapstructure:"enable_metrics"`    // Enable metrics collection
+	
+	// Security configuration
+	InternalOnly    bool   `mapstructure:"internal_only"`    // Restrict to internal access only
+	AllowedIPs      []string `mapstructure:"allowed_ips"`    // Allowed IP addresses (if restricted)
 }

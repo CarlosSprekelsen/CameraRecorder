@@ -24,7 +24,9 @@ go.work
 /build/
 /dist/
 
-# Go module proxy cache
+# Go module cache and build artifacts
+/pkg/
+**/pkg/
 $GOPATH/pkg/mod/
 
 # Virtual Environment
