@@ -193,7 +193,7 @@ func (pm *pathManager) CreatePath(ctx context.Context, name, source string, opti
 		"endpoint":    FormatConfigPathsAdd(name),
 		"source":      source,
 		"options":     options,
-	}).Debug("Creating MediaMTX path")
+	}).Info("Creating MediaMTX path")
 
 	// Enhanced validation for better user experience and software resilience
 	if err := pm.validatePathName(name); err != nil {
@@ -407,7 +407,7 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config *PathC
 		"method":      "PATCH",
 		"endpoint":    FormatConfigPathsPatch(name),
 		"config":      patchConfig,
-	}).Debug("Patching MediaMTX path configuration")
+	}).Info("Patching MediaMTX path configuration")
 
 	if err := pm.validatePathName(name); err != nil {
 		return fmt.Errorf("invalid path name: %w", err)
@@ -564,7 +564,6 @@ func (pm *pathManager) ActivatePathPublisher(ctx context.Context, name string) e
 
 // DeletePath deletes a path with fallback for runtime paths
 func (pm *pathManager) DeletePath(ctx context.Context, name string) error {
-	pm.logger.WithField("name", name).Debug("Deleting MediaMTX path")
 
 	// Try to delete via config API first
 	err := pm.client.Delete(ctx, FormatConfigPathsDelete(name))
@@ -587,7 +586,6 @@ func (pm *pathManager) DeletePath(ctx context.Context, name string) error {
 			}
 
 			// Path doesn't exist at all - return error for proper error handling
-			pm.logger.WithField("name", name).Debug("Path does not exist")
 			return NewPathErrorWithErr(name, "delete_path", "path not found", err)
 		}
 
@@ -600,7 +598,6 @@ func (pm *pathManager) DeletePath(ctx context.Context, name string) error {
 
 // GetPath gets a specific path (runtime status)
 func (pm *pathManager) GetPath(ctx context.Context, name string) (*Path, error) {
-	pm.logger.WithField("name", name).Debug("Getting MediaMTX path")
 
 	data, err := pm.client.Get(ctx, FormatPathsGet(name))
 	if err != nil {
@@ -617,7 +614,6 @@ func (pm *pathManager) GetPath(ctx context.Context, name string) (*Path, error) 
 
 // ListPaths lists all path configurations
 func (pm *pathManager) ListPaths(ctx context.Context) ([]*PathConf, error) {
-	pm.logger.Debug("Listing MediaMTX path configurations")
 
 	data, err := pm.client.Get(ctx, MediaMTXConfigPathsList)
 	if err != nil {
@@ -629,13 +625,11 @@ func (pm *pathManager) ListPaths(ctx context.Context) ([]*PathConf, error) {
 		return nil, fmt.Errorf("failed to parse path configurations response: %w", err)
 	}
 
-	pm.logger.WithField("count", strconv.Itoa(len(paths))).Debug("MediaMTX path configurations listed successfully")
 	return paths, nil
 }
 
 // GetRuntimePaths gets all runtime paths (active paths with status)
 func (pm *pathManager) GetRuntimePaths(ctx context.Context) ([]*Path, error) {
-	pm.logger.Debug("Getting MediaMTX runtime paths")
 
 	data, err := pm.client.Get(ctx, MediaMTXPathsList)
 	if err != nil {
@@ -647,13 +641,11 @@ func (pm *pathManager) GetRuntimePaths(ctx context.Context) ([]*Path, error) {
 		return nil, fmt.Errorf("failed to parse runtime paths response: %w", err)
 	}
 
-	pm.logger.WithField("count", strconv.Itoa(len(paths))).Debug("MediaMTX runtime paths retrieved successfully")
 	return paths, nil
 }
 
 // ValidatePath validates a path
 func (pm *pathManager) ValidatePath(ctx context.Context, name string) error {
-	pm.logger.WithField("name", name).Debug("Validating MediaMTX path")
 
 	// Get path details to validate configuration (this also checks existence)
 	_, err := pm.GetPath(ctx, name)
@@ -661,13 +653,11 @@ func (pm *pathManager) ValidatePath(ctx context.Context, name string) error {
 		return NewPathErrorWithErr(name, "validate_path", "path does not exist or failed to get path details", err)
 	}
 
-	pm.logger.WithField("name", name).Debug("MediaMTX path validated successfully")
 	return nil
 }
 
 // PathExists checks if a path exists in runtime (not config)
 func (pm *pathManager) PathExists(ctx context.Context, name string) bool {
-	pm.logger.WithField("name", name).Debug("Checking if MediaMTX path exists in runtime")
 
 	// Use runtime endpoint to check path existence (not config)
 	_, err := pm.GetPath(ctx, name)

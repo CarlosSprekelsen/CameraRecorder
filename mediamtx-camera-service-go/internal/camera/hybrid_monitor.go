@@ -479,9 +479,7 @@ func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 func (m *HybridCameraMonitor) monitorLoop(ctx context.Context, monStartID string) {
 	defer m.wg.Done() // Ensure WaitGroup is decremented when goroutine exits
 
-	m.logger.Debug("Monitor loop started")
 	defer func() {
-		m.logger.Debug("Monitor loop exiting")
 		// Don't reset running flag here - let Stop() method handle it
 		m.stats.Running = false
 		atomic.StoreInt64(&m.stats.ActiveTasks, 0)
@@ -492,8 +490,6 @@ func (m *HybridCameraMonitor) monitorLoop(ctx context.Context, monStartID string
 		"mon_start_id": monStartID,
 		"action":       "seed_discovery_begin",
 	}).Info("Starting seed discovery")
-
-	m.logger.Debug("About to call discoverCameras")
 
 	// Seed discovery is non-fatal - log any errors but continue
 	func() {
@@ -508,8 +504,6 @@ func (m *HybridCameraMonitor) monitorLoop(ctx context.Context, monStartID string
 		}()
 		m.discoverCameras(ctx)
 	}()
-
-	m.logger.Debug("discoverCameras completed")
 
 	// Set readiness flag after initial discovery completes (regardless of errors)
 	atomic.StoreInt32(&m.ready, 1)
@@ -550,7 +544,6 @@ func (m *HybridCameraMonitor) Stop(ctx context.Context) error {
 
 	// Check if monitor is actually running - make Stop() idempotent
 	if atomic.LoadInt32(&m.running) == 0 {
-		m.logger.Debug("Monitor is already stopped - Stop() is idempotent")
 		return nil // Idempotent: safe to call Stop() on non-running monitor
 	}
 
@@ -926,7 +919,7 @@ func (m *HybridCameraMonitor) selectOptimalPixelFormat(devicePath, outputFormat 
 	m.logger.WithFields(logging.Fields{
 		"device":        devicePath,
 		"output_format": outputFormat,
-	}).Debug("Selecting optimal pixel format for camera")
+	}).Info("Selecting optimal pixel format for camera")
 
 	// Get device capabilities
 	device, exists := m.GetDevice(devicePath)
@@ -1065,7 +1058,7 @@ func (m *HybridCameraMonitor) AddEventHandler(handler CameraEventHandler) {
 	m.logger.WithFields(logging.Fields{
 		"handler_type": fmt.Sprintf("%T", handler), // Keep fmt.Sprintf for type reflection
 		"action":       "event_handler_added",
-	}).Debug("Added camera event handler")
+	}).Info("Added camera event handler")
 }
 
 // AddEventCallback adds a camera event callback function
@@ -1076,7 +1069,7 @@ func (m *HybridCameraMonitor) AddEventCallback(callback func(CameraEventData)) {
 	m.eventCallbacks = append(m.eventCallbacks, callback)
 	m.logger.WithFields(logging.Fields{
 		"action": "event_callback_added",
-	}).Debug("Added camera event callback")
+	}).Info("Added camera event callback")
 }
 
 // SubscribeToReadiness subscribes to camera monitor readiness events
@@ -1170,7 +1163,7 @@ func (m *HybridCameraMonitor) eventLoop(ctx context.Context) {
 
 	m.logger.WithFields(logging.Fields{
 		"action": "event_loop_started",
-	}).Debug("Device event loop started")
+	}).Info("Device event loop started")
 
 	for {
 		select {
@@ -1178,17 +1171,16 @@ func (m *HybridCameraMonitor) eventLoop(ctx context.Context) {
 			m.logger.WithFields(logging.Fields{
 				"action": "event_loop_stopped",
 				"reason": "context_cancelled",
-			}).Debug("Device event loop stopped due to context cancellation")
+			}).Info("Device event loop stopped due to context cancellation")
 			return
 		case <-m.stopChan:
 			m.logger.WithFields(logging.Fields{
 				"action": "event_loop_stopped",
 				"reason": "stop_requested",
-			}).Debug("Device event loop stopped")
+			}).Info("Device event loop stopped")
 			return
 		case event, ok := <-m.deviceEventSource.Events():
 			if !ok {
-				m.logger.Debug("Device event source channel closed")
 				return
 			}
 			m.processDeviceEvent(ctx, event)
@@ -1244,7 +1236,7 @@ func (m *HybridCameraMonitor) processDeviceEvent(ctx context.Context, event Devi
 		"vendor":      event.Vendor,
 		"product":     event.Product,
 		"serial":      event.Serial,
-	}).Debug("Processing device event")
+	}).Info("Processing device event")
 
 	switch event.Type {
 	case DeviceEventAdd:
@@ -1346,7 +1338,7 @@ func (m *HybridCameraMonitor) handleDeviceChange(ctx context.Context, event Devi
 		"device_path": event.DevicePath,
 		"device_name": device.Name,
 		"action":      "device_changed",
-	}).Debug("V4L2 device changed via event")
+	}).Info("V4L2 device changed via event")
 
 	// Generate event
 	m.generateCameraEvent(ctx, CameraEventStatusChanged, event.DevicePath, device)
@@ -1383,7 +1375,7 @@ func (m *HybridCameraMonitor) createDeviceFromEvent(ctx context.Context, event D
 				"device_path": event.DevicePath,
 				"error":       err.Error(),
 				"action":      "capability_probe_failed",
-			}).Debug("Failed to probe device capabilities")
+			}).Info("Failed to probe device capabilities")
 		}
 	}
 
@@ -1396,7 +1388,7 @@ func (m *HybridCameraMonitor) reconcileDevices(ctx context.Context) {
 
 	m.logger.WithFields(logging.Fields{
 		"action": "reconcile_devices",
-	}).Debug("Performing device reconciliation")
+	}).Info("Performing device reconciliation")
 
 	// Get current devices from filesystem (only real devices, no index guessing)
 	currentDevices := make(map[string]*CameraDevice)
@@ -1475,7 +1467,7 @@ func (m *HybridCameraMonitor) discoverCameras(ctx context.Context) {
 					"source_path": src.Source,
 					"error":       err.Error(),
 					"action":      "device_check_error",
-				}).Debug("Error checking device")
+				}).Info("Error checking device")
 
 				// Propagate device check errors with more context
 				select {
@@ -1594,7 +1586,7 @@ func (m *HybridCameraMonitor) createCameraDeviceInfo(ctx context.Context, device
 				"device_path": devicePath,
 				"error":       err.Error(),
 				"action":      "capability_probe_failed",
-			}).Debug("Failed to probe device capabilities")
+			}).Info("Failed to probe device capabilities")
 		}
 	} else {
 		device.Name = "Video Device " + strconv.Itoa(deviceNum)
@@ -1917,7 +1909,7 @@ func (m *HybridCameraMonitor) adjustPollingInterval() {
 			"new_interval":  m.currentPollInterval,
 			"failure_count": atomic.LoadInt64(&m.pollingFailureCount),
 			"action":        "polling_interval_adjusted",
-		}).Debug("Adjusted polling interval")
+		}).Info("Adjusted polling interval")
 	}
 }
 

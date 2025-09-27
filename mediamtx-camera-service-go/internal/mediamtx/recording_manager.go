@@ -295,7 +295,7 @@ func (rm *RecordingManager) executeStartRecording(ctx context.Context, cameraID 
 			rm.logger.WithFields(logging.Fields{
 				"cameraID": cameraID,
 				"duration": duration,
-			}).Debug("Parsed auto-stop duration for recording")
+			}).Info("Parsed auto-stop duration for recording")
 		} else {
 			rm.logger.WithError(err).WithField("recordDeleteAfter", options.RecordDeleteAfter).Warn("Invalid recordDeleteAfter format, ignoring auto-stop timer")
 		}
@@ -362,8 +362,6 @@ func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename strin
 			}).Error("Panic recovered in GetRecordingInfo")
 		}
 	}()
-
-	rm.logger.WithField("filename", filename).Debug("Getting API-ready recording info")
 
 	// Get basic file metadata first
 	// Use canonical configured recordings path (ConfigurationManager overrides default)
@@ -439,9 +437,9 @@ func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename strin
 				"filename": filename,
 				"duration": duration,
 				"codec":    metadata.VideoCodec,
-			}).Debug("Video duration extracted successfully")
+			}).Info("Video duration extracted successfully")
 		} else {
-			rm.logger.WithField("file_path", filePath).Debug("Video metadata extraction succeeded but no duration found")
+			rm.logger.WithField("filename", filename).Warn("Video metadata extraction failed or no duration available")
 		}
 	}
 
@@ -460,7 +458,7 @@ func (rm *RecordingManager) GetRecordingInfo(ctx context.Context, filename strin
 		"device":    device,
 		"format":    format,
 		"file_size": fileInfo.Size(),
-	}).Debug("Recording info retrieved successfully")
+	}).Info("Recording info retrieved successfully")
 
 	return response, nil
 }
@@ -574,7 +572,7 @@ func (rm *RecordingManager) StopRecording(ctx context.Context, cameraID string) 
 			"cameraID":   cameraID,
 			"start_time": startTime,
 			"duration":   duration,
-		}).Debug("Retrieved accurate recording duration from timer manager")
+		}).Info("Recording info retrieved from timer manager")
 	} else {
 		// Fallback if timer info not available
 		startTime = time.Now().Add(-time.Hour) // Placeholder
@@ -597,7 +595,7 @@ func (rm *RecordingManager) StopRecording(ctx context.Context, cameraID string) 
 			rm.logger.WithFields(logging.Fields{
 				"filename":  filename,
 				"file_size": fileSize,
-			}).Debug("Actual file size retrieved successfully")
+			}).Info("Actual file size retrieved successfully")
 		} else {
 			rm.logger.WithError(err).WithField("filename", filename).Warn("Failed to get actual file size, using fallback")
 		}
@@ -656,7 +654,7 @@ func (rm *RecordingManager) ListRecordings(ctx context.Context, limit, offset in
 	rm.logger.WithFields(logging.Fields{
 		"limit":  limit,
 		"offset": offset,
-	}).Debug("Getting API-ready recordings list")
+	}).Info("Getting API-ready recordings list")
 
 	// Get file list from existing method
 	fileList, err := rm.GetRecordingsList(ctx, limit, offset)
@@ -740,7 +738,7 @@ func (rm *RecordingManager) GetRecordingsList(ctx context.Context, limit, offset
 	rm.logger.WithFields(logging.Fields{
 		"limit":  limit,
 		"offset": offset,
-	}).Debug("Getting recordings list from MediaMTX API")
+	}).Info("Getting recordings list from MediaMTX API")
 
 	// Call MediaMTX recordings API
 	queryParams := fmt.Sprintf("?page=%d&itemsPerPage=%d", offset/limit, limit)
@@ -839,7 +837,6 @@ func (rm *RecordingManager) CleanupOldRecordings(ctx context.Context, maxAge tim
 	}
 
 	if recordings == nil || len(recordings.Files) == 0 {
-		rm.logger.Debug("No recordings found for cleanup")
 		return 0, 0, nil
 	}
 
@@ -935,7 +932,7 @@ func (rm *RecordingManager) getEffectiveConfigName(ctx context.Context, cameraID
 		rm.logger.WithFields(logging.Fields{
 			"camera_id": cameraID,
 			"error":     err,
-		}).Debug("Runtime path not found, assuming dedicated config")
+		}).Info("Runtime path not found, assuming dedicated config")
 		return cameraID, nil
 	}
 
@@ -946,7 +943,6 @@ func (rm *RecordingManager) getEffectiveConfigName(ctx context.Context, cameraID
 
 	confName, exists := runtimePath["confName"]
 	if !exists {
-		rm.logger.WithField("camera_id", cameraID).Debug("No confName found, using camera ID")
 		return cameraID, nil
 	}
 
@@ -954,7 +950,7 @@ func (rm *RecordingManager) getEffectiveConfigName(ctx context.Context, cameraID
 	rm.logger.WithFields(logging.Fields{
 		"camera_id":      cameraID,
 		"effective_conf": effectiveConf,
-	}).Debug("Resolved effective config name")
+	}).Info("Resolved effective config name")
 
 	return effectiveConf, nil
 }
@@ -1059,7 +1055,7 @@ func (rm *RecordingManager) pollUntilRecordingDisabled(ctx context.Context, path
 		rm.logger.WithFields(logging.Fields{
 			"path":    pathName,
 			"attempt": attempt,
-		}).Debug("Recording still enabled, polling again...")
+		}).Info("Recording still enabled, polling again...")
 
 		time.Sleep(200 * time.Millisecond)
 	}
@@ -1094,14 +1090,14 @@ func (rm *RecordingManager) isPathRecordingWithRetry(ctx context.Context, pathNa
 			rm.logger.WithFields(logging.Fields{
 				"path":    pathName,
 				"attempt": attempt,
-			}).Debug("Recording confirmed disabled")
+			}).Info("Recording confirmed disabled")
 			return false, nil
 		}
 
 		rm.logger.WithFields(logging.Fields{
 			"path":    pathName,
 			"attempt": attempt,
-		}).Debug("Recording still enabled, retrying...")
+		}).Info("Recording still enabled, retrying...")
 
 		if attempt < maxAttempts {
 			time.Sleep(100 * time.Millisecond)
@@ -1153,7 +1149,6 @@ func (rm *RecordingManager) Start(ctx context.Context) error {
 // Stop gracefully shuts down the recording manager (implements camera.ResourceManager)
 func (rm *RecordingManager) Stop(ctx context.Context) error {
 	if !atomic.CompareAndSwapInt32(&rm.running, 1, 0) {
-		rm.logger.Debug("Recording manager is already stopped")
 		return nil // Idempotent
 	}
 
@@ -1162,7 +1157,6 @@ func (rm *RecordingManager) Stop(ctx context.Context) error {
 	// Stop all keepalive readers
 	if rm.keepaliveReader != nil {
 		rm.keepaliveReader.StopAll()
-		rm.logger.Debug("All keepalive readers stopped")
 	}
 
 	// Clean up all active timers with context timeout
@@ -1170,7 +1164,6 @@ func (rm *RecordingManager) Stop(ctx context.Context) error {
 		if err := rm.timerManager.StopAll(ctx); err != nil {
 			rm.logger.WithError(err).Warn("Error stopping timer manager")
 		}
-		rm.logger.Debug("All recording timers stopped")
 	}
 
 	// Close metadata manager resources if it implements io.Closer
@@ -1180,7 +1173,6 @@ func (rm *RecordingManager) Stop(ctx context.Context) error {
 				rm.logger.WithError(err).Warn("Error closing metadata manager")
 			}
 		}
-		rm.logger.Debug("Metadata manager resources cleaned up")
 	}
 
 	rm.logger.Info("Recording manager stopped successfully")

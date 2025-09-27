@@ -14,7 +14,7 @@ module.exports = {
   ],
   
   // Setup files
-  // setupFilesAfterEnv: ['<rootDir>/tests/integration/setup.ts'],
+  setupFilesAfterEnv: ['<rootDir>/setup.ts'],
   
   // Coverage configuration
   collectCoverage: true,

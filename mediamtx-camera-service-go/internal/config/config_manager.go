@@ -869,14 +869,14 @@ func (cm *ConfigManager) setDefaults(v *viper.Viper) {
 	v.SetDefault("retention_policy.max_size_gb", 1)
 	v.SetDefault("retention_policy.auto_cleanup", true)
 
-	// Logging defaults
-	v.SetDefault("logging.level", "INFO")
-	v.SetDefault("logging.format", "%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+	// Logging defaults - aligned with canonical configuration
+	v.SetDefault("logging.level", "error") // Only critical errors by default
+	v.SetDefault("logging.format", "json") // Structured logging for production
 	v.SetDefault("logging.file_enabled", true)
-	v.SetDefault("logging.file_path", "/opt/camera-service/logs/camera-service.log")
-	v.SetDefault("logging.max_file_size", 10485760)
-	v.SetDefault("logging.backup_count", 5)
-	v.SetDefault("logging.console_enabled", true)
+	v.SetDefault("logging.file_path", "/var/log/camera-service.log")
+	v.SetDefault("logging.max_file_size", 5242880) // 5MB for edge devices
+	v.SetDefault("logging.backup_count", 3)
+	v.SetDefault("logging.console_enabled", false) // Disabled for edge devices
 
 	// Recording defaults
 	v.SetDefault("recording.enabled", false)
@@ -1006,13 +1006,13 @@ func getDefaultConfig() *Config {
 			CapabilityMaxRetries:      3,
 		},
 		Logging: LoggingConfig{
-			Level:          "INFO",
-			Format:         "%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+			Level:          "error", // Only critical errors by default
+			Format:         "json",  // Structured logging for production
 			FileEnabled:    true,
-			FilePath:       "/opt/camera-service/logs/camera-service.log",
-			MaxFileSize:    10485760,
-			BackupCount:    5,
-			ConsoleEnabled: true,
+			FilePath:       "/var/log/camera-service.log",
+			MaxFileSize:    5242880, // 5MB for edge devices
+			BackupCount:    3,
+			ConsoleEnabled: false, // Disabled for edge devices
 		},
 		Recording: RecordingConfig{
 			Enabled:         false,

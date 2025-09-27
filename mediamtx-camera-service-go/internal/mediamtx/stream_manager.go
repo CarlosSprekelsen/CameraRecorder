@@ -406,7 +406,7 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 	sm.logger.WithFields(logging.Fields{
 		"name":   name,
 		"source": source,
-	}).Debug("Creating MediaMTX stream")
+	}).Info("Creating MediaMTX stream")
 
 	// Validate stream name
 	if name == "" {
@@ -538,7 +538,6 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 
 // DeleteStream deletes a stream
 func (sm *streamManager) DeleteStream(ctx context.Context, id string) error {
-	sm.logger.WithField("stream_id", id).Debug("Deleting MediaMTX stream")
 
 	// Use PathManager for proper architectural integration
 	err := sm.pathManager.DeletePath(ctx, id)
@@ -552,7 +551,6 @@ func (sm *streamManager) DeleteStream(ctx context.Context, id string) error {
 
 // GetStream gets a specific stream
 func (sm *streamManager) GetStream(ctx context.Context, id string) (*Path, error) {
-	sm.logger.WithField("stream_id", id).Debug("Getting MediaMTX stream")
 
 	// Use PathManager for proper architectural integration
 	path, err := sm.pathManager.GetPath(ctx, id)
@@ -574,7 +572,6 @@ func (sm *streamManager) GetStream(ctx context.Context, id string) (*Path, error
 
 // ListStreams lists all streams
 func (sm *streamManager) ListStreams(ctx context.Context) (*GetStreamsResponse, error) {
-	sm.logger.Debug("Listing MediaMTX streams with cameraID-first approach")
 
 	// Get runtime paths for actual stream status
 	runtimePaths, err := sm.pathManager.GetRuntimePaths(ctx)
@@ -629,13 +626,11 @@ func (sm *streamManager) ListStreams(ctx context.Context) (*GetStreamsResponse, 
 		Timestamp: time.Now().Format(time.RFC3339),
 	}
 
-	sm.logger.WithField("count", fmt.Sprintf("%d", len(runtimePaths))).Debug("MediaMTX streams listed successfully")
 	return response, nil
 }
 
 // MonitorStream monitors a stream
 func (sm *streamManager) MonitorStream(ctx context.Context, id string) error {
-	sm.logger.WithField("stream_id", id).Debug("Monitoring MediaMTX stream")
 
 	// Get stream status
 	status, err := sm.GetStreamStatus(ctx, id)
@@ -646,14 +641,13 @@ func (sm *streamManager) MonitorStream(ctx context.Context, id string) error {
 	sm.logger.WithFields(logging.Fields{
 		"stream_id": id,
 		"status":    status,
-	}).Debug("MediaMTX stream status")
+	}).Info("MediaMTX stream status")
 
 	return nil
 }
 
 // GetStreamStatus gets the status of a stream
 func (sm *streamManager) GetStreamStatus(ctx context.Context, cameraID string) (*GetStreamStatusResponse, error) {
-	sm.logger.WithField("cameraID", cameraID).Debug("Getting stream status with cameraID-first approach")
 
 	// Use cameraID directly as MediaMTX path name
 	stream, err := sm.GetStream(ctx, cameraID)
@@ -687,7 +681,7 @@ func (sm *streamManager) GetStreamStatus(ctx context.Context, cameraID string) (
 			"start_time":    response.StartTime,
 			"last_activity": response.LastActivity,
 			"duration":      streamMeta.GetDuration(),
-		}).Debug("Enhanced stream status with metadata tracking")
+		}).Info("Enhanced stream status with metadata tracking")
 	} else {
 		// Fallback to stream ReadyTime if metadata not available
 		if stream.ReadyTime != nil {
@@ -704,7 +698,7 @@ func (sm *streamManager) CheckStreamReadiness(ctx context.Context, streamName st
 	sm.logger.WithFields(logging.Fields{
 		"stream_name": streamName,
 		"timeout":     timeout,
-	}).Debug("Checking stream readiness")
+	}).Info("Checking stream readiness")
 
 	// Get current stream status from MediaMTX using PathManager
 	paths, err := sm.pathManager.ListPaths(ctx)
@@ -717,7 +711,6 @@ func (sm *streamManager) CheckStreamReadiness(ctx context.Context, streamName st
 		if path.Name == streamName {
 			// Path struct doesn't have Ready field, so we'll assume it's ready if it exists
 			// In a real implementation, we might need to check the actual MediaMTX API for readiness
-			sm.logger.WithField("stream_name", streamName).Debug("Stream found, assuming ready")
 			return true, nil
 		}
 	}
@@ -748,7 +741,6 @@ func (sm *streamManager) WaitForStreamReadiness(ctx context.Context, streamName 
 		case <-ticker.C:
 			ready, err := sm.CheckStreamReadiness(ctx, streamName, 1*time.Second)
 			if err != nil {
-				sm.logger.WithError(err).WithField("stream_name", streamName).Debug("Stream readiness check failed, continuing")
 				continue
 			}
 			if ready {
@@ -816,7 +808,6 @@ func (sm *streamManager) GenerateStreamURL(streamName string) string {
 
 // GetStreamURL returns stream URL with status checking - consolidates Controller business logic
 func (sm *streamManager) GetStreamURL(ctx context.Context, cameraID string) (*GetStreamURLResponse, error) {
-	sm.logger.WithField("cameraID", cameraID).Debug("Getting stream URL with status")
 
 	// Generate stream URL using cameraID directly
 	streamURL := sm.GenerateStreamURL(cameraID)
@@ -994,7 +985,7 @@ func (sm *streamManager) createRecordingConfig(cameraID, outputPath string) *Pat
 		"cameraID":    cameraID,
 		"record_path": recordPath,
 		"config":      config,
-	}).Debug("Created recording configuration for PATCH")
+	}).Info("Created recording configuration for PATCH")
 
 	return config
 }

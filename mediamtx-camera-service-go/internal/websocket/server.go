@@ -244,7 +244,7 @@ func (s *WebSocketServer) notifyRecordingStatusUpdate(device, status, filename s
 		"filename": filename,
 		"duration": duration,
 		"topic":    topic,
-	}).Debug("Sending recording status notification")
+	}).Info("Sending recording status notification")
 
 	// Use new efficient event system
 	if err := s.sendEventToSubscribers(topic, eventData); err != nil {
@@ -279,7 +279,7 @@ func (s *WebSocketServer) notifyCameraStatusUpdate(device, status, name string) 
 		"status": status,
 		"name":   name,
 		"topic":  topic,
-	}).Debug("Sending camera status notification")
+	}).Info("Sending camera status notification")
 
 	// Use new efficient event system
 	if err := s.sendEventToSubscribers(topic, eventData); err != nil {
@@ -303,7 +303,7 @@ func (s *WebSocketServer) notifySnapshotTaken(device, filename, resolution strin
 		"filename":   filename,
 		"resolution": resolution,
 		"topic":      TopicSnapshotTaken,
-	}).Debug("Sending snapshot notification")
+	}).Info("Sending snapshot notification")
 
 	// Use new efficient event system
 	if err := s.sendEventToSubscribers(TopicSnapshotTaken, eventData); err != nil {
@@ -341,7 +341,7 @@ func (s *WebSocketServer) notifySystemEvent(eventType string, data map[string]in
 		"event_type": eventType,
 		"topic":      topic,
 		"data":       data,
-	}).Debug("Sending system event notification")
+	}).Info("Sending system event notification")
 
 	// Use new efficient event system
 	if err := s.sendEventToSubscribers(topic, data); err != nil {
@@ -385,7 +385,7 @@ func (s *WebSocketServer) broadcastEvent(eventType string, data interface{}) {
 				s.logger.WithFields(logging.Fields{
 					"client_id":  clientID,
 					"event_type": eventType,
-				}).Debug("Notification sent to client")
+				}).Info("Notification sent to client")
 			}
 		}
 	}
@@ -402,7 +402,6 @@ func (s *WebSocketServer) sendEventToSubscribers(topic EventTopic, data map[stri
 	// Get subscribers for this topic
 	subscribers := s.eventManager.GetSubscribersForTopic(topic)
 	if len(subscribers) == 0 {
-		s.logger.WithField("topic", string(topic)).Debug("No subscribers for event topic")
 		return nil
 	}
 
@@ -436,7 +435,7 @@ func (s *WebSocketServer) sendEventToSubscribers(topic EventTopic, data map[stri
 				s.logger.WithFields(logging.Fields{
 					"client_id": clientID,
 					"topic":     topic,
-				}).Debug("Event sent to subscribed client")
+				}).Info("Event sent to subscribed client")
 			}
 		}
 	}
@@ -445,7 +444,7 @@ func (s *WebSocketServer) sendEventToSubscribers(topic EventTopic, data map[stri
 		"topic":       topic,
 		"subscribers": len(subscribers),
 		"sent_count":  sentCount,
-	}).Debug("Event delivered to subscribed clients")
+	}).Info("Event delivered to subscribed clients")
 
 	return nil
 }
@@ -715,14 +714,12 @@ func (s *WebSocketServer) closeAllClientConnections() {
 	// Get list of clients to close
 	s.clientsMutex.Lock()
 	clientsToClose := make([]*ClientConnection, 0, len(s.clients))
-	for clientID, client := range s.clients {
+	for _, client := range s.clients {
 		clientsToClose = append(clientsToClose, client)
-		s.logger.WithField("client_id", clientID).Debug("Queuing client connection for cleanup")
 	}
 	s.clientsMutex.Unlock()
 
 	if len(clientsToClose) == 0 {
-		s.logger.Debug("No client connections to clean up")
 		return
 	}
 
@@ -799,7 +796,6 @@ func (s *WebSocketServer) closeAllClientConnections() {
 			}
 		}
 	case <-cleanupDone:
-		s.logger.Debug("All client connections cleaned up successfully")
 	}
 
 	// Check cleanup results
@@ -952,10 +948,8 @@ func (s *WebSocketServer) handleClientConnection(conn *websocket.Conn, client *C
 	for {
 		select {
 		case <-s.stopChan:
-			s.logger.WithField("client_id", client.ClientID).Debug("Server shutdown signal received, closing client connection")
 			return
 		case <-msgCtx.Done():
-			s.logger.WithField("client_id", client.ClientID).Debug("Message context cancelled, closing client connection")
 			return
 		case <-ticker.C:
 			// Set write deadline for ping
@@ -978,7 +972,6 @@ func (s *WebSocketServer) handleClientConnection(conn *websocket.Conn, client *C
 				if websocket.IsUnexpectedCloseError(err, websocket.CloseGoingAway, websocket.CloseAbnormalClosure) {
 					s.logger.WithError(err).WithField("client_id", client.ClientID).Error("WebSocket read error")
 				} else if websocket.IsCloseError(err, websocket.CloseNormalClosure, websocket.CloseGoingAway) {
-					s.logger.WithField("client_id", client.ClientID).Debug("Client connection closed normally")
 				}
 				return
 			}
@@ -996,7 +989,7 @@ func (s *WebSocketServer) handleMessage(conn *websocket.Conn, client *ClientConn
 	s.logger.WithFields(logging.Fields{
 		"client_id": client.ClientID,
 		"action":    "handle_message",
-	}).Debug("Processing WebSocket message")
+	}).Info("Processing WebSocket message")
 
 	// Parse JSON-RPC request
 	var request JsonRpcRequest
@@ -1061,7 +1054,7 @@ func (s *WebSocketServer) handleMessage(conn *websocket.Conn, client *ClientConn
 		"method":    request.Method,
 		"duration":  duration,
 		"action":    "request_completed",
-	}).Debug("Request completed")
+	}).Info("Request completed")
 }
 
 // handleRequest processes JSON-RPC requests
@@ -1080,7 +1073,7 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 		"client_id": client.ClientID,
 		"method":    request.Method,
 		"action":    "method_lookup",
-	}).Debug("Looking up method handler")
+	}).Info("Looking up method handler")
 
 	s.methodsMutex.RLock()
 	handler, exists := s.methods[request.Method]
@@ -1099,7 +1092,7 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 			"client_id": client.ClientID,
 			"method":    request.Method,
 			"action":    "method_not_found",
-		}).Debug("Method not found")
+		}).Info("Method not found")
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
 			ID:      request.ID,
@@ -1133,7 +1126,7 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 		"client_id": client.ClientID,
 		"method":    request.Method,
 		"action":    "progressive_readiness_enabled",
-	}).Debug("Progressive Readiness: Attempting operation with potential fallback")
+	}).Info("Progressive Readiness: Attempting operation with potential fallback")
 
 	// Security extensions: Permission check (Phase 1 enhancement)
 	// Skip permission check for authenticate and ping methods
@@ -1142,7 +1135,7 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 			"client_id": client.ClientID,
 			"method":    request.Method,
 			"action":    "permission_check",
-		}).Debug("Checking method permissions")
+		}).Info("Checking method permissions")
 
 		if err := s.checkMethodPermissions(client, request.Method); err != nil {
 			s.logger.WithFields(logging.Fields{
@@ -1150,8 +1143,7 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 				"method":    request.Method,
 				"error":     err.Error(),
 				"action":    "permission_denied",
-			}).Debug("Permission check failed")
-
+			}).Info("Permission check failed")
 			return &JsonRpcResponse{
 				JSONRPC: "2.0",
 				ID:      request.ID,
@@ -1165,7 +1157,7 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 		"client_id": client.ClientID,
 		"method":    request.Method,
 		"action":    "calling_handler",
-	}).Debug("Calling method handler")
+	}).Info("Calling method handler")
 
 	response, err := handler(request.Params, client)
 	if err != nil {
@@ -1294,7 +1286,7 @@ func validateCORSOrigin(r *http.Request, cfg *config.Config, logger *logging.Log
 			logger.WithFields(logging.Fields{
 				"origin":  origin,
 				"allowed": true,
-			}).Debug("CORS origin validated successfully")
+			}).Info("CORS origin validated successfully")
 			return true
 		}
 	}

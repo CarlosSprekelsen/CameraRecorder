@@ -1,0 +1,86 @@
+# MediaMTX Configuration - Fixed for API Access
+# Based on deployment/README.md requirements
+
+# API Configuration - CRITICAL: Enable API for our application
+api: yes
+apiAddress: :9997
+
+# RTSP Configuration
+rtsp: yes
+rtspAddress: :8554
+
+# RTMP Configuration
+rtmp: yes
+rtmpAddress: :1935
+
+# HLS Configuration
+hls: yes
+hlsAddress: :8888
+
+# WebRTC Configuration
+webrtc: yes
+webrtcAddress: :8889
+
+# Logging
+logLevel: info
+logDestinations: [stdout]
+
+# Paths configuration
+paths:
+  all:
+    source: publisher
+    sourceOnDemand: yes
+    sourceOnDemandStartTimeout: 10s
+    sourceOnDemandCloseAfter: 10s
+
+# Recording configuration
+record: no
+recordPath: ./recordings/%path/%Y-%m-%d_%H-%M-%S-%f
+recordFormat: fmp4
+recordPartDuration: 1s
+recordSegmentDuration: 1h
+recordDeleteAfter: 24h
+
+# Authentication
+authMethod: internal
+
+# Metrics
+metrics: yes
+metricsAddress: :9998
+
+# PPROF (debugging)
+pprof: yes
+pprofAddress: :9999
+
+# Read timeout
+readTimeout: 10s
+
+# Write timeout  
+writeTimeout: 10s
+
+# Read buffer count
+readBufferCount: 512
+
+# UDP maximum payload size
+udpMaxPayloadSize: 1472
+
+# External authentication URL
+externalAuthenticationURL: ""
+
+# Run on demand
+runOnInit: ""
+runOnInitRestart: no
+
+# Run on demand close
+runOnDemand: ""
+runOnDemandRestart: no
+runOnDemandStartTimeout: 10s
+runOnDemandCloseAfter: 10s
+
+# Run on ready
+runOnReady: ""
+runOnReadyRestart: no
+
+# Run on not ready
+runOnNotReady: ""
+runOnNotReadyRestart: no

@@ -37,6 +37,7 @@ import (
 	"fmt"
 	"runtime"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -1424,15 +1425,55 @@ func (c *controller) HandleCameraEvent(ctx context.Context, eventData camera.Cam
 	case camera.CameraEventDisconnected:
 		c.OnCameraDisconnected(eventData.DevicePath)
 	case camera.CameraEventConnected:
-		// ARCHITECTURE DECISION: Camera connected events logged only (no action needed)
-		// RATIONALE: Camera discovery handled by CameraMonitor, paths created on-demand
 		c.logger.WithField("device_path", eventData.DevicePath).Info("Camera connected")
+
+		// ARCHITECTURE FIX: Wire PathIntegration for automatic path creation
+		// RATIONALE: PathIntegration exists specifically for camera-path integration
+		if c.pathIntegration != nil {
+			// Convert device path to camera ID (e.g., /dev/video0 → camera0)
+			cameraID := c.getCameraIDFromDevicePath(eventData.DevicePath)
+			if cameraID != "" {
+				if err := c.pathIntegration.CreatePathForCamera(ctx, cameraID); err != nil {
+					c.logger.WithError(err).WithFields(logging.Fields{
+						"device_path": eventData.DevicePath,
+						"camera_id":   cameraID,
+					}).Warn("Failed to create MediaMTX path for camera")
+				} else {
+					c.logger.WithFields(logging.Fields{
+						"device_path": eventData.DevicePath,
+						"camera_id":   cameraID,
+					}).Info("MediaMTX path created for camera")
+				}
+			}
+		}
 	case camera.CameraEventStatusChanged:
 		// ARCHITECTURE DECISION: Camera status changes logged only (no action needed)
 		// RATIONALE: Status changes handled by individual operations (recording, snapshot)
 		c.logger.WithField("device_path", eventData.DevicePath).Info("Camera status changed")
 	}
 	return nil
+}
+
+// getCameraIDFromDevicePath converts device path to camera ID
+// Example: /dev/video0 → camera0, /dev/video1 → camera1
+func (c *controller) getCameraIDFromDevicePath(devicePath string) string {
+	// Extract device number from /dev/video{N} -> camera{N}
+	if strings.HasPrefix(devicePath, "/dev/video") {
+		deviceNum := strings.TrimPrefix(devicePath, "/dev/video")
+		return fmt.Sprintf("camera%s", deviceNum)
+	}
+
+	// For other device paths, use the last segment with camera_ prefix
+	if strings.HasPrefix(devicePath, "/dev/") {
+		deviceName := strings.TrimPrefix(devicePath, "/dev/")
+		// Replace non-alphanumeric with underscores for valid path names
+		deviceName = strings.ReplaceAll(deviceName, "/", "_")
+		return fmt.Sprintf("camera_%s", deviceName)
+	}
+
+	// Fallback: sanitize the device string
+	sanitized := strings.ReplaceAll(devicePath, "/", "_")
+	return fmt.Sprintf("camera_%s", sanitized)
 }
 
 // File management methods are implemented and wired to RecordingManager and SnapshotManager

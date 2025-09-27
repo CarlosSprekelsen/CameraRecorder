@@ -649,7 +649,6 @@ func (sm *SnapshotManager) ListSnapshotsInternal() []*Snapshot {
 
 // DeleteSnapshot deletes a snapshot
 func (sm *SnapshotManager) DeleteSnapshot(ctx context.Context, snapshotID string) error {
-	sm.logger.WithField("snapshot_id", snapshotID).Debug("Deleting snapshot")
 
 	// Get snapshot - lock-free read with sync.Map
 	snapshotInterface, exists := sm.snapshots.Load(snapshotID)
@@ -877,7 +876,7 @@ func (sm *SnapshotManager) ListSnapshots(ctx context.Context, limit, offset int)
 	sm.logger.WithFields(logging.Fields{
 		"limit":  limit,
 		"offset": offset,
-	}).Debug("Getting API-ready snapshots list")
+	}).Info("Getting API-ready snapshots list")
 
 	// Get file list from existing method
 	fileList, err := sm.GetSnapshotsList(ctx, limit, offset)
@@ -948,7 +947,7 @@ func (sm *SnapshotManager) GetSnapshotsList(ctx context.Context, limit, offset i
 	sm.logger.WithFields(logging.Fields{
 		"limit":  limit,
 		"offset": offset,
-	}).Debug("Getting snapshots list")
+	}).Info("Getting snapshots list")
 
 	// Validate pagination parameters
 	if limit < 0 {
@@ -983,7 +982,6 @@ func (sm *SnapshotManager) GetSnapshotsList(ctx context.Context, limit, offset i
 		cfg := sm.configManager.GetConfig()
 		if cfg != nil && cfg.Snapshots.UseDeviceSubdirs {
 			// Scan device subdirectories when use_device_subdirs is enabled
-			sm.logger.WithField("directory", snapshotsDir).Debug("Scanning device subdirectories for snapshots")
 
 			// Read base directory to find device subdirectories
 			baseEntries, err := os.ReadDir(snapshotsDir)
@@ -1062,7 +1060,7 @@ func (sm *SnapshotManager) GetSnapshotsList(ctx context.Context, limit, offset i
 			sm.logger.WithFields(logging.Fields{
 				"filename": filename,
 				"metadata": metadata,
-			}).Debug("Extracted comprehensive snapshot metadata")
+			}).Info("Extracted comprehensive snapshot metadata")
 		}
 
 		files = append(files, fileMetadata)
@@ -1095,7 +1093,7 @@ func (sm *SnapshotManager) GetSnapshotsList(ctx context.Context, limit, offset i
 	sm.logger.WithFields(logging.Fields{
 		"total_files": totalCount,
 		"returned":    len(paginatedFiles),
-	}).Debug("Snapshots list retrieved successfully")
+	}).Info("Snapshots list retrieved successfully")
 
 	return &FileListResponse{
 		Files:  paginatedFiles,
@@ -1107,14 +1105,12 @@ func (sm *SnapshotManager) GetSnapshotsList(ctx context.Context, limit, offset i
 
 // extractSnapshotMetadata extracts comprehensive metadata from snapshot file for Python equivalence
 func (sm *SnapshotManager) extractSnapshotMetadata(ctx context.Context, filePath string) map[string]interface{} {
-	sm.logger.WithField("file_path", filePath).Debug("Extracting comprehensive snapshot metadata")
 
 	metadata := make(map[string]interface{})
 
 	// Check if ffprobe is available before attempting extraction
 	_, err := exec.LookPath("ffprobe")
 	if err != nil {
-		sm.logger.WithField("file_path", filePath).Debug("ffprobe not available, skipping metadata extraction")
 		return metadata
 	}
 
@@ -1137,7 +1133,6 @@ func (sm *SnapshotManager) extractSnapshotMetadata(ctx context.Context, filePath
 	output, err := cmd.Output()
 	if err != nil {
 		// Only log as debug to avoid spam - metadata extraction is optional
-		sm.logger.WithField("file_path", filePath).Debug("Failed to extract image metadata (optional operation)")
 		return metadata
 	}
 
@@ -1151,7 +1146,7 @@ func (sm *SnapshotManager) extractSnapshotMetadata(ctx context.Context, filePath
 	sm.logger.WithFields(logging.Fields{
 		"file_path": filePath,
 		"metadata":  string(output),
-	}).Debug("Extracted raw image metadata")
+	}).Info("Extracted raw image metadata")
 
 	// TODO: Complete metadata parsing implementation for full feature parity with Python version
 	// INVESTIGATION: Python version extracts width, height, format, codec, bitrate from ffprobe
@@ -1169,7 +1164,7 @@ func (sm *SnapshotManager) extractSnapshotMetadata(ctx context.Context, filePath
 	sm.logger.WithFields(logging.Fields{
 		"file_path": filePath,
 		"metadata":  metadata,
-	}).Debug("Comprehensive snapshot metadata extracted successfully")
+	}).Info("Comprehensive snapshot metadata extracted successfully")
 
 	return metadata
 }
@@ -1177,7 +1172,6 @@ func (sm *SnapshotManager) extractSnapshotMetadata(ctx context.Context, filePath
 // GetSnapshotInfo gets detailed information about a specific snapshot file
 // GetSnapshotInfo returns API-ready snapshot information with rich metadata
 func (sm *SnapshotManager) GetSnapshotInfo(ctx context.Context, filename string) (*GetSnapshotInfoResponse, error) {
-	sm.logger.WithField("filename", filename).Debug("Getting API-ready snapshot info")
 
 	// Validate filename
 	if filename == "" {
@@ -1269,14 +1263,13 @@ func (sm *SnapshotManager) GetSnapshotInfo(ctx context.Context, filename string)
 		"format":     format,
 		"resolution": resolution,
 		"file_size":  fileInfo.Size(),
-	}).Debug("Snapshot info retrieved successfully")
+	}).Info("Snapshot info retrieved successfully")
 
 	return response, nil
 }
 
 // DeleteSnapshotFile deletes a snapshot file by filename
 func (sm *SnapshotManager) DeleteSnapshotFile(ctx context.Context, filename string) error {
-	sm.logger.WithField("filename", filename).Debug("Deleting snapshot file")
 
 	// Validate filename
 	if filename == "" {

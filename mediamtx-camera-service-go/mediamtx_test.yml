@@ -1,0 +1,44 @@
+# MediaMTX Test Configuration - API Enabled
+# Minimal configuration for testing API functionality
+
+# API Configuration - CRITICAL: Enable API
+api: yes
+apiAddress: :9998  # Use different port to avoid conflict
+
+# RTSP Configuration
+rtsp: yes
+rtspAddress: :8555  # Use different port to avoid conflict
+
+# HLS Configuration
+hls: yes
+hlsAddress: :8887   # Use different port to avoid conflict
+
+# WebRTC Configuration
+webrtc: yes
+webrtcAddress: :8890 # Use different port to avoid conflict
+
+# Logging
+logLevel: info
+logDestinations: [stdout]
+
+# Paths configuration
+paths:
+  all:
+    source: publisher
+    sourceOnDemand: yes
+    sourceOnDemandStartTimeout: 10s
+    sourceOnDemandCloseAfter: 10s
+
+# Recording configuration
+record: no
+recordPath: /tmp/test_recordings/%path/%Y-%m-%d_%H-%M-%S-%f
+recordFormat: fmp4
+
+# Authentication
+authMethod: internal
+
+# Read timeout
+readTimeout: 10s
+
+# Write timeout  
+writeTimeout: 10s

@@ -80,7 +80,7 @@ camera:
   event_handler_timeout: 5s         # Event handler timeout
 
 logging:
-  level: "error"  # Only show critical errors
+  level: "error"
   format: "json"
   file_enabled: true
   file_path: "/var/log/camera-service.log"

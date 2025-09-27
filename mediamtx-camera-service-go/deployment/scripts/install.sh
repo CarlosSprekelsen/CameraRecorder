@@ -219,6 +219,11 @@ install_mediamtx() {
         log_message "Extracting default MediaMTX configuration..."
         tar -xf "$DEPENDENCIES_DIR/mediamtx_v1.15.1_linux_amd64.tar.gz" -C "$MEDIAMTX_DIR/config" mediamtx.yml
         log_success "Default MediaMTX configuration extracted"
+        
+        # CRITICAL: Enable API for our application integration
+        log_message "Enabling MediaMTX API for application integration..."
+        sed -i 's/api: no/api: yes/' "$MEDIAMTX_DIR/config/mediamtx.yml"
+        log_success "MediaMTX API enabled for application integration"
     else
         log_error "MediaMTX package not found for configuration extraction"
         exit 1
@@ -492,7 +497,7 @@ camera:
   event_handler_timeout: 5s
 
 logging:
-  level: "warn"
+  level: "error"
   format: "json"
   file_enabled: true
   file_path: "/var/log/camera-service.log"
@@ -762,9 +767,6 @@ main() {
     verify_installation
     
     log_success "MediaMTX Camera Service (Go) installation completed successfully!"
-    log_message "Services are running and ready to use."
-    log_message "MediaMTX API: http://localhost:9997"
-    log_message "Camera Service: http://localhost:8080"
 }
 
 # Run main function

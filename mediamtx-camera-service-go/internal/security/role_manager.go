@@ -71,6 +71,7 @@ func NewPermissionChecker() *PermissionChecker {
 		"get_streams",
 		"get_stream_url",
 		"get_stream_status",
+		"get_server_info", // JSON-RPC spec: viewer, operator, admin all allowed
 		"subscribe_events",
 		"unsubscribe_events",
 		"get_subscription_stats",
@@ -95,7 +96,6 @@ func NewPermissionChecker() *PermissionChecker {
 	adminMethods := []string{
 		"get_metrics",
 		"get_status",
-		"get_server_info",
 		"get_storage_info",
 		"set_retention_policy",
 		"cleanup_old_files",
