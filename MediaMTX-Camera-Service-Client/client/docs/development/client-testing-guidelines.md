@@ -276,32 +276,239 @@ describe('Feature Tests', () => {
 
 ## Multi-Developer Coordination
 
-### Development Workflow
-1. **Before Testing**: Always run `./set-test-env.sh` to ensure current server configuration
+### Development Workflow - ENHANCED
+1. **Environment Setup**: Always run `./set-test-env.sh` before any testing
 2. **Test Execution**: Use standardized npm scripts (`test:unit`, `test:integration`, `test:e2e`)
 3. **File Naming**: Follow `*.test.ts` convention for automatic Jest discovery
 4. **Configuration**: Use centralized base config to prevent drift
+5. **Code Reviews**: Verify test coverage and naming compliance
+6. **CI/CD Integration**: Ensure all test types pass in pipeline
 
-### Environment Synchronization
+### Environment Synchronization - COMPREHENSIVE
 - **Server Configuration**: Use `set-test-env.sh` to load current server settings
 - **Test Environment**: All tests use `.test_env` file for consistent configuration
 - **Port Configuration**: WebSocket (8002) vs Health (8003) endpoints clearly documented
 - **Authentication**: Dynamic token generation prevents hardcoded credentials
+- **Cross-Platform**: Guidelines work on Windows, macOS, and Linux
+- **IDE Integration**: VS Code Jest extension configuration provided
 
-### Team Coordination Rules
+### Team Coordination Rules - ENFORCED
 - **No Custom Configs**: Use standardized Jest configurations only
 - **Shared Utilities**: Leverage `tests/utils/` for common patterns
 - **Consistent Patterns**: Follow established mocking and validation patterns
 - **Documentation**: Update guidelines when adding new test patterns
+- **Branch Protection**: Require test passes before merge
+- **Code Coverage**: Maintain minimum thresholds per test type
 
-### Troubleshooting Common Issues
+### Developer Onboarding Checklist
+- [ ] Clone repository and run `npm install`
+- [ ] Execute `./set-test-env.sh` to configure environment
+- [ ] Run `npm run test:unit` to verify setup
+- [ ] Run `npm run test:integration` to test server connectivity
+- [ ] Review this document and architecture guidelines
+- [ ] Set up IDE Jest extension for test discovery
+- [ ] Configure pre-commit hooks for test validation
+
+### IDE Configuration (VS Code)
+```json
+// .vscode/settings.json
+{
+  "jest.jestCommandLine": "npm run test:unit",
+  "jest.autoRun": "watch",
+  "jest.showCoverageOnLoad": true,
+  "jest.testExplorer": {
+    "enabled": true
+  },
+  "typescript.preferences.includePackageJsonAutoImports": "on"
+}
+```
+
+### Pre-commit Hooks Setup
+```bash
+# Install husky for git hooks
+npm install --save-dev husky lint-staged
+
+# Configure pre-commit hooks
+npx husky add .husky/pre-commit "npm run test:unit -- --passWithNoTests"
+```
+
+### Troubleshooting Common Issues - EXPANDED
 - **Test Failures**: Check server status with `curl localhost:8002/ws`
 - **Authentication Errors**: Run `./set-test-env.sh` to refresh tokens
 - **Port Conflicts**: Verify WebSocket (8002) vs Health (8003) usage
 - **Configuration Drift**: Use base config inheritance, don't create custom configs
+- **Memory Issues**: Increase Node.js memory with `NODE_OPTIONS="--max-old-space-size=4096"`
+- **Timeout Issues**: Check server performance and network connectivity
+- **Coverage Failures**: Run `npm run test:unit:coverage` to identify gaps
+- **Import Errors**: Verify TypeScript path mapping in base config
+
+### Performance Optimization
+- **Parallel Testing**: Use `--maxWorkers=4` for faster execution
+- **Test Caching**: Enable Jest cache with `--cache` flag
+- **Selective Testing**: Use `--testPathPattern` for focused testing
+- **Coverage Optimization**: Use `--coverageThreshold` for build validation
+
+### Quality Gates - ENFORCED
+```bash
+# Pre-merge validation
+npm run lint && \
+npm run test:unit && \
+npm run test:integration && \
+npm run build
+```
+
+### Cross-Platform Compatibility
+- **Windows**: Use Git Bash or WSL for shell scripts
+- **macOS**: Native support for all commands
+- **Linux**: Full compatibility with all features
+- **Docker**: Containerized testing environment available
+
+## Testing Workflows - COMPREHENSIVE
+
+### Daily Development Workflow
+```bash
+# 1. Start development session
+./set-test-env.sh
+npm run test:unit -- --watch
+
+# 2. Before committing changes
+npm run test:unit
+npm run test:integration
+npm run lint
+
+# 3. Before pushing to remote
+npm run test:all
+npm run build
+```
+
+### Feature Development Workflow
+```bash
+# 1. Create feature branch
+git checkout -b feature/new-camera-control
+
+# 2. Write tests first (TDD approach)
+npm run test:unit -- --testPathPattern="camera"
+
+# 3. Implement feature
+npm run test:unit -- --watch
+
+# 4. Integration testing
+npm run test:integration -- --testPathPattern="camera"
+
+# 5. End-to-end validation
+npm run test:e2e -- --testPathPattern="camera"
+
+# 6. Final validation
+npm run test:all && npm run build
+```
+
+### Bug Fix Workflow
+```bash
+# 1. Reproduce bug with test
+npm run test:unit -- --testNamePattern="bug_description"
+
+# 2. Fix implementation
+npm run test:unit -- --watch
+
+# 3. Verify fix
+npm run test:integration
+npm run test:e2e
+
+# 4. Regression testing
+npm run test:all
+```
+
+## Best Practices - ENHANCED
+
+### Test Writing Guidelines
+- **Test Naming**: Use descriptive names that explain the scenario
+- **Test Structure**: Follow AAA pattern (Arrange, Act, Assert)
+- **Test Isolation**: Each test should be independent and repeatable
+- **Mock Strategy**: Mock external dependencies, not internal logic
+- **Assertions**: Use specific assertions, avoid generic `toBeTruthy()`
+
+### Code Coverage Strategy
+- **Unit Tests**: Target 80%+ coverage for business logic
+- **Integration Tests**: Target 60%+ coverage for API interactions
+- **E2E Tests**: Focus on critical user journeys
+- **Coverage Reports**: Review coverage reports before merging
+
+### Performance Testing
+- **Load Testing**: Use integration tests with sustained load
+- **Memory Testing**: Monitor memory usage in long-running tests
+- **Timeout Management**: Set appropriate timeouts per test type
+- **Resource Cleanup**: Ensure proper cleanup in afterEach/afterAll
+
+### Security Testing
+- **Authentication**: Test all authentication scenarios
+- **Authorization**: Verify role-based access control
+- **Input Validation**: Test with malicious inputs
+- **Token Management**: Test token expiration and refresh
+
+## Continuous Integration - ENHANCED
+
+### GitHub Actions Workflow
+```yaml
+# .github/workflows/test.yml
+name: Test Suite
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - run: npm ci
+      - run: npm run test:unit
+      - run: npm run test:integration
+      - run: npm run test:e2e
+      - run: npm run build
+```
+
+### Quality Metrics Dashboard
+- **Test Coverage**: Track coverage trends over time
+- **Test Duration**: Monitor test execution time
+- **Flaky Tests**: Identify and fix unreliable tests
+- **Failure Analysis**: Categorize and track test failures
+
+## Advanced Configuration
+
+### Environment-Specific Testing
+```bash
+# Development environment
+NODE_ENV=development npm run test:unit
+
+# Staging environment  
+NODE_ENV=staging npm run test:integration
+
+# Production environment
+NODE_ENV=production npm run test:e2e
+```
+
+### Custom Jest Matchers
+```typescript
+// tests/utils/custom-matchers.ts
+expect.extend({
+  toBeValidJWT(received: string) {
+    // Custom matcher for JWT validation
+  }
+});
+```
+
+### Test Data Management
+```typescript
+// tests/fixtures/test-data.ts
+export const TEST_CAMERAS = {
+  camera0: { device: 'camera0', status: 'CONNECTED' },
+  camera1: { device: 'camera1', status: 'DISCONNECTED' }
+};
+```
 
 ---
 
 **Architecture Integration**: Follows go-architecture-guide.md principles adapted for client testing  
 **Maintenance Focus**: Centralized patterns prevent server-side bloat and duplication issues  
-**Team Coordination**: Standardized workflow ensures consistent testing across developers
+**Team Coordination**: Standardized workflow ensures consistent testing across developers  
+**Quality Assurance**: Comprehensive testing strategy ensures reliable software delivery
