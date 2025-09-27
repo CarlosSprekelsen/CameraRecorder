@@ -107,6 +107,28 @@ echo "   🚫 NEVER run tests from root directory"
 echo "   ✅ ALWAYS run tests from client directory: cd client && npm test"
 echo ""
 
+# Load API keys if available
+if [ -f "test_api_keys.json" ]; then
+    echo "✅ Found test API keys file"
+    export TEST_API_KEYS_FILE="$(pwd)/test_api_keys.json"
+    
+    # Extract API keys for environment variables
+    TEST_VIEWER_KEY=$(grep -o '"key": "test_viewer_key_[^"]*"' test_api_keys.json | cut -d'"' -f4)
+    TEST_OPERATOR_KEY=$(grep -o '"key": "test_api_key_[^"]*"' test_api_keys.json | cut -d'"' -f4)
+    TEST_ADMIN_KEY=$(grep -o '"key": "test_admin_key_[^"]*"' test_api_keys.json | cut -d'"' -f4)
+    
+    export TEST_VIEWER_KEY="$TEST_VIEWER_KEY"
+    export TEST_OPERATOR_KEY="$TEST_OPERATOR_KEY"
+    export TEST_ADMIN_KEY="$TEST_ADMIN_KEY"
+    
+    echo "🔑 API Keys loaded:"
+    echo "   TEST_VIEWER_KEY=${TEST_VIEWER_KEY:0:20}..."
+    echo "   TEST_OPERATOR_KEY=${TEST_OPERATOR_KEY:0:20}..."
+    echo "   TEST_ADMIN_KEY=${TEST_ADMIN_KEY:0:20}..."
+else
+    echo "⚠️  No test API keys file found (test_api_keys.json)"
+fi
+
 echo "🔧 Environment Variables Available:"
 echo "   CAMERA_SERVICE_JWT_SECRET=${CAMERA_SERVICE_JWT_SECRET:0:16}..."
 echo ""

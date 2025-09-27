@@ -1,0 +1,17 @@
+{
+    "test_user": {
+        "key": "test_api_key_316dd8310648dd4558f3011761f01264",
+        "role": "operator",
+        "permissions": ["view", "control"]
+    },
+    "test_admin": {
+        "key": "test_admin_key_dc4573852e7ac2e263d264865e2ce73c",
+        "role": "admin",
+        "permissions": ["view", "control", "admin"]
+    },
+    "test_viewer": {
+        "key": "test_viewer_key_d8791985a7f494c2005325342c15293e",
+        "role": "viewer",
+        "permissions": ["view"]
+    }
+}
