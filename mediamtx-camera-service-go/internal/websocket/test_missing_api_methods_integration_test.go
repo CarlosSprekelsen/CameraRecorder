@@ -502,7 +502,7 @@ func TestMissingAPI_SetDiscoveryInterval_Integration(t *testing.T) {
 	require.NotNil(t, response.Error, "Should get error when external discovery not configured")
 	require.Equal(t, -32030, response.Error.Code, "Error code should be UNSUPPORTED (-32030)")
 	require.Equal(t, "Unsupported", response.Error.Message, "Error message should be 'Unsupported'")
-	
+
 	// Check error data structure
 	errorData, ok := response.Error.Data.(map[string]interface{})
 	require.True(t, ok, "Error data should be a map")
@@ -541,6 +541,6 @@ func TestMissingAPI_CameraStatusUpdate_Integration(t *testing.T) {
 	require.NotNil(t, response.Error, "Should get error for blocked notification method")
 	require.Equal(t, -32002, response.Error.Code, "Error code should be PERMISSION_DENIED (-32002)")
 	require.Equal(t, "Permission denied", response.Error.Message, "Error message should be 'Permission denied'")
-	
+
 	t.Log("✅ Security: camera_status_update properly blocked - not in permission matrix (correct behavior)")
 }
