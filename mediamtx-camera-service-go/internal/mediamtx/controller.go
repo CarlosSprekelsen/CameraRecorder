@@ -296,7 +296,8 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 	// Create system metrics manager
 	systemMetricsManager := NewSystemMetricsManager(fullConfig, recordingConfig, configIntegration, logger)
 
-	return &controller{
+	// Create controller instance
+	ctrl := &controller{
 		client:                    client,
 		healthMonitor:             healthMonitor,
 		pathManager:               pathManager,
@@ -314,7 +315,16 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 		systemMetricsManager:      systemMetricsManager,
 		// externalDiscovery: nil - intentionally not initialized (optional component)
 		// No local recording state - query MediaMTX directly
-	}, nil
+	}
+
+	// Start configuration watching for hot reload support
+	if err := configIntegration.WatchConfigChanges(ctrl); err != nil {
+		logger.WithError(err).Warn("Failed to start configuration watching, hot reload disabled")
+	} else {
+		logger.Info("Configuration watching started successfully")
+	}
+
+	return ctrl, nil
 }
 
 // Start starts the MediaMTX controller
@@ -1046,7 +1056,6 @@ func (c *controller) DeleteRecording(ctx context.Context, filename string) error
 		return fmt.Errorf("controller is not running")
 	}
 
-
 	return c.recordingManager.DeleteRecording(ctx, filename)
 }
 
@@ -1055,7 +1064,6 @@ func (c *controller) DeleteSnapshot(ctx context.Context, filename string) error 
 	if !c.checkRunningState() {
 		return fmt.Errorf("controller is not running")
 	}
-
 
 	return c.snapshotManager.DeleteSnapshotFile(ctx, filename)
 }
@@ -1082,7 +1090,6 @@ func (c *controller) GetRTSPConnection(ctx context.Context, id string) (*RTSPCon
 		return nil, fmt.Errorf("controller is not running")
 	}
 
-
 	return c.rtspManager.GetConnection(ctx, id)
 }
 
@@ -1105,7 +1112,6 @@ func (c *controller) GetRTSPSession(ctx context.Context, id string) (*RTSPConnec
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
-
 
 	return c.rtspManager.GetSession(ctx, id)
 }

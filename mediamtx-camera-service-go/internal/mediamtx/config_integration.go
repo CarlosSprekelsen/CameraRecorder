@@ -14,6 +14,8 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package mediamtx
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
@@ -416,9 +418,82 @@ func (ci *ConfigIntegration) BuildPathConf(pathName string, pathSource *PathSour
 
 // WatchConfigChanges watches for configuration changes and notifies the MediaMTX controller
 func (ci *ConfigIntegration) WatchConfigChanges(controller MediaMTXController) error {
-	// Note: SubscribeToChanges method doesn't exist in ConfigManager
-	// Configuration watching would need to be implemented through the existing config system
-	ci.logger.Debug("Configuration change watcher not implemented (requires ConfigManager enhancement)")
+	// Register callback with existing ConfigManager to watch for configuration changes
+	ci.configManager.AddUpdateCallback(func(newConfig *config.Config) {
+		if newConfig == nil {
+			ci.logger.Warn("Configuration change callback received nil config, skipping")
+			return
+		}
+
+		// Check if MediaMTX path override is enabled
+		if newConfig.MediaMTX.OverrideMediaMTXPaths {
+			ci.logger.WithFields(logging.Fields{
+				"recordings_path": newConfig.MediaMTX.RecordingsPath,
+				"snapshots_path":  newConfig.MediaMTX.SnapshotsPath,
+			}).Info("Configuration change detected, synchronizing MediaMTX paths")
+
+			// Synchronize MediaMTX paths with new config
+			if err := ci.syncMediaMTXPaths(newConfig); err != nil {
+				ci.logger.WithError(err).Error("Failed to sync MediaMTX paths on config change")
+			} else {
+				ci.logger.Info("MediaMTX paths synchronized successfully")
+			}
+		} else {
+			ci.logger.Debug("MediaMTX path override disabled, skipping path synchronization")
+		}
+	})
+
+	ci.logger.Info("Configuration change watcher registered successfully")
+	return nil
+}
+
+// syncMediaMTXPaths synchronizes MediaMTX global configuration with the service configuration
+// This method reuses the same logic as the controller's startup path override
+func (ci *ConfigIntegration) syncMediaMTXPaths(cfg *config.Config) error {
+	// Get MediaMTX configuration for API client
+	mediaMTXConfig, err := ci.GetMediaMTXConfig()
+	if err != nil {
+		return fmt.Errorf("failed to get MediaMTX config: %w", err)
+	}
+
+	// Create HTTP client for MediaMTX API calls (reuse existing client creation logic)
+	client := NewClient(mediaMTXConfig.BaseURL, mediaMTXConfig, ci.logger)
+
+	// Generate MediaMTX record path pattern for recordings (reuse existing logic)
+	recordPath := GenerateRecordingPath(mediaMTXConfig, &cfg.Recording)
+
+	// Generate snapshot path pattern for snapshots (for logging/debugging)
+	snapshotPath := GenerateSnapshotPath(mediaMTXConfig, &cfg.Snapshots, "camera0") // Use generic device name for global config
+
+	// Configure MediaMTX global settings via API (reuse existing logic)
+	globalConfig := map[string]interface{}{
+		"recordPath":   recordPath,
+		"recordFormat": cfg.Recording.RecordFormat,
+		// MediaMTX handles snapshots per-path or via direct FFmpeg capture
+		// Global snapshot configuration is not supported by MediaMTX API
+	}
+
+	// Convert to JSON for API call
+	configData, err := json.Marshal(globalConfig)
+	if err != nil {
+		return fmt.Errorf("failed to marshal MediaMTX global config: %w", err)
+	}
+
+	// PATCH MediaMTX global configuration (reuse existing API call logic)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	err = client.Patch(ctx, MediaMTXConfigGlobalPatch, configData)
+	if err != nil {
+		return fmt.Errorf("failed to update MediaMTX global config: %w", err)
+	}
+
+	ci.logger.WithFields(logging.Fields{
+		"record_path":   recordPath,
+		"snapshot_path": snapshotPath,
+		"record_format": cfg.Recording.RecordFormat,
+	}).Info("MediaMTX global configuration synchronized")
+
 	return nil
 }
 
