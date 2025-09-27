@@ -160,6 +160,30 @@ func TestMissingAPI_GetStatus_Integration(t *testing.T) {
 	asserter.client.AssertJSONRPCResponse(response, false)
 }
 
+// TestMissingAPI_GetSystemStatus_Integration tests get_system_status method
+func TestMissingAPI_GetSystemStatus_Integration(t *testing.T) {
+	asserter := NewWebSocketIntegrationAsserter(t)
+
+	// Connect and authenticate
+	err := asserter.client.Connect()
+	require.NoError(t, err, "WebSocket connection should succeed")
+
+	// CRITICAL: get_system_status requires viewer role per permissions matrix
+	authToken, err := asserter.helper.GetJWTToken("viewer")
+	require.NoError(t, err, "Should be able to create JWT token")
+
+	err = asserter.client.Authenticate(authToken)
+	require.NoError(t, err, "Authentication should succeed")
+
+	// Test get_system_status method
+	response, err := asserter.client.GetSystemStatus()
+	require.NoError(t, err, "get_system_status should succeed")
+	require.NotNil(t, response, "Response should not be nil")
+
+	// Validate response structure per API documentation
+	asserter.client.AssertJSONRPCResponse(response, false)
+}
+
 // TestMissingAPI_GetServerInfo_Integration tests get_server_info method
 func TestMissingAPI_GetServerInfo_Integration(t *testing.T) {
 	asserter := NewWebSocketIntegrationAsserter(t)
@@ -330,9 +354,9 @@ func TestMissingAPI_SubscribeEvents_Integration(t *testing.T) {
 	err = asserter.client.Authenticate(authToken)
 	require.NoError(t, err, "Authentication should succeed")
 
-	// Test subscribe_events method
-	eventTypes := []string{"camera_status", "recording_status"}
-	response, err := asserter.client.SubscribeEvents(eventTypes)
+	// Test subscribe_events method with valid topic names per API documentation
+	topics := []string{"camera.connected", "recording.start"}
+	response, err := asserter.client.SubscribeEvents(topics)
 	require.NoError(t, err, "subscribe_events should succeed")
 	require.NotNil(t, response, "Response should not be nil")
 
@@ -409,8 +433,23 @@ func TestMissingAPI_DiscoverExternalStreams_Integration(t *testing.T) {
 	require.NoError(t, err, "discover_external_streams should succeed")
 	require.NotNil(t, response, "Response should not be nil")
 
-	// Validate response structure per API documentation
-	asserter.client.AssertJSONRPCResponse(response, false)
+	// Check if external discovery is disabled (expected in test environment)
+	if response.Error != nil {
+		// Validate structured error response when external discovery is disabled
+		require.Equal(t, -32030, response.Error.Code, "Error code should be -32030 (UNSUPPORTED)")
+		require.Equal(t, "Unsupported", response.Error.Message)
+		require.NotNil(t, response.Error.Data, "Error data should be present")
+
+		// Validate error data structure
+		errorData, ok := response.Error.Data.(map[string]interface{})
+		require.True(t, ok, "Error data should be a map")
+		require.Equal(t, "feature_disabled", errorData["reason"])
+		require.Equal(t, "External stream discovery is disabled in configuration", errorData["details"])
+		require.Equal(t, "Enable external discovery in configuration", errorData["suggestion"])
+	} else {
+		// If external discovery is enabled, validate success response structure
+		asserter.client.AssertJSONRPCResponse(response, false)
+	}
 }
 
 // TestMissingAPI_GetExternalStreams_Integration tests get_external_streams method

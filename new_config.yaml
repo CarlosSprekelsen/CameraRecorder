@@ -1,0 +1,299 @@
+# UltraEfficient Configuration for Edge/IoT Devices
+# Optimized for minimal power consumption and resource usage
+# Based on resource optimization test results: CPU=6.00%, Memory=0.45MB, PowerScore=6.09
+
+server:
+  host: "0.0.0.0"
+  port: 8002
+  websocket_path: "/ws"
+  max_connections: 10  # Reduced from 1000 for edge devices
+  read_timeout: 10s    # Increased for stability
+  write_timeout: 5s    # Increased for reliability
+  ping_interval: 60s   # Increased from 30s for power efficiency
+  pong_wait: 120s      # Increased from 60s for power efficiency
+  max_message_size: 524288  # Reduced to 512KB for edge devices
+  read_buffer_size: 1024    # Default buffer size
+  write_buffer_size: 1024   # Default buffer size
+  shutdown_timeout: 30s     # Graceful shutdown timeout
+  client_cleanup_timeout: 10s  # Client cleanup timeout
+  auto_close_after: 0s      # Disabled for edge devices
+
+mediamtx:
+  host: "localhost"
+  api_port: 9997
+  rtsp_port: 8554
+  webrtc_port: 8889
+  hls_port: 8888
+  config_path: "/opt/mediamtx/config/mediamtx.yml"
+  recordings_path: "/opt/camera-service/recordings"
+  snapshots_path: "/opt/camera-service/snapshots"
+  override_mediamtx_paths: true  # Override MediaMTX defaults
+  health_check_interval: 60  # Increased from 30 for power efficiency
+  health_failure_threshold: 5  # Increased tolerance
+  health_circuit_breaker_timeout: 120  # Increased from 60
+  health_max_backoff_interval: 600  # Increased from 300
+  health_recovery_confirmation_threshold: 3  # Increased from 2
+  backoff_base_multiplier: 1.5  # Reduced from 2.0 for gentler backoff
+  backoff_jitter_range: [0.1, 0.2]  # Reduced jitter
+  process_termination_timeout: 15.0  # Increased from 10.0
+  process_kill_timeout: 10.0  # Increased from 5.0
+  health_check_timeout: 10s  # Increased from 5s
+  
+  # Health monitoring defaults for edge devices
+  health_monitor_defaults:
+    check_interval: 60.0              # 60 seconds for edge devices
+    max_backoff_delay: 120.0          # 120 seconds for edge devices
+    shutdown_timeout: 30.0            # 30 seconds for edge devices
+  
+  codec:
+    video_profile: "high422"   # STANAG 4609 compliant with 4:2:2 support (was "baseline")
+    video_level: "4.0"         # Tactical system standard (was "3.0")
+    pixel_format: "yuv422p"    # 4:2:2 for tactical systems (was "yuv420p")
+    bitrate: "2M"              # Increased for tactical quality (was "1M")
+    preset: "fast"             # Better quality for tactical use (was "ultrafast")
+  
+  # CRITICAL: Stream readiness configuration with proper defaults
+  stream_readiness:
+    timeout: 60.0  # Increased from 30.0 for stability
+    retry_attempts: 2  # Reduced from 3
+    retry_delay: 2.0  # Increased from 1.0
+    check_interval: 2.0  # Increased from 1.0
+    enable_progress_notifications: false  # Disabled for efficiency
+    graceful_fallback: true
+    max_check_interval: 2.0  # Maximum polling interval
+    initial_check_interval: 0.2  # Initial check interval
+    # CRITICAL: Performance fine-tuning options (prevents panic)
+    controller_ticker_interval: 0.1        # 100ms for fast controller readiness
+    stream_manager_ticker_interval: 0.1   # 100ms for fast stream readiness
+    path_manager_retry_intervals: [0.1, 0.2, 0.4, 0.8]  # Retry backoffs
+
+camera:
+  poll_interval: 2.0  # Increased from 5.0 to 2.0 seconds for power efficiency
+  detection_timeout: 15.0  # Increased from 10.0
+  device_range: [0, 9]
+  enable_capability_detection: false  # Disabled for power efficiency
+  auto_start_streams: false
+  capability_timeout: 10.0  # Increased from 5.0
+  capability_retry_interval: 2.0  # Increased from 1.0
+  capability_max_retries: 2  # Reduced from 3
+  # Device discovery configuration
+  discovery_mode: "event-first"  # Event-driven discovery with polling fallback
+  fallback_poll_interval: 90.0    # 90 seconds for reconcile fallback
+  # Resource management configuration
+  max_event_handler_goroutines: 10  # Maximum event handler goroutines
+  event_handler_timeout: 5s         # Event handler timeout
+
+logging:
+  level: "error"
+  format: "json"
+  file_enabled: true
+  file_path: "/var/log/camera-service.log"
+  max_file_size: 5242880  # 5MB for edge devices
+  backup_count: 3
+  console_enabled: false  # Disabled for edge devices
+
+recording:
+  enabled: false  # Disabled by default for power efficiency
+  format: "mp4"
+  quality: "low"  # Changed from "medium" for efficiency
+  segment_duration: 600  # Reduced to 10 minutes from 5 minutes
+  max_segment_size: 52428800  # Reduced to 50MB from 100MB
+  auto_cleanup: true
+  cleanup_interval: 7200  # Increased to 2 hours from 1 hour
+  max_age: 2592000  # Increased to 30 days from 7 days
+  max_size: 536870912  # Reduced to 500MB from 1GB
+  default_rotation_size: 52428800  # Reduced to 50MB from 100MB
+  default_max_duration: 12h  # Reduced from 24h
+  default_retention_days: 30  # Increased from 7 days
+  # NO FILE EXTENSION - MediaMTX adds .mp4 for fmp4 format (STANAG 4609)
+  file_name_pattern: "%path_%Y-%m-%d_%H-%M-%S"
+  use_device_subdirs: true  # Creates /recordings/camera0/, /recordings/camera1/, etc.
+  record_format: "fmp4"  # STANAG 4609 compliant format
+  # Pagination configuration
+  default_page_size: 50
+  max_page_size: 100
+  # Resource management configuration
+  max_restart_count: 3  # Maximum restart count for RTSP keepalive processes
+  process_timeout: 5s    # Process timeout
+
+snapshots:
+  enabled: true
+  format: "jpeg"
+  quality: 70  # Reduced from 85 for efficiency
+  max_width: 1280  # Reduced from 1920
+  max_height: 720  # Reduced from 1080
+  auto_cleanup: true
+  cleanup_interval: 7200  # Increased to 2 hours from 1 hour
+  max_age: 2592000  # Increased to 30 days from 7 days
+  max_count: 500  # Reduced from 1000
+  file_name_pattern: "%device_%timestamp.jpg"  # Snapshots need extension
+  use_device_subdirs: true  # Creates /snapshots/camera0/, /snapshots/camera1/, etc.
+
+ffmpeg:
+  snapshot:
+    process_creation_timeout: 15.0  # Increased from 10.0
+    execution_timeout: 60.0  # Increased from 30.0
+    internal_timeout: 10  # Increased from 5
+    retry_attempts: 2  # Reduced from 3
+    retry_delay: 2.0  # Increased from 1.0
+  recording:
+    process_creation_timeout: 15.0  # Increased from 10.0
+    execution_timeout: 60.0  # Increased from 30.0
+    internal_timeout: 10  # Increased from 5
+    retry_attempts: 2  # Reduced from 3
+    retry_delay: 2.0  # Increased from 1.0
+  # Fallback defaults for edge devices
+  fallback_defaults:
+    retry_delay: 2.0               # 2 seconds for edge devices
+    process_creation_timeout: 15.0 # 15 seconds for edge devices
+    execution_timeout: 60.0        # 60 seconds for edge devices
+    max_backoff_delay: 120.0       # 120 seconds for edge devices
+
+notifications:
+  websocket:
+    delivery_timeout: 10.0  # Increased from 5.0
+    retry_attempts: 2  # Reduced from 3
+    retry_delay: 2.0  # Increased from 1.0
+    max_queue_size: 100  # Reduced from 1000
+    cleanup_interval: 600  # Increased to 10 minutes from 5 minutes
+  real_time:
+    camera_status_interval: 60.0  # Increased from 30.0
+    recording_progress_interval: 30.0  # Increased from 10.0
+    connection_health_check: 120.0  # Increased from 60.0
+
+performance:
+  response_time_targets:
+    snapshot_capture: 5.0  # Increased from 2.0
+    recording_start: 10.0  # Increased from 5.0
+    recording_stop: 5.0  # Increased from 3.0
+    file_listing: 2.0  # Increased from 1.0
+  snapshot_tiers:
+    tier1_usb_direct_timeout: 2.0  # Increased from 1.0
+    tier2_rtsp_ready_check_timeout: 5.0  # Increased from 2.0
+    tier3_activation_timeout: 10.0  # Increased from 5.0
+    tier3_activation_trigger_timeout: 20.0  # Increased from 10.0
+    total_operation_timeout: 30.0  # Increased from 15.0
+    immediate_response_threshold: 1.0  # Increased from 0.5
+    acceptable_response_threshold: 5.0  # Increased from 2.0
+    slow_response_threshold: 10.0  # Increased from 5.0
+  optimization:
+    enable_caching: false  # Disabled for memory efficiency
+    cache_ttl: 60  # Reduced to 1 minute from 5 minutes
+    max_concurrent_operations: 3  # Reduced from 10
+    connection_pool_size: 2  # Reduced from 5
+  # Monitoring thresholds for edge devices
+  monitoring_thresholds:
+    memory_usage_percent: 90.0      # Memory usage threshold
+    error_rate_percent: 5.0         # Error rate threshold
+    average_response_time_ms: 1000.0 # Response time threshold
+    active_connections_limit: 900   # Connection limit
+    goroutines_limit: 1000          # Goroutine limit
+  # Debounce configuration for notifications
+  debounce:
+    health_monitor_seconds: 15      # Health monitor debounce
+    storage_monitor_seconds: 30     # Storage monitor debounce
+    performance_monitor_seconds: 45 # Performance monitor debounce
+
+# Security configuration optimized for edge devices
+security:
+  rate_limit_requests: 300  # Increased from 50 for better usability
+  rate_limit_window: 1m     # Reduced from 2m for more responsive rate limiting
+  jwt_secret_key: "edge-device-secret-key-change-in-production"
+  jwt_expiry_hours: 48     # Increased from 24 for stability
+  
+  # CORS configuration for WebSocket security
+  cors_origins: ["http://localhost:3000", "https://localhost:3000"]  # Allowed origins
+  cors_methods: ["GET", "POST", "OPTIONS"]  # Allowed HTTP methods
+  cors_headers: ["Authorization", "Content-Type"]  # Allowed headers
+  cors_credentials: false  # Disable credentials for security
+
+# Storage configuration optimized for edge devices
+storage:
+  warn_percent: 70    # Reduced from 80 for early warning
+  block_percent: 85   # Reduced from 90 for safety
+  default_path: "/opt/camera-service/recordings"
+  fallback_path: "/opt/camera-service/recordings"
+
+# Retention policy optimized for edge devices
+retention_policy:
+  enabled: true
+  type: "age"
+  max_age_days: 30     # Increased from 7 days
+  max_size_gb: 0.5     # Reduced from 1 GB
+  auto_cleanup: true
+
+# External discovery configuration (disabled by default for edge devices)
+external_discovery:
+  enabled: false                      # Disabled by default for edge devices
+  scan_interval: 30                   # 30 seconds for testing (not 0 to prevent issues)
+  scan_timeout: 30                    # 30 seconds max scan time
+  max_concurrent_scans: 3             # Reduced from 5 for edge devices
+  enable_startup_scan: false          # Disabled for edge devices
+  
+  # Skydio UAV discovery configuration
+  skydio:
+    enabled: false                    # Disabled by default
+    network_ranges: ["192.168.42.0/24"]  # Skydio default network range
+    eo_port: 5554                     # EO stream port
+    ir_port: 6554                     # IR stream port
+    eo_stream_path: "/subject"        # EO stream path
+    ir_stream_path: "/infrared"       # IR stream path
+    enable_both_streams: true         # Enable both EO and IR streams
+    known_ips: ["192.168.42.10"]      # Known Skydio IP addresses
+  
+  # Generic UAV discovery configuration (for other models)
+  generic_uav:
+    enabled: false                    # Disabled by default
+    network_ranges: []                # Empty by default
+    common_ports: [554, 8554]         # Common RTSP ports
+    stream_paths: ["/stream", "/live", "/video"]  # Common stream paths
+    known_ips: []                     # Empty by default
+
+# Health server port for edge device monitoring
+health_port: 8080
+
+# Server operation defaults for edge devices
+server_defaults:
+  shutdown_timeout: 30.0              # 30 seconds for edge devices
+  camera_monitor_ticker: 60.0         # 60 seconds for edge devices
+
+# API Key Management Configuration (disabled by default for edge devices)
+api_key_management:
+  storage_path: "/opt/camera-service/api-keys.json"
+  encryption_key: "edge-device-encryption-key-32-chars-long"
+  backup_enabled: false               # Disabled for edge devices
+  backup_path: "/opt/camera-service/backups/keys"
+  backup_interval: "24h"
+  key_length: 32
+  key_prefix: "csk_"
+  key_format: "base64url"
+  default_expiry: "90d"
+  rotation_enabled: false             # Disabled for edge devices
+  rotation_interval: "30d"
+  max_keys_per_role: 5                # Reduced for edge devices
+  audit_logging: true
+  usage_tracking: true
+  cli_enabled: true
+  admin_interface: false              # Disabled for edge devices
+  admin_port: 8004
+
+# HTTP Health Endpoint Configuration (enabled for container orchestration)
+http_health:
+  enabled: true
+  host: "0.0.0.0"
+  port: 8003
+  read_timeout: "5s"
+  write_timeout: "5s"
+  idle_timeout: "30s"
+  basic_endpoint: "/health"
+  detailed_endpoint: "/health/detailed"
+  ready_endpoint: "/health/ready"
+  live_endpoint: "/health/live"
+  response_format: "json"
+  include_version: true
+  include_uptime: true
+  include_components: true
+  max_response_time: "100ms"
+  enable_metrics: false               # Disabled for edge devices
+  internal_only: true                 # Restricted to internal access
+  allowed_ips: []                     # Empty for internal only

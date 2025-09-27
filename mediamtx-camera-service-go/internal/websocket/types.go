@@ -99,6 +99,11 @@ type JsonRpcError struct {
 	Data    interface{} `json:"data,omitempty"`
 }
 
+// Error implements the error interface
+func (e *JsonRpcError) Error() string {
+	return e.Message
+}
+
 // ErrorData standardizes JSON-RPC error data payloads
 type ErrorData struct {
 	Reason     string `json:"reason,omitempty"`

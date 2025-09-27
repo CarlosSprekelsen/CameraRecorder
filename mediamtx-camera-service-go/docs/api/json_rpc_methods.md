@@ -26,7 +26,7 @@
 3. **Removal**: After 12 months, feature removed
 4. **Migration Support**: Tools and guides provided  
 
-This document describes all available JSON-RPC 2.0 methods provided by the MediaMTX Camera Service Go implementation. The API maintains 100% compatibility with the Python implementation while providing Go-specific examples and performance improvements.
+This document describes all available JSON-RPC 2.0 methods provided by the MediaMTX Camera Service Go implementation. The API provides high-performance WebSocket communication with comprehensive camera management capabilities.
 
 ## JSON-RPC 2.0 Compliance (Authoritative)
 
@@ -111,6 +111,7 @@ Call `authenticate` once after opening the WebSocket. If it succeeds, the **conn
 | `get_streams`        |    ✅   |     ✅    |   ✅   |
 | `get_metrics`        |    ❌   |     ❌    |   ✅   |
 | `get_status`         |    ❌   |     ❌    |   ✅   |
+| `get_system_status`  |    ✅   |     ✅    |   ✅   |
 | `get_server_info`    |    ✅   |     ✅    |   ✅   |
 | `get_storage_info`   |    ❌   |     ❌    |   ✅   |
 | `set_retention_policy` |  ❌   |     ❌    |   ✅   |
@@ -1781,6 +1782,107 @@ Each component reports its operational state:
   - `camera_monitor`: Camera discovery monitor status ("RUNNING", "STOPPED", "ERROR", "STARTING", "STOPPING") (string)
   - `mediamtx`: MediaMTX service connectivity status ("RUNNING", "STOPPED", "ERROR", "STARTING", "STOPPING") (string)
 
+### get_system_status
+
+Get system readiness and initialization status for client applications.
+
+**Authentication:** Required (viewer role)
+
+**Parameters:** None
+
+**Returns:** Object containing system readiness status, available cameras, and initialization progress
+
+**Status:** ✅ Implemented
+
+**Implementation:** Provides real-time system readiness information including camera discovery status, available cameras, and initialization progress. This method is designed for client applications to determine when the system is ready to accept requests and what resources are currently available.
+
+**System Readiness Status Values:**
+
+The system readiness status indicates the current initialization state:
+
+- **`"starting"`** - System is initializing, components are starting up
+  - Camera discovery is in progress
+  - MediaMTX service is starting
+  - No cameras are available yet
+  - Client should wait before making camera-specific requests
+
+- **`"partial"`** - System is partially ready, some components available
+  - Some cameras have been discovered and are available
+  - Camera discovery may still be in progress
+  - Client can make requests for available cameras
+  - System is functional but may still be discovering additional resources
+
+- **`"ready"`** - System is fully operational
+  - All components are initialized and running
+  - Camera discovery is complete
+  - All discovered cameras are available for use
+  - Client can make full use of all system capabilities
+
+**Example:**
+
+```json
+// Request
+{
+  "jsonrpc": "2.0",
+  "method": "get_system_status",
+  "id": 12
+}
+
+// Response (System Starting)
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "status": "starting",
+    "message": "System is initializing, please wait",
+    "available_cameras": [],
+    "discovery_active": true
+  },
+  "id": 12
+}
+
+// Response (System Partially Ready)
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "status": "partial",
+    "message": "Some cameras available, discovery in progress",
+    "available_cameras": ["camera0"],
+    "discovery_active": true
+  },
+  "id": 12
+}
+
+// Response (System Ready)
+{
+  "jsonrpc": "2.0",
+  "result": {
+    "status": "ready",
+    "message": "System is fully operational",
+    "available_cameras": ["camera0", "camera1"],
+    "discovery_active": false
+  },
+  "id": 12
+}
+```
+
+**Response Fields:**
+
+- `status`: System readiness status ("starting", "partial", "ready") (string)
+- `message`: Human-readable status message describing current state (string)
+- `available_cameras`: Array of currently available camera device identifiers (array of strings)
+- `discovery_active`: Whether camera discovery is currently in progress (boolean)
+
+**Use Cases:**
+
+- **Client Initialization**: Check system readiness before making camera requests
+- **Progressive Loading**: Determine which cameras are available for immediate use
+- **Status Monitoring**: Monitor system initialization progress in real-time
+- **Error Prevention**: Avoid making requests for cameras that haven't been discovered yet
+
+**Note:** This method provides different information than `get_status`:
+- `get_system_status`: Real-time readiness and initialization state (viewer accessible)
+- `get_status`: Comprehensive system health monitoring with metrics (admin only)
+
 ### get_server_info
 
 Get server configuration and capability information.
@@ -2022,6 +2124,8 @@ Discover external RTSP streams including UAVs and other network-based video sour
 
 **Implementation:** Performs network scanning to discover external RTSP streams with configurable parameters for different UAV models and network ranges.
 
+**Note:** When external discovery is disabled in configuration, this method returns a structured error response indicating that the feature is not available.
+
 **Example:**
 
 ```json
@@ -2092,6 +2196,24 @@ Discover external RTSP streams including UAVs and other network-based video sour
     },
     "scan_duration": "2.5s",
     "errors": []
+  },
+  "id": 27
+}
+```
+
+**Error Response (External Discovery Disabled):**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "error": {
+    "code": -32030,
+    "message": "Unsupported",
+    "data": {
+      "reason": "feature_disabled",
+      "details": "External stream discovery is disabled in configuration",
+      "suggestion": "Enable external discovery in configuration"
+    }
   },
   "id": 27
 }
@@ -2479,7 +2601,7 @@ Responses MAY include a top-level `"metadata"` object with:
 
 **Performance Characteristics:**
 
-- **Response Time:** <100ms for 95% of requests (5x improvement over Python)
+- **Response Time:** <100ms for 95% of requests (high-performance Go implementation)
 - **Concurrency:** 1000+ simultaneous WebSocket connections (10x improvement)
 - **Memory Usage:** <60MB base footprint (50% reduction)
 - **CPU Usage:** <50% sustained usage (30% reduction)
@@ -2496,4 +2618,4 @@ Responses MAY include a top-level `"metadata"` object with:
 **API Version:** 1.0.0 (Go Implementation)  
 **Last Updated:** 2025-01-15  
 **Implementation Status:** All core methods, notifications, and event subscription system implemented and operational  
-**Performance Status:** 5x improvement over Python implementation achieved, 100x+ event system performance improvement
+**Performance Status:** High-performance Go implementation achieved, 100x+ event system performance improvement

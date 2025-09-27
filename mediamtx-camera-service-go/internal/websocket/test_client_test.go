@@ -360,6 +360,11 @@ func (c *WebSocketTestClient) GetStatus() (*JSONRPCResponse, error) {
 	return c.SendJSONRPC("get_status", nil)
 }
 
+// GetSystemStatus gets system readiness status (viewer accessible)
+func (c *WebSocketTestClient) GetSystemStatus() (*JSONRPCResponse, error) {
+	return c.SendJSONRPC("get_system_status", nil)
+}
+
 // GetServerInfo gets server information
 func (c *WebSocketTestClient) GetServerInfo() (*JSONRPCResponse, error) {
 	return c.SendJSONRPC("get_server_info", nil)
@@ -416,9 +421,9 @@ func (c *WebSocketTestClient) GetSnapshotInfo(filename string) (*JSONRPCResponse
 // ============================================================================
 
 // SubscribeEvents subscribes to events
-func (c *WebSocketTestClient) SubscribeEvents(eventTypes []string) (*JSONRPCResponse, error) {
+func (c *WebSocketTestClient) SubscribeEvents(topics []string) (*JSONRPCResponse, error) {
 	params := map[string]interface{}{
-		"event_types": eventTypes,
+		"topics": topics,
 	}
 	return c.SendJSONRPC("subscribe_events", params)
 }

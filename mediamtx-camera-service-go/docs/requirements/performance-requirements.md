@@ -12,7 +12,7 @@
 
 ## How to Use This Document
 
-**Ground Truth and Scope**: This document defines the performance requirements and benchmarks for the MediaMTX Camera Service Go implementation. All performance targets are based on 5x improvement over the Python implementation while maintaining full API compatibility.
+**Ground Truth and Scope**: This document defines the performance requirements and benchmarks for the MediaMTX Camera Service Go implementation. All performance targets are optimized for high-performance camera service operations with comprehensive WebSocket communication.
 
 - **Performance Targets**: Measurable performance goals with specific thresholds
 - **Benchmark Criteria**: Validation methods and acceptance criteria
@@ -35,9 +35,9 @@ All performance targets are quantified and ready for Go implementation validatio
 ## Performance Targets Overview
 
 ### Go Implementation Performance Improvements
-The Go implementation targets significant performance improvements over the Python implementation:
+The Go implementation targets high-performance camera service operations:
 
-| Metric | Python Baseline | Go Target | Improvement Factor |
+| Metric | Baseline | Go Target | Performance Factor |
 |--------|----------------|-----------|-------------------|
 | API Response Time | 500ms | 100ms | 5x faster |
 | Concurrent Connections | 100 | 1000+ | 10x more |
@@ -300,7 +300,7 @@ The Go implementation targets significant performance improvements over the Pyth
 ### Performance Acceptance Criteria
 
 #### Minimum Viable Performance (MVP)
-- API Response Time: <200ms (2x improvement over Python)
+- API Response Time: <200ms (high-performance Go implementation)
 - Concurrent Connections: 500+ (5x improvement)
 - Memory Usage: <80MB (no regression)
 - Camera Detection: <500ms (2x improvement)

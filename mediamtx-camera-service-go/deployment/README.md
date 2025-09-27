@@ -1,6 +1,6 @@
 # MediaMTX Camera Service (Go) - Deployment Scripts
 
-This directory contains deployment scripts for the MediaMTX Camera Service Go implementation, adapted from the Python version.
+This directory contains deployment scripts for the MediaMTX Camera Service Go implementation.
 
 ## Scripts Overview
 

@@ -786,7 +786,10 @@ func (c *controller) DiscoverExternalStreams(ctx context.Context, options Discov
 	}
 
 	if !c.hasExternalDiscovery() {
-		return nil, fmt.Errorf("external stream discovery is not configured")
+		// Return structured error response for disabled external discovery
+		return nil, &ExternalDiscoveryDisabledError{
+			Message: "External stream discovery is disabled in configuration",
+		}
 	}
 
 	// Pure delegation to ExternalStreamDiscovery - returns API-ready response

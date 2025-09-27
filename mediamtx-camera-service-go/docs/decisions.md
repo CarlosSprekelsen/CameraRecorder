@@ -18,7 +18,7 @@ Track architectural and technical decisions for the MediaMTX Camera Service Go i
 **Components:** Technology Stack  
 
 **Context:**  
-The project requires a high-performance implementation to replace the Python version while maintaining full API compatibility. Performance targets include 5x response time improvement and 10x concurrency improvement.
+The project requires a high-performance Go implementation for camera service operations. Performance targets include sub-100ms response times and 1000+ concurrent connections.
 
 **Decision:**  
 Use Go 1.24.6+ as the primary implementation language for the MediaMTX Camera Service.
@@ -26,7 +26,7 @@ Use Go 1.24.6+ as the primary implementation language for the MediaMTX Camera Se
 **Rationale:**
 - **Performance:** Go provides near-native performance with garbage collection
 - **Concurrency:** Built-in goroutines and channels for efficient concurrent programming
-- **Memory Efficiency:** Lower memory footprint compared to Python
+- **Memory Efficiency:** Lower memory footprint with efficient garbage collection
 - **Static Linking:** Single binary deployment without runtime dependencies
 - **Ecosystem:** Rich standard library and third-party packages for WebSocket, HTTP, and JSON-RPC
 - **Tooling:** Excellent development tools (gofmt, golangci-lint, go test)
@@ -37,8 +37,8 @@ Use Go 1.24.6+ as the primary implementation language for the MediaMTX Camera Se
 - **Neutral:** Maintains API compatibility through identical JSON-RPC protocol
 
 **Evidence:**
-- Go performance benchmarks show 5-10x improvement over Python for similar workloads
-- Static binary deployment eliminates Python runtime dependencies
+- Go performance benchmarks show excellent performance for I/O-bound workloads
+- Static binary deployment eliminates runtime dependencies
 - Goroutines provide efficient concurrency model for WebSocket connections
 
 ---
@@ -96,11 +96,11 @@ Use Viper library for configuration management with YAML as primary format.
 **Consequences:**
 - **Positive:** Flexible configuration, environment variable support, runtime updates
 - **Negative:** Additional dependency, configuration complexity
-- **Neutral:** Maintains compatibility with Python implementation configuration
+- **Neutral:** Maintains configuration compatibility
 
 **Evidence:**
 - Viper is widely used in Go applications for configuration management
-- Supports the same configuration hierarchy as Python implementation
+- Supports comprehensive configuration hierarchy
 - Provides better type safety than manual configuration parsing
 
 ---
@@ -127,7 +127,7 @@ Use logrus library for structured logging.
 **Consequences:**
 - **Positive:** Structured logging, JSON output, extensible hooks
 - **Negative:** Additional dependency, different API from standard log package
-- **Neutral:** Maintains logging compatibility with Python implementation
+- **Neutral:** Maintains logging compatibility
 
 **Evidence:**
 - logrus is the most popular structured logging library for Go
@@ -153,7 +153,7 @@ Use golang-jwt/jwt/v4 for JWT handling and golang.org/x/crypto/bcrypt for passwo
 - **Security:** Provides comprehensive JWT validation and signing
 - **Performance:** Efficient JWT parsing and validation
 - **Bcrypt:** Standard library for secure password hashing
-- **Compatibility:** Maintains authentication compatibility with Python implementation
+- **Compatibility:** Maintains authentication compatibility
 
 **Consequences:**
 - **Positive:** Secure authentication, widely adopted libraries, good performance
@@ -162,7 +162,7 @@ Use golang-jwt/jwt/v4 for JWT handling and golang.org/x/crypto/bcrypt for passwo
 
 **Evidence:**
 - golang-jwt/jwt/v4 is the de facto standard for JWT in Go
-- Provides the same JWT functionality as Python PyJWT library
+- Provides comprehensive JWT functionality for secure authentication
 - Bcrypt is the standard for password hashing in Go
 
 ---
@@ -219,11 +219,11 @@ Use goroutines with channels for communication and context.Context for cancellat
 
 **Consequences:**
 - **Positive:** Efficient concurrency, built-in safety, good performance
-- **Negative:** Different concurrency model from Python asyncio
+- **Negative:** Different concurrency model from traditional threading
 - **Neutral:** Standard Go concurrency patterns
 
 **Evidence:**
-- Goroutines provide better performance than Python asyncio for I/O-bound workloads
+- Goroutines provide excellent performance for I/O-bound workloads
 - Channels provide thread-safe communication without locks
 - Context is the standard Go pattern for cancellation and timeouts
 
@@ -245,12 +245,12 @@ Use Go's error interface with custom error types and error wrapping.
 - **Error Interface:** Go's standard error handling pattern
 - **Custom Errors:** Domain-specific error types for better error handling
 - **Error Wrapping:** fmt.Errorf with %w verb for error context
-- **Compatibility:** Maintains error handling compatibility with Python implementation
+- **Compatibility:** Maintains error handling compatibility
 - **Tooling:** Works well with Go error handling tools and linters
 
 **Consequences:**
 - **Positive:** Standard error handling, custom error types, good tooling support
-- **Negative:** Different error handling model from Python exceptions
+- **Negative:** Different error handling model from exception-based languages
 - **Neutral:** Follows Go best practices
 
 **Evidence:**
@@ -281,7 +281,7 @@ Use Go's built-in testing package with testify for assertions and test utilities
 
 **Consequences:**
 - **Positive:** Excellent testing support, built-in benchmarking, good tooling
-- **Negative:** Different testing approach from Python pytest
+- **Negative:** Different testing approach from other testing frameworks
 - **Neutral:** Standard Go testing practices
 
 **Evidence:**
@@ -312,7 +312,7 @@ Use Make for build automation with static linking and multi-stage OCI container 
 
 **Consequences:**
 - **Positive:** Simple deployment, no runtime dependencies, container support
-- **Negative:** Different build process from Python
+- **Negative:** Different build process from interpreted languages
 - **Neutral:** Standard Go deployment practices
 
 **Evidence:**
@@ -329,7 +329,7 @@ Use Make for build automation with static linking and multi-stage OCI container 
 **Components:** All Components  
 
 **Context:**  
-The service must achieve 5x performance improvement over Python implementation.
+The service must achieve high-performance camera service operations.
 
 **Decision:**  
 Use object pools, connection pooling, and efficient data structures with profiling.
@@ -375,7 +375,7 @@ Use Go's crypto libraries with custom security middleware and input validation.
 **Consequences:**
 - **Positive:** Comprehensive security, secure defaults, good tooling
 - **Negative:** More complex security implementation
-- **Neutral:** Maintains security compatibility with Python implementation
+- **Neutral:** Maintains security compatibility
 
 **Evidence:**
 - Go's crypto libraries are well-tested and secure

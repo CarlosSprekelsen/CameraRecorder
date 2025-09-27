@@ -523,12 +523,11 @@ func (s *WebSocketServer) MethodGetStatus(params map[string]interface{}, client 
 // MethodGetSystemStatus implements the get_system_status method
 // Returns detailed system readiness information
 func (s *WebSocketServer) MethodGetSystemStatus(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// No authentication required for system status
-	return &JsonRpcResponse{
-		JSONRPC: "2.0",
-		ID:      params["id"],
-		Result:  s.getSystemReadinessResponse(),
-	}, nil
+	// Uses wrapper helpers for consistent method execution
+	return s.authenticatedMethodWrapper("get_system_status", func() (interface{}, error) {
+		// Return system readiness response - no additional processing needed
+		return s.getSystemReadinessResponse(), nil
+	})(params, client)
 }
 
 // MethodGetServerInfo implements the get_server_info method
@@ -1233,7 +1232,7 @@ func (s *WebSocketServer) MethodDiscoverExternalStreams(params map[string]interf
 		// Trigger discovery with options
 		result, err := s.mediaMTXController.DiscoverExternalStreams(context.Background(), options)
 		if err != nil {
-			return nil, fmt.Errorf("discovery failed: %w", err)
+			return nil, err
 		}
 
 		return result, nil
@@ -1322,6 +1321,12 @@ func (s *WebSocketServer) MethodSetDiscoveryInterval(params map[string]interface
 // translateErrorToJsonRpc converts business logic errors to appropriate JSON-RPC errors
 func (s *WebSocketServer) translateErrorToJsonRpc(err error, methodName string) *JsonRpcError {
 	errMsg := err.Error()
+
+	// External discovery disabled error
+	if strings.Contains(errMsg, "external stream discovery is disabled in configuration") {
+		return NewJsonRpcError(UNSUPPORTED, "feature_disabled",
+			"External stream discovery is disabled in configuration", "Enable external discovery in configuration")
+	}
 
 	// Check for specific error patterns from Phase 1 enhanced error messages
 	if strings.Contains(errMsg, "status 404") {

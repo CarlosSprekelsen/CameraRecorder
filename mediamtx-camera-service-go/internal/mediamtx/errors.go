@@ -178,3 +178,13 @@ func NewPathErrorWithErr(pathName, op, message string, err error) *PathError {
 		Err:      err,
 	}
 }
+
+// ExternalDiscoveryDisabledError represents an error when external discovery is disabled
+type ExternalDiscoveryDisabledError struct {
+	Message string
+}
+
+// Error implements the error interface
+func (e *ExternalDiscoveryDisabledError) Error() string {
+	return e.Message
+}

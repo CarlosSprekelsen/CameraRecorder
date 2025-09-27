@@ -71,7 +71,8 @@ func NewPermissionChecker() *PermissionChecker {
 		"get_streams",
 		"get_stream_url",
 		"get_stream_status",
-		"get_server_info", // JSON-RPC spec: viewer, operator, admin all allowed
+		"get_server_info",   // JSON-RPC spec: viewer, operator, admin all allowed
+		"get_system_status", // System readiness status - accessible to all authenticated users
 		"subscribe_events",
 		"unsubscribe_events",
 		"get_subscription_stats",
