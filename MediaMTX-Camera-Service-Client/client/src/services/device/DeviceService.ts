@@ -2,7 +2,7 @@ import { WebSocketService } from '../websocket/WebSocketService';
 import { LoggerService } from '../logger/LoggerService';
 import { Camera, StreamInfo } from '../../stores/device/deviceStore';
 import { IDiscovery } from '../interfaces/ServiceInterfaces';
-import { CameraListResult, StreamUrlResult, CameraCapabilitiesResult, StreamStatusResult } from '../../types/api';
+import { CameraListResult, StreamUrlResult, CameraCapabilitiesResult, StreamStatusResult, StreamStartResult, StreamStopResult } from '../../types/api';
 
 /**
  * Device Service - Camera discovery and stream management
@@ -57,6 +57,24 @@ export class DeviceService implements IDiscovery {
       return [];
     } catch (error) {
       this.logger.error('Failed to get camera list', error as Record<string, unknown>);
+      throw error;
+    }
+  }
+
+  /**
+   * Get status for a specific camera device
+   * Implements get_camera_status RPC method
+   */
+  async getCameraStatus(device: string): Promise<CameraStatusResult> {
+    try {
+      this.logger.info(`Getting camera status for device: ${device}`);
+
+      const response = await this.wsService.sendRPC('get_camera_status', { device }) as CameraStatusResult;
+
+      this.logger.info(`Retrieved camera status for ${device}:`, response);
+      return response;
+    } catch (error) {
+      this.logger.error(`Failed to get camera status for device: ${device}`, error as Record<string, unknown>);
       throw error;
     }
   }
@@ -172,6 +190,42 @@ export class DeviceService implements IDiscovery {
       return response;
     } catch (error) {
       this.logger.error(`Failed to get stream status for device: ${device}`, error as Record<string, unknown>);
+      throw error;
+    }
+  }
+
+  /**
+   * Start streaming for a specific camera device
+   * Implements start_streaming RPC method
+   */
+  async startStreaming(device: string, format?: string): Promise<StreamStartResult> {
+    try {
+      this.logger.info(`Starting streaming for device: ${device}`, { format });
+
+      const response = await this.wsService.sendRPC('start_streaming', { device, format }) as StreamStartResult;
+
+      this.logger.info(`Started streaming for ${device}`);
+      return response;
+    } catch (error) {
+      this.logger.error(`Failed to start streaming for device: ${device}`, error as Record<string, unknown>);
+      throw error;
+    }
+  }
+
+  /**
+   * Stop streaming for a specific camera device
+   * Implements stop_streaming RPC method
+   */
+  async stopStreaming(device: string): Promise<StreamStopResult> {
+    try {
+      this.logger.info(`Stopping streaming for device: ${device}`);
+
+      const response = await this.wsService.sendRPC('stop_streaming', { device }) as StreamStopResult;
+
+      this.logger.info(`Stopped streaming for ${device}`);
+      return response;
+    } catch (error) {
+      this.logger.error(`Failed to stop streaming for device: ${device}`, error as Record<string, unknown>);
       throw error;
     }
   }

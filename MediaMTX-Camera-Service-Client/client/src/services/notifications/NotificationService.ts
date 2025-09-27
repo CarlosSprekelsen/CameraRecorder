@@ -82,4 +82,34 @@ export class NotificationService {
   getHandlerCount(method: string): number {
     return this.handlers.get(method)?.size || 0;
   }
+
+  /**
+   * Subscribe to camera status update notifications
+   * Implements camera_status_update RPC method
+   */
+  subscribeToCameraStatusUpdates(handler: NotificationHandler): () => void {
+    return this.subscribe('camera_status_update', handler);
+  }
+
+  /**
+   * Subscribe to recording status update notifications
+   * Implements recording_status_update RPC method
+   */
+  subscribeToRecordingStatusUpdates(handler: NotificationHandler): () => void {
+    return this.subscribe('recording_status_update', handler);
+  }
+
+  /**
+   * Unsubscribe from camera status update notifications
+   */
+  unsubscribeFromCameraStatusUpdates(handler: NotificationHandler): void {
+    this.unsubscribe('camera_status_update', handler);
+  }
+
+  /**
+   * Unsubscribe from recording status update notifications
+   */
+  unsubscribeFromRecordingStatusUpdates(handler: NotificationHandler): void {
+    this.unsubscribe('recording_status_update', handler);
+  }
 }

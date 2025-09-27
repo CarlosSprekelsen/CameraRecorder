@@ -8,6 +8,7 @@ import { NotificationService } from './notifications/NotificationService';
 import { DeviceService } from './device/DeviceService';
 import { RecordingService } from './recording/RecordingService';
 import { FileService } from './file/FileService';
+import { ExternalStreamService } from './external/ExternalStreamService';
 import { logger } from './logger/LoggerService';
 
 export class ServiceFactory {
@@ -19,6 +20,7 @@ export class ServiceFactory {
   private deviceService: DeviceService | null = null;
   private recordingService: RecordingService | null = null;
   private fileService: FileService | null = null;
+  private externalStreamService: ExternalStreamService | null = null;
 
   private constructor() {}
 
@@ -85,6 +87,14 @@ export class ServiceFactory {
     return this.fileService;
   }
 
+  createExternalStreamService(wsService: WebSocketService): ExternalStreamService {
+    if (!this.externalStreamService) {
+      this.externalStreamService = new ExternalStreamService(wsService, logger);
+      logger.info('External stream service created');
+    }
+    return this.externalStreamService;
+  }
+
   getWebSocketService(): WebSocketService | null {
     return this.wsService;
   }
@@ -113,6 +123,10 @@ export class ServiceFactory {
     return this.fileService;
   }
 
+  getExternalStreamService(): ExternalStreamService | null {
+    return this.externalStreamService;
+  }
+
   // Cleanup method for testing
   reset(): void {
     this.wsService = null;
@@ -122,6 +136,7 @@ export class ServiceFactory {
     this.deviceService = null;
     this.recordingService = null;
     this.fileService = null;
+    this.externalStreamService = null;
     logger.info('Service factory reset');
   }
 }

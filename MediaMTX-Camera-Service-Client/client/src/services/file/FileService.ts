@@ -1,7 +1,7 @@
 import { WebSocketService } from '../websocket/WebSocketService';
 import { LoggerService } from '../logger/LoggerService';
 import { IFileCatalog, IFileActions } from '../interfaces/ServiceInterfaces';
-import { FileListResult, RecordingInfo, SnapshotInfo, DeleteResult } from '../../types/api';
+import { FileListResult, RecordingInfo, SnapshotInfo, DeleteResult, RetentionPolicySetResult, CleanupResult } from '../../types/api';
 
 /**
  * File Service - File management and operations
@@ -204,6 +204,50 @@ export class FileService implements IFileCatalog, IFileActions {
       this.logger.info(`Download initiated for: ${filename}`);
     } catch (error) {
       this.logger.error(`Failed to download file ${filename}`, error as Record<string, unknown>);
+      throw error;
+    }
+  }
+
+  /**
+   * Set file retention policy for automatic cleanup.
+   * Implements set_retention_policy RPC method.
+   */
+  async setRetentionPolicy(
+    policyType: 'age' | 'size' | 'manual',
+    enabled: boolean,
+    maxAgeDays?: number,
+    maxSizeGb?: number
+  ): Promise<RetentionPolicySetResult> {
+    try {
+      this.logger.info('Setting retention policy', { policyType, enabled, maxAgeDays, maxSizeGb });
+      const params: Record<string, unknown> = {
+        policy_type: policyType,
+        enabled
+      };
+      if (maxAgeDays !== undefined) params.max_age_days = maxAgeDays;
+      if (maxSizeGb !== undefined) params.max_size_gb = maxSizeGb;
+      
+      const response = await this.wsService.sendRPC('set_retention_policy', params) as RetentionPolicySetResult;
+      this.logger.info('Retention policy set successfully');
+      return response;
+    } catch (error) {
+      this.logger.error('Failed to set retention policy', error as Record<string, unknown>);
+      throw error;
+    }
+  }
+
+  /**
+   * Cleanup old files based on retention criteria.
+   * Implements cleanup_old_files RPC method.
+   */
+  async cleanupOldFiles(): Promise<CleanupResult> {
+    try {
+      this.logger.info('Cleaning up old files');
+      const response = await this.wsService.sendRPC('cleanup_old_files') as CleanupResult;
+      this.logger.info(`Cleanup completed: ${response.files_deleted} files deleted`);
+      return response;
+    } catch (error) {
+      this.logger.error('Failed to cleanup old files', error as Record<string, unknown>);
       throw error;
     }
   }

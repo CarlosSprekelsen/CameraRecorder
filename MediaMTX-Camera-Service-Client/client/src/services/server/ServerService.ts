@@ -81,6 +81,14 @@ export class ServerService implements IStatus {
     return this.wsService.sendRPC<SystemStatus>('get_status');
   }
 
+  async getSystemStatus(): Promise<SystemStatus> {
+    if (!this.wsService.isConnected) {
+      throw new Error('WebSocket not connected');
+    }
+
+    return this.wsService.sendRPC<SystemStatus>('get_system_status');
+  }
+
   async getStorageInfo(): Promise<StorageInfo> {
     if (!this.wsService.isConnected) {
       throw new Error('WebSocket not connected');
