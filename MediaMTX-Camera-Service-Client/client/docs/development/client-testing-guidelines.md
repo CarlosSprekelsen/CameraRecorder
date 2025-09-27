@@ -75,11 +75,12 @@ client/tests/
 └── config/           # Test configurations
 ```
 
-### Naming Convention
-- **Files**: `test_<what>_<type>.{ts,js}` using snake_case
-- **Functions**: `test_<behavior>_<scenario>()`
-- **Examples**: `test_camera_detail_component.ts`, `test_websocket_integration.ts`, `test_auth_flow_e2e.js`
+### Naming Convention - STANDARDIZED
+- **Files**: `*.test.{ts,js}` using standard Jest convention
+- **Functions**: `test_<behavior>_<scenario>()` or `describe('<feature>', () => { it('should <behavior>', () => {}) })`
+- **Examples**: `camera_operations.test.ts`, `websocket_integration.test.ts`, `auth_flow_e2e.test.ts`
 - **No variations**: No _real, _v2, _mock suffixes
+- **Jest Standard**: Follows Jest's `*.test.ts` pattern for automatic discovery
 
 ## Mocking Strategy
 
@@ -154,30 +155,47 @@ client/tests/
 - WebSocket connection: <1s (p95)
 - Client load: <3s (p95)
 
-## Test Configuration
+## Test Configuration - STANDARDIZED
 
-### Environment-Specific Configs
+### Jest Configuration Architecture
 ```javascript
-// jest.config.cjs - Unit tests (jsdom + mocks)
-module.exports = {
-  testEnvironment: 'jsdom',
-  testMatch: ['**/tests/unit/**/*.test.{ts,js}'],
-  setupFilesAfterEnv: ['<rootDir>/tests/utils/setup-unit.ts']
+// jest.config.base.cjs - Base configuration (shared settings)
+const baseConfig = {
+  transform: { /* shared transform config */ },
+  moduleNameMapper: { /* shared module mapping */ },
+  collectCoverageFrom: [ /* shared coverage patterns */ ]
 };
 
-// jest.integration.config.cjs - Integration tests (Node.js + real WebSocket)
+// jest-unit.config.cjs - Unit tests (jsdom + mocks)
 module.exports = {
+  ...baseConfig,
+  testEnvironment: 'jsdom',
+  testMatch: ['**/tests/unit/**/*.test.{ts,js}'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.ts']
+};
+
+// jest.config.cjs - Integration tests (Node.js + real WebSocket)
+module.exports = {
+  ...baseConfig,
   testEnvironment: 'node', 
   testMatch: ['**/tests/integration/**/*.test.{ts,js}'],
-  setupFilesAfterEnv: ['<rootDir>/tests/utils/setup-integration.ts']
+  setupFilesAfterEnv: ['<rootDir>/tests/integration/setup.ts']
+};
+
+// jest-e2e.config.cjs - E2E tests (Node.js + real hardware)
+module.exports = {
+  ...baseConfig,
+  testEnvironment: 'node',
+  testMatch: ['**/tests/e2e/**/*.test.{ts,js}'],
+  setupFilesAfterEnv: ['<rootDir>/tests/setup.integration.ts']
 };
 ```
 
-### Test Execution Requirements
-- Unit tests: Use `jest.config.cjs` (jsdom + mocks)
-- Integration tests: Use `jest.integration.config.cjs` (Node.js + real WebSocket)
-- Performance tests: Use `jest.integration.config.cjs` (Node.js + real WebSocket)
-- E2E tests: Use `jest.integration.config.cjs` (Node.js + real WebSocket)
+### Test Execution Requirements - UPDATED
+- Unit tests: `npm run test:unit` (jsdom + mocks)
+- Integration tests: `npm run test:integration` (Node.js + real WebSocket)
+- E2E tests: `npm run test:e2e` (Node.js + real hardware)
+- All tests: `npm run test:all` (unit + integration + e2e)
 
 ### WebSocket Testing
 - Unit tests: Mock WebSocket services completely
@@ -256,7 +274,34 @@ describe('Feature Tests', () => {
 - Test against real endpoints
 - Document new shared utilities
 
+## Multi-Developer Coordination
+
+### Development Workflow
+1. **Before Testing**: Always run `./set-test-env.sh` to ensure current server configuration
+2. **Test Execution**: Use standardized npm scripts (`test:unit`, `test:integration`, `test:e2e`)
+3. **File Naming**: Follow `*.test.ts` convention for automatic Jest discovery
+4. **Configuration**: Use centralized base config to prevent drift
+
+### Environment Synchronization
+- **Server Configuration**: Use `set-test-env.sh` to load current server settings
+- **Test Environment**: All tests use `.test_env` file for consistent configuration
+- **Port Configuration**: WebSocket (8002) vs Health (8003) endpoints clearly documented
+- **Authentication**: Dynamic token generation prevents hardcoded credentials
+
+### Team Coordination Rules
+- **No Custom Configs**: Use standardized Jest configurations only
+- **Shared Utilities**: Leverage `tests/utils/` for common patterns
+- **Consistent Patterns**: Follow established mocking and validation patterns
+- **Documentation**: Update guidelines when adding new test patterns
+
+### Troubleshooting Common Issues
+- **Test Failures**: Check server status with `curl localhost:8002/ws`
+- **Authentication Errors**: Run `./set-test-env.sh` to refresh tokens
+- **Port Conflicts**: Verify WebSocket (8002) vs Health (8003) usage
+- **Configuration Drift**: Use base config inheritance, don't create custom configs
+
 ---
 
 **Architecture Integration**: Follows go-architecture-guide.md principles adapted for client testing  
-**Maintenance Focus**: Centralized patterns prevent server-side bloat and duplication issues
+**Maintenance Focus**: Centralized patterns prevent server-side bloat and duplication issues  
+**Team Coordination**: Standardized workflow ensures consistent testing across developers

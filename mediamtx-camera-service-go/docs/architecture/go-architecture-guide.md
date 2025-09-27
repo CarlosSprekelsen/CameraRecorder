@@ -285,9 +285,11 @@ title Internal Component Architecture
 
 package "MediaMTX Camera Service" {
     component "WebSocket Server" as ws
+    component "HTTP Health Server" as http
     component "MediaMTX Controller" as controller
     component "Camera Monitor" as camera
     component "Security Framework" as security
+    component "API Key Manager" as keymgr
     queue "Device Event Source" as devsrc
     component "Path Manager" as pm
     component "Stream Manager" as sm
@@ -296,14 +298,17 @@ package "MediaMTX Camera Service" {
     interface "ControllerAPI" as ctrl_api
     interface "CameraAPI" as cam_api
     interface "SecurityAPI" as sec_api
+    interface "HealthAPI" as health_api
 }
 
 ws --> ctrl_api
+http --> health_api
 controller ..> ctrl_api
 controller --> cam_api
 camera ..> cam_api
 ws --> sec_api
 security ..> sec_api
+keymgr --> sec_api
 devsrc --> camera : udev/fsnotify Events
 controller --> pm
 controller --> sm
@@ -312,6 +317,7 @@ controller --> rm
 note right of ws
   Architecture Rules:
   • WebSocket Server contains NO business logic
+  • HTTP Health Server contains NO business logic
   • All operations delegate to MediaMTX Controller
   • No direct component-to-component calls
   • Interface-based dependency injection
@@ -381,6 +387,21 @@ end note
 - Session management
 - **Pattern:** Middleware integration with existing configuration
 
+#### HTTP Health Server (Protocol Layer)
+
+- HTTP health endpoint implementation on port 8003
+- Container orchestration compatibility (Kubernetes/Docker)
+- **Constraint:** NO business logic - delegates all operations to HealthMonitor
+- **Pattern:** Thin delegation layer for health status
+
+#### API Key Manager (Administrative Layer)
+
+- Production API key generation and management
+- CLI utility for key operations
+- Admin interface for key management
+- Secure key storage with encryption
+- **Pattern:** Separate administrative system with audit trail
+
 ### 3.3 Optional Components Pattern
 
 Some components are optional based on configuration and may be nil:
@@ -390,6 +411,8 @@ Some components are optional based on configuration and may be nil:
 | cameraMonitor | ✅ Yes | Always initialized |
 | healthMonitor | ✅ Yes | Always initialized |
 | recordingManager | ✅ Yes | Always initialized |
+| httpHealthServer | ✅ Yes | Always initialized |
+| apiKeyManager | ❌ No | Only if production key management enabled |
 | externalDiscovery | ❌ No | Only if external streams enabled |
 | pathIntegration | ❌ No | Only if auto-path creation enabled |
 
@@ -469,6 +492,13 @@ interface SecurityAPI {
     +ValidateToken(token : string) : JWTClaims
     +CheckPermission(role : string, method : string) : bool
     +CreateSession(userID : string) : Session
+}
+
+interface HealthAPI {
+    +GetHealth() : HealthResponse
+    +GetDetailedHealth() : DetailedHealthResponse
+    +IsReady() : bool
+    +IsAlive() : bool
 }
 
 @enduml
@@ -573,12 +603,14 @@ package "Layer 2: Core Services" #lightblue {
     [MediaMTXClient]
     [CameraMonitor]
     [ConfigIntegration]
+    [HealthMonitor]
 }
 
 package "Layer 3: Managers" #lightgreen {
     [PathManager]
     [StreamManager]
     [FFmpegManager]
+    [APIKeyManager]
 }
 
 package "Layer 4: Business Logic" #lightyellow {
@@ -592,6 +624,7 @@ package "Layer 5: Orchestration" #lightcoral {
 
 package "Layer 6: API" #lavender {
     [WebSocketServer]
+    [HTTPHealthServer]
 }
 
 [ConfigManager] --> [ConfigIntegration]
@@ -600,7 +633,9 @@ package "Layer 6: API" #lavender {
 [StreamManager] --> [RecordingManager]
 [RecordingManager] --> [Controller]
 [CameraMonitor] --> [Controller] : Events
+[HealthMonitor] --> [Controller] : Health Status
 [Controller] --> [WebSocketServer]
+[HealthMonitor] --> [HTTPHealthServer] : Health Data
 
 note right
 Build Order:
@@ -608,6 +643,7 @@ Build Order:
 2. Each layer depends on previous
 3. Controller orchestrates all
 4. WebSocket has NO business logic
+5. HTTP Health Server delegates to HealthMonitor
 end note
 
 @enduml
@@ -1325,6 +1361,176 @@ clients --> service : WebSocket API\nHost Network
 | 8003 | HTTP | Health checks | Internal only |
 | 9997 | HTTP | MediaMTX API | Internal only |
 | 8554 | RTSP | Media streaming | Internal only |
+
+### 5.3 HTTP Health Endpoint Architecture
+
+The system provides HTTP health endpoints on port 8003 for container orchestration, load balancers, and monitoring systems. These endpoints follow the thin delegation pattern, providing no business logic and delegating all operations to existing components.
+
+```plantuml
+@startuml HTTPHealthArchitecture
+title HTTP Health Endpoint Architecture
+
+component "HTTP Health Server" as HTTP
+component "Health Monitor" as HM
+component "MediaMTX Controller" as MC
+
+HTTP --> HM : GetHealth()
+HM --> MC : GetSystemStatus()
+MC --> HM : System Metrics
+HM --> HTTP : Health Response
+
+note right of HTTP
+Port 8003:
+- GET /health (basic)
+- GET /health/detailed (comprehensive)
+- GET /health/ready (readiness)
+- GET /health/live (liveness)
+end note
+
+@enduml
+```
+
+#### 5.3.1 HTTP Health Endpoint Design
+
+**Architecture Decision**: HTTP health endpoints are implemented as a **separate HTTP server** that delegates to existing health monitoring components, following the thin delegation pattern.
+
+**Implementation Requirements:**
+
+1. **Thin Delegation Layer**: HTTP server contains NO business logic
+2. **Component Reuse**: Delegates to existing `HealthMonitor` and `MediaMTXController`
+3. **Standard Endpoints**: Implements Kubernetes/Docker standard health check endpoints
+4. **No Authentication**: Health endpoints are internal-only and do not require authentication
+5. **Fast Response**: Health checks must respond within 100ms for orchestration compatibility
+
+**Endpoint Specifications:**
+
+| Endpoint | Purpose | Response | Use Case |
+|----------|---------|----------|----------|
+| `GET /health` | Basic health status | `{"status": "healthy"}` | Simple health checks |
+| `GET /health/detailed` | Comprehensive system status | Full health response | Detailed monitoring |
+| `GET /health/ready` | Readiness probe | `{"ready": true}` | Kubernetes readiness |
+| `GET /health/live` | Liveness probe | `{"alive": true}` | Kubernetes liveness |
+
+**Response Format:**
+
+```json
+{
+  "status": "healthy|unhealthy|degraded",
+  "timestamp": "2025-01-18T10:30:00Z",
+  "uptime": "72h15m30s",
+  "version": "1.0.0",
+  "components": {
+    "mediamtx": "healthy",
+    "cameras": "healthy",
+    "storage": "healthy"
+  }
+}
+```
+
+**Error Handling:**
+
+- HTTP 200: System healthy
+- HTTP 503: System unhealthy (for readiness/liveness probes)
+- HTTP 500: Internal server error
+
+### 5.4 Production API Key Management Architecture
+
+The system implements production-grade API key management with CLI utilities, admin interfaces, and secure key storage following enterprise security standards.
+
+```plantuml
+@startuml APIKeyManagement
+title Production API Key Management Architecture
+
+component "CLI Utility" as CLI
+component "Key Manager" as KM
+component "Admin Interface" as AI
+component "Secure Storage" as SS
+component "Audit Logger" as AL
+
+CLI --> KM : Generate/Revoke Keys
+AI --> KM : Manage Keys
+KM --> SS : Store Keys
+KM --> AL : Log Operations
+
+note right of KM
+Features:
+- Key generation (cryptographically secure)
+- Key rotation policies
+- Expiration management
+- Role-based key assignment
+- Audit trail
+end note
+
+@enduml
+```
+
+#### 5.4.1 API Key Management Design
+
+**Architecture Decision**: API key management is implemented as a **separate administrative system** with CLI utilities and web-based admin interface, following enterprise security patterns.
+
+**Implementation Requirements:**
+
+1. **Cryptographically Secure**: Keys generated using `crypto/rand` with 256-bit entropy
+2. **Role-Based Assignment**: Keys assigned to specific roles (viewer, operator, admin)
+3. **Expiration Management**: Configurable key expiration with automatic cleanup
+4. **Audit Trail**: All key operations logged for security compliance
+5. **Secure Storage**: Keys stored encrypted with configurable encryption algorithms
+6. **CLI Interface**: Command-line utilities for key management operations
+7. **Admin Interface**: Web-based interface for key management (admin role only)
+
+**CLI Utility Commands:**
+
+```bash
+# Generate new API key
+camera-service-cli keys generate --role admin --expiry 90d --description "Production admin key"
+
+# List existing keys
+camera-service-cli keys list --role admin
+
+# Revoke key
+camera-service-cli keys revoke --key-id abc123
+
+# Rotate keys
+camera-service-cli keys rotate --role operator --force
+
+# Export key (for backup)
+camera-service-cli keys export --key-id abc123 --format json
+```
+
+**Key Storage Format:**
+
+```json
+{
+  "keys": {
+    "key_abc123": {
+      "id": "key_abc123",
+      "role": "admin",
+      "created_at": "2025-01-18T10:30:00Z",
+      "expires_at": "2025-04-18T10:30:00Z",
+      "description": "Production admin key",
+      "last_used": "2025-01-18T15:45:00Z",
+      "usage_count": 42,
+      "status": "active|revoked|expired"
+    }
+  }
+}
+```
+
+**Security Features:**
+
+- **Key Rotation**: Automated key rotation with configurable intervals
+- **Usage Tracking**: Monitor key usage patterns and detect anomalies
+- **Revocation**: Immediate key revocation with audit trail
+- **Encryption**: Keys stored encrypted at rest with configurable algorithms
+- **Access Control**: Admin interface requires admin role authentication
+
+**Admin Interface Features:**
+
+- Key generation and management
+- Usage analytics and monitoring
+- Security audit reports
+- Key rotation scheduling
+- Bulk operations (generate, revoke, rotate)
 
 ---
 

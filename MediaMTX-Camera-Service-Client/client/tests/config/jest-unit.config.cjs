@@ -4,7 +4,7 @@
  * 
  * Ground Truth References:
  * - Testing Guidelines: ../docs/development/client-testing-guidelines.md
- * - Testing Implementation Plan: ../docs/development/testing-implementation-plan.md
+ * - Client Architecture: ../docs/architecture/client-architechture.md
  * 
  * Requirements Coverage:
  * - REQ-CONFIG-001: Unit test environment configuration
@@ -12,42 +12,27 @@
  * - REQ-CONFIG-003: Coverage thresholds
  * 
  * Test Categories: Unit
- * API Documentation Reference: mediamtx_camera_service_openrpc.json
+ * API Documentation Reference: mediamtx-camera-service-go/docs/api/json_rpc_methods.md
  */
+
+const baseConfig = require('../../jest.config.base.cjs');
 
 /** @type {import('jest').Config} */
 module.exports = {
+  ...baseConfig,
+  
   rootDir: '../../',
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/tests/setup.ts'],
+  
+  // Standardized test file patterns - use *.test.ts convention
   testMatch: [
     '<rootDir>/tests/unit/**/*.test.{js,ts,tsx}',
-    '<rootDir>/tests/unit/**/test_*.{js,ts,tsx}',
-    '<rootDir>/src/**/*.test.{js,ts,tsx}',
-    '<rootDir>/src/**/test_*.{js,ts,tsx}'
+    '<rootDir>/src/**/*.test.{js,ts,tsx}'
   ],
-  transform: {
-    '^.+\\.(ts|tsx)$': ['ts-jest', {
-      tsconfig: {
-        jsx: 'react-jsx',
-        skipLibCheck: true,
-        esModuleInterop: true,
-        allowSyntheticDefaultImports: true
-      }
-    }],
-    '^.+\\.js$': 'babel-jest'
-  },
-  moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/src/$1',
-    '\\.(css|less|scss|sass)$': 'identity-obj-proxy'
-  },
-  testTimeout: 30000,
-  transformIgnorePatterns: [
-    'node_modules/(?!(ws)/)'
-  ],
-  collectCoverage: true,
+  
+  // Unit-specific coverage settings
   coverageDirectory: 'coverage/unit',
-  coverageReporters: ['text', 'lcov', 'html'],
   coverageThreshold: {
     global: {
       branches: 80,
@@ -55,17 +40,5 @@ module.exports = {
       lines: 80,
       statements: 80
     }
-  },
-  collectCoverageFrom: [
-    '<rootDir>/src/**/*.{ts,tsx}',
-    '!<rootDir>/src/**/*.d.ts',
-    '!<rootDir>/src/main.tsx',
-    '!<rootDir>/src/vite-env.d.ts'
-  ],
-  coveragePathIgnorePatterns: [
-    '/node_modules/',
-    '/tests/',
-    '/coverage/',
-    '/dist/'
-  ]
+  }
 };

@@ -2,26 +2,38 @@
  * Jest Configuration for Integration Tests
  * 
  * Configuration for integration tests that require real server
+ * 
+ * Ground Truth References:
+ * - Testing Guidelines: ../docs/development/client-testing-guidelines.md
+ * - Client Architecture: ../docs/architecture/client-architechture.md
+ * 
+ * Requirements Coverage:
+ * - REQ-CONFIG-001: Integration test environment configuration
+ * - REQ-CONFIG-002: Real server communication
+ * - REQ-CONFIG-003: API compliance validation
+ * 
+ * Test Categories: Integration
+ * API Documentation Reference: mediamtx-camera-service-go/docs/api/json_rpc_methods.md
  */
 
+const baseConfig = require('../../jest.config.base.cjs');
+
 module.exports = {
+  ...baseConfig,
+  
   // Test environment
   testEnvironment: 'node',
   
-  // Test file patterns
+  // Standardized test file patterns - use *.test.ts convention
   testMatch: [
-    '<rootDir>/test_basic_connectivity.ts'
+    '<rootDir>/**/*.test.{js,ts,tsx}'
   ],
   
   // Setup files
   setupFilesAfterEnv: ['<rootDir>/setup.ts'],
   
-  // Coverage configuration
-  collectCoverage: true,
+  // Integration-specific coverage settings
   coverageDirectory: '<rootDir>/coverage/integration',
-  coverageReporters: ['text', 'lcov', 'html'],
-  
-  // Coverage thresholds (lower for integration tests)
   coverageThreshold: {
     global: {
       statements: 60,
@@ -31,31 +43,6 @@ module.exports = {
     }
   },
   
-  // Test timeout (longer for integration tests)
-  testTimeout: 30000,
-  
-  // Verbose output
-  verbose: true,
-  
-  // Transform configuration
-  transform: {
-    '^.+\\.ts$': 'ts-jest'
-  },
-  
-  // Module file extensions
-  moduleFileExtensions: ['ts', 'js', 'json'],
-  
-  // TypeScript configuration
-  globals: {
-    'ts-jest': {
-      tsconfig: '<rootDir>/tsconfig.json'
-    }
-  },
-  
-  // Test environment variables
-  // setupFiles: ['<rootDir>/tests/integration/env.ts'],
-  
-  // Global setup and teardown
-  // globalSetup: '<rootDir>/tests/integration/globalSetup.ts',
-  // globalTeardown: '<rootDir>/tests/integration/globalTeardown.ts'
+  // Verbose output for integration tests
+  verbose: true
 };

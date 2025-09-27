@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "test:unit": "npx jest --config tests/config/jest-unit.config.cjs",
     "test:integration": "npx jest --config tests/integration/jest.config.cjs",
-    "test:all": "npm run test:unit && npm run test:integration",
+    "test:e2e": "npx jest --config tests/config/jest-e2e.config.cjs",
+    "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
     "test:unit:coverage": "npm run test:unit -- --coverage",
     "test:integration:coverage": "npm run test:integration -- --coverage",
     "test:coverage": "npm run test:unit:coverage && npm run test:integration:coverage"
