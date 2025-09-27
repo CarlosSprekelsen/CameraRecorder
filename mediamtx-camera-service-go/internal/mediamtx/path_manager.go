@@ -424,7 +424,7 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config *PathC
 		// Use configured retry intervals
 		backoffs = make([]time.Duration, len(pm.config.StreamReadiness.PathManagerRetryIntervals))
 		for i, interval := range pm.config.StreamReadiness.PathManagerRetryIntervals {
-			backoffs[i] = time.Duration(interval) * time.Second
+			backoffs[i] = time.Duration(interval * float64(time.Second))
 		}
 	}
 

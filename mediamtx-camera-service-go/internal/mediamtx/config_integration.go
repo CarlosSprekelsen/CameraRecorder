@@ -72,19 +72,18 @@ func (ci *ConfigIntegration) GetMediaMTXConfig() (*config.MediaMTXConfig, error)
 	}
 
 	// Convert existing config to MediaMTX config
-	fmt.Printf("DEBUG: GetMediaMTXConfig - Source ControllerTickerInterval: %v\n", cfg.MediaMTX.StreamReadiness.ControllerTickerInterval)
 	mediaMTXConfig := &config.MediaMTXConfig{
 		// Core MediaMTX settings
 		BaseURL:        fmt.Sprintf("http://%s:%d", cfg.MediaMTX.Host, cfg.MediaMTX.APIPort),
 		HealthCheckURL: fmt.Sprintf("http://%s:%d%s", cfg.MediaMTX.Host, cfg.MediaMTX.APIPort, MediaMTXPathsList),
-		Timeout:        time.Duration(cfg.MediaMTX.HealthCheckInterval) * time.Second,
+		Timeout:        time.Duration(float64(cfg.MediaMTX.HealthCheckInterval) * float64(time.Second)),
 		RetryAttempts:  3, // Default value
-		RetryDelay:     time.Duration(cfg.MediaMTX.HealthMaxBackoffInterval) * time.Second,
+		RetryDelay:     time.Duration(float64(cfg.MediaMTX.HealthMaxBackoffInterval) * float64(time.Second)),
 
 		// Circuit breaker configuration
 		CircuitBreaker: config.CircuitBreakerConfig{
 			FailureThreshold: cfg.MediaMTX.HealthFailureThreshold,
-			RecoveryTimeout:  time.Duration(cfg.MediaMTX.HealthCircuitBreakerTimeout) * time.Second,
+			RecoveryTimeout:  time.Duration(float64(cfg.MediaMTX.HealthCircuitBreakerTimeout) * float64(time.Second)),
 			MaxFailures:      cfg.MediaMTX.HealthRecoveryConfirmationThreshold,
 		},
 

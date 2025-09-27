@@ -793,8 +793,7 @@ func (m *HybridCameraMonitor) TakeDirectSnapshot(ctx context.Context, devicePath
 		"full_command": fullCommand,
 	}).Info("Executing V4L2 direct snapshot command")
 
-	// Also log the command directly for debugging
-	fmt.Printf("DEBUG: V4L2 Command: %s\n", fullCommand)
+	// Execute V4L2 command
 
 	// Execute V4L2 direct capture with fallback format selection
 	output, err := m.commandExecutor.ExecuteCommand(ctx, devicePath, args)

@@ -300,7 +300,7 @@ func (esd *ExternalStreamDiscovery) checkSkydioStream(ctx context.Context, ip st
 	rtspURL := fmt.Sprintf("rtsp://%s:%d%s", ip, port, streamPath)
 
 	// Quick connectivity check with timeout
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(esd.config.ScanTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(float64(esd.config.ScanTimeout)*float64(time.Second)))
 	defer cancel()
 
 	// Test RTSP connection
@@ -383,7 +383,7 @@ func (esd *ExternalStreamDiscovery) checkGenericStream(ctx context.Context, ip s
 	rtspURL := fmt.Sprintf("rtsp://%s:%d%s", ip, port, streamPath)
 
 	// Quick connectivity check with timeout
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(esd.config.ScanTimeout)*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(float64(esd.config.ScanTimeout)*float64(time.Second)))
 	defer cancel()
 
 	// Test RTSP connection
@@ -420,7 +420,7 @@ func (esd *ExternalStreamDiscovery) isRTSPStreamAvailable(ctx context.Context, r
 	port := matches[2]
 
 	// Try to connect to the host:port
-	conn, err := net.DialTimeout("tcp", host+":"+port, time.Duration(esd.config.ScanTimeout)*time.Second)
+	conn, err := net.DialTimeout("tcp", host+":"+port, time.Duration(float64(esd.config.ScanTimeout)*float64(time.Second)))
 	if err != nil {
 		return false
 	}
@@ -460,7 +460,7 @@ func incrementIP(ip net.IP) {
 
 // startDiscoveryTimer starts the background discovery timer
 func (esd *ExternalStreamDiscovery) startDiscoveryTimer(ctx context.Context) {
-	ticker := time.NewTicker(time.Duration(esd.config.ScanInterval) * time.Second)
+	ticker := time.NewTicker(time.Duration(float64(esd.config.ScanInterval) * float64(time.Second)))
 	defer ticker.Stop()
 
 	esd.logger.WithField("scan_interval", fmt.Sprintf("%d", esd.config.ScanInterval)).Info("External discovery timer started")

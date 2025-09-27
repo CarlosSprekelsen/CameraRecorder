@@ -77,7 +77,7 @@ func (h *HealthNotificationManager) ShouldNotifyStorage(status string, usagePerc
 	GetTotalSpace() int64
 }) bool {
 	component := "storage_monitor"
-	debounceDuration := time.Duration(h.config.Performance.Debounce.StorageMonitorSeconds) * time.Second
+	debounceDuration := time.Duration(float64(h.config.Performance.Debounce.StorageMonitorSeconds) * float64(time.Second))
 
 	if !h.shouldNotifyWithDebounce(component, status, debounceDuration) {
 		return false
@@ -91,7 +91,7 @@ func (h *HealthNotificationManager) ShouldNotifyStorage(status string, usagePerc
 // ShouldNotifyPerformance checks if a performance notification should be sent with debounce
 func (h *HealthNotificationManager) ShouldNotifyPerformance(status, metricName string, value, threshold float64, severity string) bool {
 	component := "performance_monitor"
-	debounceDuration := time.Duration(h.config.Performance.Debounce.PerformanceMonitorSeconds) * time.Second
+	debounceDuration := time.Duration(float64(h.config.Performance.Debounce.PerformanceMonitorSeconds) * float64(time.Second))
 
 	if !h.shouldNotifyWithDebounce(component, status, debounceDuration) {
 		return false
@@ -105,7 +105,7 @@ func (h *HealthNotificationManager) ShouldNotifyPerformance(status, metricName s
 // ShouldNotifyHealth checks if a health notification should be sent with debounce
 func (h *HealthNotificationManager) ShouldNotifyHealth(status string, metrics map[string]interface{}) bool {
 	component := "health_monitor"
-	debounceDuration := time.Duration(h.config.Performance.Debounce.HealthMonitorSeconds) * time.Second
+	debounceDuration := time.Duration(float64(h.config.Performance.Debounce.HealthMonitorSeconds) * float64(time.Second))
 
 	if !h.shouldNotifyWithDebounce(component, status, debounceDuration) {
 		return false
@@ -152,13 +152,7 @@ func (h *HealthNotificationManager) shouldNotifyWithDebounce(component, status s
 	// ATOMIC CHECK: Load current status atomically
 	lastStatus := atomic.LoadInt32(h.lastNotificationStatuses[component])
 
-	// DEBUG: Log status check
-	h.logger.WithFields(logging.Fields{
-		"component":   component,
-		"status":      status,
-		"statusValue": statusValue,
-		"lastStatus":  lastStatus,
-	}).Info("DEBUG: Status check")
+	// Check if status has changed
 
 	// Note: Removed status-change requirement to allow repeated notifications
 	// Debounce is now time-based only, allowing repeated notifications of same status
@@ -170,7 +164,7 @@ func (h *HealthNotificationManager) shouldNotifyWithDebounce(component, status s
 		"status":      status,
 		"lastStatus":  lastStatus,
 		"statusValue": statusValue,
-	}).Info("DEBUG: Attempting compare-and-swap")
+	}).Debug("Attempting compare-and-swap")
 
 	if atomic.CompareAndSwapInt32(h.lastNotificationStatuses[component], lastStatus, statusValue) {
 		atomic.StoreInt64(h.lastNotificationTimes[component], now)

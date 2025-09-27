@@ -214,7 +214,7 @@ func (h *SimpleHealthMonitor) monitorLoop(ctx context.Context) {
 	defer h.wg.Done()
 
 	// Use configured interval from centralized config
-	checkInterval := time.Duration(h.config.HealthCheckInterval) * time.Second
+	checkInterval := time.Duration(float64(h.config.HealthCheckInterval) * float64(time.Second))
 
 	ticker := time.NewTicker(checkInterval)
 	defer ticker.Stop()
@@ -316,7 +316,7 @@ func (h *SimpleHealthMonitor) WaitForHealthy(ctx context.Context) error {
 	}
 
 	// Fallback to polling with configuration-based intervals if event-driven approach doesn't work
-	tickerInterval := time.Duration(h.config.HealthMonitorDefaults.CheckInterval) * time.Second
+	tickerInterval := time.Duration(h.config.HealthMonitorDefaults.CheckInterval * float64(time.Second))
 	ticker := time.NewTicker(tickerInterval)
 	defer ticker.Stop()
 

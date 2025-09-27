@@ -387,8 +387,7 @@ func (c *controller) Start(ctx context.Context) error {
 // This implements the Progressive Readiness pattern - components become ready as they initialize
 func (c *controller) monitorReadiness() {
 	// Use dedicated controller ticker interval for optimal performance (configurable)
-	tickerInterval := time.Duration(c.config.StreamReadiness.ControllerTickerInterval) * time.Second
-	fmt.Printf("DEBUG: Controller - ControllerTickerInterval: %v, tickerInterval: %v\n", c.config.StreamReadiness.ControllerTickerInterval, tickerInterval)
+	tickerInterval := time.Duration(c.config.StreamReadiness.ControllerTickerInterval * float64(time.Second))
 	ticker := time.NewTicker(tickerInterval)
 	defer ticker.Stop()
 

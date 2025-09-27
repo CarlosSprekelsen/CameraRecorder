@@ -157,7 +157,7 @@ func (kr *RTSPKeepaliveReader) StopKeepalive(pathName string) error {
 	select {
 	case <-session.done:
 		kr.logger.WithField("path", pathName).Info("Keepalive reader stopped gracefully")
-	case <-time.After(time.Duration(kr.config.ProcessTerminationTimeout) * time.Second):
+	case <-time.After(time.Duration(kr.config.ProcessTerminationTimeout * float64(time.Second))):
 		// Force kill process group if not stopped gracefully
 		if session.cmd != nil && session.cmd.Process != nil {
 			// Kill the entire process group to prevent orphaned processes
@@ -208,7 +208,7 @@ func (kr *RTSPKeepaliveReader) startReader(ctx context.Context, session *keepali
 
 	// Give it a moment to connect using context-aware timeout
 	select {
-	case <-time.After(time.Duration(kr.config.StreamReadiness.CheckInterval) * time.Second):
+	case <-time.After(time.Duration(kr.config.StreamReadiness.CheckInterval * float64(time.Second))):
 		// Connection should be established now
 	case <-ctx.Done():
 		// Context cancelled, return early
@@ -272,8 +272,8 @@ func (kr *RTSPKeepaliveReader) monitorReader(ctx context.Context, session *keepa
 					}).Warn("Keepalive reader exited, restarting...")
 
 					// Exponential backoff based on restart count using configuration
-					baseDelay := time.Duration(kr.config.StreamReadiness.RetryDelay) * time.Second
-					maxDelay := time.Duration(kr.config.HealthMonitorDefaults.MaxBackoffDelay) * time.Second
+					baseDelay := time.Duration(kr.config.StreamReadiness.RetryDelay * float64(time.Second))
+					maxDelay := time.Duration(kr.config.HealthMonitorDefaults.MaxBackoffDelay * float64(time.Second))
 					backoffDuration := time.Duration(restartCount) * baseDelay
 					if backoffDuration > maxDelay {
 						backoffDuration = maxDelay // Cap at configured maximum

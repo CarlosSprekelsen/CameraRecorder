@@ -233,7 +233,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 		cleanupActions = append(cleanupActions, "terminated")
 
 		// Wait for graceful shutdown with configurable timeout
-		terminationTimeout := time.Duration(fm.config.ProcessTerminationTimeout) * time.Second
+		terminationTimeout := time.Duration(fm.config.ProcessTerminationTimeout * float64(time.Second))
 		done := make(chan error, 1)
 		go func() {
 			done <- process.cmd.Wait()
@@ -271,7 +271,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 			cleanupActions = append(cleanupActions, "killed")
 
 			// Wait for force kill with configurable timeout
-			killTimeout := time.Duration(fm.config.ProcessKillTimeout) * time.Second
+			killTimeout := time.Duration(fm.config.ProcessKillTimeout * float64(time.Second))
 			done := make(chan error, 1)
 			go func() {
 				done <- process.cmd.Wait()
@@ -508,7 +508,7 @@ func (fm *ffmpegManager) calculateBackoffDelay(baseDelay time.Duration, attempt 
 	delay += jitter
 
 	// Cap maximum delay at configured value
-	maxDelay := time.Duration(fm.config.FFmpeg.FallbackDefaults.MaxBackoffDelay) * time.Second
+	maxDelay := time.Duration(fm.config.FFmpeg.FallbackDefaults.MaxBackoffDelay * float64(time.Second))
 	if delay > maxDelay {
 		delay = maxDelay
 	}

@@ -213,7 +213,7 @@ func (mm *MetadataManager) executeFFprobe(ctx context.Context, filePath string) 
 	if mm.configIntegration != nil {
 		if cfg, err := mm.configIntegration.GetConfig(); err == nil && cfg != nil {
 			// Use FFmpeg snapshot configuration for timeout
-			timeout = time.Duration(cfg.MediaMTX.FFmpeg.Snapshot.ExecutionTimeout) * time.Second
+			timeout = time.Duration(cfg.MediaMTX.FFmpeg.Snapshot.ExecutionTimeout * float64(time.Second))
 		}
 	}
 

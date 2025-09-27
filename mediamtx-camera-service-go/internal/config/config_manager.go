@@ -83,9 +83,7 @@ func (cm *ConfigManager) LoadConfig(configPath string) error {
 
 	// CRITICAL: Apply defaults after unmarshaling to prevent zero values from overriding defaults
 	// This fixes the bug where incomplete YAML sections cause zero values to override Viper defaults
-	fmt.Printf("DEBUG: Before applyDefaults - ControllerTickerInterval: %v\n", config.MediaMTX.StreamReadiness.ControllerTickerInterval)
 	cm.applyDefaultsAfterUnmarshal(&config)
-	fmt.Printf("DEBUG: After applyDefaults - ControllerTickerInterval: %v\n", config.MediaMTX.StreamReadiness.ControllerTickerInterval)
 
 	// REQ-CONFIG-001: Validate final configuration values after environment variable overrides
 	// REQ-CONFIG-002: Fail fast on configuration errors

@@ -984,10 +984,10 @@ func (rm *RecordingManager) isPathRecording(ctx context.Context, cameraID string
 	// CRITICAL: Log raw response when record=true to debug MediaMTX API state
 	if pathConfig.Record {
 		rm.logger.WithFields(logging.Fields{
-			"camera_id":     cameraID,
+			"camera_id":      cameraID,
 			"effective_conf": effectiveConf,
-			"record_flag":   pathConfig.Record,
-			"raw_response":  string(data),
+			"record_flag":    pathConfig.Record,
+			"raw_response":   string(data),
 		}).Warn("MediaMTX reports recording enabled - check for stale config")
 	}
 
@@ -1301,7 +1301,7 @@ func getCircuitBreakerConfig(configIntegration ConfigIntegration) CircuitBreaker
 	}
 	if cbConfig.RecoveryTimeout == 0 {
 		// Use configuration-based recovery timeout
-		cbConfig.RecoveryTimeout = time.Duration(config.CircuitBreaker.RecoveryTimeout) * time.Second
+		cbConfig.RecoveryTimeout = config.CircuitBreaker.RecoveryTimeout
 	}
 	if cbConfig.MaxFailures == 0 {
 		cbConfig.MaxFailures = 15 // Default: 15 failures before permanent open
