@@ -390,8 +390,13 @@ install_camera_service() {
     
     # Create required directories with proper permissions
     log_message "Creating required directories..."
-    mkdir -p "$INSTALL_DIR/recordings" "$INSTALL_DIR/snapshots"
-    chown "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR/recordings" "$INSTALL_DIR/snapshots"
+    mkdir -p "$INSTALL_DIR/recordings" "$INSTALL_DIR/snapshots" "$INSTALL_DIR/logs"
+    chown "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR/recordings" "$INSTALL_DIR/snapshots" "$INSTALL_DIR/logs"
+    
+    # Create API key storage file with proper permissions
+    touch "$INSTALL_DIR/api-keys.json"
+    chown "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR/api-keys.json"
+    chmod 600 "$INSTALL_DIR/api-keys.json"
     
     # Build the Go application
     log_message "Building Go application..."
@@ -405,17 +410,23 @@ install_camera_service() {
     # Download dependencies
     go mod download
     
-    # Build the binary
+    # Build the main service binary
     go build -o "$BINARY_NAME" cmd/server/main.go
     
-    # Move binary to installation directory
-    mv "$BINARY_NAME" "$INSTALL_DIR/"
+    # Build the CLI utility
+    go build -o "camera-cli" cmd/cli/main.go
     
-    # Make binary executable
+    # Move binaries to installation directory
+    mv "$BINARY_NAME" "$INSTALL_DIR/"
+    mv "camera-cli" "$INSTALL_DIR/"
+    
+    # Make binaries executable
     chmod +x "$INSTALL_DIR/$BINARY_NAME"
+    chmod +x "$INSTALL_DIR/camera-cli"
     
     # Set ownership
     chown "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR/$BINARY_NAME"
+    chown "$SERVICE_USER:$SERVICE_GROUP" "$INSTALL_DIR/camera-cli"
     
     # Copy UltraEfficient configuration for edge/IoT devices
     log_message "Installing UltraEfficient configuration for edge/IoT devices..."
@@ -532,6 +543,32 @@ snapshots:
   max_age: 2592000
   max_count: 500
 
+ffmpeg:
+  snapshot:
+    process_creation_timeout: 10.0
+    execution_timeout: 30.0
+    internal_timeout: 5
+    retry_attempts: 3
+    retry_delay: 1.0
+  recording:
+    process_creation_timeout: 10.0
+    execution_timeout: 30.0
+    internal_timeout: 5
+    retry_attempts: 3
+    retry_delay: 1.0
+
+notifications:
+  websocket:
+    delivery_timeout: 5.0
+    retry_attempts: 3
+    retry_delay: 1.0
+    max_queue_size: 1000
+    cleanup_interval: 300
+  real_time:
+    camera_status_interval: 30.0
+    recording_progress_interval: 10.0
+    connection_health_check: 60.0
+
 performance:
   response_time_targets:
     snapshot_capture: 5.0
@@ -573,7 +610,7 @@ storage:
   warn_percent: 70
   block_percent: 85
   default_path: "/opt/camera-service/recordings"
-  fallback_path: "/tmp/recordings"
+  fallback_path: "/opt/camera-service/recordings"
 
 retention_policy:
   enabled: true
@@ -594,6 +631,66 @@ external_discovery:
     known_ips: []
 
 health_port: 8080
+
+# Server operation defaults
+server_defaults:
+  shutdown_timeout: 30.0
+  camera_monitor_ticker: 5.0
+
+# API Key Management Configuration
+api_key_management:
+  storage_path: "/opt/camera-service/api-keys.json"
+  encryption_key: "edge-device-encryption-key-32-chars-long"
+  backup_enabled: false
+  key_length: 32
+  key_prefix: "csk_"
+  key_format: "base64url"
+  default_expiry: "90d"
+  max_keys_per_role: 5
+  audit_logging: true
+  usage_tracking: true
+  cli_enabled: true
+  admin_interface: false
+
+# HTTP Health Endpoint Configuration
+http_health:
+  enabled: true
+  host: "0.0.0.0"
+  port: 8003
+  read_timeout: "5s"
+  write_timeout: "5s"
+  idle_timeout: "30s"
+  basic_endpoint: "/health"
+  detailed_endpoint: "/health/detailed"
+  ready_endpoint: "/health/ready"
+  live_endpoint: "/health/live"
+  response_format: "json"
+  include_version: true
+  include_uptime: true
+  include_components: true
+
+# External stream discovery configuration
+external_discovery:
+  enabled: false
+  scan_interval: 0
+  scan_timeout: 30
+  max_concurrent_scans: 2
+  enable_startup_scan: false
+  skydio:
+    enabled: false
+    network_ranges: ["192.168.42.0/24"]
+    eo_port: 5554
+    ir_port: 6554
+    eo_stream_path: "/subject"
+    ir_stream_path: "/infrared"
+    enable_both_streams: true
+    known_ips: ["192.168.42.10"]
+  generic_uav:
+    enabled: false
+    network_ranges: []
+    common_ports: [554, 8554]
+    stream_paths: ["/stream", "/live", "/video"]
+    known_ips: []
 EOF
     fi
     
@@ -731,6 +828,20 @@ verify_installation() {
         log_success "MediaMTX API is accessible"
     else
         log_warning "MediaMTX API is not accessible"
+    fi
+    
+    # Test HTTP Health Endpoint
+    if curl -s http://localhost:8003/health >/dev/null; then
+        log_success "HTTP Health endpoint is accessible"
+    else
+        log_warning "HTTP Health endpoint is not accessible"
+    fi
+    
+    # Test CLI utility
+    if [ -f "$INSTALL_DIR/camera-cli" ]; then
+        log_success "CLI utility installed"
+    else
+        log_warning "CLI utility not found"
     fi
     
     log_success "Installation verification completed"
