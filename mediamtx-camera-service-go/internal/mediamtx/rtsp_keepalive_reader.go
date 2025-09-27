@@ -140,8 +140,44 @@ func (kr *RTSPKeepaliveReader) StartKeepalive(ctx context.Context, pathName stri
 	return nil
 }
 
-// StopKeepalive stops the keepalive reader for the given path
+// StopKeepalive stops the keepalive reader for the given path (non-blocking)
 func (kr *RTSPKeepaliveReader) StopKeepalive(pathName string) error {
+	sessionI, exists := kr.activeReaders.LoadAndDelete(pathName)
+	if !exists {
+		kr.logger.WithField("path", pathName).Debug("No keepalive reader to stop")
+		return nil
+	}
+
+	session := sessionI.(*keepaliveSession)
+
+	// Cancel the context to signal stop
+	session.cancel()
+
+	// Start async cleanup goroutine to avoid blocking the caller
+	go func() {
+		// Wait for graceful shutdown with timeout
+		select {
+		case <-session.done:
+			kr.logger.WithField("path", pathName).Info("Keepalive reader stopped gracefully")
+		case <-time.After(time.Duration(kr.config.ProcessTerminationTimeout * float64(time.Second))):
+			// Force kill process group if not stopped gracefully
+			if session.cmd != nil && session.cmd.Process != nil {
+				// Kill the entire process group to prevent orphaned processes
+				syscall.Kill(-session.cmd.Process.Pid, syscall.SIGKILL)
+			}
+			kr.logger.WithField("path", pathName).Warn("Keepalive reader force stopped with process group kill")
+		}
+
+		// Update statistics
+		atomic.AddInt64(&kr.resourceStats.ActiveSessions, -1)
+		atomic.AddInt64(&kr.resourceStats.TotalSessionsStopped, 1)
+	}()
+
+	return nil
+}
+
+// StopKeepaliveSync stops the keepalive reader synchronously (for shutdown scenarios)
+func (kr *RTSPKeepaliveReader) StopKeepaliveSync(pathName string) error {
 	sessionI, exists := kr.activeReaders.LoadAndDelete(pathName)
 	if !exists {
 		kr.logger.WithField("path", pathName).Debug("No keepalive reader to stop")
@@ -160,7 +196,6 @@ func (kr *RTSPKeepaliveReader) StopKeepalive(pathName string) error {
 	case <-time.After(time.Duration(kr.config.ProcessTerminationTimeout * float64(time.Second))):
 		// Force kill process group if not stopped gracefully
 		if session.cmd != nil && session.cmd.Process != nil {
-			// Kill the entire process group to prevent orphaned processes
 			syscall.Kill(-session.cmd.Process.Pid, syscall.SIGKILL)
 		}
 		kr.logger.WithField("path", pathName).Warn("Keepalive reader force stopped with process group kill")
@@ -307,7 +342,7 @@ func (kr *RTSPKeepaliveReader) monitorReader(ctx context.Context, session *keepa
 func (kr *RTSPKeepaliveReader) StopAll() {
 	kr.activeReaders.Range(func(key, value interface{}) bool {
 		pathName := key.(string)
-		kr.StopKeepalive(pathName)
+		kr.StopKeepaliveSync(pathName) // Use sync version for complete cleanup
 		return true
 	})
 }

@@ -74,3 +74,4 @@ vendor/
 coverage/
 *.cover
 *.coverprofilemediamtx-camera-service-go/pkg/
+mediamtx-camera-service-go/bin/
