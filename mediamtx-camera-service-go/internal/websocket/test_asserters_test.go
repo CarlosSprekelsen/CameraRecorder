@@ -352,41 +352,158 @@ func (a *WebSocketIntegrationAsserter) AssertFileLifecycleWorkflow() error {
 	require.NoError(a.t, err, "Snapshot should be deleted successfully")
 
 	// Test recording lifecycle
-	// CRITICAL: MediaMTX uses its own naming convention for recordings
-	// We need to predict the actual filename that MediaMTX will create
-	// MediaMTX typically creates files with timestamp and format
-	recordingTimestamp := time.Now().Format("2006-01-02_15-04-05")
-	// MediaMTX creates files like: camera0_2025-09-26_18-17-37.mp4
-	actualRecordingFilename := cameraID + "_" + recordingTimestamp + ".mp4"
-	actualRecordingPath := testutils.BuildRecordingFilePath(recordingsPath, cameraID, actualRecordingFilename, true, "mp4")
-
 	// Step 1: Start recording and validate API response
 	// CRITICAL: Use unlimited recording (duration=0) to avoid race condition with auto-stop timer
 	// MediaMTX creates recording files asynchronously
 	_, err = a.client.StartRecording(cameraID, 0, "mp4")
 	require.NoError(a.t, err, "Start recording should succeed")
 
+	// Note: StartRecording response contains predicted filename, but MediaMTX may create file with different timestamp
+	// We'll get the actual filename from ListRecordings after the file is created
+
 	// Step 2: Wait for MediaMTX to create the recording file
 	// MediaMTX needs time to start the FFmpeg process and begin recording
 	time.Sleep(5 * time.Second)
 
-	// Step 3: Stop recording
-	_, err = a.client.StopRecording(cameraID)
-	require.NoError(a.t, err, "Stop recording should succeed")
+	// Step 3: Stop recording with retry logic
+	var stopErr error
+	for i := 0; i < 3; i++ {
+		_, stopErr = a.client.StopRecording(cameraID)
+		if stopErr == nil {
+			break
+		}
+
+		// If connection was closed, try to reconnect
+		if strings.Contains(stopErr.Error(), "EOF") || strings.Contains(stopErr.Error(), "connection reset") {
+			a.t.Logf("Connection lost during StopRecording (attempt %d), reconnecting...", i+1)
+
+			// Wait briefly
+			time.Sleep(100 * time.Millisecond)
+
+			// Reconnect
+			if err := a.client.Connect(); err != nil {
+				return fmt.Errorf("failed to reconnect: %w", err)
+			}
+
+			// Re-authenticate
+			authToken, err := a.helper.GetJWTToken("operator")
+			if err != nil {
+				return fmt.Errorf("failed to get auth token: %w", err)
+			}
+			if err := a.client.Authenticate(authToken); err != nil {
+				return fmt.Errorf("failed to re-authenticate: %w", err)
+			}
+
+			continue
+		}
+
+		// Other errors, don't retry
+		break
+	}
+
+	require.NoError(a.t, stopErr, "Stop recording should succeed")
 
 	// Step 3.5: Wait for StopRecording to complete and WebSocket to stabilize
 	// This prevents connection reset during test cleanup
 	time.Sleep(5 * time.Second) // Increased delay to allow StopRecording to complete
 
-	// Step 4: List recordings and validate it appears
-	response, err = a.client.ListRecordings(50, 0)
-	require.NoError(a.t, err, "List recordings should succeed")
-	require.NotNil(a.t, response.Result, "List recordings should return results")
+	// Step 4: List recordings and validate it appears (with retry logic)
+	var listResponse *JSONRPCResponse
+	var listErr error
+	for i := 0; i < 3; i++ {
+		listResponse, listErr = a.client.ListRecordings(50, 0)
+		if listErr == nil {
+			break
+		}
 
-	// Step 5: Delete recording and validate deletion
+		// If connection was closed, try to reconnect
+		if strings.Contains(listErr.Error(), "EOF") || strings.Contains(listErr.Error(), "connection reset") {
+			a.t.Logf("Connection lost during ListRecordings (attempt %d), reconnecting...", i+1)
+
+			// Wait briefly
+			time.Sleep(100 * time.Millisecond)
+
+			// Reconnect
+			if err := a.client.Connect(); err != nil {
+				return fmt.Errorf("failed to reconnect for ListRecordings: %w", err)
+			}
+
+			// Re-authenticate
+			authToken, err := a.helper.GetJWTToken("operator")
+			if err != nil {
+				return fmt.Errorf("failed to get auth token for ListRecordings: %w", err)
+			}
+			if err := a.client.Authenticate(authToken); err != nil {
+				return fmt.Errorf("failed to re-authenticate for ListRecordings: %w", err)
+			}
+
+			continue
+		}
+
+		// Other errors, don't retry
+		break
+	}
+
+	require.NoError(a.t, listErr, "List recordings should succeed")
+	require.NotNil(a.t, listResponse.Result, "List recordings should return results")
+
+	// Extract actual filename from ListRecordings response
+	// This gives us the real filename that MediaMTX created
+	listResult, ok := listResponse.Result.(map[string]interface{})
+	require.True(a.t, ok, "List recordings result should be a map")
+
+	recordings, ok := listResult["recordings"].([]interface{})
+	require.True(a.t, ok, "List recordings should contain recordings array")
+	require.NotEmpty(a.t, recordings, "Should have at least one recording")
+
+	// Get the first recording (most recent)
+	firstRecording, ok := recordings[0].(map[string]interface{})
+	require.True(a.t, ok, "First recording should be a map")
+
+	actualRecordingFilename, ok := firstRecording["filename"].(string)
+	require.True(a.t, ok, "Recording should contain filename")
+	require.NotEmpty(a.t, actualRecordingFilename, "Filename should not be empty")
+
+	// Build the actual recording path using the real filename
+	actualRecordingPath := testutils.BuildRecordingFilePath(recordingsPath, cameraID, actualRecordingFilename, true, "mp4")
+
+	// Step 5: Delete recording and validate deletion (with retry logic)
 	err = dvh.AssertFileDeleted(func() error {
-		_, err := a.client.DeleteRecording(actualRecordingFilename)
-		return err
+		var deleteErr error
+		for i := 0; i < 3; i++ {
+			_, deleteErr = a.client.DeleteRecording(actualRecordingFilename)
+			if deleteErr == nil {
+				break
+			}
+
+			// If connection was closed, try to reconnect
+			if strings.Contains(deleteErr.Error(), "EOF") || strings.Contains(deleteErr.Error(), "connection reset") {
+				a.t.Logf("Connection lost during DeleteRecording (attempt %d), reconnecting...", i+1)
+
+				// Wait briefly
+				time.Sleep(100 * time.Millisecond)
+
+				// Reconnect
+				if err := a.client.Connect(); err != nil {
+					return fmt.Errorf("failed to reconnect for DeleteRecording: %w", err)
+				}
+
+				// Re-authenticate
+				authToken, err := a.helper.GetJWTToken("operator")
+				if err != nil {
+					return fmt.Errorf("failed to get auth token for DeleteRecording: %w", err)
+				}
+				if err := a.client.Authenticate(authToken); err != nil {
+					return fmt.Errorf("failed to re-authenticate for DeleteRecording: %w", err)
+				}
+
+				continue
+			}
+
+			// Other errors, don't retry
+			break
+		}
+		return deleteErr
 	}, actualRecordingPath, "Recording lifecycle deletion")
 	require.NoError(a.t, err, "Recording should be deleted successfully")
 

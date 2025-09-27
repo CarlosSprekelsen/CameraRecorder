@@ -560,8 +560,11 @@ func (rm *RecordingManager) StopRecording(ctx context.Context, cameraID string) 
 		return nil, fmt.Errorf("path %s is not currently recording", pathName)
 	}
 
-	// Stop RTSP keepalive reader first
+	// Stop RTSP keepalive reader first (now non-blocking)
 	rm.stopRTSPKeepalive(pathName)
+
+	// Small delay to ensure async cleanup has started
+	time.Sleep(10 * time.Millisecond)
 
 	// Disable recording by patching the path configuration
 	err = rm.disableRecordingOnPath(ctx, pathName)

@@ -603,8 +603,8 @@ performance:
     performance_monitor_seconds: 45
 
 security:
-  rate_limit_requests: 50
-  rate_limit_window: 2m
+  rate_limit_requests: 300
+  rate_limit_window: 1m
   jwt_secret_key: "edge-device-secret-key-change-in-production"
   jwt_expiry_hours: 48
 

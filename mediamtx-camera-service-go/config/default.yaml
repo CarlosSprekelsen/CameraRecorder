@@ -192,8 +192,8 @@ performance:
 
 # Security configuration optimized for edge devices
 security:
-  rate_limit_requests: 50  # Reduced from 100 for edge devices
-  rate_limit_window: 2m    # Increased from 1m
+  rate_limit_requests: 300  # Increased from 50 for better usability
+  rate_limit_window: 1m     # Reduced from 2m for more responsive rate limiting
   jwt_secret_key: "edge-device-secret-key-change-in-production"
   jwt_expiry_hours: 48     # Increased from 24 for stability
   
