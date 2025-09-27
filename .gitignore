@@ -73,7 +73,10 @@ vendor/
 # Test Coverage
 coverage/
 *.cover
-*.coverprofilemediamtx-camera-service-go/pkg/
+*.coverprofile
+
+# Go executables and build artifacts
+mediamtx-camera-service-go/pkg/
 mediamtx-camera-service-go/bin/
 mediamtx-camera-service-go/cli
 mediamtx-camera-service-go/export
