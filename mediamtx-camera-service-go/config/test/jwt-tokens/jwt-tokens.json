@@ -1,0 +1,25 @@
+{
+  "tokens": {
+    "viewer": {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdF92aWV3ZXIiLCJyb2xlIjoidmlld2VyIiwiaWF0IjoxNzU4OTY1ODM0LCJleHAiOjE3NTkxMzg2MzR9.U-cKToMh-rU9MAmEZOyjWGeR5BdeJW_Oo-UgPQJ1Vgg",
+      "user_id": "test_viewer",
+      "role": "viewer",
+      "expires_in_hours": 48
+    },
+    "operator": {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdF9vcGVyYXRvciIsInJvbGUiOiJvcGVyYXRvciIsImlhdCI6MTc1ODk2NTgzNCwiZXhwIjoxNzU5MTM4NjM0fQ.az7XCqKxqxh-kh5Ha-VmEeGm2-53vze2upYomoqAtpw",
+      "user_id": "test_operator",
+      "role": "operator",
+      "expires_in_hours": 48
+    },
+    "admin": {
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdF9hZG1pbiIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc1ODk2NTgzNCwiZXhwIjoxNzU5MTM4NjM0fQ.PpVS_h6lmuVejRMCFrH07YM5I3nnzkX3OllqNpvrbdc",
+      "user_id": "test_admin",
+      "role": "admin",
+      "expires_in_hours": 48
+    }
+  },
+  "generated_at": "2025-09-27T09:37:14.209Z",
+  "jwt_secret": "edge-device-secret-key-change-in-production",
+  "algorithm": "HS256"
+}

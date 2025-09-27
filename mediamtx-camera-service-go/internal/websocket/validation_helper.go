@@ -201,9 +201,9 @@ func (vh *ValidationHelper) ValidateRecordingParameters(params map[string]interf
 	// Validate optional parameters
 	options := make(map[string]interface{})
 
-	// Duration validation
+	// Duration validation (0 = unlimited recording)
 	if duration, exists := params["duration"]; exists {
-		if durationResult := vh.inputValidator.ValidatePositiveInteger(duration, "duration"); durationResult.HasErrors() {
+		if durationResult := vh.inputValidator.ValidateNonNegativeInteger(duration, "duration"); durationResult.HasErrors() {
 			result.AddError(durationResult.GetErrorMessages()[0])
 			return result
 		}

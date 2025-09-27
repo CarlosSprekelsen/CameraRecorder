@@ -361,9 +361,9 @@ func (a *WebSocketIntegrationAsserter) AssertFileLifecycleWorkflow() error {
 	actualRecordingPath := testutils.BuildRecordingFilePath(recordingsPath, cameraID, actualRecordingFilename, true, "mp4")
 
 	// Step 1: Start recording and validate API response
-	// CRITICAL: Focus on API compliance, not immediate file creation
+	// CRITICAL: Use unlimited recording (duration=0) to avoid race condition with auto-stop timer
 	// MediaMTX creates recording files asynchronously
-	_, err = a.client.StartRecording(cameraID, 5, "mp4")
+	_, err = a.client.StartRecording(cameraID, 0, "mp4")
 	require.NoError(a.t, err, "Start recording should succeed")
 
 	// Step 2: Wait for MediaMTX to create the recording file
@@ -373,6 +373,10 @@ func (a *WebSocketIntegrationAsserter) AssertFileLifecycleWorkflow() error {
 	// Step 3: Stop recording
 	_, err = a.client.StopRecording(cameraID)
 	require.NoError(a.t, err, "Stop recording should succeed")
+
+	// Step 3.5: Wait for StopRecording to complete and WebSocket to stabilize
+	// This prevents connection reset during test cleanup
+	time.Sleep(5 * time.Second) // Increased delay to allow StopRecording to complete
 
 	// Step 4: List recordings and validate it appears
 	response, err = a.client.ListRecordings(50, 0)

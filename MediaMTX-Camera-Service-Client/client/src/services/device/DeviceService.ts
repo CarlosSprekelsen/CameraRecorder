@@ -65,19 +65,14 @@ export class DeviceService implements IDiscovery {
    * Get the stream URL for a specific camera device
    * Implements get_stream_url RPC method
    */
-  async getStreamUrl(device: string): Promise<string | null> {
+  async getStreamUrl(device: string): Promise<StreamUrlResult> {
     try {
       this.logger.info(`Getting stream URL for device: ${device}`);
 
       const response = await this.wsService.sendRPC('get_stream_url', { device }) as StreamUrlResult;
 
-      if (response.stream_url) {
-        this.logger.info(`Retrieved stream URL for ${device}`);
-        return response.stream_url;
-      }
-
-      this.logger.warn(`No stream URL found for device: ${device}`);
-      return null;
+      this.logger.info(`Retrieved stream URL for ${device}:`, response);
+      return response;
     } catch (error) {
       this.logger.error(`Failed to get stream URL for device: ${device}`, error as Record<string, unknown>);
       throw error;

@@ -1,82 +1,68 @@
-﻿# Go
-# Binaries for programs and plugins
+﻿# API Keys and Sensitive Configuration
+deployment/keys/production/
+deployment/keys/staging/
+deployment/keys/development/
+**/api-keys.json
+**/*_keys.json
+**/*.env
+**/test_api_keys.json
+**/server_api_keys.json
+**/generated_api_keys.json
+**/temp_*_key.json
+
+# Environment Files
+.env
+.env.local
+.env.production
+.env.staging
+.test_env
+
+# Logs
+*.log
+logs/
+
+# Temporary Files
+temp/
+tmp/
+*.tmp
+*.temp
+
+# IDE Files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Build Artifacts
+dist/
+build/
+coverage/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Go
 *.exe
 *.exe~
 *.dll
 *.so
 *.dylib
-
-# Test binary, built with `go test -c`
 *.test
-
-# Output of the go coverage tool, specifically when used with LiteIDE
 *.out
-*.cout
-
-# Dependency directories (remove the comment below to include it)
-# vendor/
-
-# Go workspace file
 go.work
 
-# Build artifacts
-/bin/
-/build/
-/dist/
-
-# Go module cache and build artifacts
-/pkg/
-**/pkg/
-$GOPATH/pkg/mod/
-
-# Virtual Environment
-venv/
-env/
-ENV/
-.venv*/
-.cdr*
-node_modules/
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-.vs/
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-logs/
-*.log
-
-# Configuration (sensitive)
-.env
-config/local.yaml
-config/production.yaml
-
-# Media files
-recordings/
-snapshots/
-*.mp4
-*.jpg
-*.png
-
-# Test files
-# Go test coverage
-coverage.out
-coverage.html
+# Test Coverage
+coverage/
 *.cover
 *.coverprofile
-
-# Go test cache
-.cache/
-
-# Test artifacts
-artifacts/
-test-results/
-
-# MediaMTX
-go1.25.0.linux-amd64.tar.gz

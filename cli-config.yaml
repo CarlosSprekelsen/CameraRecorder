@@ -1,0 +1,36 @@
+# Minimal CLI configuration for API key generation
+# Based on ultra-efficient-edge.yaml with API key management enabled
+
+server:
+  host: "0.0.0.0"
+  port: 8002
+  websocket_path: "/ws"
+
+mediamtx:
+  host: "localhost"
+  api_port: 9997
+  rtsp_port: 8554
+  config_path: "/opt/mediamtx/config/mediamtx.yml"
+  recordings_path: "/opt/camera-service/recordings"
+  snapshots_path: "/opt/camera-service/snapshots"
+  override_mediamtx_paths: true
+
+# API Key Management Configuration
+api_key_management:
+  storage_path: "/opt/camera-service/api-keys.json"
+  encryption_key: "edge-device-encryption-key-32-chars-long"
+  backup_enabled: false
+  key_length: 32
+  key_prefix: "csk_"
+  key_format: "base64url"
+  default_expiry: "90d"
+  rotation_enabled: false
+  max_keys_per_role: 10
+  audit_logging: true
+  usage_tracking: true
+
+# Health monitoring
+health:
+  enabled: true
+  port: 8003
+  host: "0.0.0.0"

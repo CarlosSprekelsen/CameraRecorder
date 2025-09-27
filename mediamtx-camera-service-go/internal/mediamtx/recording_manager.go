@@ -1040,7 +1040,7 @@ func (rm *RecordingManager) patchRecordingOnPath(ctx context.Context, cameraID s
 // pollUntilRecordingDisabled polls MediaMTX config until record=false is confirmed
 // This addresses the race condition where PATCH succeeds but GET still returns record=true
 func (rm *RecordingManager) pollUntilRecordingDisabled(ctx context.Context, pathName string) error {
-	maxAttempts := 10 // 10 attempts * 200ms = 2 seconds max
+	maxAttempts := 5 // 5 attempts * 200ms = 1 second max (reduced from 2 seconds)
 	attempt := 0
 
 	for attempt < maxAttempts {
@@ -1074,7 +1074,7 @@ func (rm *RecordingManager) pollUntilRecordingDisabled(ctx context.Context, path
 		time.Sleep(200 * time.Millisecond)
 	}
 
-	return fmt.Errorf("recording still enabled after %d attempts (2 seconds)", maxAttempts)
+	return fmt.Errorf("recording still enabled after %d attempts (1 second)", maxAttempts)
 }
 
 // isPathRecordingWithRetry checks if a path is recording with retry logic
