@@ -73,4 +73,4 @@ vendor/
 # Test Coverage
 coverage/
 *.cover
-*.coverprofile
+*.coverprofilemediamtx-camera-service-go/pkg/
