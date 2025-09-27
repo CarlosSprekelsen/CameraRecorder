@@ -299,8 +299,8 @@ func (pm *pathManager) createPathInternal(ctx context.Context, name, source stri
 	var err error
 
 	if path.RunOnDemand != "" {
-		// For on-demand streams (USB devices), use USB-specific marshaling
-		data, err = marshalCreateUSBPathRequest(name, path.RunOnDemand)
+		// For on-demand streams, use complete PathConf marshaling with all on-demand fields
+		data, err = marshalPathConfForOnDemand(path)
 	} else if strings.HasPrefix(source, "rtsp://") || strings.HasPrefix(source, "rtmp://") {
 		// For external stream sources, use stream-specific marshaling
 		data, err = marshalCreateStreamRequest(name, source)

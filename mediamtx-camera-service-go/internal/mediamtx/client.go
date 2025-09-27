@@ -396,6 +396,51 @@ func marshalCreateUSBPathRequest(name, ffmpegCommand string) ([]byte, error) {
 	return json.Marshal(request)
 }
 
+// marshalPathConfForOnDemand marshals a complete on-demand path configuration
+func marshalPathConfForOnDemand(conf *PathConf) ([]byte, error) {
+	// MediaMTX expects specific field structure for on-demand paths
+	request := map[string]interface{}{
+		"name": conf.Name,
+		// Publisher source for on-demand paths (MediaMTX requirement)
+		"source": "publisher",
+		// On-demand configuration fields (omit sourceOnDemand for publisher source)
+		"runOnDemand":             conf.RunOnDemand,
+		"runOnDemandRestart":      conf.RunOnDemandRestart,
+		"runOnDemandCloseAfter":   conf.RunOnDemandCloseAfter,
+		"runOnDemandStartTimeout": conf.RunOnDemandStartTimeout,
+	}
+
+	// Add recording configuration if present
+	if conf.Record {
+		request["record"] = conf.Record
+		if conf.RecordFormat != "" {
+			request["recordFormat"] = conf.RecordFormat
+		}
+		if conf.RecordPath != "" {
+			request["recordPath"] = conf.RecordPath
+		}
+		if conf.RecordPartDuration != "" {
+			request["recordPartDuration"] = conf.RecordPartDuration
+		}
+		if conf.RecordSegmentDuration != "" {
+			request["recordSegmentDuration"] = conf.RecordSegmentDuration
+		}
+		if conf.RecordDeleteAfter != "" {
+			request["recordDeleteAfter"] = conf.RecordDeleteAfter
+		}
+	}
+
+	// Remove empty values to avoid MediaMTX validation issues
+	cleaned := make(map[string]interface{})
+	for k, v := range request {
+		if v != "" && v != false && v != nil {
+			cleaned[k] = v
+		}
+	}
+
+	return json.Marshal(cleaned)
+}
+
 // validateMediaMTXResponse validates MediaMTX API responses for structural integrity
 // SECURITY: Handles Unicode, large strings, and extra fields gracefully
 func validateMediaMTXResponse(data []byte, expectedSchema string) error {

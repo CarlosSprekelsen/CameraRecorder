@@ -656,22 +656,9 @@ func (fm *ffmpegManager) BuildSnapshotCommand(device, outputPath string, format 
 
 // BuildRunOnDemandCommand builds the runOnDemand ffmpeg command using camera capability detection
 func (fm *ffmpegManager) BuildRunOnDemandCommand(devicePath, streamName string) (string, error) {
-	// Select pixel format for h264 pipeline
-	var pixFmt string
-	var err error
-	if fm.cameraMonitor != nil && strings.HasPrefix(devicePath, "/dev/video") {
-		if selector, ok := fm.cameraMonitor.(interface {
-			SelectOptimalPixelFormat(string, string) (string, error)
-		}); ok {
-			pixFmt, err = selector.SelectOptimalPixelFormat(devicePath, "h264")
-		}
-		if err != nil {
-			fm.logger.WithError(err).WithField("device", devicePath).Warn("Failed to select optimal pixel format; using config pixel_format")
-			pixFmt = fm.config.Codec.PixelFormat
-		}
-	} else {
-		pixFmt = fm.config.Codec.PixelFormat
-	}
+	// Use configured pixel format for h264 pipeline (libx264 compatible)
+	// Camera detection may return formats like YUYV that are not compatible with libx264
+	pixFmt := fm.config.Codec.PixelFormat
 
 	// Build full command strictly from config
 	args := []string{"-f", "v4l2", "-i", devicePath,

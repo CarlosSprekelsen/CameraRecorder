@@ -391,7 +391,7 @@ func (ci *ConfigIntegration) BuildPathConf(pathName string, pathSource *PathSour
 	pathConf := &PathConf{
 		// Basic path configuration
 		Name:   pathName,
-		Source: "", // Empty source for on-demand paths
+		Source: "publisher", // Publisher source for on-demand paths (MediaMTX requirement)
 
 		// On-demand configuration
 		SourceOnDemand:             true,
@@ -399,8 +399,10 @@ func (ci *ConfigIntegration) BuildPathConf(pathName string, pathSource *PathSour
 		SourceOnDemandCloseAfter:   cfg.MediaMTX.RunOnDemandCloseAfter,
 
 		// FFmpeg command configuration using FFmpegManager
-		RunOnDemand:        ci.buildPathCommand(devicePath, pathName),
-		RunOnDemandRestart: true,
+		RunOnDemand:             ci.buildPathCommand(devicePath, pathName),
+		RunOnDemandRestart:      true,
+		RunOnDemandStartTimeout: cfg.MediaMTX.RunOnDemandStartTimeout,
+		RunOnDemandCloseAfter:   cfg.MediaMTX.RunOnDemandCloseAfter,
 	}
 
 	// Add recording configuration if requested

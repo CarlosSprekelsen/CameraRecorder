@@ -366,19 +366,20 @@ func (a *WebSocketIntegrationAsserter) AssertFileLifecycleWorkflow() error {
 	_, err = a.client.StartRecording(cameraID, 5, "mp4")
 	require.NoError(a.t, err, "Start recording should succeed")
 
-	// Note: File creation is asynchronous and may take time
-	// We focus on API compliance rather than immediate file validation
+	// Step 2: Wait for MediaMTX to create the recording file
+	// MediaMTX needs time to start the FFmpeg process and begin recording
+	time.Sleep(5 * time.Second)
 
-	// Step 2: Stop recording
+	// Step 3: Stop recording
 	_, err = a.client.StopRecording(cameraID)
 	require.NoError(a.t, err, "Stop recording should succeed")
 
-	// Step 3: List recordings and validate it appears
+	// Step 4: List recordings and validate it appears
 	response, err = a.client.ListRecordings(50, 0)
 	require.NoError(a.t, err, "List recordings should succeed")
 	require.NotNil(a.t, response.Result, "List recordings should return results")
 
-	// Step 4: Delete recording and validate deletion
+	// Step 5: Delete recording and validate deletion
 	err = dvh.AssertFileDeleted(func() error {
 		_, err := a.client.DeleteRecording(actualRecordingFilename)
 		return err
