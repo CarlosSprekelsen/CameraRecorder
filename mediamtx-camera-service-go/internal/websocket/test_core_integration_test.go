@@ -57,7 +57,7 @@ func TestProgressiveReadiness_Performance_Integration(t *testing.T) {
 	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.Cleanup()
 
-	// Test connection performance (should be <100ms)
+	// Test connection performance (should be <100ms for WebSocket connection)
 	serverURL := asserter.helper.GetServerURL()
 
 	start := time.Now()
@@ -66,7 +66,7 @@ func TestProgressiveReadiness_Performance_Integration(t *testing.T) {
 	connectionTime := time.Since(start)
 
 	require.NoError(t, err, "Client should connect successfully")
-	require.Less(t, connectionTime, 100*time.Millisecond, "Connection should be <100ms")
+	require.Less(t, connectionTime, 100*time.Millisecond, "WebSocket connection should be <100ms")
 
 	client.Close()
 	t.Logf("✅ Progressive Readiness Performance: Connection took %v (expected <100ms)", connectionTime)

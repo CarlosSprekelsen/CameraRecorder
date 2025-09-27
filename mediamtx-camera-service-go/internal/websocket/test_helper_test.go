@@ -25,7 +25,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"sync"
 	"testing"
 	"time"
 
@@ -37,9 +36,8 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 )
 
-// Global mutex to prevent parallel test execution
-// WebSocket tests must run sequentially because they share the same MediaMTX controller resources
-var testMutex sync.Mutex
+// REMOVED: Global mutex - Controller and WebSocket server are thread-safe
+// Tests can run concurrently with proper isolation
 
 // WebSocketTestHelper provides real WebSocket server setup for integration testing
 type WebSocketTestHelper struct {
@@ -56,12 +54,9 @@ type WebSocketTestHelper struct {
 
 // NewWebSocketTestHelper creates a new WebSocket test helper with real components
 // Follows main.go orchestration pattern exactly
-// CRITICAL: Uses global mutex to prevent parallel test execution due to shared MediaMTX controller resources
+// Each test gets its own isolated controller instance - no shared state
 func NewWebSocketTestHelper(t *testing.T) *WebSocketTestHelper {
-	// CRITICAL: Lock to prevent parallel test execution
-	// WebSocket tests share the same MediaMTX controller, camera devices, and file paths
-	testMutex.Lock()
-	t.Cleanup(func() { testMutex.Unlock() })
+	// REMOVED: Global mutex - each test gets isolated controller instance
 	// Use testutils.UniversalTestSetup for fixture-based configuration
 	setup := testutils.SetupTest(t, "config_clean_minimal.yaml")
 	configManager := setup.GetConfigManager()
@@ -111,23 +106,34 @@ func NewWebSocketTestHelper(t *testing.T) *WebSocketTestHelper {
 		t.Fatalf("Failed to start MediaMTX controller: %v", err)
 	}
 
-	// DETERMINISTIC SETUP: Wait for controller to be truly ready
-	// This ensures camera monitor completes discovery before tests run
-	maxWait := 30 * time.Second
-	start := time.Now()
-	for time.Since(start) < maxWait {
+	// HYBRID READINESS: Use both event-driven and polling approach
+	// The controller becomes ready quickly, but the readiness channel may not fire immediately
+	logger.Info("Waiting for controller readiness...")
+	readinessChan := mediaMTXController.SubscribeToReadiness()
+
+	// Apply readiness timeout to prevent indefinite blocking
+	readinessCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+
+	// Use select with both readiness channel and polling
+	ready := false
+	select {
+	case <-readinessChan:
+		logger.Info("Controller readiness event received - all services ready")
+		ready = true
+	case <-readinessCtx.Done():
+		// Fallback to polling if event doesn't arrive
+		logger.Info("Readiness event timeout, checking controller state directly")
 		if mediaMTXController.IsReady() {
-			break
+			ready = true
 		}
-		time.Sleep(100 * time.Millisecond)
 	}
 
-	if !mediaMTXController.IsReady() {
-		t.Fatalf("MediaMTX controller not ready within %v", maxWait)
+	// Final verification
+	if !ready {
+		t.Fatalf("Controller not ready after timeout")
 	}
-
-	// Controller is now truly ready - tests can run deterministically
-	logger.Info("MediaMTX controller started and ready - WebSocket server ready for connections")
+	logger.Info("Controller reports ready - all services operational")
 
 	// Register cleanup
 	t.Cleanup(func() {
@@ -172,6 +178,7 @@ func (h *WebSocketTestHelper) CreateRealServer() error {
 // Cleanup stops the server and cleans up resources
 // Uses MediaMTX cleanup pattern for proper test isolation
 func (h *WebSocketTestHelper) Cleanup() {
+	// Stop WebSocket server first - prevents new client connections
 	if h.server != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -181,8 +188,10 @@ func (h *WebSocketTestHelper) Cleanup() {
 	if h.listener != nil {
 		h.listener.Close()
 	}
+
+	// Stop MediaMTX controller - orchestrates shutdown of all managed services
 	if h.mediaMTXController != nil {
-		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		// Use MediaMTX cleanup pattern: force stop all active recordings
@@ -195,12 +204,17 @@ func (h *WebSocketTestHelper) Cleanup() {
 			}
 		}
 
-		// Cast to full interface to access Stop method
+		// Stop controller using proper interface (like main.go)
 		if fullController, ok := h.mediaMTXController.(interface{ Stop(context.Context) error }); ok {
-			fullController.Stop(ctx)
-			h.t.Log("MediaMTX controller stopped")
+			if err := fullController.Stop(ctx); err != nil {
+				h.t.Logf("Warning: Failed to stop MediaMTX controller: %v", err)
+			} else {
+				h.t.Log("MediaMTX controller stopped")
+			}
 		}
 	}
+
+	// Cleanup test setup
 	h.setup.Cleanup()
 	h.t.Log("WebSocketTestHelper cleanup completed")
 }

@@ -322,7 +322,7 @@ func TestWebSocket_ProgressiveReadiness_Performance(t *testing.T) {
 			totalTime += duration
 			successCount++
 			require.Less(t, duration, 100*time.Millisecond,
-				"Connection %d took %v, should be <100ms", i, duration)
+				"WebSocket connection %d took %v, should be <100ms", i, duration)
 		case <-time.After(testutils.UniversalTimeoutVeryLong):
 			t.Fatal("Performance test timed out")
 		}

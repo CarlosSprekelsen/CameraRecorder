@@ -1188,6 +1188,11 @@ func (rm *RecordingManager) Stop(ctx context.Context) error {
 		}
 	}
 
+	// Stop error metrics collector to prevent goroutine leaks
+	if rm.errorMetricsCollector != nil {
+		rm.errorMetricsCollector.Stop()
+	}
+
 	rm.logger.Info("Recording manager stopped successfully")
 	return nil
 }
@@ -1218,6 +1223,11 @@ func (rm *RecordingManager) Cleanup(ctx context.Context) error {
 		rm.timerManager.DeleteTimer(recording.CameraID)
 
 		atomic.AddInt64(&rm.resourceStats.TotalRecordingsStopped, 1)
+	}
+
+	// Stop error metrics collector to prevent goroutine leaks
+	if rm.errorMetricsCollector != nil {
+		rm.errorMetricsCollector.Stop()
 	}
 
 	rm.logger.WithField("stopped_recordings", fmt.Sprintf("%d", len(activeRecordings))).Info("Recording manager cleanup completed")

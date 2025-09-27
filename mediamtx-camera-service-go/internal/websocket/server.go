@@ -26,7 +26,7 @@
 //   - REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint on port 8002
 //   - REQ-API-002: Complete JSON-RPC 2.0 protocol implementation
 //   - REQ-API-003: Request/response message handling with proper error codes
-//   - REQ-API-011: API methods respond within specified time limits (<100ms)
+//   - REQ-API-011: API methods respond within specified time limits (<2s for V4L2 hardware)
 //
 // Test Categories: Unit/Integration
 // API Documentation Reference: docs/api/json_rpc_methods.md
@@ -58,7 +58,7 @@ import (
 //
 // Performance Targets:
 //   - 1000+ simultaneous WebSocket connections
-//   - <100ms response time for 95% of requests
+//   - <2s response time for 95% of V4L2 hardware operations
 //   - <20ms event notification delivery latency
 //
 // Thread Safety: All shared state is protected by appropriate synchronization:

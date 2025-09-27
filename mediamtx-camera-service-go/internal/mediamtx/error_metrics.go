@@ -164,6 +164,7 @@ type ErrorMetricsCollector struct {
 	alerter   *ErrorAlerter
 	startTime time.Time
 	mutex     sync.RWMutex
+	stopChan  chan struct{} // Channel to signal stop
 }
 
 // NewErrorMetricsCollector creates a new error metrics collector
@@ -187,6 +188,7 @@ func NewErrorMetricsCollector(logger *logging.Logger) *ErrorMetricsCollector {
 		},
 		alerter:   alerter,
 		startTime: time.Now(),
+		stopChan:  make(chan struct{}),
 	}
 }
 
@@ -203,9 +205,20 @@ func (emc *ErrorMetricsCollector) startPeriodicChecking() {
 	ticker := time.NewTicker(30 * time.Second) // Check every 30 seconds
 	defer ticker.Stop()
 
-	for range ticker.C {
-		emc.alerter.CheckThresholds()
+	for {
+		select {
+		case <-ticker.C:
+			emc.alerter.CheckThresholds()
+		case <-emc.stopChan:
+			emc.logger.Debug("ErrorMetricsCollector periodic checking stopped")
+			return
+		}
 	}
+}
+
+// Stop stops the error metrics collector
+func (emc *ErrorMetricsCollector) Stop() {
+	close(emc.stopChan)
 }
 
 // RecordError records an error in the metrics

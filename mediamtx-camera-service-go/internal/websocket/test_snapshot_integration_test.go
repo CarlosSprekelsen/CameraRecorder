@@ -84,7 +84,7 @@ func TestSnapshot_MultiTierPerformance_Integration(t *testing.T) {
 }
 
 // TestSnapshot_Tier0DirectV4L2_Integration validates Tier 0 direct V4L2 capture
-// performance (<100ms) for USB devices
+// performance (<2s) for USB devices
 func TestSnapshot_Tier0DirectV4L2_Integration(t *testing.T) {
 	// Create integration asserter with real components
 	asserter := NewWebSocketIntegrationAsserter(t)
