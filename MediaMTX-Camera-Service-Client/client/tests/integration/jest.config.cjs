@@ -44,5 +44,12 @@ module.exports = {
   },
   
   // Verbose output for integration tests
-  verbose: true
+  verbose: true,
+  
+  // Handle async cleanup properly
+  detectOpenHandles: true,
+  forceExit: true,
+  
+  // Test timeout
+  testTimeout: 30000
 };

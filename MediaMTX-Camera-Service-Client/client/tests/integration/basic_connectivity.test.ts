@@ -28,6 +28,9 @@ describe('Basic Integration Test: Server Connectivity', () => {
     if (webSocketService) {
       await webSocketService.disconnect();
     }
+    
+    // Give time for cleanup
+    await new Promise(resolve => setTimeout(resolve, 100));
   });
 
   describe('REQ-BASIC-001: Server Connection', () => {

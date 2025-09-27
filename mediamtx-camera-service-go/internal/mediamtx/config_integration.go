@@ -390,7 +390,8 @@ func (ci *ConfigIntegration) BuildPathConf(pathName string, pathSource *PathSour
 
 	pathConf := &PathConf{
 		// Basic path configuration
-		Name: pathName,
+		Name:   pathName,
+		Source: "", // Empty source for on-demand paths
 
 		// On-demand configuration
 		SourceOnDemand:             true,

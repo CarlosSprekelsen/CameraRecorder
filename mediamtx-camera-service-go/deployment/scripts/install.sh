@@ -620,19 +620,6 @@ retention_policy:
   max_size_gb: 0.5
   auto_cleanup: true
 
-external_discovery:
-  enabled: false
-  scan_interval: 30
-  timeout: 5.0
-  max_concurrent_scans: 2
-  generic_uav:
-    enabled: false
-    common_ports: [554, 8554]
-    stream_paths: ["/stream", "/live", "/video"]
-    known_ips: []
-
-health_port: 8080
-
 # Server operation defaults
 server_defaults:
   shutdown_timeout: 30.0

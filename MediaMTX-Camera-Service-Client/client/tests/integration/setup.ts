@@ -20,6 +20,18 @@ class WebSocketMock extends WebSocket {
 // Mock browser APIs for Node.js environment
 global.WebSocket = WebSocketMock;
 
+// Mock sessionStorage for Node.js environment
+const sessionStorageMock = {
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+  clear: jest.fn(),
+  length: 0,
+  key: jest.fn()
+};
+
+global.sessionStorage = sessionStorageMock as any;
+
 // Global test setup
 beforeAll(async () => {
   console.log('🚀 Starting Integration Tests with Real Server');
@@ -35,6 +47,14 @@ afterAll(async () => {
   console.log('📊 Performance metrics collected');
   console.log('🔒 Security validation completed');
   console.log('📡 API compliance verified');
+  
+  // Force cleanup of any remaining WebSocket connections
+  if (typeof global.gc === 'function') {
+    global.gc();
+  }
+  
+  // Give time for cleanup
+  await new Promise(resolve => setTimeout(resolve, 100));
 });
 
 // Test timeout configuration

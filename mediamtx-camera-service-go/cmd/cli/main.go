@@ -20,6 +20,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -439,10 +440,18 @@ func parseDuration(s string) (time.Duration, error) {
 	// Parse duration string (e.g., "90d", "30d", "1y")
 	if strings.HasSuffix(s, "d") {
 		days := s[:len(s)-1]
-		return time.ParseDuration(days + "h" + "24")
+		hours, err := strconv.Atoi(days)
+		if err != nil {
+			return 0, fmt.Errorf("invalid days: %s", days)
+		}
+		return time.Duration(hours) * 24 * time.Hour, nil
 	} else if strings.HasSuffix(s, "y") {
 		years := s[:len(s)-1]
-		return time.ParseDuration(years + "h" + "8760")
+		yearCount, err := strconv.Atoi(years)
+		if err != nil {
+			return 0, fmt.Errorf("invalid years: %s", years)
+		}
+		return time.Duration(yearCount) * 365 * 24 * time.Hour, nil
 	} else {
 		return time.ParseDuration(s)
 	}

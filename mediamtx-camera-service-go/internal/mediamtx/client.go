@@ -389,6 +389,7 @@ func marshalUpdatePathRequest(config *PathConf) ([]byte, error) {
 // marshalCreateUSBPathRequest marshals a USB device path creation request (matches Python implementation)
 func marshalCreateUSBPathRequest(name, ffmpegCommand string) ([]byte, error) {
 	request := map[string]interface{}{
+		"source":             "publisher", // Publisher source for on-demand paths
 		"runOnDemand":        ffmpegCommand,
 		"runOnDemandRestart": true,
 	}

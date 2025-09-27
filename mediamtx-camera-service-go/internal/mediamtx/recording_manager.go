@@ -228,11 +228,25 @@ func (rm *RecordingManager) executeStartRecording(ctx context.Context, cameraID 
 
 		// Create path with error recovery
 		err = rm.pathManager.CreatePath(ctx, pathName, devicePath, pathOptions)
+	} else {
+		// Path exists but may lack on-demand configuration - patch it
+		pathOptions, err := rm.configIntegration.BuildPathConf(pathName, &PathSource{ID: devicePath}, true)
 		if err != nil {
-			// Attempt error recovery for path creation
+			return nil, fmt.Errorf("failed to build recording path configuration: %w", err)
+		}
+
+		// Patch existing path to ensure on-demand configuration
+		err = rm.pathManager.PatchPath(ctx, pathName, pathOptions)
+		if err != nil {
+			// If patch fails, try to recreate the path with correct configuration
+			rm.logger.WithError(err).WithField("path_name", pathName).Warn("Failed to patch existing path, attempting to recreate")
+			err = rm.pathManager.CreatePath(ctx, pathName, devicePath, pathOptions)
+		}
+		if err != nil {
+			// Attempt error recovery for path creation/patching
 			errorCtx := &ErrorContext{
 				Component:   "RecordingManager",
-				Operation:   "CreatePath",
+				Operation:   "CreateOrPatchPath",
 				CameraID:    cameraID,
 				PathName:    pathName,
 				Timestamp:   time.Now(),
@@ -247,7 +261,7 @@ func (rm *RecordingManager) executeStartRecording(ctx context.Context, cameraID 
 			if recoveryErr != nil {
 				// Record recovery failure
 				rm.errorMetricsCollector.RecordRecoveryAttempt(false)
-				return nil, fmt.Errorf("failed to create path %s: %w", pathName, recoveryErr)
+				return nil, fmt.Errorf("failed to create or patch path %s: %w", pathName, recoveryErr)
 			}
 
 			// Record recovery success

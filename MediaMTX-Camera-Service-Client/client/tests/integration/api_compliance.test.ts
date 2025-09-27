@@ -24,7 +24,10 @@ describe('Integration Tests: API Compliance', () => {
     loggerService = new LoggerService();
     webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
     
-    // Wait for connection
+    // Connect to the server
+    await webSocketService.connect();
+    
+    // Wait for connection to be established
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     authService = new AuthService(webSocketService, loggerService);

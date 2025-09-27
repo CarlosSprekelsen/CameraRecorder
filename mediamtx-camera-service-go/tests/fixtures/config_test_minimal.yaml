@@ -139,3 +139,73 @@ retention_policy:
   max_age_days: 7
   max_size_gb: 1
   auto_cleanup: true
+
+# Server operation defaults
+server_defaults:
+  shutdown_timeout: 30.0
+  camera_monitor_ticker: 5.0
+
+# API Key Management Configuration
+api_key_management:
+  storage_path: "/tmp/api-keys.json"
+  encryption_key: "test-encryption-key-32-chars-long"
+  backup_enabled: false
+  key_length: 32
+  key_prefix: "csk_"
+  key_format: "base64url"
+  default_expiry: "90d"
+  max_keys_per_role: 10
+  audit_logging: true
+  usage_tracking: true
+  cli_enabled: true
+  admin_interface: false
+
+# HTTP Health Endpoint Configuration
+http_health:
+  enabled: true
+  host: "0.0.0.0"
+  port: 8003
+  basic_endpoint: "/health"
+  detailed_endpoint: "/health/detailed"
+  ready_endpoint: "/health/ready"
+  live_endpoint: "/health/live"
+  response_format: "json"
+  include_version: true
+  include_uptime: true
+  include_components: true
+
+# External stream discovery configuration
+external_discovery:
+  enabled: false
+  scan_interval: 0
+  scan_timeout: 30
+  max_concurrent_scans: 5
+  enable_startup_scan: false
+  skydio:
+    enabled: false
+    network_ranges: ["192.168.42.0/24"]
+    eo_port: 5554
+    ir_port: 6554
+    eo_stream_path: "/subject"
+    ir_stream_path: "/infrared"
+    enable_both_streams: true
+    known_ips: ["192.168.42.10"]
+  generic_uav:
+    enabled: false
+    network_ranges: []
+    common_ports: [554, 8554]
+    stream_paths: ["/stream", "/live", "/video"]
+    known_ips: []
+
+# Notifications configuration
+notifications:
+  websocket:
+    delivery_timeout: 5.0
+    retry_attempts: 3
+    retry_delay: 1.0
+    max_queue_size: 1000
+    cleanup_interval: 30
+  real_time:
+    camera_status_interval: 1.0
+    recording_progress_interval: 0.5
+    connection_health_check: 10.0
