@@ -212,7 +212,7 @@ storage:
   warn_percent: 70    # Reduced from 80 for early warning
   block_percent: 85   # Reduced from 90 for safety
   default_path: "/opt/camera-service/recordings"
-  fallback_path: "/tmp/recordings"
+  fallback_path: "/opt/camera-service/recordings"
 
 # Retention policy optimized for edge devices
 retention_policy:

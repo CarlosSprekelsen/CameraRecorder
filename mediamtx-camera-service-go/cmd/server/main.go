@@ -37,6 +37,7 @@ import (
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/health"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
@@ -135,6 +136,20 @@ func main() {
 		logger.WithError(err).Fatal("Failed to create WebSocket server")
 	}
 
+	// Initialize HTTP Health Server for container orchestration
+	var httpHealthServer *health.HTTPHealthServer
+	if cfg.HTTPHealth.Enabled {
+		// Create health monitor for health API
+		healthMonitor := health.NewHealthMonitor("1.0.0")
+		
+		// Create HTTP health server with thin delegation pattern
+		httpHealthServer, err = health.NewHTTPHealthServer(&cfg.HTTPHealth, healthMonitor, logger)
+		if err != nil {
+			logger.WithError(err).Fatal("Failed to create HTTP health server")
+		}
+		logger.Info("HTTP Health Server initialized")
+	}
+
 	// Event System Integration - Connect MediaMTX controller to WebSocket event notifications
 	// Controller implements DeviceToCameraIDMapper for API abstraction layer
 	mediaMTXEventNotifier := websocket.NewMediaMTXEventNotifier(wsServer.GetEventManager(), mediaMTXController, logger)
@@ -196,6 +211,15 @@ func main() {
 	}
 	logger.Info("WebSocket server started successfully")
 
+	// Start HTTP Health Server for container orchestration
+	if httpHealthServer != nil {
+		logger.Info("Starting HTTP Health Server...")
+		if err := httpHealthServer.Start(ctx); err != nil {
+			logger.WithError(err).Fatal("Failed to start HTTP Health Server")
+		}
+		logger.Info("HTTP Health Server started successfully")
+	}
+
 	logger.Info("Camera service started successfully - all components operational")
 
 	// Graceful Shutdown - Wait for termination signal
@@ -217,9 +241,24 @@ func main() {
 
 	// Reverse Shutdown Order - Stop services in reverse order of startup for clean resource cleanup
 	var wg sync.WaitGroup
-	errorChan := make(chan error, 3)
+	errorChan := make(chan error, 4)
 
-	// Stop WebSocket server first - prevents new client connections
+	// Stop HTTP Health Server first - prevents new health check connections
+	if httpHealthServer != nil {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			logger.Info("Stopping HTTP Health Server...")
+			if err := httpHealthServer.Stop(); err != nil {
+				logger.WithError(err).Error("Error stopping HTTP Health Server")
+				errorChan <- err
+			} else {
+				logger.Info("HTTP Health Server stopped successfully")
+			}
+		}()
+	}
+
+	// Stop WebSocket server - prevents new client connections
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
