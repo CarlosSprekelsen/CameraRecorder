@@ -256,3 +256,44 @@ health_port: 8080
 server_defaults:
   shutdown_timeout: 30.0              # 30 seconds for edge devices
   camera_monitor_ticker: 60.0         # 60 seconds for edge devices
+
+# API Key Management Configuration (disabled by default for edge devices)
+api_key_management:
+  storage_path: "/opt/camera-service/api-keys.json"
+  encryption_key: "edge-device-encryption-key-32-chars-long"
+  backup_enabled: false               # Disabled for edge devices
+  backup_path: "/opt/camera-service/backups/keys"
+  backup_interval: "24h"
+  key_length: 32
+  key_prefix: "csk_"
+  key_format: "base64url"
+  default_expiry: "90d"
+  rotation_enabled: false             # Disabled for edge devices
+  rotation_interval: "30d"
+  max_keys_per_role: 5                # Reduced for edge devices
+  audit_logging: true
+  usage_tracking: true
+  cli_enabled: true
+  admin_interface: false              # Disabled for edge devices
+  admin_port: 8004
+
+# HTTP Health Endpoint Configuration (enabled for container orchestration)
+http_health:
+  enabled: true
+  host: "0.0.0.0"
+  port: 8003
+  read_timeout: "5s"
+  write_timeout: "5s"
+  idle_timeout: "30s"
+  basic_endpoint: "/health"
+  detailed_endpoint: "/health/detailed"
+  ready_endpoint: "/health/ready"
+  live_endpoint: "/health/live"
+  response_format: "json"
+  include_version: true
+  include_uptime: true
+  include_components: true
+  max_response_time: "100ms"
+  enable_metrics: false               # Disabled for edge devices
+  internal_only: true                 # Restricted to internal access
+  allowed_ips: []                     # Empty for internal only
