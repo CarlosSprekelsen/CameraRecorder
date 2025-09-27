@@ -1322,8 +1322,9 @@ func (s *WebSocketServer) MethodSetDiscoveryInterval(params map[string]interface
 func (s *WebSocketServer) translateErrorToJsonRpc(err error, methodName string) *JsonRpcError {
 	errMsg := err.Error()
 
-	// External discovery disabled error
-	if strings.Contains(strings.ToLower(errMsg), "external stream discovery") &&
+	// External discovery disabled error - check for both variations
+	if (strings.Contains(strings.ToLower(errMsg), "external stream discovery") ||
+		strings.Contains(strings.ToLower(errMsg), "external discovery")) &&
 		(strings.Contains(errMsg, "disabled") || strings.Contains(errMsg, "not configured")) {
 		return NewJsonRpcError(UNSUPPORTED, "feature_disabled",
 			"External stream discovery is disabled in configuration", "Enable external discovery in configuration")

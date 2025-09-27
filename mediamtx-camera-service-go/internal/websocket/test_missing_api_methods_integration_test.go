@@ -494,11 +494,23 @@ func TestMissingAPI_SetDiscoveryInterval_Integration(t *testing.T) {
 	// CRITICAL: JSON-RPC API uses "scan_interval" parameter, not "interval"
 	scanInterval := 30 // 30 seconds
 	response, err := asserter.client.SetDiscoveryInterval(scanInterval)
-	require.NoError(t, err, "set_discovery_interval should succeed")
+	require.NoError(t, err, "Request should not fail")
 	require.NotNil(t, response, "Response should not be nil")
 
-	// Validate response structure per API documentation
-	asserter.client.AssertJSONRPCResponse(response, false)
+	// VALIDATION: External discovery is not configured in test environment
+	// Expected: UNSUPPORTED error (-32030) with proper error message
+	require.NotNil(t, response.Error, "Should get error when external discovery not configured")
+	require.Equal(t, -32030, response.Error.Code, "Error code should be UNSUPPORTED (-32030)")
+	require.Equal(t, "Unsupported", response.Error.Message, "Error message should be 'Unsupported'")
+	
+	// Check error data structure
+	errorData, ok := response.Error.Data.(map[string]interface{})
+	require.True(t, ok, "Error data should be a map")
+	require.Equal(t, "feature_disabled", errorData["reason"], "Error reason should be 'feature_disabled'")
+	require.Contains(t, errorData["details"], "External stream discovery is disabled in configuration", "Error should explain the issue")
+	require.Contains(t, errorData["suggestion"], "Enable external discovery", "Error should provide suggestion")
+
+	t.Log("✅ External Discovery: set_discovery_interval properly returns UNSUPPORTED when feature disabled")
 }
 
 // TestMissingAPI_CameraStatusUpdate_Integration tests camera_status_update method

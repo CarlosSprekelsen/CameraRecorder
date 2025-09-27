@@ -314,11 +314,11 @@ classDiagram
 
 **Notifications Interface (5):**
 
-- `subscribe_events`([event_types])
-- `unsubscribe_events`([event_types])
+- `subscribe_events`([event_types]) → **CLIENT-CALLABLE METHOD**
+- `unsubscribe_events`([event_types]) → **CLIENT-CALLABLE METHOD**
 - `get_subscription_stats` → notification metrics
-- `camera_status_update` → real-time camera events
-- `recording_status_update` → real-time recording events
+- `camera_status_update` → **SERVER-GENERATED NOTIFICATION** (not callable)
+- `recording_status_update` → **SERVER-GENERATED NOTIFICATION** (not callable)
 
 **External Streams Interface (5):**
 
@@ -512,6 +512,22 @@ graph LR
 | Transport | Encrypted communication channels |
 | Input Validation | Client and server-side validation |
 | Session Management | Automatic timeout and renewal |
+| Notification Security | Server-generated notifications blocked from client calls |
+
+#### 8.3.1 Notification Method Security
+
+**Server-Generated Notifications (Not Callable):**
+- `camera_status_update` - Server sends camera status changes
+- `recording_status_update` - Server sends recording status changes
+
+**Client-Callable Methods:**
+- `subscribe_events` - Subscribe to receive notifications
+- `unsubscribe_events` - Unsubscribe from notifications
+
+**Security Enforcement:**
+- Notification methods return permission denied (-32002) when called directly
+- Prevents clients from sending fake status updates
+- Maintains server authority over status reporting
 
 ---
 

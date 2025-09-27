@@ -36,8 +36,9 @@ describe('NotificationService Unit Tests', () => {
   });
 
   describe('REQ-NOTIF-001: Notification subscription management', () => {
-    test('Should subscribe to notification method', () => {
-      // Act
+    test('Should subscribe to notification method (server-generated)', () => {
+      // Note: camera_status_update is a server-generated notification, not a callable method
+      // This test validates the client can set up handlers for incoming notifications
       const unsubscribe = notificationService.subscribe('camera_status_update', mockHandler);
 
       // Assert

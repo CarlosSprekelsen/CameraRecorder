@@ -85,7 +85,8 @@ export class NotificationService {
 
   /**
    * Subscribe to camera status update notifications
-   * Implements camera_status_update RPC method
+   * Note: camera_status_update is a server-generated notification, not a callable method
+   * Use subscribe_events with topics: ['camera.connected', 'camera.disconnected'] instead
    */
   subscribeToCameraStatusUpdates(handler: NotificationHandler): () => void {
     return this.subscribe('camera_status_update', handler);
@@ -93,7 +94,8 @@ export class NotificationService {
 
   /**
    * Subscribe to recording status update notifications
-   * Implements recording_status_update RPC method
+   * Note: recording_status_update is a server-generated notification, not a callable method
+   * Use subscribe_events with topics: ['recording.started', 'recording.stopped'] instead
    */
   subscribeToRecordingStatusUpdates(handler: NotificationHandler): () => void {
     return this.subscribe('recording_status_update', handler);
