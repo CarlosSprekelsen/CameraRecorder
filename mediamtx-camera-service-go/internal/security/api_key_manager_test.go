@@ -118,7 +118,7 @@ func TestAPIKeyManager_GenerateKey(t *testing.T) {
 		},
 		{
 			name:        "empty role",
-			role:        Role(""),
+			role:        Role(0),
 			expiry:      90 * 24 * time.Hour,
 			description: "Test key",
 			expectError: true,
@@ -260,7 +260,7 @@ func TestAPIKeyManager_RevokeKey(t *testing.T) {
 				assert.NoError(t, err)
 
 				// Verify key is revoked
-				keys, err := manager.ListKeys("")
+				keys, err := manager.ListKeys(Role(0))
 				require.NoError(t, err)
 
 				var revokedKey *APIKey
@@ -295,7 +295,7 @@ func TestAPIKeyManager_ListKeys(t *testing.T) {
 	require.NoError(t, err)
 
 	// Generate test keys
-	_, err := manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key")
+	_, err = manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key")
 	require.NoError(t, err)
 
 	_, err = manager.GenerateKey(RoleOperator, 30*24*time.Hour, "Operator key")
@@ -311,7 +311,7 @@ func TestAPIKeyManager_ListKeys(t *testing.T) {
 	}{
 		{
 			name:     "all keys",
-			role:     Role(""),
+			role:     Role(0),
 			expected: 3,
 		},
 		{
@@ -331,7 +331,7 @@ func TestAPIKeyManager_ListKeys(t *testing.T) {
 		},
 		{
 			name:     "non-existent role",
-			role:     Role("nonexistent"),
+			role:     Role(999),
 			expected: 0,
 		},
 	}
@@ -344,7 +344,7 @@ func TestAPIKeyManager_ListKeys(t *testing.T) {
 
 			// Verify all returned keys have the correct role
 			for _, key := range keys {
-				if tt.role != Role("") {
+				if tt.role != Role(0) {
 					assert.Equal(t, tt.role, key.Role)
 				}
 			}
@@ -369,7 +369,7 @@ func TestAPIKeyManager_RotateKeys(t *testing.T) {
 	require.NoError(t, err)
 
 	// Generate test keys
-	_, err := manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key 1")
+	_, err = manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key 1")
 	require.NoError(t, err)
 
 	_, err = manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key 2")
@@ -389,7 +389,7 @@ func TestAPIKeyManager_RotateKeys(t *testing.T) {
 		},
 		{
 			name:        "rotate non-existent role",
-			role:        Role("nonexistent"),
+			role:        Role(999),
 			force:       false,
 			expectError: true,
 		},
@@ -458,7 +458,7 @@ func TestAPIKeyManager_CleanupExpiredKeys(t *testing.T) {
 	assert.NoError(t, err)
 
 	// Verify expired key is marked as expired
-	keys, err := manager.ListKeys("")
+	keys, err := manager.ListKeys(Role(0))
 	require.NoError(t, err)
 
 	var expiredKeyFound, validKeyFound bool
@@ -494,7 +494,7 @@ func TestAPIKeyManager_GetStats(t *testing.T) {
 	require.NoError(t, err)
 
 	// Generate test keys
-	_, err := manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key")
+	_, err = manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key")
 	require.NoError(t, err)
 
 	operatorKey, err := manager.GenerateKey(RoleOperator, 30*24*time.Hour, "Operator key")
@@ -539,7 +539,7 @@ func TestAPIKeyManager_MaxKeysPerRole(t *testing.T) {
 	key1, err := manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key 1")
 	require.NoError(t, err)
 
-	key2, err := manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key 2")
+	_, err = manager.GenerateKey(RoleAdmin, 90*24*time.Hour, "Admin key 2")
 	require.NoError(t, err)
 
 	// Try to generate one more key (should fail)

@@ -28,11 +28,11 @@ import (
 // HTTPHealthServer implements HTTP health endpoints with thin delegation pattern
 // Contains NO business logic - delegates all operations to HealthAPI
 type HTTPHealthServer struct {
-	config     *config.HTTPHealthConfig
-	logger     *logging.Logger
-	healthAPI  HealthAPI
-	server     *http.Server
-	startTime  time.Time
+	config    *config.HTTPHealthConfig
+	logger    *logging.Logger
+	healthAPI HealthAPI
+	server    *http.Server
+	startTime time.Time
 }
 
 // NewHTTPHealthServer creates a new HTTP health server instance
@@ -56,24 +56,24 @@ func NewHTTPHealthServer(config *config.HTTPHealthConfig, healthAPI HealthAPI, l
 
 	// Create HTTP server
 	mux := http.NewServeMux()
-	
+
 	// Register health endpoints
 	mux.HandleFunc(config.BasicEndpoint, server.handleBasicHealth)
 	mux.HandleFunc(config.DetailedEndpoint, server.handleDetailedHealth)
 	mux.HandleFunc(config.ReadyEndpoint, server.handleReadiness)
 	mux.HandleFunc(config.LiveEndpoint, server.handleLiveness)
-	
+
 	// Parse timeouts
 	readTimeout, err := time.ParseDuration(config.ReadTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("invalid read timeout: %w", err)
 	}
-	
+
 	writeTimeout, err := time.ParseDuration(config.WriteTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("invalid write timeout: %w", err)
 	}
-	
+
 	idleTimeout, err := time.ParseDuration(config.IdleTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("invalid idle timeout: %w", err)
@@ -122,11 +122,11 @@ func (hs *HTTPHealthServer) Start(ctx context.Context) error {
 
 	// Wait for context cancellation
 	<-ctx.Done()
-	
+
 	// Shutdown server
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
-	
+
 	if err := hs.server.Shutdown(shutdownCtx); err != nil {
 		hs.logger.WithError(err).Error("HTTP Health Server shutdown failed")
 		return err
@@ -151,7 +151,7 @@ func (hs *HTTPHealthServer) Stop() error {
 // handleBasicHealth handles the basic health endpoint
 func (hs *HTTPHealthServer) handleBasicHealth(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
-	
+
 	// Delegate to HealthAPI - NO business logic in HTTP server
 	response, err := hs.healthAPI.GetHealth(r.Context())
 	if err != nil {
@@ -162,10 +162,10 @@ func (hs *HTTPHealthServer) handleBasicHealth(w http.ResponseWriter, r *http.Req
 
 	// Set response headers
 	hs.setResponseHeaders(w)
-	
+
 	// Write response
 	hs.writeJSONResponse(w, http.StatusOK, response)
-	
+
 	// Log request
 	hs.logRequest(r, "basic_health", time.Since(start), http.StatusOK)
 }
@@ -173,7 +173,7 @@ func (hs *HTTPHealthServer) handleBasicHealth(w http.ResponseWriter, r *http.Req
 // handleDetailedHealth handles the detailed health endpoint
 func (hs *HTTPHealthServer) handleDetailedHealth(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
-	
+
 	// Delegate to HealthAPI - NO business logic in HTTP server
 	response, err := hs.healthAPI.GetDetailedHealth(r.Context())
 	if err != nil {
@@ -184,10 +184,10 @@ func (hs *HTTPHealthServer) handleDetailedHealth(w http.ResponseWriter, r *http.
 
 	// Set response headers
 	hs.setResponseHeaders(w)
-	
+
 	// Write response
 	hs.writeJSONResponse(w, http.StatusOK, response)
-	
+
 	// Log request
 	hs.logRequest(r, "detailed_health", time.Since(start), http.StatusOK)
 }
@@ -195,7 +195,7 @@ func (hs *HTTPHealthServer) handleDetailedHealth(w http.ResponseWriter, r *http.
 // handleReadiness handles the readiness probe endpoint
 func (hs *HTTPHealthServer) handleReadiness(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
-	
+
 	// Delegate to HealthAPI - NO business logic in HTTP server
 	response, err := hs.healthAPI.IsReady(r.Context())
 	if err != nil {
@@ -206,16 +206,16 @@ func (hs *HTTPHealthServer) handleReadiness(w http.ResponseWriter, r *http.Reque
 
 	// Set response headers
 	hs.setResponseHeaders(w)
-	
+
 	// Determine HTTP status code
 	statusCode := http.StatusOK
 	if !response.Ready {
 		statusCode = http.StatusServiceUnavailable
 	}
-	
+
 	// Write response
 	hs.writeJSONResponse(w, statusCode, response)
-	
+
 	// Log request
 	hs.logRequest(r, "readiness", time.Since(start), statusCode)
 }
@@ -223,7 +223,7 @@ func (hs *HTTPHealthServer) handleReadiness(w http.ResponseWriter, r *http.Reque
 // handleLiveness handles the liveness probe endpoint
 func (hs *HTTPHealthServer) handleLiveness(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
-	
+
 	// Delegate to HealthAPI - NO business logic in HTTP server
 	response, err := hs.healthAPI.IsAlive(r.Context())
 	if err != nil {
@@ -234,16 +234,16 @@ func (hs *HTTPHealthServer) handleLiveness(w http.ResponseWriter, r *http.Reques
 
 	// Set response headers
 	hs.setResponseHeaders(w)
-	
+
 	// Determine HTTP status code
 	statusCode := http.StatusOK
 	if !response.Alive {
 		statusCode = http.StatusServiceUnavailable
 	}
-	
+
 	// Write response
 	hs.writeJSONResponse(w, statusCode, response)
-	
+
 	// Log request
 	hs.logRequest(r, "liveness", time.Since(start), statusCode)
 }
@@ -254,7 +254,7 @@ func (hs *HTTPHealthServer) setResponseHeaders(w http.ResponseWriter) {
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	w.Header().Set("Pragma", "no-cache")
 	w.Header().Set("Expires", "0")
-	
+
 	// Add CORS headers if needed
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
@@ -264,7 +264,7 @@ func (hs *HTTPHealthServer) setResponseHeaders(w http.ResponseWriter) {
 // writeJSONResponse writes a JSON response
 func (hs *HTTPHealthServer) writeJSONResponse(w http.ResponseWriter, statusCode int, data interface{}) {
 	w.WriteHeader(statusCode)
-	
+
 	if err := json.NewEncoder(w).Encode(data); err != nil {
 		hs.logger.WithError(err).Error("Failed to encode JSON response")
 	}
@@ -274,13 +274,13 @@ func (hs *HTTPHealthServer) writeJSONResponse(w http.ResponseWriter, statusCode 
 func (hs *HTTPHealthServer) writeErrorResponse(w http.ResponseWriter, statusCode int, message string) {
 	// Set response headers first
 	hs.setResponseHeaders(w)
-	
+
 	errorResponse := map[string]interface{}{
 		"error":     message,
 		"timestamp": time.Now().Format(time.RFC3339),
 		"status":    statusCode,
 	}
-	
+
 	hs.writeJSONResponse(w, statusCode, errorResponse)
 }
 

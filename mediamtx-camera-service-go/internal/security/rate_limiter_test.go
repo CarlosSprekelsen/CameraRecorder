@@ -56,7 +56,7 @@ func TestDefaultRateLimitConfig(t *testing.T) {
 func TestNewEnhancedRateLimiter(t *testing.T) {
 	t.Parallel()
 
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLogger("test")
 
 	tests := []struct {
 		name   string
@@ -82,7 +82,7 @@ func TestNewEnhancedRateLimiter(t *testing.T) {
 func TestEnhancedRateLimiter_SetMethodRateLimit(t *testing.T) {
 	t.Parallel()
 
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLogger("test")
 	limiter := NewEnhancedRateLimiter(logger, nil)
 
 	// Set method rate limit
@@ -105,7 +105,7 @@ func TestEnhancedRateLimiter_CheckLimit(t *testing.T) {
 
 	// Test basic successful requests
 	t.Run("successful_requests", func(t *testing.T) {
-		logger := logging.CreateTestLogger(t, nil)
+		logger := logging.GetLogger("test")
 		limiter := NewEnhancedRateLimiter(logger, nil)
 
 		method := "test_method"
@@ -124,7 +124,7 @@ func TestEnhancedRateLimiter_CheckLimit(t *testing.T) {
 
 	// Test blocked client scenario
 	t.Run("blocked_client", func(t *testing.T) {
-		logger := logging.CreateTestLogger(t, nil)
+		logger := logging.GetLogger("test")
 		limiter := NewEnhancedRateLimiter(logger, nil)
 
 		// Manually block a client
@@ -139,7 +139,7 @@ func TestEnhancedRateLimiter_CheckLimit(t *testing.T) {
 
 	// Test client unblocking after duration
 	t.Run("client_unblock_after_duration", func(t *testing.T) {
-		logger := logging.CreateTestLogger(t, nil)
+		logger := logging.GetLogger("test")
 		limiter := NewEnhancedRateLimiter(logger, nil)
 
 		// Block client with old timestamp
@@ -160,7 +160,7 @@ func TestEnhancedRateLimiter_CheckLimit(t *testing.T) {
 
 	// Test new client creation and tracking
 	t.Run("new_client_creation", func(t *testing.T) {
-		logger := logging.CreateTestLogger(t, nil)
+		logger := logging.GetLogger("test")
 		limiter := NewEnhancedRateLimiter(logger, nil)
 
 		err := limiter.CheckLimit("test_method", "new_client")
@@ -177,7 +177,7 @@ func TestEnhancedRateLimiter_CheckLimit(t *testing.T) {
 
 	// Test method-specific rate limit
 	t.Run("method_specific_rate_limit", func(t *testing.T) {
-		logger := logging.CreateTestLogger(t, nil)
+		logger := logging.GetLogger("test")
 		config := &TestSecurityConfig{}
 		limiter := NewEnhancedRateLimiter(logger, config)
 
@@ -200,7 +200,7 @@ func TestEnhancedRateLimiter_CheckLimit(t *testing.T) {
 
 	// Test client rate limit per minute exceeded
 	t.Run("client_rate_limit_per_minute", func(t *testing.T) {
-		logger := logging.CreateTestLogger(t, nil)
+		logger := logging.GetLogger("test")
 		limiter := NewEnhancedRateLimiter(logger, nil)
 		clientID := "heavy_client"
 
@@ -221,7 +221,7 @@ func TestEnhancedRateLimiter_CheckLimit(t *testing.T) {
 
 	// Test client blocking after excessive requests
 	t.Run("client_blocking_excessive_requests", func(t *testing.T) {
-		logger := logging.CreateTestLogger(t, nil)
+		logger := logging.GetLogger("test")
 		limiter := NewEnhancedRateLimiter(logger, nil)
 		clientID := "excessive_client"
 
@@ -249,7 +249,7 @@ func TestEnhancedRateLimiter_CheckLimit(t *testing.T) {
 func TestEnhancedRateLimiter_ResetClientLimits(t *testing.T) {
 	t.Parallel()
 
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLogger("test")
 	limiter := NewEnhancedRateLimiter(logger, nil)
 	clientID := "test_client"
 	method := "test_method"
@@ -270,7 +270,7 @@ func TestEnhancedRateLimiter_ResetClientLimits(t *testing.T) {
 func TestEnhancedRateLimiter_GetClientStats(t *testing.T) {
 	t.Parallel()
 
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLogger("test")
 	limiter := NewEnhancedRateLimiter(logger, nil)
 	clientID := "test_client"
 	method := "test_method"
@@ -289,7 +289,7 @@ func TestEnhancedRateLimiter_GetClientStats(t *testing.T) {
 func TestEnhancedRateLimiter_GetMethodStats(t *testing.T) {
 	t.Parallel()
 
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLogger("test")
 	limiter := NewEnhancedRateLimiter(logger, nil)
 	method := "test_method"
 
@@ -310,7 +310,7 @@ func TestEnhancedRateLimiter_GetMethodStats(t *testing.T) {
 func TestEnhancedRateLimiter_GetGlobalStats(t *testing.T) {
 	t.Parallel()
 
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLogger("test")
 	limiter := NewEnhancedRateLimiter(logger, nil)
 
 	// Get global stats
@@ -324,7 +324,7 @@ func TestEnhancedRateLimiter_GetGlobalStats(t *testing.T) {
 func TestEnhancedRateLimiter_CleanupOldClients(t *testing.T) {
 	t.Parallel()
 
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLogger("test")
 	limiter := NewEnhancedRateLimiter(logger, nil)
 	clientID := "test_client"
 	method := "test_method"
@@ -350,7 +350,7 @@ func TestEnhancedRateLimiter_CleanupOldClients(t *testing.T) {
 func TestEnhancedRateLimiter_StartCleanupRoutine(t *testing.T) {
 	t.Parallel()
 
-	logger := logging.CreateTestLogger(t, nil)
+	logger := logging.GetLogger("test")
 	limiter := NewEnhancedRateLimiter(logger, nil)
 
 	// Start cleanup routine with very short interval

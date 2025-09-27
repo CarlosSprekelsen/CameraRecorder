@@ -30,14 +30,14 @@ import (
 
 // mockHealthAPI is a mock implementation of HealthAPI for testing
 type mockHealthAPI struct {
-	healthResponse      *HealthResponse
-	detailedResponse    *DetailedHealthResponse
-	readinessResponse   *ReadinessResponse
-	livenessResponse    *LivenessResponse
-	healthError         error
-	detailedError       error
-	readinessError      error
-	livenessError       error
+	healthResponse    *HealthResponse
+	detailedResponse  *DetailedHealthResponse
+	readinessResponse *ReadinessResponse
+	livenessResponse  *LivenessResponse
+	healthError       error
+	detailedError     error
+	readinessError    error
+	livenessError     error
 }
 
 func (m *mockHealthAPI) GetHealth(ctx context.Context) (*HealthResponse, error) {
@@ -67,16 +67,16 @@ func TestNewHTTPHealthServer(t *testing.T) {
 		{
 			name: "valid configuration",
 			config: &config.HTTPHealthConfig{
-				Enabled:        true,
-				Host:           "localhost",
-				Port:           8003,
-				ReadTimeout:    "5s",
-				WriteTimeout:   "5s",
-				IdleTimeout:    "30s",
-				BasicEndpoint:  "/health",
+				Enabled:          true,
+				Host:             "localhost",
+				Port:             8003,
+				ReadTimeout:      "5s",
+				WriteTimeout:     "5s",
+				IdleTimeout:      "30s",
+				BasicEndpoint:    "/health",
 				DetailedEndpoint: "/health/detailed",
-				ReadyEndpoint:  "/health/ready",
-				LiveEndpoint:   "/health/live",
+				ReadyEndpoint:    "/health/ready",
+				LiveEndpoint:     "/health/live",
 			},
 			healthAPI:   &mockHealthAPI{},
 			logger:      logging.GetLogger("test"),
@@ -92,16 +92,16 @@ func TestNewHTTPHealthServer(t *testing.T) {
 		{
 			name: "nil health API",
 			config: &config.HTTPHealthConfig{
-				Enabled:        true,
-				Host:           "localhost",
-				Port:           8003,
-				ReadTimeout:    "5s",
-				WriteTimeout:   "5s",
-				IdleTimeout:    "30s",
-				BasicEndpoint:  "/health",
+				Enabled:          true,
+				Host:             "localhost",
+				Port:             8003,
+				ReadTimeout:      "5s",
+				WriteTimeout:     "5s",
+				IdleTimeout:      "30s",
+				BasicEndpoint:    "/health",
 				DetailedEndpoint: "/health/detailed",
-				ReadyEndpoint:  "/health/ready",
-				LiveEndpoint:   "/health/live",
+				ReadyEndpoint:    "/health/ready",
+				LiveEndpoint:     "/health/live",
 			},
 			healthAPI:   nil,
 			logger:      logging.GetLogger("test"),
@@ -110,16 +110,16 @@ func TestNewHTTPHealthServer(t *testing.T) {
 		{
 			name: "nil logger",
 			config: &config.HTTPHealthConfig{
-				Enabled:        true,
-				Host:           "localhost",
-				Port:           8003,
-				ReadTimeout:    "5s",
-				WriteTimeout:   "5s",
-				IdleTimeout:    "30s",
-				BasicEndpoint:  "/health",
+				Enabled:          true,
+				Host:             "localhost",
+				Port:             8003,
+				ReadTimeout:      "5s",
+				WriteTimeout:     "5s",
+				IdleTimeout:      "30s",
+				BasicEndpoint:    "/health",
 				DetailedEndpoint: "/health/detailed",
-				ReadyEndpoint:  "/health/ready",
-				LiveEndpoint:   "/health/live",
+				ReadyEndpoint:    "/health/ready",
+				LiveEndpoint:     "/health/live",
 			},
 			healthAPI:   &mockHealthAPI{},
 			logger:      nil,
@@ -128,16 +128,16 @@ func TestNewHTTPHealthServer(t *testing.T) {
 		{
 			name: "invalid timeout",
 			config: &config.HTTPHealthConfig{
-				Enabled:        true,
-				Host:           "localhost",
-				Port:           8003,
-				ReadTimeout:    "invalid",
-				WriteTimeout:   "5s",
-				IdleTimeout:    "30s",
-				BasicEndpoint:  "/health",
+				Enabled:          true,
+				Host:             "localhost",
+				Port:             8003,
+				ReadTimeout:      "invalid",
+				WriteTimeout:     "5s",
+				IdleTimeout:      "30s",
+				BasicEndpoint:    "/health",
 				DetailedEndpoint: "/health/detailed",
-				ReadyEndpoint:  "/health/ready",
-				LiveEndpoint:   "/health/live",
+				ReadyEndpoint:    "/health/ready",
+				LiveEndpoint:     "/health/live",
 			},
 			healthAPI:   &mockHealthAPI{},
 			logger:      logging.GetLogger("test"),
@@ -148,7 +148,7 @@ func TestNewHTTPHealthServer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			server, err := NewHTTPHealthServer(tt.config, tt.healthAPI, tt.logger)
-			
+
 			if tt.expectError {
 				assert.Error(t, err)
 				assert.Nil(t, server)
@@ -166,20 +166,20 @@ func TestNewHTTPHealthServer(t *testing.T) {
 func TestHTTPHealthServer_handleBasicHealth(t *testing.T) {
 	// Setup
 	config := &config.HTTPHealthConfig{
-		Enabled:        true,
-		Host:           "localhost",
-		Port:           8003,
-		ReadTimeout:    "5s",
-		WriteTimeout:   "5s",
-		IdleTimeout:    "30s",
-		BasicEndpoint:  "/health",
+		Enabled:          true,
+		Host:             "localhost",
+		Port:             8003,
+		ReadTimeout:      "5s",
+		WriteTimeout:     "5s",
+		IdleTimeout:      "30s",
+		BasicEndpoint:    "/health",
 		DetailedEndpoint: "/health/detailed",
-		ReadyEndpoint:  "/health/ready",
-		LiveEndpoint:   "/health/live",
+		ReadyEndpoint:    "/health/ready",
+		LiveEndpoint:     "/health/live",
 	}
-	
+
 	logger := logging.GetLogger("test")
-	
+
 	tests := []struct {
 		name           string
 		mockResponse   *HealthResponse
@@ -198,9 +198,9 @@ func TestHTTPHealthServer_handleBasicHealth(t *testing.T) {
 			mockError:      nil,
 			expectedStatus: http.StatusOK,
 			expectedBody: map[string]interface{}{
-				"status": "healthy",
+				"status":  "healthy",
 				"version": "1.0.0",
-				"uptime": "1h30m",
+				"uptime":  "1h30m",
 			},
 		},
 		{
@@ -221,27 +221,27 @@ func TestHTTPHealthServer_handleBasicHealth(t *testing.T) {
 				healthResponse: tt.mockResponse,
 				healthError:    tt.mockError,
 			}
-			
+
 			// Create server
 			server, err := NewHTTPHealthServer(config, mockAPI, logger)
 			require.NoError(t, err)
-			
+
 			// Create request
 			req := httptest.NewRequest("GET", "/health", nil)
 			w := httptest.NewRecorder()
-			
+
 			// Call handler
 			server.handleBasicHealth(w, req)
-			
+
 			// Assert response
 			assert.Equal(t, tt.expectedStatus, w.Code)
 			assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
-			
+
 			// Parse response body
 			var response map[string]interface{}
 			err = json.Unmarshal(w.Body.Bytes(), &response)
 			require.NoError(t, err)
-			
+
 			// Check expected fields
 			for key, expectedValue := range tt.expectedBody {
 				assert.Equal(t, expectedValue, response[key])
@@ -253,20 +253,20 @@ func TestHTTPHealthServer_handleBasicHealth(t *testing.T) {
 func TestHTTPHealthServer_handleDetailedHealth(t *testing.T) {
 	// Setup
 	config := &config.HTTPHealthConfig{
-		Enabled:        true,
-		Host:           "localhost",
-		Port:           8003,
-		ReadTimeout:    "5s",
-		WriteTimeout:   "5s",
-		IdleTimeout:    "30s",
-		BasicEndpoint:  "/health",
+		Enabled:          true,
+		Host:             "localhost",
+		Port:             8003,
+		ReadTimeout:      "5s",
+		WriteTimeout:     "5s",
+		IdleTimeout:      "30s",
+		BasicEndpoint:    "/health",
 		DetailedEndpoint: "/health/detailed",
-		ReadyEndpoint:  "/health/ready",
-		LiveEndpoint:   "/health/live",
+		ReadyEndpoint:    "/health/ready",
+		LiveEndpoint:     "/health/live",
 	}
-	
+
 	logger := logging.GetLogger("test")
-	
+
 	tests := []struct {
 		name           string
 		mockResponse   *DetailedHealthResponse
@@ -292,9 +292,9 @@ func TestHTTPHealthServer_handleDetailedHealth(t *testing.T) {
 			mockError:      nil,
 			expectedStatus: http.StatusOK,
 			expectedBody: map[string]interface{}{
-				"status": "healthy",
+				"status":  "healthy",
 				"version": "1.0.0",
-				"uptime": "1h30m",
+				"uptime":  "1h30m",
 			},
 		},
 		{
@@ -315,27 +315,27 @@ func TestHTTPHealthServer_handleDetailedHealth(t *testing.T) {
 				detailedResponse: tt.mockResponse,
 				detailedError:    tt.mockError,
 			}
-			
+
 			// Create server
 			server, err := NewHTTPHealthServer(config, mockAPI, logger)
 			require.NoError(t, err)
-			
+
 			// Create request
 			req := httptest.NewRequest("GET", "/health/detailed", nil)
 			w := httptest.NewRecorder()
-			
+
 			// Call handler
 			server.handleDetailedHealth(w, req)
-			
+
 			// Assert response
 			assert.Equal(t, tt.expectedStatus, w.Code)
 			assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
-			
+
 			// Parse response body
 			var response map[string]interface{}
 			err = json.Unmarshal(w.Body.Bytes(), &response)
 			require.NoError(t, err)
-			
+
 			// Check expected fields
 			for key, expectedValue := range tt.expectedBody {
 				assert.Equal(t, expectedValue, response[key])
@@ -347,20 +347,20 @@ func TestHTTPHealthServer_handleDetailedHealth(t *testing.T) {
 func TestHTTPHealthServer_handleReadiness(t *testing.T) {
 	// Setup
 	config := &config.HTTPHealthConfig{
-		Enabled:        true,
-		Host:           "localhost",
-		Port:           8003,
-		ReadTimeout:    "5s",
-		WriteTimeout:   "5s",
-		IdleTimeout:    "30s",
-		BasicEndpoint:  "/health",
+		Enabled:          true,
+		Host:             "localhost",
+		Port:             8003,
+		ReadTimeout:      "5s",
+		WriteTimeout:     "5s",
+		IdleTimeout:      "30s",
+		BasicEndpoint:    "/health",
 		DetailedEndpoint: "/health/detailed",
-		ReadyEndpoint:  "/health/ready",
-		LiveEndpoint:   "/health/live",
+		ReadyEndpoint:    "/health/ready",
+		LiveEndpoint:     "/health/live",
 	}
-	
+
 	logger := logging.GetLogger("test")
-	
+
 	tests := []struct {
 		name           string
 		mockResponse   *ReadinessResponse
@@ -378,7 +378,7 @@ func TestHTTPHealthServer_handleReadiness(t *testing.T) {
 			mockError:      nil,
 			expectedStatus: http.StatusOK,
 			expectedBody: map[string]interface{}{
-				"ready": true,
+				"ready":   true,
 				"message": "System is ready",
 			},
 		},
@@ -392,7 +392,7 @@ func TestHTTPHealthServer_handleReadiness(t *testing.T) {
 			mockError:      nil,
 			expectedStatus: http.StatusServiceUnavailable,
 			expectedBody: map[string]interface{}{
-				"ready": false,
+				"ready":   false,
 				"message": "System not ready",
 			},
 		},
@@ -414,27 +414,27 @@ func TestHTTPHealthServer_handleReadiness(t *testing.T) {
 				readinessResponse: tt.mockResponse,
 				readinessError:    tt.mockError,
 			}
-			
+
 			// Create server
 			server, err := NewHTTPHealthServer(config, mockAPI, logger)
 			require.NoError(t, err)
-			
+
 			// Create request
 			req := httptest.NewRequest("GET", "/health/ready", nil)
 			w := httptest.NewRecorder()
-			
+
 			// Call handler
 			server.handleReadiness(w, req)
-			
+
 			// Assert response
 			assert.Equal(t, tt.expectedStatus, w.Code)
 			assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
-			
+
 			// Parse response body
 			var response map[string]interface{}
 			err = json.Unmarshal(w.Body.Bytes(), &response)
 			require.NoError(t, err)
-			
+
 			// Check expected fields
 			for key, expectedValue := range tt.expectedBody {
 				assert.Equal(t, expectedValue, response[key])
@@ -446,20 +446,20 @@ func TestHTTPHealthServer_handleReadiness(t *testing.T) {
 func TestHTTPHealthServer_handleLiveness(t *testing.T) {
 	// Setup
 	config := &config.HTTPHealthConfig{
-		Enabled:        true,
-		Host:           "localhost",
-		Port:           8003,
-		ReadTimeout:    "5s",
-		WriteTimeout:   "5s",
-		IdleTimeout:    "30s",
-		BasicEndpoint:  "/health",
+		Enabled:          true,
+		Host:             "localhost",
+		Port:             8003,
+		ReadTimeout:      "5s",
+		WriteTimeout:     "5s",
+		IdleTimeout:      "30s",
+		BasicEndpoint:    "/health",
 		DetailedEndpoint: "/health/detailed",
-		ReadyEndpoint:  "/health/ready",
-		LiveEndpoint:   "/health/live",
+		ReadyEndpoint:    "/health/ready",
+		LiveEndpoint:     "/health/live",
 	}
-	
+
 	logger := logging.GetLogger("test")
-	
+
 	tests := []struct {
 		name           string
 		mockResponse   *LivenessResponse
@@ -477,7 +477,7 @@ func TestHTTPHealthServer_handleLiveness(t *testing.T) {
 			mockError:      nil,
 			expectedStatus: http.StatusOK,
 			expectedBody: map[string]interface{}{
-				"alive": true,
+				"alive":   true,
 				"message": "System is alive",
 			},
 		},
@@ -491,7 +491,7 @@ func TestHTTPHealthServer_handleLiveness(t *testing.T) {
 			mockError:      nil,
 			expectedStatus: http.StatusServiceUnavailable,
 			expectedBody: map[string]interface{}{
-				"alive": false,
+				"alive":   false,
 				"message": "System is not alive",
 			},
 		},
@@ -513,27 +513,27 @@ func TestHTTPHealthServer_handleLiveness(t *testing.T) {
 				livenessResponse: tt.mockResponse,
 				livenessError:    tt.mockError,
 			}
-			
+
 			// Create server
 			server, err := NewHTTPHealthServer(config, mockAPI, logger)
 			require.NoError(t, err)
-			
+
 			// Create request
 			req := httptest.NewRequest("GET", "/health/live", nil)
 			w := httptest.NewRecorder()
-			
+
 			// Call handler
 			server.handleLiveness(w, req)
-			
+
 			// Assert response
 			assert.Equal(t, tt.expectedStatus, w.Code)
 			assert.Equal(t, "application/json", w.Header().Get("Content-Type"))
-			
+
 			// Parse response body
 			var response map[string]interface{}
 			err = json.Unmarshal(w.Body.Bytes(), &response)
 			require.NoError(t, err)
-			
+
 			// Check expected fields
 			for key, expectedValue := range tt.expectedBody {
 				assert.Equal(t, expectedValue, response[key])
@@ -545,35 +545,35 @@ func TestHTTPHealthServer_handleLiveness(t *testing.T) {
 func TestHTTPHealthServer_GetServerInfo(t *testing.T) {
 	// Setup
 	config := &config.HTTPHealthConfig{
-		Enabled:        true,
-		Host:           "localhost",
-		Port:           8003,
-		ReadTimeout:    "5s",
-		WriteTimeout:   "5s",
-		IdleTimeout:    "30s",
-		BasicEndpoint:  "/health",
+		Enabled:          true,
+		Host:             "localhost",
+		Port:             8003,
+		ReadTimeout:      "5s",
+		WriteTimeout:     "5s",
+		IdleTimeout:      "30s",
+		BasicEndpoint:    "/health",
 		DetailedEndpoint: "/health/detailed",
-		ReadyEndpoint:  "/health/ready",
-		LiveEndpoint:   "/health/live",
+		ReadyEndpoint:    "/health/ready",
+		LiveEndpoint:     "/health/live",
 	}
-	
+
 	logger := logging.GetLogger("test")
 	mockAPI := &mockHealthAPI{}
-	
+
 	// Create server
 	server, err := NewHTTPHealthServer(config, mockAPI, logger)
 	require.NoError(t, err)
-	
+
 	// Get server info
 	info := server.GetServerInfo()
-	
+
 	// Assert server info
 	assert.Equal(t, true, info["enabled"])
 	assert.Equal(t, "localhost", info["host"])
 	assert.Equal(t, 8003, info["port"])
 	assert.NotNil(t, info["start_time"])
 	assert.NotNil(t, info["uptime"])
-	
+
 	endpoints, ok := info["endpoints"].([]string)
 	require.True(t, ok)
 	assert.Contains(t, endpoints, "/health")
@@ -585,25 +585,25 @@ func TestHTTPHealthServer_GetServerInfo(t *testing.T) {
 func TestHTTPHealthServer_Stop(t *testing.T) {
 	// Setup
 	config := &config.HTTPHealthConfig{
-		Enabled:        true,
-		Host:           "localhost",
-		Port:           8003,
-		ReadTimeout:    "5s",
-		WriteTimeout:   "5s",
-		IdleTimeout:    "30s",
-		BasicEndpoint:  "/health",
+		Enabled:          true,
+		Host:             "localhost",
+		Port:             8003,
+		ReadTimeout:      "5s",
+		WriteTimeout:     "5s",
+		IdleTimeout:      "30s",
+		BasicEndpoint:    "/health",
 		DetailedEndpoint: "/health/detailed",
-		ReadyEndpoint:  "/health/ready",
-		LiveEndpoint:   "/health/live",
+		ReadyEndpoint:    "/health/ready",
+		LiveEndpoint:     "/health/live",
 	}
-	
+
 	logger := logging.GetLogger("test")
 	mockAPI := &mockHealthAPI{}
-	
+
 	// Create server
 	server, err := NewHTTPHealthServer(config, mockAPI, logger)
 	require.NoError(t, err)
-	
+
 	// Stop server
 	err = server.Stop()
 	assert.NoError(t, err)
@@ -612,25 +612,25 @@ func TestHTTPHealthServer_Stop(t *testing.T) {
 func TestHTTPHealthServer_Stop_Disabled(t *testing.T) {
 	// Setup
 	config := &config.HTTPHealthConfig{
-		Enabled:        false,
-		Host:           "localhost",
-		Port:           8003,
-		ReadTimeout:    "5s",
-		WriteTimeout:   "5s",
-		IdleTimeout:    "30s",
-		BasicEndpoint:  "/health",
+		Enabled:          false,
+		Host:             "localhost",
+		Port:             8003,
+		ReadTimeout:      "5s",
+		WriteTimeout:     "5s",
+		IdleTimeout:      "30s",
+		BasicEndpoint:    "/health",
 		DetailedEndpoint: "/health/detailed",
-		ReadyEndpoint:  "/health/ready",
-		LiveEndpoint:   "/health/live",
+		ReadyEndpoint:    "/health/ready",
+		LiveEndpoint:     "/health/live",
 	}
-	
+
 	logger := logging.GetLogger("test")
 	mockAPI := &mockHealthAPI{}
-	
+
 	// Create server
 	server, err := NewHTTPHealthServer(config, mockAPI, logger)
 	require.NoError(t, err)
-	
+
 	// Stop server
 	err = server.Stop()
 	assert.NoError(t, err)

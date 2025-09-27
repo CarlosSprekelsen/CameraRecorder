@@ -251,8 +251,7 @@ func (km *APIKeyManager) ListKeys(role Role) ([]*APIKey, error) {
 // RotateKeys rotates all keys for a specific role
 func (km *APIKeyManager) RotateKeys(role Role, force bool) error {
 	km.mu.Lock()
-	defer km.mu.Unlock()
-
+	
 	// Find keys to rotate
 	var keysToRotate []*APIKey
 	for _, apiKey := range km.storage.Keys {
@@ -262,19 +261,24 @@ func (km *APIKeyManager) RotateKeys(role Role, force bool) error {
 	}
 
 	if len(keysToRotate) == 0 {
+		km.mu.Unlock()
 		return fmt.Errorf("no active keys found for role %s", role)
 	}
 
+	// Release lock before generating new keys to avoid deadlock
+	km.mu.Unlock()
+
 	// Rotate keys
 	for _, apiKey := range keysToRotate {
-		// Generate new key
+		// Generate new key (this will acquire its own lock)
 		newKey, err := km.GenerateKey(apiKey.Role, time.Until(apiKey.ExpiresAt), apiKey.Description+" (rotated)")
 		if err != nil {
 			km.logger.WithError(err).WithField("key_id", apiKey.ID).Error("Failed to generate replacement key during rotation")
 			continue
 		}
 
-		// Revoke old key
+		// Revoke old key (acquire lock again)
+		km.mu.Lock()
 		apiKey.Status = "revoked"
 
 		km.logger.WithFields(logging.Fields{
@@ -282,12 +286,17 @@ func (km *APIKeyManager) RotateKeys(role Role, force bool) error {
 			"new_key_id": newKey.ID,
 			"role":       role,
 		}).Info("API key rotated successfully")
+		
+		km.mu.Unlock()
 	}
 
 	// Save changes
+	km.mu.Lock()
 	if err := km.saveKeys(); err != nil {
+		km.mu.Unlock()
 		return fmt.Errorf("failed to save key rotation: %w", err)
 	}
+	km.mu.Unlock()
 
 	return nil
 }
@@ -421,7 +430,7 @@ func (km *APIKeyManager) GetStats() map[string]interface{} {
 
 		// Count by role
 		roleCount := stats["keys_by_role"].(map[string]int)
-		roleCount[string(apiKey.Role)]++
+		roleCount[apiKey.Role.String()]++
 	}
 
 	return stats
