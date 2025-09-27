@@ -109,7 +109,7 @@ func (fm *ffmpegManager) StartProcess(ctx context.Context, command []string, out
 	fm.logger.WithFields(logging.Fields{
 		"command":     command,
 		"output_path": outputPath,
-	}).Debug("Starting FFmpeg process")
+	}).Info("Starting FFmpeg process")
 
 	// Validate inputs (following Python implementation pattern)
 	if len(command) == 0 {
@@ -166,7 +166,6 @@ func (fm *ffmpegManager) StartProcess(ctx context.Context, command []string, out
 
 // StopProcess stops an FFmpeg process with sophisticated cleanup (Python parity)
 func (fm *ffmpegManager) StopProcess(ctx context.Context, pid int) error {
-	fm.logger.WithField("pid", strconv.Itoa(pid)).Debug("Stopping FFmpeg process")
 
 	fm.processMu.Lock()
 	process, exists := fm.processes[pid]
@@ -213,7 +212,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 		"pid":            pid,
 		"correlation_id": correlationID,
 		"operation":      operation,
-	}).Debug("Starting sophisticated FFmpeg process cleanup")
+	}).Info("Starting sophisticated FFmpeg process cleanup")
 
 	// Check if process is already terminated
 	if process.cmd.ProcessState != nil && process.cmd.ProcessState.Exited() {
@@ -307,7 +306,7 @@ func (fm *ffmpegManager) cleanupFFmpegProcess(process *FFmpegProcess, pid int, o
 		"pid":            pid,
 		"correlation_id": correlationID,
 		"cleanup_result": result,
-	}).Debug("FFmpeg process cleanup completed")
+	}).Info("FFmpeg process cleanup completed")
 
 	return result
 }
@@ -344,7 +343,7 @@ func (fm *ffmpegManager) TakeSnapshot(ctx context.Context, device, outputPath st
 		"device":         device,
 		"output_path":    outputPath,
 		"operation_type": operationType,
-	}).Debug("Taking FFmpeg snapshot with retry logic")
+	}).Info("Taking FFmpeg snapshot with retry logic")
 
 	// Track performance metrics
 	defer func() {
@@ -402,7 +401,7 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 			"max_attempts":   retryAttempts + 1,
 			"correlation_id": correlationID,
 			"operation":      operation,
-		}).Debug("Executing FFmpeg command with retry")
+		}).Info("Executing FFmpeg command with retry")
 
 		// Create context with timeout for process creation
 		processCtx, cancel := context.WithTimeout(ctx, processCreationTimeout)
@@ -425,7 +424,7 @@ func (fm *ffmpegManager) executeWithRetry(ctx context.Context, command []string,
 					"attempt":        attempt,
 					"backoff_delay":  backoffDelay,
 					"correlation_id": correlationID,
-				}).Debug("Retrying FFmpeg operation after backoff")
+				}).Info("Retrying FFmpeg operation after backoff")
 				// Use context-aware timeout for backoff delay
 				select {
 				case <-time.After(backoffDelay):
@@ -562,7 +561,7 @@ func (fm *ffmpegManager) recordPerformanceMetrics(operationType string, duration
 		"successful_ops":   metrics.SuccessfulOps,
 		"failed_ops":       metrics.FailedOps,
 		"success_rate":     float64(metrics.SuccessfulOps) / float64(metrics.TotalOperations) * 100,
-	}).Debug("Performance metrics recorded")
+	}).Info("Performance metrics recorded")
 }
 
 // RotateFile rotates a file
@@ -570,7 +569,7 @@ func (fm *ffmpegManager) RotateFile(ctx context.Context, oldPath, newPath string
 	fm.logger.WithFields(logging.Fields{
 		"old_path": oldPath,
 		"new_path": newPath,
-	}).Debug("Rotating FFmpeg file")
+	}).Info("Rotating FFmpeg file")
 
 	// Create new directory if it doesn't exist
 	newDir := filepath.Dir(newPath)
@@ -593,7 +592,6 @@ func (fm *ffmpegManager) RotateFile(ctx context.Context, oldPath, newPath string
 
 // GetFileInfo gets file information
 func (fm *ffmpegManager) GetFileInfo(ctx context.Context, path string) (int64, time.Time, error) {
-	fm.logger.WithField("path", path).Debug("Getting FFmpeg file info")
 
 	// Get file info
 	info, err := os.Stat(path)
@@ -711,7 +709,6 @@ func (fm *ffmpegManager) monitorProcess(process *FFmpegProcess) {
 
 // BuildCommand builds an FFmpeg command with the provided arguments
 func (fm *ffmpegManager) BuildCommand(args ...string) []string {
-	fm.logger.WithField("args", strings.Join(args, " ")).Debug("Building FFmpeg command")
 
 	// Start with ffmpeg command
 	command := []string{"ffmpeg"}
@@ -719,6 +716,5 @@ func (fm *ffmpegManager) BuildCommand(args ...string) []string {
 	// Add all provided arguments
 	command = append(command, args...)
 
-	fm.logger.WithField("command", strings.Join(command, " ")).Debug("FFmpeg command built successfully")
 	return command
 }

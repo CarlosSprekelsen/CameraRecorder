@@ -27,13 +27,13 @@ import {
   Info as InfoIcon,
 } from '@mui/icons-material';
 import { useFileStore } from '../../stores/file/fileStore';
-import { FileInfo } from '../../stores/file/fileStore';
+import { FileListItem } from '../../stores/file/fileStore';
 import ConfirmDialog from './ConfirmDialog';
 import { logger } from '../../services/logger/LoggerService';
 import PermissionGate from '../Security/PermissionGate';
 
 interface FileTableProps {
-  files: FileInfo[];
+  files: FileListItem[];
   fileType: 'recordings' | 'snapshots';
   loading: boolean;
 }
@@ -98,7 +98,7 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
     return new Date(dateString).toLocaleString();
   };
 
-  const handleDownload = async (file: FileInfo) => {
+  const handleDownload = async (file: FileListItem) => {
     try {
       await downloadFile(file.download_url, file.filename);
       logger.info(`Download initiated for: ${file.filename}`);
@@ -219,17 +219,6 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
                 </TableCell>
                 <TableCell>
                   <Typography variant="body2">{formatDate(file.modified_time)}</Typography>
-                </TableCell>
-                <TableCell>
-                  <Chip
-                    label={file.format || 'Unknown'}
-                    size="small"
-                    color="primary"
-                    variant="outlined"
-                  />
-                </TableCell>
-                <TableCell>
-                  <Typography variant="body2">{file.device || 'Unknown'}</Typography>
                 </TableCell>
                 <TableCell align="center">
                   <Box display="flex" gap={1} justifyContent="center">

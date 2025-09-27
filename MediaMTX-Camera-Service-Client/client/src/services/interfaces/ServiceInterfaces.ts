@@ -167,7 +167,7 @@ export interface IFileCatalog {
   getRecordingInfo(filename: string): Promise<{
     filename: string;
     file_size: number;
-    modified_time: string;
+    created_time: string;
     download_url: string;
     duration?: number;
     format?: string;
@@ -176,7 +176,7 @@ export interface IFileCatalog {
   getSnapshotInfo(filename: string): Promise<{
     filename: string;
     file_size: number;
-    modified_time: string;
+    created_time: string;
     download_url: string;
     format?: string;
     device?: string;

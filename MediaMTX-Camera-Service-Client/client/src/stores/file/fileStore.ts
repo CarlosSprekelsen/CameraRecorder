@@ -2,19 +2,29 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { FileService } from '../../services/file/FileService';
 
-export interface FileInfo {
+// File info for list operations (uses modified_time)
+export interface FileListItem {
   filename: string;
   file_size: number;
   modified_time: string;
+  download_url: string;
+}
+
+// File info for detailed operations (uses created_time)
+export interface FileInfo {
+  filename: string;
+  file_size: number;
+  created_time: string;
   download_url: string;
   duration?: number;
   format?: string;
   device?: string;
 }
 
+
 export interface FileState {
-  recordings: FileInfo[];
-  snapshots: FileInfo[];
+  recordings: FileListItem[];
+  snapshots: FileListItem[];
   loading: boolean;
   error: string | null;
   pagination: {
