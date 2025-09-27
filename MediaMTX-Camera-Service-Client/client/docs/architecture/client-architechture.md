@@ -251,34 +251,73 @@ classDiagram
     StateManager --> APIClient
 ```
 
-### 5.3 Component Interfaces (Control/Files/Status)
+### 5.3 Component Interfaces (Complete API Coverage)
 
-- I.Discovery: list devices and stream links (`get_camera_list`, `get_streams`, `get_stream_url`)
+- I.Core: `ping`; `authenticate`
+- I.Discovery: list devices and stream links (`get_camera_list`, `get_streams`, `get_stream_url`, `get_camera_status`, `get_camera_capabilities`)
 - I.Command: `take_snapshot`; `start_recording` (optional `duration`); `stop_recording`
+- I.Streaming: `start_streaming`; `stop_streaming`; `get_stream_status`
 - I.FileCatalog: `list_recordings`; `list_snapshots`; `get_recording_info`; `get_snapshot_info` (pagination)
-- I.FileActions: download(url) hand-off; `delete_recording`(filename); `delete_snapshot`(filename)
-- I.Status: `get_status`; `get_storage_info`; `get_server_info`; `subscribe_events` / `unsubscribe_events`; `get_subscription_stats`
+- I.FileActions: download(url) hand-off; `delete_recording`(filename); `delete_snapshot`(filename); `set_retention_policy`; `cleanup_old_files`
+- I.Status: `get_status`; `get_system_status`; `get_storage_info`; `get_server_info`; `get_metrics`
+- I.Notifications: `subscribe_events`; `unsubscribe_events`; `get_subscription_stats`; `camera_status_update`; `recording_status_update`
+- I.ExternalStreams: `discover_external_streams`; `add_external_stream`; `remove_external_stream`; `get_external_streams`; `set_discovery_interval`
 
-#### 5.3.1 RPC Method Alignment (Authoritative)
+#### 5.3.1 RPC Method Alignment (Authoritative - Complete 32 Methods)
 
-- Discovery
-  - `get_camera_list` → cameras with stream fields
-  - `get_streams` → MediaMTX active streams
-  - `get_stream_url` → URL for specific device
-- Commands
-  - `take_snapshot`(device[, filename])
-  - `start_recording`(device[, duration][, format])
-  - `stop_recording`(device)
-- Files
-  - `list_recordings`(limit, offset)
-  - `list_snapshots`(limit, offset)
-  - `get_recording_info`(filename)
-  - `get_snapshot_info`(filename)
-  - `delete_recording`(filename)
-  - `delete_snapshot`(filename)
-- Status / Admin
-  - `get_status`, `get_storage_info`, `get_server_info`, `get_metrics`
-  - `subscribe_events`, `unsubscribe_events`, `get_subscription_stats`
+**Core Interface (2):**
+- `ping` → connectivity health check
+- `authenticate`(auth_token) → JWT/API key authentication
+
+**Discovery Interface (5):**
+- `get_camera_list` → cameras with stream fields
+- `get_streams` → MediaMTX active streams
+- `get_stream_url`(device) → URL for specific device
+- `get_camera_status`(device) → individual camera status
+- `get_camera_capabilities`(device) → camera feature detection
+
+**Command Interface (3):**
+- `take_snapshot`(device[, filename])
+- `start_recording`(device[, duration][, format])
+- `stop_recording`(device)
+
+**Streaming Interface (3):**
+- `start_streaming`(device[, format])
+- `stop_streaming`(device)
+- `get_stream_status`(device) → stream monitoring
+
+**File Catalog Interface (4):**
+- `list_recordings`(limit, offset)
+- `list_snapshots`(limit, offset)
+- `get_recording_info`(filename)
+- `get_snapshot_info`(filename)
+
+**File Actions Interface (4):**
+- `delete_recording`(filename)
+- `delete_snapshot`(filename)
+- `set_retention_policy`(policy)
+- `cleanup_old_files`([criteria])
+
+**Status Interface (5):**
+- `get_status` → service status
+- `get_system_status` → system health
+- `get_storage_info` → storage metrics
+- `get_server_info` → server metadata
+- `get_metrics` → performance metrics
+
+**Notifications Interface (5):**
+- `subscribe_events`([event_types])
+- `unsubscribe_events`([event_types])
+- `get_subscription_stats` → notification metrics
+- `camera_status_update` → real-time camera events
+- `recording_status_update` → real-time recording events
+
+**External Streams Interface (5):**
+- `discover_external_streams`([criteria])
+- `add_external_stream`(stream_config)
+- `remove_external_stream`(stream_id)
+- `get_external_streams`([filter])
+- `set_discovery_interval`(interval)
 
 ---
 
