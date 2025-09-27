@@ -500,3 +500,35 @@ func TestMissingAPI_SetDiscoveryInterval_Integration(t *testing.T) {
 	// Validate response structure per API documentation
 	asserter.client.AssertJSONRPCResponse(response, false)
 }
+
+// TestMissingAPI_CameraStatusUpdate_Integration tests camera_status_update method
+// This validates that notification methods are properly blocked for security
+func TestMissingAPI_CameraStatusUpdate_Integration(t *testing.T) {
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
+
+	// Connect and authenticate
+	err := asserter.client.Connect()
+	require.NoError(t, err, "WebSocket connection should succeed")
+
+	authToken, err := asserter.helper.GetJWTToken("admin")
+	require.NoError(t, err, "Should be able to get admin token")
+	asserter.client.Authenticate(authToken)
+
+	// Test camera_status_update method with valid parameters
+	params := map[string]interface{}{
+		"device": "camera0",
+		"status": "connected",
+	}
+	response, err := asserter.client.CameraStatusUpdate(params)
+	require.NoError(t, err, "Request should not fail")
+	require.NotNil(t, response, "Response should not be nil")
+
+	// SECURITY VALIDATION: camera_status_update should be blocked as it's a server-generated notification
+	// Actual: PERMISSION_DENIED error because method is not in permission matrix (correct security behavior)
+	require.NotNil(t, response.Error, "Should get error for blocked notification method")
+	require.Equal(t, -32002, response.Error.Code, "Error code should be PERMISSION_DENIED (-32002)")
+	require.Equal(t, "Permission denied", response.Error.Message, "Error message should be 'Permission denied'")
+	
+	t.Log("✅ Security: camera_status_update properly blocked - not in permission matrix (correct behavior)")
+}

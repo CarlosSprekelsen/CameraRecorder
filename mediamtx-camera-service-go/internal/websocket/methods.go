@@ -1323,7 +1323,8 @@ func (s *WebSocketServer) translateErrorToJsonRpc(err error, methodName string) 
 	errMsg := err.Error()
 
 	// External discovery disabled error
-	if strings.Contains(errMsg, "external stream discovery is disabled in configuration") {
+	if strings.Contains(strings.ToLower(errMsg), "external stream discovery") &&
+		(strings.Contains(errMsg, "disabled") || strings.Contains(errMsg, "not configured")) {
 		return NewJsonRpcError(UNSUPPORTED, "feature_disabled",
 			"External stream discovery is disabled in configuration", "Enable external discovery in configuration")
 	}

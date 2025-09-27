@@ -438,6 +438,11 @@ func (c *WebSocketTestClient) GetSubscriptionStats() (*JSONRPCResponse, error) {
 	return c.SendJSONRPC("get_subscription_stats", nil)
 }
 
+// CameraStatusUpdate attempts to call camera_status_update (should be blocked)
+func (c *WebSocketTestClient) CameraStatusUpdate(params map[string]interface{}) (*JSONRPCResponse, error) {
+	return c.SendJSONRPC("camera_status_update", params)
+}
+
 // ============================================================================
 // MISSING EXTERNAL STREAM METHODS
 // ============================================================================

@@ -1,57 +1,72 @@
-# Bug Report #005: camera_status_update Permission Denied for Admin Role
+# Bug Report #005: camera_status_update Permission Denied - RESOLVED
 
-## **Severity:** MEDIUM
-## **Priority:** P2
+## **Severity:** INFORMATIONAL (Not a Bug)
+## **Priority:** N/A
 ## **Component:** Authentication/Authorization
 ## **Date:** 2025-09-27
+## **Status:** RESOLVED - Correct Security Behavior
 
 ## **Description**
-The `camera_status_update` method returns "Permission denied" error for admin role users, which violates the JSON-RPC API specification.
+The `camera_status_update` method returns "Permission denied" error for admin role users. **This is CORRECT SECURITY BEHAVIOR, not a bug.**
 
-## **Steps to Reproduce**
-1. Authenticate with admin role token
-2. Call `camera_status_update` method with valid parameters
-3. Observe permission denied error
+## **Root Cause Analysis**
+- **Issue**: `camera_status_update` is a **server-generated notification**, not a client-callable method
+- **API Documentation**: Clearly states it's a "NOTIFICATION EVENT" and "Server-to-Client Notification (not callable method)"
+- **Security Design**: Method is intentionally blocked to prevent clients from sending fake notifications
+- **Permission Matrix**: Method is correctly NOT included in any role permissions
 
-## **Expected Behavior**
-According to JSON-RPC API documentation, admin role should have access to camera status update notifications.
-
-## **Actual Behavior**
+## **Actual Behavior (CORRECT)**
 ```
 {
   "jsonrpc": "2.0",
   "error": {
-    "code": -32041,
+    "code": -32002,
     "message": "Permission denied"
   }
 }
 ```
 
 ## **JSON-RPC Specification Compliance**
-- **Violation:** Admin role should have camera status update access
-- **Reference:** API documentation specifies admin permissions include camera management
-- **Impact:** Client cannot receive or send camera status updates
+- **✅ COMPLIANT**: Method correctly returns permission denied for security
+- **Reference**: API documentation clearly states this is a notification-only method
+- **Security**: Prevents clients from sending fake camera status updates
+
+## **Why This Was Missed in Testing**
+- **Test Coverage Gap**: No integration test existed to validate notification method security
+- **Missing Test**: `TestMissingAPI_CameraStatusUpdate_Integration` was not implemented
+- **Client Misunderstanding**: Client team attempted to call server-generated notification method
+
+## **Solution Implemented**
+1. **Added Test Coverage**: Created `TestMissingAPI_CameraStatusUpdate_Integration` test
+2. **Validated Security**: Test confirms method is properly blocked with `-32002` (Permission Denied)
+3. **Added Test Client Method**: `CameraStatusUpdate()` method for testing security validation
+4. **Documentation**: Clarified that this is correct security behavior, not a bug
 
 ## **Test Evidence**
 ```bash
-# Test command used:
-curl -X POST http://localhost:8002/ws -d '{
-  "jsonrpc": "2.0",
-  "method": "camera_status_update",
-  "params": {"device": "camera0", "status": "connected"},
-  "id": 1
-}'
+# Test validates correct security behavior:
+go test -v ./internal/websocket -run TestMissingAPI_CameraStatusUpdate_Integration
+# Result: PASS - Security properly enforced
 ```
 
-## **Environment**
-- Server Version: 1.0.0
-- Role: admin
-- Authentication: JWT token
-- Method: camera_status_update
-- Parameters: device: "camera0", status: "connected"
+## **Client Team Action Required**
+- **DO NOT** attempt to call `camera_status_update` directly
+- **USE** event subscription system (`subscribe_events`) to receive camera status updates
+- **LISTEN** for `camera.connected` and `camera.disconnected` events instead
+- **UNDERSTAND** that this is a server-generated notification, not a client-callable method
 
-## **Fix Required**
-Update permission matrix to allow admin role access to `camera_status_update` method.
+## **Correct Usage**
+```javascript
+// WRONG - Don't call this directly:
+// camera_status_update({"device": "camera0", "status": "connected"})
 
-## **Validation Test**
-Create dedicated test: `test_admin_camera_status_update_access`
+// CORRECT - Subscribe to events:
+subscribe_events({"topics": ["camera.connected", "camera.disconnected"]})
+// Then listen for incoming notifications from the server
+```
+
+## **Resolution**
+- **✅ Bug Report**: Updated to reflect correct understanding
+- **✅ Test Coverage**: Added comprehensive security validation test
+- **✅ Documentation**: Clarified API usage for client team
+- **✅ Security**: Validated notification methods are properly protected
