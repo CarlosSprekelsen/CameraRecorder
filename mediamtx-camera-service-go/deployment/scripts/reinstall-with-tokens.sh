@@ -83,49 +83,39 @@ install_service() {
     fi
 }
 
-# Step 3: Generate fresh API keys
-generate_api_keys() {
-    log_message "Step 3: Generating fresh API keys..."
-    
-    if [ -f "$SCRIPT_DIR/manage-api-keys.sh" ]; then
+# Step 3: Generate fresh JWT tokens
+generate_jwt_tokens() {
+    log_message "Step 3: Generating fresh JWT tokens..."
+
+    if [ -f "$SCRIPT_DIR/generate-jwt-tokens.sh" ]; then
         cd "$SCRIPT_DIR"
-        ./manage-api-keys.sh generate test
-        log_success "API keys generated"
+        ./generate-jwt-tokens.sh --expiry-hours 72
+        log_success "JWT tokens generated"
     else
-        log_error "API key management script not found"
+        log_error "JWT token generation script not found"
         exit 1
     fi
 }
 
-# Step 4: Install API keys to server
-install_api_keys() {
-    log_message "Step 4: Installing API keys to server..."
-    
-    cd "$SCRIPT_DIR"
-    ./manage-api-keys.sh install test
-    log_success "API keys installed to server"
-}
-
-# Step 5: Setup test environment
-setup_test_environment() {
+        # Step 4: Setup test environment
+        setup_test_environment() {
     log_message "Step 5: Setting up test environment..."
     
-    # Copy environment file to client
-    if [ -f "$SERVER_DIR/config/test/api-keys/test-keys.env" ]; then
-        cp "$SERVER_DIR/config/test/api-keys/test-keys.env" "$CLIENT_DIR/.test_env"
+    # Copy JWT tokens environment file to client
+    if [ -f "$CLIENT_DIR/.test_env" ]; then
         log_success "Client environment updated: $CLIENT_DIR/.test_env"
     else
-        log_error "Environment file not found"
+        log_error "JWT tokens environment file not found"
         exit 1
     fi
     
-    # Copy keys to client fixtures
-    if [ -f "$SERVER_DIR/config/test/api-keys/test-keys.json" ]; then
+    # Copy JWT tokens to client fixtures
+    if [ -f "$SERVER_DIR/config/test/jwt-tokens/jwt-tokens.json" ]; then
         mkdir -p "$CLIENT_DIR/tests/fixtures"
-        cp "$SERVER_DIR/config/test/api-keys/test-keys.json" "$CLIENT_DIR/tests/fixtures/"
-        log_success "API keys copied to client fixtures"
+        cp "$SERVER_DIR/config/test/jwt-tokens/jwt-tokens.json" "$CLIENT_DIR/tests/fixtures/test_jwt_tokens.json"
+        log_success "JWT tokens copied to client fixtures"
     else
-        log_error "API keys file not found"
+        log_error "JWT tokens file not found"
         exit 1
     fi
 }
@@ -194,8 +184,7 @@ main() {
     
     uninstall_service
     install_service
-    generate_api_keys
-    install_api_keys
+    generate_jwt_tokens
     setup_test_environment
     start_service
     verify_installation
@@ -208,9 +197,9 @@ main() {
     log_message "  - Check logs: journalctl -u camera-service -f"
     echo
     log_message "🔑 Token files generated:"
-    log_message "  - API keys: $SERVER_DIR/config/test/api-keys/test-keys.json"
+    log_message "  - JWT tokens: $SERVER_DIR/config/test/jwt-tokens/jwt-tokens.json"
     log_message "  - Environment: $CLIENT_DIR/.test_env"
-    log_message "  - Client fixtures: $CLIENT_DIR/tests/fixtures/test-keys.json"
+    log_message "  - Client fixtures: $CLIENT_DIR/tests/fixtures/test_jwt_tokens.json"
 }
 
 # Show usage
