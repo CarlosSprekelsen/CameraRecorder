@@ -191,7 +191,6 @@ func (f *FsnotifyDeviceEventSource) eventLoop(ctx context.Context) {
 
 	// If fsnotify is not supported, just wait for stop signal
 	if f.watcher == nil {
-		f.logger.Debug("Running in poll-only mode (no fsnotify events)")
 		select {
 		case <-ctx.Done():
 			return
@@ -206,23 +205,19 @@ func (f *FsnotifyDeviceEventSource) eventLoop(ctx context.Context) {
 			f.logger.WithFields(logging.Fields{
 				"action": "event_loop_stopped",
 				"reason": "context_cancelled",
-			}).Debug("Fsnotify event loop stopped due to context cancellation")
 			return
 		case <-f.stopChan:
 			f.logger.WithFields(logging.Fields{
 				"action": "event_loop_stopped",
 				"reason": "stop_requested",
-			}).Debug("Fsnotify event loop stopped")
 			return
 		case event, ok := <-f.watcher.Events:
 			if !ok {
-				f.logger.Debug("Fsnotify watcher events channel closed")
 				return
 			}
 			f.processEvent(event)
 		case err, ok := <-f.watcher.Errors:
 			if !ok {
-				f.logger.Debug("Fsnotify watcher errors channel closed")
 				return
 			}
 			f.logger.WithError(err).Warn("Fsnotify watcher error")
@@ -262,7 +257,6 @@ func (f *FsnotifyDeviceEventSource) processEvent(event fsnotify.Event) {
 		"device_path": deviceEvent.DevicePath,
 		"event_type":  deviceEvent.Type,
 		"fsnotify_op": event.Op.String(),
-	}).Debug("Processed device event")
 
 	// Send event to channel (non-blocking)
 	select {
@@ -396,7 +390,6 @@ func (u *UdevDeviceEventSource) eventLoop(ctx context.Context) {
 		u.done.Done()
 	}()
 
-	u.logger.Debug("Udev event loop started (simplified polling implementation)")
 
 	// For now, this is a placeholder that just waits for stop signal
 	// Real udev integration would use netlink or udevadm monitor

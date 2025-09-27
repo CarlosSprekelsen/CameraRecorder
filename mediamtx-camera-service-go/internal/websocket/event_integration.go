@@ -91,7 +91,6 @@ func (n *CameraEventNotifier) NotifyCameraConnected(device *camera.CameraDevice)
 			"device": cameraID,
 			"name":   device.Name,
 			"topic":  TopicCameraConnected,
-		}).Debug("Published camera connected event")
 	}
 }
 
@@ -118,7 +117,6 @@ func (n *CameraEventNotifier) NotifyCameraDisconnected(devicePath string) {
 		n.logger.WithFields(logging.Fields{
 			"device": cameraID,
 			"topic":  TopicCameraDisconnected,
-		}).Debug("Published camera disconnected event")
 	}
 }
 
@@ -155,7 +153,6 @@ func (n *CameraEventNotifier) NotifyCameraStatusChange(device *camera.CameraDevi
 			"old_status": oldStatus,
 			"new_status": newStatus,
 			"topic":      TopicCameraStatusChange,
-		}).Debug("Published camera status change event")
 	}
 }
 
@@ -192,7 +189,6 @@ func (n *CameraEventNotifier) NotifyCapabilityDetected(device *camera.CameraDevi
 			"device": cameraID,
 			"driver": capabilities.DriverName,
 			"topic":  TopicCameraCapabilityDetected,
-		}).Debug("Published capability detected event")
 	}
 }
 
@@ -217,7 +213,6 @@ func (n *CameraEventNotifier) NotifyCapabilityError(devicePath string, errorMsg 
 			"device": cameraID,
 			"error":  errorMsg,
 			"topic":  TopicCameraCapabilityError,
-		}).Debug("Published capability error event")
 	}
 }
 
@@ -256,7 +251,6 @@ func (n *MediaMTXEventNotifier) NotifyRecordingStarted(device, filename string) 
 			"device":   device,
 			"filename": filename,
 			"topic":    TopicMediaMTXRecordingStarted,
-		}).Debug("Published recording started event")
 	}
 }
 
@@ -278,7 +272,6 @@ func (n *MediaMTXEventNotifier) NotifyRecordingStopped(device, filename string, 
 			"filename": filename,
 			"duration": duration,
 			"topic":    TopicMediaMTXRecordingStopped,
-		}).Debug("Published recording stopped event")
 	}
 }
 
@@ -319,7 +312,6 @@ func (n *MediaMTXEventNotifier) NotifyStreamStarted(device, streamID, streamType
 			"stream_id":   streamID,
 			"stream_type": streamType,
 			"topic":       TopicMediaMTXStreamStarted,
-		}).Debug("Published stream started event")
 	}
 }
 
@@ -341,7 +333,6 @@ func (n *MediaMTXEventNotifier) NotifyStreamStopped(device, streamID, streamType
 			"stream_id":   streamID,
 			"stream_type": streamType,
 			"topic":       TopicMediaMTXStreamStopped,
-		}).Debug("Published stream stopped event")
 	}
 }
 
@@ -408,6 +399,5 @@ func (n *SystemEventNotifier) NotifySystemHealth(status string, metrics map[stri
 		n.logger.WithFields(logging.Fields{
 			"status": status,
 			"topic":  TopicSystemHealth,
-		}).Debug("Published system health event")
 	}
 }
