@@ -75,3 +75,6 @@ coverage/
 *.cover
 *.coverprofilemediamtx-camera-service-go/pkg/
 mediamtx-camera-service-go/bin/
+mediamtx-camera-service-go/cli
+mediamtx-camera-service-go/export
+mediamtx-camera-service-go/server
