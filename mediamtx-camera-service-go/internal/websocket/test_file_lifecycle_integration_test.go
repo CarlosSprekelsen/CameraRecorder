@@ -42,10 +42,8 @@ func TestWebSocket_FileValidation_Comprehensive_Integration(t *testing.T) {
 // TestWebSocket_ConfigurationDrivenPaths_Integration tests configuration-driven path handling
 func TestWebSocket_ConfigurationDrivenPaths_Integration(t *testing.T) {
 	// Use testutils for comprehensive setup
-	helper := NewWebSocketTestHelper(t)
-	defer helper.Cleanup()
-
 	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.helper.Cleanup()
 
 	// Test that paths are loaded from testutils, not hardcoded
 	err := asserter.AssertSnapshotWorkflow()
@@ -61,10 +59,6 @@ func TestWebSocket_ConfigurationDrivenPaths_Integration(t *testing.T) {
 
 // TestWebSocket_TestUtilsIntegration_Integration tests integration with testutils
 func TestWebSocket_TestUtilsIntegration_Integration(t *testing.T) {
-	// Use testutils for comprehensive setup
-	helper := NewWebSocketTestHelper(t)
-	defer helper.Cleanup()
-
 	// Test that testutils DataValidationHelper works correctly
 	dvh := testutils.NewDataValidationHelper(t)
 

@@ -1036,6 +1036,25 @@ func getDefaultConfig() *Config {
 			MaxAge:          86400,
 			MaxCount:        1000,
 		},
+		APIKeyManagement: APIKeyManagementConfig{
+			StoragePath:      "/etc/camera-service/api-keys.json",
+			EncryptionKey:    "", // Must be set via environment variable
+			BackupEnabled:    true,
+			BackupPath:       "/var/backups/camera-service/keys",
+			BackupInterval:   "24h",
+			KeyLength:        32,
+			KeyPrefix:        "csk_",
+			KeyFormat:        "base64url",
+			DefaultExpiry:    "90d",
+			RotationEnabled:  false,
+			RotationInterval: "30d",
+			MaxKeysPerRole:   10,
+			AuditLogging:     true,
+			UsageTracking:    true,
+			CLIEnabled:       true,
+			AdminInterface:   false,
+			AdminPort:        8004,
+		},
 	}
 }
 

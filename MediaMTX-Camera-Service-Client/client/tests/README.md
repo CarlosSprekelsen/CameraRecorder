@@ -1,336 +1,249 @@
-# Testing Implementation - Web Client
+# MediaMTX Camera Client - Testing Guide
 
-**Version:** 1.0  
-**Date:** 2025-01-25  
-**Status:** MANDATORY - All AI agents must follow this implementation exactly  
-**Authority:** Ground Truth - Overrides any conflicting instructions
+## Quick Start
 
-## 🚨 CRITICAL: AI Agent Directives
+```bash
+# 1. Setup environment
+./set-test-env.sh
 
-### MANDATORY AI Behavior Rules
-1. **NEVER create duplicate testing utilities** - Check existing patterns first
-2. **NEVER deviate from established patterns** - Use exact patterns from this implementation
-3. **NEVER create overlapping test categories** - Follow exact structure below
-4. **ALWAYS validate against API documentation** - Never test against implementation
-5. **STOP and ask for authorization** before creating new testing patterns
+# 2. Run all tests
+npm run test:all
 
-### Ground Truth Enforcement
-- **API Documentation**: `mediamtx-camera-service-go/docs/api/mediamtx_camera_service_openrpc.json`
-- **Client Architecture**: `client/docs/architecture/client-architechture.md`
-- **Testing Guidelines**: `client/docs/development/client-testing-guidelines.md`
-- **Testing Implementation Plan**: `client/docs/development/testing-implementation-plan.md`
-- **This Implementation**: `client/tests/README.md`
-
-## Directory Structure (FROZEN)
-
-```
-client/tests/
-├── unit/                    # Component isolation tests
-│   ├── components/         # React component tests
-│   ├── hooks/             # Custom hook tests
-│   ├── services/          # Service layer tests
-│   └── utils/             # Utility function tests
-├── integration/            # Real server communication tests
-│   ├── api/              # JSON-RPC method tests
-│   ├── auth/             # Authentication flow tests
-│   └── websocket/        # WebSocket connection tests
-├── e2e/                   # Complete workflow tests
-│   ├── camera-operations/ # Camera control workflows
-│   ├── file-management/  # File operations workflows
-│   └── system-monitoring/ # Health and status workflows
-├── fixtures/              # Shared test data (FROZEN)
-│   ├── api-responses/    # Documented API response samples
-│   ├── camera-data/      # Camera configuration samples
-│   └── auth-tokens/      # Test authentication tokens
-├── utils/                 # Centralized test utilities (FROZEN)
-│   ├── api-client.ts     # Single WebSocket client abstraction
-│   ├── auth-helper.ts    # Authentication utilities
-│   ├── validators.ts     # Response validation utilities
-│   ├── mocks.ts          # Centralized mock implementations
-│   └── test-helpers.ts   # Common test utilities
-├── config/               # Test configurations (FROZEN)
-│   ├── jest-unit.config.cjs
-│   ├── jest-integration.config.cjs
-│   └── jest-e2e.config.cjs
-├── setup.ts              # Unit test setup
-├── setup.integration.ts  # Integration test setup
-└── README.md             # This file
+# 3. Run specific test types
+npm run test:unit          # Unit tests (jsdom + mocks)
+npm run test:integration   # Integration tests (Node.js + real WebSocket)
+npm run test:e2e          # End-to-end tests (Node.js + real hardware)
 ```
 
-## Testing Utility Patterns (FROZEN)
+## Test Organization
 
-### 1. API Client Abstraction (`utils/api-client.ts`)
-- **SINGLE WebSocket client abstraction** for all tests
-- Environment-driven: real connections for integration, mocks for unit
-- Validates against documented API schema
-- **MANDATORY**: Use this client for all API tests
-
-### 2. Authentication Helper (`utils/auth-helper.ts`)
-- **SINGLE authentication utility** for all tests
-- Dynamic token generation - NO hardcoded credentials
-- Role-based access control validation
-- **MANDATORY**: Use this helper for all auth tests
-
-### 3. Response Validators (`utils/validators.ts`)
-- **SINGLE validation utility** for all API responses
-- Validates against documented schemas only
-- Error code validation
-- **MANDATORY**: Use this validator for all response tests
-
-### 4. Centralized Mocks (`utils/mocks.ts`)
-- **SINGLE mock implementation** per API concern
-- Based on documented API responses only
-- No duplicate mock patterns
-- **MANDATORY**: Use this mock for all unit tests
-
-### 5. Test Helpers (`utils/test-helpers.ts`)
-- Common test utilities for all test categories
-- Environment setup and cleanup
-- Test data generation
-- **MANDATORY**: Use this helper for all test setup
-
-## Test Category Patterns (FROZEN)
-
-### Unit Tests Pattern
-```typescript
-/**
- * Unit test template - Component isolation
- * 
- * Ground Truth References:
- * - Client Architecture: ../docs/architecture/client-architechture.md
- * - API Documentation: ../mediamtx-camera-service-go/docs/api/mediamtx_camera_service_openrpc.json
- * 
- * Requirements Coverage:
- * - REQ-UNIT-001: Component behavior validation
- * - REQ-UNIT-002: Business logic testing
- * - REQ-UNIT-003: Edge case handling
- * 
- * Test Categories: Unit
- * API Documentation Reference: mediamtx_camera_service_openrpc.json
- */
-describe('ComponentName Tests', () => {
-  beforeEach(() => {
-    // Use centralized mocks
-    jest.clearAllMocks();
-  });
-  
-  test('REQ-UNIT-001: Component renders correctly', () => {
-    // Test component rendering
-  });
-});
+### Directory Structure
+```
+tests/
+├── unit/              # Isolated component/logic tests
+├── integration/       # Real server communication tests  
+├── e2e/              # Complete workflow tests
+├── fixtures/         # Shared test utilities
+├── utils/            # Centralized test utilities
+└── config/           # Test configurations
 ```
 
-### Integration Tests Pattern
-```typescript
-/**
- * Integration test template - Real server communication
- * 
- * Ground Truth References:
- * - API Documentation: ../mediamtx-camera-service-go/docs/api/mediamtx_camera_service_openrpc.json
- * - Client Architecture: ../docs/architecture/client-architechture.md
- * 
- * Requirements Coverage:
- * - REQ-INT-001: Real API communication
- * - REQ-INT-002: Authentication flow validation
- * - REQ-INT-003: Error handling validation
- * 
- * Test Categories: Integration/API-Compliance
- * API Documentation Reference: mediamtx_camera_service_openrpc.json
- */
-describe('APIMethodName Integration Tests', () => {
-  let apiClient: TestAPIClient;
-  let authHelper: AuthHelper;
-  
-  beforeAll(async () => {
-    // Load test environment
-    await loadTestEnvironment();
-    apiClient = new TestAPIClient({ mockMode: false });
-    authHelper = new AuthHelper();
-  });
-  
-  test('REQ-INT-001: Method call with valid parameters', async () => {
-    const token = await authHelper.generateTestToken('admin');
-    await apiClient.authenticate(token);
-    
-    const result = await apiClient.call('method_name', [param1, param2]);
-    
-    expect(APIResponseValidator.validateMethodResult(result)).toBe(true);
-  });
-});
-```
+### File Naming Convention
+- **Standard**: `*.test.ts` (Jest automatic discovery)
+- **Examples**: `camera_operations.test.ts`, `websocket_integration.test.ts`
+- **No variations**: No `_real`, `_v2`, `_mock` suffixes
 
-### E2E Tests Pattern
-```typescript
-/**
- * E2E test template - Complete workflows
- * 
- * Ground Truth References:
- * - Client Architecture: ../docs/architecture/client-architechture.md
- * - API Documentation: ../mediamtx-camera-service-go/docs/api/mediamtx_camera_service_openrpc.json
- * 
- * Requirements Coverage:
- * - REQ-E2E-001: Complete user workflows
- * - REQ-E2E-002: Real hardware interaction
- * - REQ-E2E-003: Performance validation
- * 
- * Test Categories: E2E/Performance
- * API Documentation Reference: mediamtx_camera_service_openrpc.json
- */
-describe('WorkflowName E2E Tests', () => {
-  let apiClient: TestAPIClient;
-  
-  beforeAll(async () => {
-    await loadTestEnvironment();
-    apiClient = new TestAPIClient({ mockMode: false });
-  });
-  
-  test('REQ-E2E-001: Complete workflow execution', async () => {
-    // Complete user workflow test
-  });
-});
-```
-
-## Test Execution Commands
+## Test Types
 
 ### Unit Tests
+- **Environment**: jsdom (browser simulation)
+- **Mocking**: External dependencies mocked
+- **Coverage**: 80%+ threshold
+- **Execution**: `npm run test:unit`
+
+### Integration Tests  
+- **Environment**: Node.js
+- **Communication**: Real WebSocket connections
+- **Coverage**: 60%+ threshold
+- **Execution**: `npm run test:integration`
+
+### End-to-End Tests
+- **Environment**: Node.js
+- **Hardware**: Real camera devices
+- **Coverage**: No coverage (focus on user journeys)
+- **Execution**: `npm run test:e2e`
+
+## Configuration
+
+### Jest Configuration Architecture
+- **Base Config**: `jest.config.base.cjs` (shared settings)
+- **Unit Config**: `tests/config/jest-unit.config.cjs`
+- **Integration Config**: `tests/integration/jest.config.cjs`
+- **E2E Config**: `tests/config/jest-e2e.config.cjs`
+
+### Environment Variables
 ```bash
-cd MediaMTX-Camera-Service-Client/client
+# Required for integration and E2E tests
+MEDIA_SERVER_URL=ws://localhost:8002/ws
+HEALTH_SERVER_URL=http://localhost:8003
+JWT_SECRET=your-secret-key
+```
+
+## Development Workflow
+
+### Daily Development
+```bash
+# Start development session
+./set-test-env.sh
+npm run test:unit -- --watch
+
+# Before committing
 npm run test:unit
-# or
-jest --config tests/config/jest-unit.config.cjs
-```
-
-### Integration Tests
-```bash
-cd MediaMTX-Camera-Service-Client/client
-./set-test-env.sh
-source .test_env
 npm run test:integration
-# or
-jest --config tests/config/jest-integration.config.cjs
+npm run lint
 ```
 
-### E2E Tests
+### Feature Development (TDD)
 ```bash
-cd MediaMTX-Camera-Service-Client/client
-./set-test-env.sh
-source .test_env
-npm run test:e2e
-# or
-jest --config tests/config/jest-e2e.config.cjs
+# 1. Write test first
+npm run test:unit -- --testPathPattern="feature_name"
+
+# 2. Implement feature
+npm run test:unit -- --watch
+
+# 3. Integration testing
+npm run test:integration -- --testPathPattern="feature_name"
+
+# 4. Final validation
+npm run test:all && npm run build
 ```
 
-### All Tests
+## IDE Integration
+
+### VS Code Setup
+1. Install Jest extension
+2. Configure settings in `.vscode/settings.json`
+3. Enable test discovery and coverage
+4. Set up auto-run in watch mode
+
+### Test Discovery
+- Jest extension automatically discovers `*.test.ts` files
+- Test explorer shows all tests in sidebar
+- Click to run individual tests or test suites
+
+## Troubleshooting
+
+### Common Issues
+
+#### Test Failures
 ```bash
-cd MediaMTX-Camera-Service-Client/client
+# Check server status
+curl localhost:8002/ws
+
+# Refresh environment
 ./set-test-env.sh
-source .test_env
-npm run test:all
-# or
-npm run test:unit && npm run test:integration && npm run test:e2e
 ```
 
-## Environment Setup (MANDATORY)
-
-### ALWAYS Required Before Testing
+#### Authentication Errors
 ```bash
-cd MediaMTX-Camera-Service-Client/client
+# Regenerate tokens
 ./set-test-env.sh
-source .test_env
-npm test
+
+# Check server connectivity
+npm run test:integration
 ```
 
-### Server Port Configuration
-- **WebSocket Server (JSON-RPC)**: Port 8002
-- **Health Server (REST)**: Port 8003
-- **MANDATORY**: Do not mix WebSocket methods with health endpoints
+#### Memory Issues
+```bash
+# Increase Node.js memory
+NODE_OPTIONS="--max-old-space-size=4096" npm run test:unit
+```
+
+#### Coverage Failures
+```bash
+# Generate coverage report
+npm run test:unit:coverage
+
+# Check specific files
+npm run test:unit -- --coverage --testPathPattern="specific_file"
+```
+
+### Performance Optimization
+```bash
+# Parallel testing
+npm run test:unit -- --maxWorkers=4
+
+# Test caching
+npm run test:unit -- --cache
+
+# Selective testing
+npm run test:unit -- --testPathPattern="specific_pattern"
+```
 
 ## Quality Gates
 
-### Coverage Enforcement
-- Unit tests: ≥80% coverage
-- Integration tests: ≥70% coverage
-- E2E tests: Critical paths only
-- API compliance: 100% of documented methods
+### Pre-merge Checklist
+- [ ] Unit tests pass (80%+ coverage)
+- [ ] Integration tests pass (60%+ coverage)
+- [ ] Lint passes without warnings
+- [ ] Build succeeds
+- [ ] No test file naming violations
 
-### Performance Targets
-- Status methods: <50ms (p95)
-- Control methods: <100ms (p95)
-- WebSocket connection: <1s (p95)
-- Client load: <3s (p95)
+### CI/CD Pipeline
+- **GitHub Actions**: Automated testing on push/PR
+- **Quality Gates**: Block merge if tests fail
+- **Coverage Reports**: Track coverage trends
+- **Artifact Storage**: Build artifacts for deployment
 
-## Anti-Patterns (FORBIDDEN)
+## Best Practices
 
-### ❌ FORBIDDEN: Multiple Mock Implementations
+### Test Writing
+- **AAA Pattern**: Arrange, Act, Assert
+- **Descriptive Names**: Explain the scenario being tested
+- **Test Isolation**: Each test should be independent
+- **Mock Strategy**: Mock external dependencies only
+- **Specific Assertions**: Avoid generic `toBeTruthy()`
+
+### Code Coverage
+- **Unit Tests**: Focus on business logic
+- **Integration Tests**: Focus on API interactions
+- **E2E Tests**: Focus on user journeys
+- **Coverage Reports**: Review before merging
+
+### Performance
+- **Parallel Execution**: Use `--maxWorkers` for speed
+- **Test Caching**: Enable Jest cache
+- **Resource Cleanup**: Proper cleanup in teardown
+- **Timeout Management**: Appropriate timeouts per test type
+
+## Advanced Features
+
+### Custom Matchers
 ```typescript
-// ❌ NEVER DO THIS - Creates duplicate patterns
-export class CameraServiceMock { }
-export class CameraServiceMockV2 { }
-export class CameraServiceTestMock { }
-```
-
-### ❌ FORBIDDEN: Implementation-Dependent Testing
-```typescript
-// ❌ NEVER DO THIS - Tests implementation, not API
-test('should call internal method', () => {
-  const service = new CameraService();
-  service.internalMethod(); // Testing private implementation
+// tests/utils/custom-matchers.ts
+expect.extend({
+  toBeValidJWT(received: string) {
+    // Custom JWT validation matcher
+  }
 });
 ```
 
-### ❌ FORBIDDEN: Hardcoded Test Data
+### Test Data Management
 ```typescript
-// ❌ NEVER DO THIS - Hardcoded credentials
-const testToken = 'hardcoded-jwt-token';
-const testCamera = { device: 'camera0', status: 'CONNECTED' };
+// tests/fixtures/test-data.ts
+export const TEST_CAMERAS = {
+  camera0: { device: 'camera0', status: 'CONNECTED' },
+  camera1: { device: 'camera1', status: 'DISCONNECTED' }
+};
 ```
 
-### ✅ REQUIRED: Ground Truth Validation
-```typescript
-// ✅ ALWAYS DO THIS - Validate against documentation
-test('API response matches documented schema', () => {
-  const result = await apiClient.call('get_camera_list');
-  expect(APIResponseValidator.validateCameraListResult(result)).toBe(true);
-});
+### Environment-Specific Testing
+```bash
+# Development
+NODE_ENV=development npm run test:unit
+
+# Staging
+NODE_ENV=staging npm run test:integration
+
+# Production
+NODE_ENV=production npm run test:e2e
 ```
 
-## Implementation Checklist
+## Support
 
-### Before Writing Any Test
-- [ ] Check existing utilities in `tests/utils/`
-- [ ] Validate against API documentation
-- [ ] Plan shared mock strategy
-- [ ] Identify architecture integration points
+### Documentation
+- **Testing Guidelines**: `docs/development/client-testing-guidelines.md`
+- **Architecture**: `docs/architecture/client-architechture.md`
+- **API Reference**: `mediamtx-camera-service-go/docs/api/json_rpc_methods.md`
 
-### During Implementation
-- [ ] Use established patterns from `tests/utils/`
-- [ ] Follow exact naming conventions
-- [ ] Add requirements traceability headers
-- [ ] Validate against documented APIs
-
-### After Implementation
-- [ ] Verify no duplicate patterns created
-- [ ] Check coverage thresholds
-- [ ] Test against real endpoints
-- [ ] Document any new shared utilities
-
-## AI Agent Compliance
-
-### MANDATORY AI Behavior
-1. **NEVER create new testing utilities** without checking existing patterns
-2. **NEVER deviate from established patterns** in this implementation
-3. **ALWAYS validate against API documentation** - Never test implementation
-4. **STOP and ask for authorization** before creating new patterns
-5. **ALWAYS use centralized utilities** - No duplicate implementations
-
-### Ground Truth Enforcement
-- Tests must validate against documented API schemas
-- Tests must follow exact patterns from this implementation
-- Tests must use centralized utilities only
-- Tests must include requirements traceability
+### Team Coordination
+- **Standardized Workflow**: Consistent testing across developers
+- **Quality Gates**: Automated quality enforcement
+- **Cross-Platform**: Works on Windows, macOS, Linux
+- **IDE Integration**: VS Code Jest extension support
 
 ---
 
-**Authority**: This implementation is FROZEN and MANDATORY for all AI agents  
-**Compliance**: All testing must follow this implementation exactly  
-**Enforcement**: Deviations require explicit authorization
+**Last Updated**: January 2025  
+**Version**: 1.0  
+**Maintainer**: Development Team
