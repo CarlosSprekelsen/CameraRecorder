@@ -220,6 +220,22 @@ EOF
         echo "export TEST_VIEWER_KEY=\"$viewer_key\"" >> "$env_file"
         echo "export TEST_OPERATOR_KEY=\"$operator_key\"" >> "$env_file"
         echo "export TEST_ADMIN_KEY=\"$admin_key\"" >> "$env_file"
+        
+        # Add legacy JWT token variables (using API keys)
+        echo "" >> "$env_file"
+        echo "# Legacy JWT Tokens (use API keys instead)" >> "$env_file"
+        echo "export TEST_VIEWER_TOKEN=\"$viewer_key\"" >> "$env_file"
+        echo "export TEST_OPERATOR_TOKEN=\"$operator_key\"" >> "$env_file"
+        echo "export TEST_ADMIN_TOKEN=\"$admin_key\"" >> "$env_file"
+        
+        # Add server configuration
+        echo "" >> "$env_file"
+        echo "# Server Configuration" >> "$env_file"
+        echo "export CAMERA_SERVICE_HOST=localhost" >> "$env_file"
+        echo "export CAMERA_SERVICE_PORT=8002" >> "$env_file"
+        echo "export CAMERA_SERVICE_WS_PATH=/ws" >> "$env_file"
+        echo "export CAMERA_SERVICE_HEALTH_PORT=8003" >> "$env_file"
+        echo "export CAMERA_SERVICE_HEALTH_PATH=/health" >> "$env_file"
     else
         log_warning "jq not available, environment variables not created"
     fi

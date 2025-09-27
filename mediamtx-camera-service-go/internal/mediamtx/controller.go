@@ -92,7 +92,8 @@ type controller struct {
 	cancel    context.CancelFunc
 
 	// Event-Driven Readiness System
-	readinessMutex sync.RWMutex // Protects readiness state access
+	readinessMutex       sync.RWMutex    // Protects readiness state access
+	readinessSubscribers []chan struct{} // Channels to notify when ready
 }
 
 // checkRunningState safely checks if the controller is running using atomic operations.
@@ -133,13 +134,19 @@ func (c *controller) IsReady() bool {
 // Each subscriber gets their own channel, so no shared channel broadcasting
 
 // SubscribeToReadiness subscribes to controller readiness events
-// FIXED: Creates per-subscriber channel instead of returning shared channel
+// FIXED: Creates per-subscriber channel and stores it for notifications
 func (c *controller) SubscribeToReadiness() <-chan struct{} {
 	c.readinessMutex.Lock()
 	defer c.readinessMutex.Unlock()
 
 	// Create unique channel for this subscriber
 	subscriberChan := make(chan struct{}, 1)
+
+	// Store subscriber channel for notifications
+	if c.readinessSubscribers == nil {
+		c.readinessSubscribers = make([]chan struct{}, 0)
+	}
+	c.readinessSubscribers = append(c.readinessSubscribers, subscriberChan)
 
 	// If already ready, send immediate notification
 	if c.IsReady() {
@@ -415,6 +422,17 @@ func (c *controller) monitorReadiness() {
 			if !lastReadyState && currentReadyState && !readyEventEmitted {
 				c.logger.Info("Controller became ready - readiness state updated")
 				readyEventEmitted = true
+
+				// Notify all subscribers
+				c.readinessMutex.Lock()
+				for _, subscriberChan := range c.readinessSubscribers {
+					select {
+					case subscriberChan <- struct{}{}:
+					default:
+						// Channel is full, skip notification
+					}
+				}
+				c.readinessMutex.Unlock()
 			}
 
 			// Reset if controller becomes unready (for recovery scenarios)

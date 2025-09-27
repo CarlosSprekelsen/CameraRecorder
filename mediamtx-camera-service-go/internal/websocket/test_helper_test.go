@@ -111,8 +111,8 @@ func NewWebSocketTestHelper(t *testing.T) *WebSocketTestHelper {
 	logger.Info("Waiting for controller readiness...")
 	readinessChan := mediaMTXController.SubscribeToReadiness()
 
-	// Apply readiness timeout to prevent indefinite blocking
-	readinessCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	// Apply readiness timeout to prevent indefinite blocking (reduced from 5s to 1s)
+	readinessCtx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
 	// Use select with both readiness channel and polling

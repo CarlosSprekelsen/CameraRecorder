@@ -218,7 +218,15 @@ func (emc *ErrorMetricsCollector) startPeriodicChecking() {
 
 // Stop stops the error metrics collector
 func (emc *ErrorMetricsCollector) Stop() {
-	close(emc.stopChan)
+	emc.mutex.Lock()
+	defer emc.mutex.Unlock()
+
+	select {
+	case <-emc.stopChan:
+		// Channel already closed, nothing to do
+	default:
+		close(emc.stopChan)
+	}
 }
 
 // RecordError records an error in the metrics
