@@ -61,6 +61,14 @@ yarn-error.log*
 *.test
 *.out
 go.work
+# Go build artifacts
+build/
+.cache/
+coverage.out
+*.coverprofile
+# Go module cache (if accidentally committed)
+pkg/mod/
+vendor/
 
 # Test Coverage
 coverage/
