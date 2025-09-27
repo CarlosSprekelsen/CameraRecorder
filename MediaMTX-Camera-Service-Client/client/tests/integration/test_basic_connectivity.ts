@@ -17,8 +17,11 @@ describe('Basic Integration Test: Server Connectivity', () => {
     loggerService = LoggerService.getInstance();
     webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
     
-    // Wait for connection
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Connect to the server
+    await webSocketService.connect();
+    
+    // Wait for connection to be established
+    await new Promise(resolve => setTimeout(resolve, 1000));
   });
 
   afterAll(async () => {

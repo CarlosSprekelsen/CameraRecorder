@@ -205,11 +205,13 @@ func (f *FsnotifyDeviceEventSource) eventLoop(ctx context.Context) {
 			f.logger.WithFields(logging.Fields{
 				"action": "event_loop_stopped",
 				"reason": "context_cancelled",
+			}).Info("Event loop stopped")
 			return
 		case <-f.stopChan:
 			f.logger.WithFields(logging.Fields{
 				"action": "event_loop_stopped",
 				"reason": "stop_requested",
+			}).Info("Event loop stopped")
 			return
 		case event, ok := <-f.watcher.Events:
 			if !ok {
@@ -257,6 +259,7 @@ func (f *FsnotifyDeviceEventSource) processEvent(event fsnotify.Event) {
 		"device_path": deviceEvent.DevicePath,
 		"event_type":  deviceEvent.Type,
 		"fsnotify_op": event.Op.String(),
+	}).Info("Device event processed")
 
 	// Send event to channel (non-blocking)
 	select {
@@ -390,7 +393,6 @@ func (u *UdevDeviceEventSource) eventLoop(ctx context.Context) {
 		u.done.Done()
 	}()
 
-
 	// For now, this is a placeholder that just waits for stop signal
 	// Real udev integration would use netlink or udevadm monitor
 	select {
@@ -398,13 +400,13 @@ func (u *UdevDeviceEventSource) eventLoop(ctx context.Context) {
 		u.logger.WithFields(logging.Fields{
 			"action": "event_loop_stopped",
 			"reason": "context_cancelled",
-		}).Debug("Udev event loop stopped due to context cancellation")
+		}).Info("Event loop stopped")
 		return
 	case <-u.stopChan:
 		u.logger.WithFields(logging.Fields{
 			"action": "event_loop_stopped",
 			"reason": "stop_requested",
-		}).Debug("Udev event loop stopped")
+		}).Info("Event loop stopped")
 		return
 	}
 }

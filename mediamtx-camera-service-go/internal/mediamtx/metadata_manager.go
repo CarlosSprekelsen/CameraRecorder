@@ -112,7 +112,6 @@ func NewMetadataManager(configIntegration *ConfigIntegration, ffmpegManager FFmp
 
 // ExtractVideoMetadata extracts metadata from video files using ffprobe
 func (mm *MetadataManager) ExtractVideoMetadata(ctx context.Context, filePath string) (*MediaMetadata, error) {
-	mm.logger.WithField("file_path", filePath).Debug("Extracting video metadata using ffprobe")
 
 	// Get file stats first
 	fileInfo, err := os.Stat(filePath)
@@ -153,14 +152,13 @@ func (mm *MetadataManager) ExtractVideoMetadata(ctx context.Context, filePath st
 		"duration":  metadata.Duration,
 		"codec":     metadata.VideoCodec,
 		"bitrate":   metadata.Bitrate,
-	}).Debug("Video metadata extracted successfully")
+	}).Info("Video metadata extracted successfully")
 
 	return metadata, nil
 }
 
 // ExtractImageMetadata extracts metadata from image files using ffprobe
 func (mm *MetadataManager) ExtractImageMetadata(ctx context.Context, filePath string) (*MediaMetadata, error) {
-	mm.logger.WithField("file_path", filePath).Debug("Extracting image metadata using ffprobe")
 
 	// Get file stats first
 	fileInfo, err := os.Stat(filePath)
@@ -201,7 +199,7 @@ func (mm *MetadataManager) ExtractImageMetadata(ctx context.Context, filePath st
 		"width":      metadata.Width,
 		"height":     metadata.Height,
 		"resolution": metadata.Resolution,
-	}).Debug("Image metadata extracted successfully")
+	}).Info("Image metadata extracted successfully")
 
 	return metadata, nil
 }
@@ -234,7 +232,7 @@ func (mm *MetadataManager) executeFFprobe(ctx context.Context, filePath string) 
 	mm.logger.WithFields(logging.Fields{
 		"command": strings.Join(command, " "),
 		"timeout": timeout,
-	}).Debug("Executing ffprobe command")
+	}).Info("Executing ffprobe command")
 
 	// Execute command with timeout
 	cmd := exec.CommandContext(timeoutCtx, command[0], command[1:]...)
@@ -253,7 +251,7 @@ func (mm *MetadataManager) executeFFprobe(ctx context.Context, filePath string) 
 		"file_path":     filePath,
 		"streams_count": len(result.Streams),
 		"format":        result.Format.FormatName,
-	}).Debug("FFprobe command executed successfully")
+	}).Info("FFprobe command executed successfully")
 
 	return &result, nil
 }

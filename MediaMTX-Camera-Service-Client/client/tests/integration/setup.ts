@@ -5,7 +5,9 @@
  */
 
 import { LoggerService } from '../../src/services/logger/LoggerService';
-import WebSocket from 'ws';
+
+// Import WebSocket for Node.js environment
+const WebSocket = require('ws');
 
 // Create a WebSocket mock with constants for Node.js environment
 class WebSocketMock extends WebSocket {
@@ -16,7 +18,7 @@ class WebSocketMock extends WebSocket {
 }
 
 // Mock browser APIs for Node.js environment
-global.WebSocket = WebSocketMock as any;
+global.WebSocket = WebSocketMock;
 
 // Global test setup
 beforeAll(async () => {
