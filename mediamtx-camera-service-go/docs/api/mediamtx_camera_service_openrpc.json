@@ -78,7 +78,7 @@
             },
             "hls": {
               "type": "string",
-              "description": "https://<host>/hls/camera0.m3u8"
+              "description": "http://<host>/hls/camera0.m3u8"
             },
             "webrtc": {
               "type": "string",

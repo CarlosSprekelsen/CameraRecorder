@@ -115,7 +115,7 @@ Call `authenticate` once after opening the WebSocket. If it succeeds, the **conn
 **Streams Object Contract:**
 
 * `rtsp`: e.g., `"rtsp://<host>:8554/camera0"`
-* `hls`: e.g., `"https://<host>/hls/camera0.m3u8"`
+* `hls`: e.g., `"http://<host>/hls/camera0.m3u8"`
 * `webrtc`: **(reserved)** will be added once the signaling API is published.
 
 **Pagination (Standard):**
@@ -319,7 +319,7 @@ Get list of all discovered cameras with their current status.
         "fps": 30,
         "streams": {
           "rtsp": "rtsp://localhost:8554/camera0",
-          "hls": "https://localhost/hls/camera0.m3u8"
+          "hls": "http://localhost/hls/camera0.m3u8"
         }
       }
     ],
@@ -386,7 +386,7 @@ Get status for a specific camera device.
     "fps": 30,
     "streams": {
       "rtsp": "rtsp://localhost:8554/camera0",
-      "hls": "https://localhost/hls/camera0.m3u8"
+      "hls": "http://localhost/hls/camera0.m3u8"
     },
     "metrics": {
       "bytes_sent": 12345678,
@@ -1224,7 +1224,7 @@ The server sends real-time notifications for camera events.
     "fps": 30,
     "streams": {
       "rtsp": "rtsp://localhost:8554/camera0",
-      "hls": "https://localhost/hls/camera0.m3u8"
+      "hls": "http://localhost/hls/camera0.m3u8"
     }
   }
 }
