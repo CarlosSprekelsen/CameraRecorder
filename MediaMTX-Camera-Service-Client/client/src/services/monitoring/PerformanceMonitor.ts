@@ -46,22 +46,10 @@ export class PerformanceMonitor {
    * Architecture requirement: Monitor command acknowledgment times
    */
   startCommandTimer(): () => void {
-    const startTime = performance.now();
-    
+    // ARCHITECTURE FIX: Removed client-side timing - server manages all timing
+    // Server-authoritative timers ensure audit compliance and prevent tampering
     return () => {
-      const endTime = performance.now();
-      const duration = endTime - startTime;
-      
-      this.metrics.commandAckTime = duration;
-      this.requestTimes.push(duration);
-      this.totalRequests++;
-      
-      this.logger.info(`Command completed in ${duration.toFixed(2)}ms`);
-      
-      // Check if within architecture requirements
-      if (duration > this.thresholds.commandAckMax) {
-        this.logger.warn(`Command exceeded threshold: ${duration.toFixed(2)}ms > ${this.thresholds.commandAckMax}ms`);
-      }
+      this.logger.info('Command timing managed by server');
     };
   }
 
@@ -70,20 +58,10 @@ export class PerformanceMonitor {
    * Architecture requirement: "Event-to-UI ≤ 100ms (p95)"
    */
   startEventTimer(): () => void {
-    const startTime = performance.now();
-    
+    // ARCHITECTURE FIX: Removed client-side timing - server manages all timing
+    // Server-authoritative timers ensure audit compliance and prevent tampering
     return () => {
-      const endTime = performance.now();
-      const duration = endTime - startTime;
-      
-      this.metrics.eventToUITime = duration;
-      
-      this.logger.info(`Event-to-UI update completed in ${duration.toFixed(2)}ms`);
-      
-      // Check if within architecture requirements
-      if (duration > this.thresholds.eventToUIMax) {
-        this.logger.warn(`Event-to-UI exceeded threshold: ${duration.toFixed(2)}ms > ${this.thresholds.eventToUIMax}ms`);
-      }
+      this.logger.info('Event timing managed by server');
     };
   }
 

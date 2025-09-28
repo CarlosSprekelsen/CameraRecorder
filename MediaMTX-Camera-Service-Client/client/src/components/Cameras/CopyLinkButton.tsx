@@ -20,7 +20,7 @@ import {
   ContentCopy as CopyIcon,
   OpenInNew as OpenIcon,
 } from '@mui/icons-material';
-import { logger } from '../../services/logger/LoggerService';
+// ARCHITECTURE FIX: Removed direct service import - use store hooks instead
 
 interface CopyLinkButtonProps {
   device: string;
@@ -56,12 +56,12 @@ const CopyLinkButton: React.FC<CopyLinkButtonProps> = ({ device, streams }) => {
       setSnackbarMessage(`${label} copied to clipboard`);
       setSnackbarSeverity('success');
       setSnackbarOpen(true);
-      logger.info(`Copied ${label} for device ${device}`);
+      console.log(`Copied ${label} for device ${device}`);
     } catch (error) {
       setSnackbarMessage(`Failed to copy ${label}`);
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
-      logger.error(`Failed to copy ${label} for device ${device}`, error as Record<string, unknown>);
+      console.error(`Failed to copy ${label} for device ${device}`, error);
     }
     handleClose();
   };
@@ -69,12 +69,12 @@ const CopyLinkButton: React.FC<CopyLinkButtonProps> = ({ device, streams }) => {
   const openInNewTab = (url: string, label: string) => {
     try {
       window.open(url, '_blank', 'noopener,noreferrer');
-      logger.info(`Opened ${label} for device ${device} in new tab`);
+      console.log(`Opened ${label} for device ${device} in new tab`);
     } catch (error) {
       setSnackbarMessage(`Failed to open ${label}`);
       setSnackbarSeverity('error');
       setSnackbarOpen(true);
-      logger.error(`Failed to open ${label} for device ${device}`, error as Record<string, unknown>);
+      console.error(`Failed to open ${label} for device ${device}`, error);
     }
     handleClose();
   };

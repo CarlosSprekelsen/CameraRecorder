@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { Button } from '../../atoms/Button/Button';
-import { Camera } from '../../../stores/device/deviceStore';
+import { Camera } from '../../../types/api';
 
 export interface CameraCardProps {
   camera: Camera;

@@ -1,31 +1,14 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { DeviceService } from '../../services/device/DeviceService';
+import { Camera, StreamsListResult } from '../../types/api';
 
-// Types aligned with architecture section 5.3.1
-export interface Camera {
-  device: string;
-  status: 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
-  name: string;
-  resolution: string;
-  fps: number;
-  streams: {
-    rtsp: string;
-    hls: string;
-  };
-}
-
-export interface StreamInfo {
-  name: string;
-  source: string;
-  ready: boolean;
-  readers: number;
-  bytes_sent: number;
-}
+// ARCHITECTURE FIX: Use official API types from types/ directory
+// Removed duplicate type definitions - using authoritative types/api.ts
 
 export interface DeviceState {
   cameras: Camera[];
-  streams: StreamInfo[];
+  streams: StreamsListResult[];
   loading: boolean;
   error: string | null;
   lastUpdated: string | null;
@@ -45,7 +28,7 @@ export interface DeviceActions {
 
   // Real-time updates
   handleCameraStatusUpdate: (camera: Camera) => void;
-  handleStreamUpdate: (stream: StreamInfo) => void;
+  handleStreamUpdate: (stream: StreamsListResult) => void;
 
   // Service injection
   setDeviceService: (service: DeviceService) => void;
@@ -166,7 +149,7 @@ export const useDeviceStore = create<DeviceState & DeviceActions>()(
           }));
         },
 
-        handleStreamUpdate: (stream: StreamInfo) => {
+        handleStreamUpdate: (stream: StreamsListResult) => {
           set((state) => ({
             streams: state.streams
               .map((s) => (s.name === stream.name ? stream : s))

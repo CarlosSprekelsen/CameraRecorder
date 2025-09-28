@@ -66,9 +66,9 @@ export class ServiceFactory {
     return this.serverService;
   }
 
-  createNotificationService(wsService: WebSocketService, eventBus: EventBus): NotificationService {
+  createNotificationService(apiClient: APIClient, eventBus: EventBus): NotificationService {
     if (!this.notificationService) {
-      this.notificationService = new NotificationService(wsService, logger, eventBus);
+      this.notificationService = new NotificationService(apiClient, logger, eventBus);
       logger.info('Notification service created');
     }
     return this.notificationService;
@@ -98,9 +98,9 @@ export class ServiceFactory {
     return this.fileService;
   }
 
-  createExternalStreamService(wsService: WebSocketService): ExternalStreamService {
+  createExternalStreamService(apiClient: APIClient): ExternalStreamService {
     if (!this.externalStreamService) {
-      this.externalStreamService = new ExternalStreamService(wsService, logger);
+      this.externalStreamService = new ExternalStreamService(apiClient, logger);
       logger.info('External stream service created');
     }
     return this.externalStreamService;

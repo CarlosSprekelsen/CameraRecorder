@@ -1,6 +1,7 @@
 import React, { useEffect, memo } from 'react';
 import { Box, Typography, Paper, Alert, CircularProgress, Container } from '@mui/material';
-import { useDeviceStore, Camera } from '../../stores/device/deviceStore';
+import { useDeviceStore } from '../../stores/device/deviceStore';
+import { Camera } from '../../types/api';
 import { useAuthStore } from '../../stores/auth/authStore';
 import { serviceFactory } from '../../services/ServiceFactory';
 import CameraTable from '../../components/Cameras/CameraTable';

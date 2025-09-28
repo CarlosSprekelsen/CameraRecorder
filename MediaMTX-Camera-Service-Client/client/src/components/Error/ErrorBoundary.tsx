@@ -8,7 +8,7 @@ import React, { ReactNode, ErrorInfo } from 'react';
 import { ErrorBoundary as ReactErrorBoundary, FallbackProps } from 'react-error-boundary';
 import { Box, Typography, Button, Alert, AlertTitle } from '@mui/material';
 import { Refresh as RefreshIcon, BugReport as BugIcon } from '@mui/icons-material';
-import { logger } from '../../services/logger/LoggerService';
+// ARCHITECTURE FIX: Removed direct service import - use store hooks instead
 
 interface Props {
   children: ReactNode;
@@ -109,8 +109,8 @@ const ErrorFallback: React.FC<FallbackProps> = ({ error, resetErrorBoundary }) =
  */
 const ErrorBoundary: React.FC<Props> = ({ children, fallback, onError }) => {
   const handleError = (error: Error, errorInfo: ErrorInfo) => {
-    // Log error to service
-    logger.error('ErrorBoundary caught an error', error as unknown as Record<string, unknown>);
+    // Log error to console
+    console.error('ErrorBoundary caught an error', error);
 
     // Call custom error handler if provided
     if (onError) {

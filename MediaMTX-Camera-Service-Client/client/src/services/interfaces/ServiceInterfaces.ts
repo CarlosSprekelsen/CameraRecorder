@@ -21,7 +21,7 @@ import {
   MetricsResult,
   DeleteResult,
 } from '../../types/api';
-import { Camera, StreamInfo } from '../../stores/device/deviceStore';
+import { Camera, StreamsListResult } from '../../types/api';
 
 /**
  * Device Discovery Interface
@@ -47,7 +47,7 @@ export interface IDiscovery {
   /**
    * Retrieves the list of active streams
    *
-   * @returns {Promise<StreamInfo[]>} Array of stream information objects
+   * @returns {Promise<StreamsListResult[]>} Array of stream information objects
    * @throws {Error} When stream discovery fails
    *
    * @example
@@ -56,7 +56,7 @@ export interface IDiscovery {
    * streams.forEach(stream => console.log(stream.url));
    * ```
    */
-  getStreams(): Promise<StreamInfo[]>;
+  getStreams(): Promise<StreamsListResult[]>;
 
   /**
    * Gets the stream URL for a specific device

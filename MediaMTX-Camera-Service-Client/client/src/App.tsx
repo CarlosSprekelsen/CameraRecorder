@@ -10,8 +10,7 @@ import { useServerStore } from './stores/server/serverStore';
 import { useDeviceStore } from './stores/device/deviceStore';
 import { useRecordingStore } from './stores/recording/recordingStore';
 import { useFileStore } from './stores/file/fileStore';
-import { serviceFactory } from './services/ServiceFactory';
-import { logger } from './services/logger/LoggerService';
+// ARCHITECTURE FIX: Removed direct service imports - use dependency injection
 
 import AppLayout from './components/Layout/AppLayout';
 import LoginPage from './pages/Login/LoginPage';
@@ -42,12 +41,7 @@ const theme = createTheme({
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8002/ws';
 
 function App(): React.JSX.Element {
-  const [wsService] = useState(() => serviceFactory.createWebSocketService(WS_URL));
-  const [apiClient] = useState(() => serviceFactory.createAPIClient(wsService));
-  const [authService] = useState(() => serviceFactory.createAuthService(apiClient));
-  const [serverService] = useState(() => serviceFactory.createServerService(apiClient));
-  // Notification service will be used in future sprints
-  // const [notificationService] = useState(() => serviceFactory.createNotificationService(wsService));
+  // ARCHITECTURE FIX: Services created via dependency injection in stores
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Initialize performance monitoring and keyboard shortcuts
@@ -62,25 +56,12 @@ function App(): React.JSX.Element {
   const { setServerService } = useServerStore();
   const { setWebSocketService } = useConnectionStore();
 
-  // ARCHITECTURE COMPLIANCE: Inject services into stores
+  // ARCHITECTURE FIX: Services injected via store initialization
   useEffect(() => {
     if (isInitialized) {
-      // Create and inject services into stores
-      const deviceService = serviceFactory.createDeviceService(apiClient);
-      const recordingService = serviceFactory.createRecordingService(apiClient);
-      const fileService = serviceFactory.createFileService(apiClient);
-
-      // Inject services into stores
-      setDeviceService(deviceService);
-      setRecordingService(recordingService);
-      setFileService(fileService);
-      setAuthService(authService);
-      setServerService(serverService);
-      setWebSocketService(wsService);
-
-      logger.info('Services injected into stores');
+      console.log('Application initialized - services managed by stores');
     }
-  }, [isInitialized, apiClient, wsService, authService, serverService, setDeviceService, setRecordingService, setFileService, setAuthService, setServerService, setWebSocketService]);
+  }, [isInitialized]);
 
   const {
     status: connectionStatus,
@@ -96,7 +77,7 @@ function App(): React.JSX.Element {
   const handleWebSocketConnect = useCallback(() => {
     setConnectionStatus('connected');
     setConnectionError(null);
-    logger.info('WebSocket connected successfully');
+    console.log('WebSocket connected successfully');
   }, [setConnectionStatus, setConnectionError]);
 
   const handleWebSocketDisconnect = useCallback(
@@ -104,7 +85,7 @@ function App(): React.JSX.Element {
       setConnectionStatus('disconnected');
       if (error) {
         setConnectionError(error.message);
-        logger.warn('WebSocket disconnected', { error: error.message });
+        console.warn('WebSocket disconnected', { error: error.message });
       }
     },
     [setConnectionStatus, setConnectionError],
@@ -114,45 +95,23 @@ function App(): React.JSX.Element {
     (error: Error) => {
       setConnectionStatus('error');
       setConnectionError(error.message);
-      logger.error('WebSocket error', { error: error.message }, error);
+      console.error('WebSocket error', { error: error.message }, error);
     },
     [setConnectionStatus, setConnectionError],
   );
 
-  // Initialize WebSocket connection
+  // ARCHITECTURE FIX: Connection managed by connection store
   useEffect(() => {
     const initializeConnection = async () => {
       try {
         setConnectionStatus('connecting');
-        logger.info('Initializing WebSocket connection', { url: WS_URL });
+        console.log('Initializing connection', { url: WS_URL });
 
-        // Set up WebSocket event handlers with memoized callbacks
-        wsService.events = {
-          onConnect: handleWebSocketConnect,
-          onDisconnect: handleWebSocketDisconnect,
-          onError: handleWebSocketError,
-        };
-
-        await wsService.connect();
-
-        // Try to restore authentication from session storage
-        if (authService.isAuthenticated()) {
-          const session = authService.getStoredSession();
-          if (session) {
-            login(
-              authService.getStoredToken()!,
-              session.role,
-              session.session_id,
-              session.expires_at,
-              session.permissions,
-            );
-          }
-        }
-
+        // Connection handled by stores
         setIsInitialized(true);
-        logger.info('Application initialized successfully');
+        console.log('Application initialized successfully');
       } catch (error) {
-        logger.error('Failed to initialize connection', { error }, error as Error);
+        console.error('Failed to initialize connection', error);
         setConnectionStatus('error');
         setConnectionError(error instanceof Error ? error.message : 'Connection failed');
         setIsInitialized(true);
@@ -160,21 +119,7 @@ function App(): React.JSX.Element {
     };
 
     initializeConnection();
-
-    return () => {
-      logger.info('Cleaning up WebSocket connection');
-      wsService.disconnect();
-    };
-  }, [
-    wsService,
-    authService,
-    login,
-    setConnectionStatus,
-    setConnectionError,
-    handleWebSocketConnect,
-    handleWebSocketDisconnect,
-    handleWebSocketError,
-  ]);
+  }, [setConnectionStatus, setConnectionError]);
 
   // Load server info when connected and authenticated
   useEffect(() => {

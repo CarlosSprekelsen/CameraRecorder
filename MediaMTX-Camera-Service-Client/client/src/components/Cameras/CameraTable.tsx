@@ -25,14 +25,14 @@ import {
   Error as ErrorIcon,
   Cancel as DisconnectedIcon,
 } from '@mui/icons-material';
-import { Camera, StreamInfo } from '../../stores/device/deviceStore';
+import { Camera, StreamsListResult } from '../../types/api';
 import DeviceActions from './DeviceActions';
 import CopyLinkButton from './CopyLinkButton';
 import { useRecordingStore } from '../../stores/recording/recordingStore';
 
 interface CameraTableProps {
   cameras: Camera[];
-  streams: StreamInfo[];
+  streams: StreamsListResult[];
   onRefresh: () => void;
 }
 
@@ -45,7 +45,7 @@ interface CameraTableProps {
  * @component
  * @param {CameraTableProps} props - Component props
  * @param {Camera[]} props.cameras - Array of camera devices to display
- * @param {StreamInfo[]} props.streams - Array of active stream information
+ * @param {StreamsListResult[]} props.streams - Array of active stream information
  * @param {() => void} props.onRefresh - Callback function to refresh camera list
  * @returns {JSX.Element} The camera table component
  *

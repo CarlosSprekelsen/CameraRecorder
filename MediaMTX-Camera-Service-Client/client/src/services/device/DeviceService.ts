@@ -1,6 +1,6 @@
 import { APIClient } from '../abstraction/APIClient';
 import { LoggerService } from '../logger/LoggerService';
-import { Camera, StreamInfo } from '../../stores/device/deviceStore';
+import { Camera, StreamsListResult } from '../../types/api';
 import { IDiscovery } from '../interfaces/ServiceInterfaces';
 import { CameraListResult, CameraStatusResult, StreamUrlResult, CameraCapabilitiesResult, StreamStatusResult, StreamStartResult, StreamStopResult } from '../../types/api';
 import { validateCameraDeviceId } from '../../utils/validation';
@@ -107,11 +107,11 @@ export class DeviceService implements IDiscovery {
    * Get list of all active streams from MediaMTX
    * Implements get_streams RPC method
    */
-  async getStreams(): Promise<StreamInfo[]> {
+  async getStreams(): Promise<StreamsListResult[]> {
     try {
       this.logger.info('Getting active streams');
 
-      const response = await this.apiClient.call<StreamInfo[]>('get_streams', {});
+      const response = await this.apiClient.call<StreamsListResult[]>('get_streams', {});
 
       if (Array.isArray(response) && response.length > 0) {
         this.logger.info(`Retrieved ${response.length} active streams`);

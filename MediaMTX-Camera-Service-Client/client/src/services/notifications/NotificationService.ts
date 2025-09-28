@@ -5,7 +5,7 @@
  * Only handles notifications sent by the server, never initiated by client
  */
 
-import { WebSocketService } from '../websocket/WebSocketService';
+import { APIClient } from '../abstraction/APIClient';
 import { LoggerService } from '../logger/LoggerService';
 import { EventBus } from '../events/EventBus';
 
@@ -40,7 +40,7 @@ export class NotificationService {
   private recordingStatusHandlers: NotificationHandler<RecordingStatusUpdate>[] = [];
 
   constructor(
-    private wsService: WebSocketService,
+    private apiClient: APIClient,
     private logger: LoggerService,
     private eventBus: EventBus,
   ) {

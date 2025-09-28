@@ -1,4 +1,4 @@
-import { WebSocketService } from '../websocket/WebSocketService';
+import { APIClient } from '../abstraction/APIClient';
 import { LoggerService } from '../logger/LoggerService';
 import { 
   ExternalStreamDiscoveryResult, 
@@ -37,7 +37,7 @@ import {
  */
 export class ExternalStreamService {
   constructor(
-    private wsService: WebSocketService,
+    private apiClient: APIClient,
     private logger: LoggerService,
   ) {}
 
@@ -53,7 +53,7 @@ export class ExternalStreamService {
   } = {}): Promise<ExternalStreamDiscoveryResult> {
     try {
       this.logger.info('Discovering external streams', params);
-      const response = await this.wsService.sendRPC('discover_external_streams', params) as ExternalStreamDiscoveryResult;
+      const response = await this.apiClient.call('discover_external_streams', params) as ExternalStreamDiscoveryResult;
       this.logger.info(`Discovered ${response.streams?.length || 0} external streams`);
       return response;
     } catch (error) {
@@ -73,7 +73,7 @@ export class ExternalStreamService {
   }): Promise<ExternalStreamAddResult> {
     try {
       this.logger.info('Adding external stream', params);
-      const response = await this.wsService.sendRPC('add_external_stream', params) as ExternalStreamAddResult;
+      const response = await this.apiClient.call('add_external_stream', params) as ExternalStreamAddResult;
       this.logger.info(`External stream added: ${response.stream_name}`);
       return response;
     } catch (error) {
@@ -89,7 +89,7 @@ export class ExternalStreamService {
   async removeExternalStream(streamUrl: string): Promise<ExternalStreamRemoveResult> {
     try {
       this.logger.info(`Removing external stream: ${streamUrl}`);
-      const response = await this.wsService.sendRPC('remove_external_stream', { stream_url: streamUrl }) as ExternalStreamRemoveResult;
+      const response = await this.apiClient.call('remove_external_stream', { stream_url: streamUrl }) as ExternalStreamRemoveResult;
       this.logger.info(`External stream removed: ${streamUrl}`);
       return response;
     } catch (error) {
@@ -105,7 +105,7 @@ export class ExternalStreamService {
   async getExternalStreams(): Promise<ExternalStreamListResult> {
     try {
       this.logger.info('Getting external streams');
-      const response = await this.wsService.sendRPC('get_external_streams', {}) as ExternalStreamListResult;
+      const response = await this.apiClient.call('get_external_streams', {}) as ExternalStreamListResult;
       this.logger.info(`Retrieved ${response.streams?.length || 0} external streams`);
       return response;
     } catch (error) {
@@ -121,7 +121,7 @@ export class ExternalStreamService {
   async setDiscoveryInterval(scanInterval: number): Promise<DiscoveryIntervalSetResult> {
     try {
       this.logger.info(`Setting discovery interval: ${scanInterval} seconds`);
-      const response = await this.wsService.sendRPC('set_discovery_interval', { scan_interval: scanInterval }) as DiscoveryIntervalSetResult;
+      const response = await this.apiClient.call('set_discovery_interval', { scan_interval: scanInterval }) as DiscoveryIntervalSetResult;
       this.logger.info(`Discovery interval set to ${response.scan_interval} seconds`);
       return response;
     } catch (error) {

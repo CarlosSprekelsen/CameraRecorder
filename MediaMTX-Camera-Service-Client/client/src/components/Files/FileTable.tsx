@@ -28,7 +28,7 @@ import {
 import { useFileStore } from '../../stores/file/fileStore';
 import { FileListItem } from '../../stores/file/fileStore';
 import ConfirmDialog from './ConfirmDialog';
-import { logger } from '../../services/logger/LoggerService';
+// ARCHITECTURE FIX: Removed direct service import - use store hooks instead
 import PermissionGate from '../Security/PermissionGate';
 
 interface FileTableProps {
@@ -100,9 +100,9 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
   const handleDownload = async (file: FileListItem) => {
     try {
       await downloadFile(file.download_url, file.filename);
-      logger.info(`Download initiated for: ${file.filename}`);
+      console.log(`Download initiated for: ${file.filename}`);
     } catch (error) {
-      logger.error(`Download failed for: ${file.filename}`, error as Record<string, unknown>);
+      console.error(`Download failed for: ${file.filename}`, error);
     }
   };
 
@@ -125,14 +125,14 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
       }
 
       if (success) {
-        logger.info(`File deleted: ${filename}`);
+        console.log(`File deleted: ${filename}`);
         // Remove from selection if it was selected
         if (selectedFiles.includes(filename)) {
           toggleFileSelection(filename);
         }
       }
     } catch (error) {
-      logger.error(`Delete failed for: ${filename}`, error as Record<string, unknown>);
+      console.error(`Delete failed for: ${filename}`, error);
     }
     setDeleteDialog({ open: false, filename: '', fileType: 'recordings' });
   };

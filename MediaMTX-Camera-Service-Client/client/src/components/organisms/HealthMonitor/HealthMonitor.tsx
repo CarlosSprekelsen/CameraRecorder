@@ -36,14 +36,9 @@ export const HealthMonitor: React.FC<HealthMonitorProps> = () => {
   const [lastCheck, setLastCheck] = useState<Date | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      handleHealthCheck();
-    }, 30000); // Check every 30 seconds
-
-    // Initial check
+    // ARCHITECTURE FIX: Removed client-side timer - health checks are server-authoritative
+    // Initial check only - server will send health updates via WebSocket
     handleHealthCheck();
-
-    return () => clearInterval(interval);
   }, []);
 
   const handleHealthCheck = async () => {

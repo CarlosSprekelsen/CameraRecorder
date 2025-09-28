@@ -8,7 +8,7 @@ import {
   AccessTime as TimedIcon,
   Settings as SettingsIcon,
 } from '@mui/icons-material';
-import { logger } from '../../services/logger/LoggerService';
+// ARCHITECTURE FIX: Removed direct service import - use store hooks instead
 import { Snackbar, Alert } from '@mui/material';
 import TimedRecordDialog from './TimedRecordDialog';
 import { useRecordingStore } from '../../stores/recording/recordingStore';
@@ -48,7 +48,7 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({ device }) => {
   };
 
   const handleSnapshot = async () => {
-    logger.info(`Snapshot requested for device: ${device}`);
+    console.log(`Snapshot requested for device: ${device}`);
     try {
       await takeSnapshot(device);
       setSnack({ open: true, msg: 'Snapshot requested', sev: 'success' });
@@ -59,7 +59,7 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({ device }) => {
   };
 
   const handleStartRecording = async () => {
-    logger.info(`Start recording requested for device: ${device}`);
+    console.log(`Start recording requested for device: ${device}`);
     try {
       await startRecording(device);
       setSnack({ open: true, msg: 'Recording started', sev: 'success' });
@@ -70,7 +70,7 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({ device }) => {
   };
 
   const handleStopRecording = async () => {
-    logger.info(`Stop recording requested for device: ${device}`);
+    console.log(`Stop recording requested for device: ${device}`);
     try {
       await stopRecording(device);
       setSnack({ open: true, msg: 'Recording stop requested', sev: 'info' });
@@ -86,7 +86,7 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({ device }) => {
   };
 
   const handleSettings = () => {
-    logger.info(`Settings requested for device: ${device}`);
+    console.log(`Settings requested for device: ${device}`);
     handleClose();
   };
 
