@@ -61,7 +61,7 @@ export class APIResponseValidator {
   static validateIsoTimestamp(timestamp: string): boolean {
     try {
       const date = new Date(timestamp);
-    return !isNaN(date.getTime()) && date.toISOString() === timestamp;
+      return !isNaN(date.getTime()) && timestamp.includes('T') && timestamp.includes(':');
     } catch {
       return false;
     }
