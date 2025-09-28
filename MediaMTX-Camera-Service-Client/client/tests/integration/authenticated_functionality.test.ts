@@ -10,6 +10,7 @@
  */
 
 import { WebSocketService } from '../../src/services/websocket/WebSocketService';
+import { APIClient } from '../../src/services/abstraction/APIClient';
 import { AuthService } from '../../src/services/auth/AuthService';
 import { DeviceService } from '../../src/services/device/DeviceService';
 import { FileService } from '../../src/services/file/FileService';
@@ -57,10 +58,13 @@ describe('Authenticated Functionality Tests', () => {
     
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    authService = new AuthService(webSocketService);
-    deviceService = new DeviceService(webSocketService, loggerService);
-    fileService = new FileService(webSocketService, loggerService);
-    recordingService = new RecordingService(webSocketService, loggerService);
+    // Create APIClient for services
+    const apiClient = new APIClient(webSocketService, loggerService);
+    
+    authService = new AuthService(apiClient, loggerService);
+    deviceService = new DeviceService(apiClient, loggerService);
+    fileService = new FileService(apiClient, loggerService);
+    recordingService = new RecordingService(apiClient, loggerService);
 
     // Check if JWT tokens are available
     if (!TEST_VIEWER_TOKEN && !TEST_OPERATOR_TOKEN && !TEST_ADMIN_TOKEN) {

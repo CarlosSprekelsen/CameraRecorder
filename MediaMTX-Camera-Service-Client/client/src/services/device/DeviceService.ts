@@ -1,8 +1,9 @@
-import { WebSocketService } from '../websocket/WebSocketService';
+import { APIClient } from '../abstraction/APIClient';
 import { LoggerService } from '../logger/LoggerService';
 import { Camera, StreamInfo } from '../../stores/device/deviceStore';
 import { IDiscovery } from '../interfaces/ServiceInterfaces';
 import { CameraListResult, StreamUrlResult, CameraCapabilitiesResult, StreamStatusResult, StreamStartResult, StreamStopResult } from '../../types/api';
+import { validateCameraDeviceId } from '../../utils/validation';
 
 /**
  * Device Service - Camera discovery and stream management
@@ -26,9 +27,10 @@ import { CameraListResult, StreamUrlResult, CameraCapabilitiesResult, StreamStat
  */
 export class DeviceService implements IDiscovery {
   constructor(
-    private wsService: WebSocketService,
+    private apiClient: APIClient,
     private logger: LoggerService,
   ) {}
+
 
   /**
    * Get list of all discovered cameras with their current status
@@ -38,7 +40,7 @@ export class DeviceService implements IDiscovery {
     try {
       this.logger.info('Getting camera list');
 
-      const response = await this.wsService.sendRPC('get_camera_list') as CameraListResult;
+      const response = await this.apiClient.call<CameraListResult>('get_camera_list', {});
 
       if (response.cameras && response.cameras.length > 0) {
         this.logger.info(`Retrieved ${response.cameras.length} cameras`);
@@ -84,6 +86,10 @@ export class DeviceService implements IDiscovery {
    * Implements get_stream_url RPC method
    */
   async getStreamUrl(device: string): Promise<StreamUrlResult> {
+    if (!validateCameraDeviceId(device)) {
+      throw new Error(`Invalid device ID format: ${device}. Expected format: camera[0-9]+`);
+    }
+
     try {
       this.logger.info(`Getting stream URL for device: ${device}`);
 
@@ -138,59 +144,9 @@ export class DeviceService implements IDiscovery {
     }
   }
 
-  /**
-   * Start streaming for a specific device
-   * Implements start_streaming RPC method
-   */
-  async startStreaming(device: string): Promise<StreamStartResult> {
-    try {
-      this.logger.info(`Starting streaming for device: ${device}`);
-
-      const response = await this.wsService.sendRPC('start_streaming', { device }) as StreamStartResult;
-
-      this.logger.info(`Started streaming for ${device}:`, response);
-      return response;
-    } catch (error) {
-      this.logger.error(`Failed to start streaming for device: ${device}`, error as Record<string, unknown>);
-      throw error;
-    }
-  }
-
-  /**
-   * Stop streaming for a specific device
-   * Implements stop_streaming RPC method
-   */
-  async stopStreaming(device: string): Promise<StreamStopResult> {
-    try {
-      this.logger.info(`Stopping streaming for device: ${device}`);
-
-      const response = await this.wsService.sendRPC('stop_streaming', { device }) as StreamStopResult;
-
-      this.logger.info(`Stopped streaming for ${device}:`, response);
-      return response;
-    } catch (error) {
-      this.logger.error(`Failed to stop streaming for device: ${device}`, error as Record<string, unknown>);
-      throw error;
-    }
-  }
-
-  /**
-   * Get stream status for a specific device
-   * Implements get_stream_status RPC method
-   */
-  async getStreamStatus(device: string): Promise<StreamStatusResult> {
-    try {
-      this.logger.info(`Getting stream status for device: ${device}`);
-
-      const response = await this.wsService.sendRPC('get_stream_status', { device }) as StreamStatusResult;
-
-      this.logger.info(`Retrieved stream status for ${device}:`, response);
-      return response;
-    } catch (error) {
-      this.logger.error(`Failed to get stream status for device: ${device}`, error as Record<string, unknown>);
-      throw error;
-    }
-  }
+  // STREAMING METHODS MOVED TO StreamingService
+  // Architecture requirement: Interface segregation (Section 1.2)
+  // DeviceService now only handles discovery operations per IDiscovery interface
 
   /**
    * Subscribe to camera status update events
@@ -270,11 +226,11 @@ export class DeviceService implements IDiscovery {
    * Start streaming for a specific camera device
    * Implements start_streaming RPC method
    */
-  async startStreaming(device: string, format?: string): Promise<StreamStartResult> {
+  async startStreaming(device: string): Promise<StreamStartResult> {
     try {
-      this.logger.info(`Starting streaming for device: ${device}`, { format });
+      this.logger.info(`Starting streaming for device: ${device}`);
 
-      const response = await this.wsService.sendRPC('start_streaming', { device, format }) as StreamStartResult;
+      const response = await this.wsService.sendRPC('start_streaming', { device }) as StreamStartResult;
 
       this.logger.info(`Started streaming for ${device}`);
       return response;

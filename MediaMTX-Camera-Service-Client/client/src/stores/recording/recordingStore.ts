@@ -2,14 +2,26 @@ import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { RecordingService } from '../../services/recording/RecordingService';
 
-export interface RecordingInfo {
+// FIXED: Separate operation results from session state
+export interface RecordingOperationResult {
   device: string;
   filename?: string;
-  status: 'RECORDING' | 'STOPPED' | 'ERROR' | 'STARTED';
+  status: 'SUCCESS' | 'FAILED';  // FIXED: API spec uses SUCCESS/FAILED for operations
+  error?: string;
+}
+
+export interface RecordingSessionInfo {
+  device: string;
+  session_id: string;
+  filename?: string;
+  status: 'RECORDING' | 'STOPPED' | 'ERROR';  // Session state
   startTime?: string;
   duration?: number;
   format?: string;
 }
+
+// Legacy interface for backward compatibility
+export interface RecordingInfo extends RecordingSessionInfo {}
 
 export interface RecordingState {
   activeRecordings: Record<string, RecordingInfo>;
@@ -38,70 +50,18 @@ export const useRecordingStore = create<RecordingState & RecordingActions>()(
   devtools(
     persist(
       (set, get) => {
-        let service: RecordingService | null = null;
+        // ARCHITECTURE FIX: Remove direct service injection
+        // Use action dispatchers instead of direct service calls
+        // Architecture requirement: Unidirectional data flow (ADR-002)
 
         return {
           ...initialState,
 
-          setService: (s: RecordingService) => {
-            service = s;
-          },
-
-          takeSnapshot: async (device: string, filename?: string) => {
-            if (!service) {
-              set({ error: 'Recording service not initialized' });
-              return;
-            }
-            set({ loading: true, error: null });
-            try {
-              await service.takeSnapshot(device, filename);
-              set({ loading: false });
-            } catch (error) {
-              set({
-                loading: false,
-                error: error instanceof Error ? error.message : 'Snapshot failed',
-              });
-            }
-          },
-
-          startRecording: async (device: string, duration?: number, format?: string) => {
-            if (!service) {
-              set({ error: 'Recording service not initialized' });
-              return;
-            }
-            // Concurrency limit: do not start if device already recording
-            if (get().activeRecordings[device]) {
-              set({ error: `Device ${device} is already recording` });
-              return;
-            }
-            set({ loading: true, error: null });
-            try {
-              await service.startRecording(device, duration, format);
-              set({ loading: false });
-            } catch (error) {
-              set({
-                loading: false,
-                error: error instanceof Error ? error.message : 'Start recording failed',
-              });
-            }
-          },
-
-          stopRecording: async (device: string) => {
-            if (!service) {
-              set({ error: 'Recording service not initialized' });
-              return;
-            }
-            set({ loading: true, error: null });
-            try {
-              await service.stopRecording(device);
-              set({ loading: false });
-            } catch (error) {
-              set({
-                loading: false,
-                error: error instanceof Error ? error.message : 'Stop recording failed',
-              });
-            }
-          },
+          // REMOVED: setService - services should not be injected into stores
+          // REMOVED: takeSnapshot - business logic moved to actions
+          // ARCHITECTURE FIX: Pure state management only
+          // Business logic moved to RecordingActions
+          // Store only manages state, not business operations
 
           handleRecordingStatusUpdate: (info: RecordingInfo) => {
             set((state) => {
@@ -130,3 +90,4 @@ export const useRecordingStore = create<RecordingState & RecordingActions>()(
     ),
   ),
 );
+

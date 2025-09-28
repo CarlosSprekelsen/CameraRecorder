@@ -1,117 +1,133 @@
-// Service Layer - Status Receiver (NOTIF)
-// Implements notification handling as required by architecture section 5.1
+/**
+ * Notification Service - Handles server-generated notifications
+ * 
+ * Architecture requirement: Server-generated notifications blocked from client calls
+ * Only handles notifications sent by the server, never initiated by client
+ */
 
-import { JsonRpcNotification } from '../../types/api';
 import { WebSocketService } from '../websocket/WebSocketService';
-import { logger } from '../logger/LoggerService';
+import { LoggerService } from '../logger/LoggerService';
+import { EventBus } from '../events/EventBus';
 
-export interface NotificationHandler {
-  (notification: JsonRpcNotification): void;
+export interface CameraStatusUpdate {
+  device: string;
+  status: 'CONNECTED' | 'DISCONNECTED' | 'ERROR';
+  timestamp: string;
+  details?: {
+    error?: string;
+    resolution?: string;
+    fps?: number;
+  };
 }
 
+export interface RecordingStatusUpdate {
+  device: string;
+  status: 'RECORDING' | 'STOPPED' | 'FAILED';
+  filename?: string;
+  file_path?: string;
+  timestamp: string;
+  details?: {
+    duration?: number;
+    file_size?: number;
+    error?: string;
+  };
+}
+
+export type NotificationHandler<T> = (data: T) => void;
+
 export class NotificationService {
-  private handlers = new Map<string, Set<NotificationHandler>>();
-  private wsService: WebSocketService; // WebSocket service reference
+  private cameraStatusHandlers: NotificationHandler<CameraStatusUpdate>[] = [];
+  private recordingStatusHandlers: NotificationHandler<RecordingStatusUpdate>[] = [];
 
-  constructor(wsService: WebSocketService) {
-    this.wsService = wsService;
-    this.setupWebSocketHandlers();
+  constructor(
+    private wsService: WebSocketService,
+    private logger: LoggerService,
+    private eventBus: EventBus,
+  ) {
+    this.setupNotificationHandlers();
   }
 
-  private setupWebSocketHandlers(): void {
-    if (this.wsService) {
-      this.wsService.events = {
-        ...this.wsService.events,
-        onNotification: (notification: JsonRpcNotification) => {
-          this.handleNotification(notification);
-        },
-      };
-    }
+  /**
+   * Setup notification handlers for server-generated notifications
+   * Architecture requirement: Only handle server-sent notifications
+   */
+  private setupNotificationHandlers(): void {
+    this.wsService.onNotification('camera_status_update', (data: CameraStatusUpdate) => {
+      this.logger.info('Received camera status update from server', data);
+      
+      // Emit event through event bus for real-time updates
+      this.eventBus.emitWithTimestamp('camera_status_update', data);
+      
+      this.cameraStatusHandlers.forEach(handler => {
+        try {
+          handler(data);
+        } catch (error) {
+          this.logger.error('Error in camera status handler', error as Record<string, unknown>);
+        }
+      });
+    });
+
+    this.wsService.onNotification('recording_status_update', (data: RecordingStatusUpdate) => {
+      this.logger.info('Received recording status update from server', data);
+      
+      // Emit event through event bus for real-time updates
+      this.eventBus.emitWithTimestamp('recording_status_update', data);
+      
+      this.recordingStatusHandlers.forEach(handler => {
+        try {
+          handler(data);
+        } catch (error) {
+          this.logger.error('Error in recording status handler', error as Record<string, unknown>);
+        }
+      });
+    });
   }
 
-  subscribe(method: string, handler: NotificationHandler): () => void {
-    if (!this.handlers.has(method)) {
-      this.handlers.set(method, new Set());
-    }
-
-    this.handlers.get(method)!.add(handler);
-
-    logger.info(`Subscribed to notifications: ${method}`);
-
+  /**
+   * Subscribe to camera status updates
+   * Architecture requirement: Server-generated notifications only
+   */
+  onCameraStatusUpdate(handler: NotificationHandler<CameraStatusUpdate>): () => void {
+    this.cameraStatusHandlers.push(handler);
+    
     // Return unsubscribe function
     return () => {
-      this.unsubscribe(method, handler);
+      const index = this.cameraStatusHandlers.indexOf(handler);
+      if (index > -1) {
+        this.cameraStatusHandlers.splice(index, 1);
+      }
     };
   }
 
-  unsubscribe(method: string, handler: NotificationHandler): void {
-    const methodHandlers = this.handlers.get(method);
-    if (methodHandlers) {
-      methodHandlers.delete(handler);
-      if (methodHandlers.size === 0) {
-        this.handlers.delete(method);
+  /**
+   * Subscribe to recording status updates
+   * Architecture requirement: Server-generated notifications only
+   */
+  onRecordingStatusUpdate(handler: NotificationHandler<RecordingStatusUpdate>): () => void {
+    this.recordingStatusHandlers.push(handler);
+    
+    // Return unsubscribe function
+    return () => {
+      const index = this.recordingStatusHandlers.indexOf(handler);
+      if (index > -1) {
+        this.recordingStatusHandlers.splice(index, 1);
       }
-    }
-
-    logger.info(`Unsubscribed from notifications: ${method}`);
-  }
-
-  private handleNotification(notification: JsonRpcNotification): void {
-    const method = notification.method;
-    const methodHandlers = this.handlers.get(method);
-
-    if (methodHandlers) {
-      logger.debug(`Handling notification: ${method}`, { notification });
-
-      methodHandlers.forEach((handler) => {
-        try {
-          handler(notification);
-        } catch (error) {
-          logger.error(`Error in notification handler for ${method}`, error as Record<string, unknown>);
-        }
-      });
-    } else {
-      logger.debug(`No handlers for notification: ${method}`);
-    }
-  }
-
-  getSubscribedMethods(): string[] {
-    return Array.from(this.handlers.keys());
-  }
-
-  getHandlerCount(method: string): number {
-    return this.handlers.get(method)?.size || 0;
+    };
   }
 
   /**
-   * Subscribe to camera status update notifications
-   * Note: camera_status_update is a server-generated notification, not a callable method
-   * Use subscribe_events with topics: ['camera.connected', 'camera.disconnected'] instead
+   * SECURITY: Block client-initiated notifications
+   * Architecture requirement: "Server-generated notifications blocked from client calls"
    */
-  subscribeToCameraStatusUpdates(handler: NotificationHandler): () => void {
-    return this.subscribe('camera_status_update', handler);
+  sendCameraStatusUpdate(): never {
+    throw new Error('Camera status updates are server-generated only. Clients cannot send status updates.');
   }
 
   /**
-   * Subscribe to recording status update notifications
-   * Note: recording_status_update is a server-generated notification, not a callable method
-   * Use subscribe_events with topics: ['recording.started', 'recording.stopped'] instead
+   * SECURITY: Block client-initiated notifications
+   * Architecture requirement: "Server-generated notifications blocked from client calls"
    */
-  subscribeToRecordingStatusUpdates(handler: NotificationHandler): () => void {
-    return this.subscribe('recording_status_update', handler);
-  }
-
-  /**
-   * Unsubscribe from camera status update notifications
-   */
-  unsubscribeFromCameraStatusUpdates(handler: NotificationHandler): void {
-    this.unsubscribe('camera_status_update', handler);
-  }
-
-  /**
-   * Unsubscribe from recording status update notifications
-   */
-  unsubscribeFromRecordingStatusUpdates(handler: NotificationHandler): void {
-    this.unsubscribe('recording_status_update', handler);
+  sendRecordingStatusUpdate(): never {
+    throw new Error('Recording status updates are server-generated only. Clients cannot send status updates.');
   }
 }

@@ -59,6 +59,35 @@ export interface CameraStatusResult {
   };
 }
 
+// Snapshot Result from official spec - FIXED: Use API spec values
+export interface SnapshotResult {
+  device: DeviceId;
+  filename: string;
+  file_size: number;
+  status: 'SUCCESS' | 'FAILED';  // FIXED: API spec uses SUCCESS/FAILED
+  timestamp: IsoTimestamp;
+  file_path: string;
+}
+
+// Recording Start Result from official spec - FIXED: Use API spec values
+export interface RecordingStartResult {
+  device: DeviceId;
+  status: 'SUCCESS' | 'FAILED';  // FIXED: API spec uses SUCCESS/FAILED for operations
+  filename?: string;
+  file_path?: string;
+  duration?: number;
+  format?: string;
+}
+
+// Recording Stop Result from official spec - FIXED: Use API spec values
+export interface RecordingStopResult {
+  device: DeviceId;
+  status: 'SUCCESS' | 'FAILED';  // FIXED: API spec uses SUCCESS/FAILED for operations
+  filename?: string;
+  file_path?: string;
+  duration?: number;
+}
+
 // Camera Capabilities Result from official spec
 export interface CameraCapabilitiesResult {
   device: DeviceId;
@@ -68,36 +97,9 @@ export interface CameraCapabilitiesResult {
   validation_status: 'NONE' | 'DISCONNECTED' | 'CONFIRMED';
 }
 
-// Recording Start Result from official spec
-export interface RecordingStartResult {
-  device: DeviceId;
-  filename: string;
-  status: 'RECORDING' | 'STARTING' | 'STOPPING' | 'PAUSED' | 'ERROR' | 'FAILED';
-  start_time: IsoTimestamp;
-  format: 'fmp4' | 'mp4' | 'mkv';
-}
+// REMOVED: Duplicate RecordingStartResult and RecordingStopResult definitions
 
-// Recording Stop Result from official spec
-export interface RecordingStopResult {
-  device: DeviceId;
-  filename: string;
-  status: 'STOPPED' | 'STARTING' | 'STOPPING' | 'PAUSED' | 'ERROR' | 'FAILED';
-  start_time: IsoTimestamp;
-  end_time: IsoTimestamp;
-  duration: number;
-  file_size: number;
-  format: 'fmp4' | 'mp4' | 'mkv';
-}
-
-// Snapshot Result from official spec
-export interface SnapshotResult {
-  device: DeviceId;
-  filename: string;
-  status: 'SUCCESS' | 'FAILED';
-  timestamp: IsoTimestamp;
-  file_size: number;
-  file_path: string;
-}
+// REMOVED: Duplicate SnapshotResult definition
 
 // Snapshot Info from official spec
 export interface SnapshotInfo {
@@ -499,6 +501,7 @@ export type RpcMethod =
   | 'authenticate'
   | 'get_server_info'
   | 'get_status'
+  | 'get_system_status'  // FIXED: Added missing method
   | 'get_storage_info'
   | 'get_metrics'
   | 'get_camera_list'

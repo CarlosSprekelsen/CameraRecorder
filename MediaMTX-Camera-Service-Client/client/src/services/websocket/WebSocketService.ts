@@ -279,8 +279,48 @@ export class WebSocketService {
     this.events.onResponse?.(response);
   }
 
+  private notificationHandlers: Map<string, ((data: any) => void)[]> = new Map();
+
   private handleNotification(notification: JsonRpcNotification): void {
+    // Handle server notifications
+    console.log('Received notification:', notification);
+    
+    const handlers = this.notificationHandlers.get(notification.method);
+    if (handlers) {
+      handlers.forEach(handler => {
+        try {
+          handler(notification.params);
+        } catch (error) {
+          console.error('Error in notification handler:', error);
+        }
+      });
+    }
+
+    // Also call the legacy event handler
     this.events.onNotification?.(notification);
+  }
+
+  /**
+   * Register a handler for server notifications
+   */
+  onNotification(method: string, handler: (data: any) => void): void {
+    if (!this.notificationHandlers.has(method)) {
+      this.notificationHandlers.set(method, []);
+    }
+    this.notificationHandlers.get(method)!.push(handler);
+  }
+
+  /**
+   * Remove a notification handler
+   */
+  offNotification(method: string, handler: (data: any) => void): void {
+    const handlers = this.notificationHandlers.get(method);
+    if (handlers) {
+      const index = handlers.indexOf(handler);
+      if (index > -1) {
+        handlers.splice(index, 1);
+      }
+    }
   }
 
   private handleReconnect(): void {

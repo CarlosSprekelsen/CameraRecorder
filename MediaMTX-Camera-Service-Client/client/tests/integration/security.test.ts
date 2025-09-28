@@ -6,6 +6,7 @@
  */
 
 import { WebSocketService } from '../../src/services/websocket/WebSocketService';
+import { APIClient } from '../../src/services/abstraction/APIClient';
 import { AuthService } from '../../src/services/auth/AuthService';
 import { FileService } from '../../src/services/file/FileService';
 import { DeviceService } from '../../src/services/device/DeviceService';
@@ -26,8 +27,8 @@ describe('Integration Tests: Security', () => {
     await new Promise(resolve => setTimeout(resolve, 2000));
     
     authService = new AuthService(webSocketService, loggerService);
-    fileService = new FileService(webSocketService, loggerService);
-    deviceService = new DeviceService(webSocketService, loggerService);
+    fileService = new FileService(apiClient, loggerService);
+    deviceService = new DeviceService(apiClient, loggerService);
   });
 
   afterAll(async () => {

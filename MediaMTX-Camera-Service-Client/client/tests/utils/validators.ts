@@ -50,15 +50,13 @@ export class APIResponseValidator {
   /**
    * Validates camera device ID format according to server documentation
    * Pattern: camera[0-9]+ (e.g., camera0, camera1, camera10)
+   * 
+   * @deprecated Use validateCameraDeviceId from '../../src/utils/validation' instead
    */
   static validateCameraDeviceId(deviceId: string): boolean {
-    if (!deviceId || typeof deviceId !== 'string') {
-      return false;
-    }
-    
-    // Server documentation pattern: camera[0-9]+
-    const cameraIdPattern = /^camera\d+$/;
-    return cameraIdPattern.test(deviceId);
+    // Import the centralized validation function
+    const { validateCameraDeviceId } = require('../../src/utils/validation');
+    return validateCameraDeviceId(deviceId);
   }
 
   /**
@@ -266,7 +264,7 @@ export class APIResponseValidator {
     return (
       this.validateDeviceId(obj.device as string) &&
       typeof obj.filename === 'string' &&
-      ['RECORDING', 'STARTING', 'STOPPING', 'PAUSED', 'ERROR', 'FAILED'].includes(obj.status as string) &&
+      ['RECORDING', 'STARTING', 'STOPPING', 'PAUSED', 'ERROR', 'FAILED'].includes(obj.status as string) &&  // FIXED: API spec for start_recording
       this.validateIsoTimestamp(obj.start_time as string) &&
       ['fmp4', 'mp4', 'mkv'].includes(obj.format as string)
     );
@@ -283,7 +281,7 @@ export class APIResponseValidator {
     return (
       this.validateDeviceId(obj.device as string) &&
       typeof obj.filename === 'string' &&
-      ['STOPPED', 'STARTING', 'STOPPING', 'PAUSED', 'ERROR', 'FAILED'].includes(obj.status as string) &&
+      ['STOPPED', 'STARTING', 'STOPPING', 'PAUSED', 'ERROR', 'FAILED'].includes(obj.status as string) &&  // FIXED: API spec for stop_recording
       this.validateIsoTimestamp(obj.start_time as string) &&
       this.validateIsoTimestamp(obj.end_time as string) &&
       typeof obj.duration === 'number' &&
@@ -330,7 +328,7 @@ export class APIResponseValidator {
       typeof obj.file_path === 'string' &&
       this.validateIsoTimestamp(obj.timestamp as string) &&
       obj.file_size >= 0 &&
-      ['completed', 'failed', 'processing'].includes(obj.status as string)
+      ['SUCCESS', 'FAILED'].includes(obj.status as string)
     );
   }
 
@@ -852,6 +850,293 @@ export class APIResponseValidator {
       typeof obj.ready === 'boolean' &&
       this.validateDeviceId(obj.device) &&
       ['ACTIVE', 'INACTIVE', 'ERROR', 'STARTING', 'STOPPING'].includes(obj.status)
+    );
+  }
+
+  /**
+   * Validate Ping Result - matches official RPC spec exactly
+   */
+  static validatePingResult(result: unknown): result is string {
+    return typeof result === 'string' && result === 'pong';
+  }
+
+  /**
+   * Validate Recording Info Result - matches official RPC spec exactly
+   */
+  static validateRecordingInfoResult(result: unknown): result is RecordingInfo {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      typeof obj.filename === 'string' &&
+      typeof obj.file_size === 'number' &&
+      typeof obj.duration === 'number' &&
+      typeof obj.created_time === 'string' &&
+      typeof obj.download_url === 'string' &&
+      obj.file_size >= 0 &&
+      obj.duration >= 0
+    );
+  }
+
+  /**
+   * Validate Snapshot Info Result - matches official RPC spec exactly
+   */
+  static validateSnapshotInfoResult(result: unknown): result is SnapshotInfo {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      typeof obj.filename === 'string' &&
+      typeof obj.file_size === 'number' &&
+      typeof obj.created_time === 'string' &&
+      typeof obj.download_url === 'string' &&
+      obj.file_size >= 0
+    );
+  }
+
+  /**
+   * Validate System Status Result - matches official RPC spec exactly
+   */
+  static validateSystemStatusResult(result: unknown): result is SystemStatus {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      typeof obj.status === 'string' &&
+      typeof obj.uptime === 'number' &&
+      typeof obj.version === 'string' &&
+      typeof obj.components === 'object' &&
+      obj.components !== null &&
+      ['HEALTHY', 'DEGRADED', 'UNHEALTHY'].includes(obj.status) &&
+      obj.uptime >= 0
+    );
+  }
+
+  /**
+   * Validate System Readiness Result - matches official RPC spec exactly
+   */
+  static validateSystemReadinessResult(result: unknown): boolean {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      typeof obj.status === 'string' &&
+      typeof obj.message === 'string' &&
+      Array.isArray(obj.available_cameras) &&
+      typeof obj.discovery_active === 'boolean' &&
+      ['starting', 'partial', 'ready'].includes(obj.status)
+    );
+  }
+
+  /**
+   * Validate Server Info Result - matches official RPC spec exactly
+   */
+  static validateServerInfoResult(result: unknown): result is ServerInfo {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      typeof obj.name === 'string' &&
+      typeof obj.version === 'string' &&
+      typeof obj.build_date === 'string' &&
+      typeof obj.go_version === 'string' &&
+      typeof obj.architecture === 'string' &&
+      Array.isArray(obj.capabilities) &&
+      Array.isArray(obj.supported_formats) &&
+      typeof obj.max_cameras === 'number' &&
+      obj.max_cameras >= 0
+    );
+  }
+
+  /**
+   * Validate Storage Info Result - matches official RPC spec exactly
+   */
+  static validateStorageInfoResult(result: unknown): result is StorageInfo {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      typeof obj.total_space === 'number' &&
+      typeof obj.used_space === 'number' &&
+      typeof obj.available_space === 'number' &&
+      typeof obj.usage_percentage === 'number' &&
+      typeof obj.recordings_size === 'number' &&
+      typeof obj.snapshots_size === 'number' &&
+      typeof obj.low_space_warning === 'boolean' &&
+      obj.total_space >= 0 &&
+      obj.used_space >= 0 &&
+      obj.available_space >= 0 &&
+      obj.usage_percentage >= 0 &&
+      obj.usage_percentage <= 100 &&
+      obj.recordings_size >= 0 &&
+      obj.snapshots_size >= 0
+    );
+  }
+
+  /**
+   * Validate Retention Policy Result - matches official RPC spec exactly
+   */
+  static validateRetentionPolicyResult(result: unknown): boolean {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      typeof obj.policy_type === 'string' &&
+      typeof obj.enabled === 'boolean' &&
+      typeof obj.message === 'string' &&
+      (obj.status === undefined || ['UPDATED', 'ERROR'].includes(obj.status as string))
+    );
+  }
+
+  /**
+   * Validate Cleanup Result - matches official RPC spec exactly
+   */
+  static validateCleanupResult(result: unknown): boolean {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      typeof obj.cleanup_executed === 'boolean' &&
+      typeof obj.files_deleted === 'number' &&
+      typeof obj.space_freed === 'number' &&
+      typeof obj.message === 'string' &&
+      obj.files_deleted >= 0 &&
+      obj.space_freed >= 0
+    );
+  }
+
+  /**
+   * Validate External Stream Discovery Result - matches official RPC spec exactly
+   */
+  static validateExternalStreamDiscoveryResult(result: unknown): boolean {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      Array.isArray(obj.discovered_streams) &&
+      Array.isArray(obj.skydio_streams) &&
+      Array.isArray(obj.generic_streams) &&
+      typeof obj.scan_timestamp === 'string' &&
+      typeof obj.total_found === 'number' &&
+      obj.total_found >= 0
+    );
+  }
+
+  /**
+   * Validate External Stream Add Result - matches official RPC spec exactly
+   */
+  static validateExternalStreamAddResult(result: unknown): boolean {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      typeof obj.stream_url === 'string' &&
+      typeof obj.stream_name === 'string' &&
+      typeof obj.stream_type === 'string' &&
+      typeof obj.status === 'string' &&
+      typeof obj.timestamp === 'string' &&
+      ['ADDED', 'ERROR'].includes(obj.status)
+    );
+  }
+
+  /**
+   * Validate External Stream Remove Result - matches official RPC spec exactly
+   */
+  static validateExternalStreamRemoveResult(result: unknown): boolean {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      typeof obj.stream_url === 'string' &&
+      typeof obj.status === 'string' &&
+      typeof obj.timestamp === 'string' &&
+      ['REMOVED', 'ERROR'].includes(obj.status)
+    );
+  }
+
+  /**
+   * Validate External Streams List Result - matches official RPC spec exactly
+   */
+  static validateExternalStreamsListResult(result: unknown): boolean {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      Array.isArray(obj.external_streams) &&
+      Array.isArray(obj.skydio_streams) &&
+      Array.isArray(obj.generic_streams) &&
+      typeof obj.total_count === 'number' &&
+      typeof obj.timestamp === 'string' &&
+      obj.total_count >= 0
+    );
+  }
+
+  /**
+   * Validate Discovery Interval Set Result - matches official RPC spec exactly
+   */
+  static validateDiscoveryIntervalSetResult(result: unknown): boolean {
+    if (typeof result !== 'object' || result === null) return false;
+    
+    const obj = result as Record<string, unknown>;
+    
+    return (
+      typeof obj.scan_interval === 'number' &&
+      typeof obj.status === 'string' &&
+      typeof obj.message === 'string' &&
+      typeof obj.timestamp === 'string' &&
+      ['UPDATED', 'ERROR'].includes(obj.status) &&
+      obj.scan_interval >= 0
+    );
+  }
+
+  /**
+   * Validate Camera Status Update Notification - matches official RPC spec exactly
+   */
+  static validateCameraStatusUpdateNotification(notification: unknown): boolean {
+    if (typeof notification !== 'object' || notification === null) return false;
+    
+    const obj = notification as Record<string, unknown>;
+    
+    return (
+      typeof obj.device === 'string' &&
+      typeof obj.status === 'string' &&
+      typeof obj.name === 'string' &&
+      typeof obj.resolution === 'string' &&
+      typeof obj.fps === 'number' &&
+      typeof obj.streams === 'object' &&
+      obj.streams !== null &&
+      ['CONNECTED', 'DISCONNECTED', 'ERROR'].includes(obj.status) &&
+      obj.fps >= 0
+    );
+  }
+
+  /**
+   * Validate Recording Status Update Notification - matches official RPC spec exactly
+   */
+  static validateRecordingStatusUpdateNotification(notification: unknown): boolean {
+    if (typeof notification !== 'object' || notification === null) return false;
+    
+    const obj = notification as Record<string, unknown>;
+    
+    return (
+      typeof obj.device === 'string' &&
+      typeof obj.status === 'string' &&
+      typeof obj.filename === 'string' &&
+      typeof obj.duration === 'number' &&
+      ['STARTED', 'STOPPED', 'ERROR'].includes(obj.status) &&
+      obj.duration >= 0
     );
   }
 }

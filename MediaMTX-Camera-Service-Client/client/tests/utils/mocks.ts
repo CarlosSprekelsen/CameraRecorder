@@ -812,6 +812,8 @@ export class MockDataFactory {
       connect: jest.fn(),
       disconnect: jest.fn(),
       sendNotification: jest.fn(),
+      onNotification: jest.fn(), // FIXED: Added missing method from real WebSocketService
+      offNotification: jest.fn(), // FIXED: Added missing method from real WebSocketService
       onConnect: jest.fn(),
       onDisconnect: jest.fn(),
       onError: jest.fn(),

@@ -6,6 +6,7 @@
  */
 
 import { WebSocketService } from '../../src/services/websocket/WebSocketService';
+import { APIClient } from '../../src/services/abstraction/APIClient';
 import { AuthService } from '../../src/services/auth/AuthService';
 import { DeviceService } from '../../src/services/device/DeviceService';
 import { FileService } from '../../src/services/file/FileService';
@@ -27,12 +28,15 @@ describe('Integration Tests: Server Connectivity', () => {
     
     // Actually connect to the server
     await webSocketService.connect();
+    
+    // Create APIClient for services
+    const apiClient = new APIClient(webSocketService, loggerService);
     await new Promise(resolve => setTimeout(resolve, 1000));
     
-    authService = new AuthService(webSocketService);
-    deviceService = new DeviceService(webSocketService, loggerService);
-    fileService = new FileService(webSocketService, loggerService);
-    serverService = new ServerService(webSocketService, loggerService);
+    authService = new AuthService(apiClient, loggerService);
+    deviceService = new DeviceService(apiClient, loggerService);
+    fileService = new FileService(apiClient, loggerService);
+    serverService = new ServerService(apiClient, loggerService);
   });
 
   afterAll(async () => {
