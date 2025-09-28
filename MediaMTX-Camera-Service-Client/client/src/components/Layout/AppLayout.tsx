@@ -25,14 +25,14 @@ import {
   Info as InfoIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { AuthService } from '../../services/auth/AuthService';
+// ARCHITECTURE FIX: Removed direct service import - components must use stores only
 import { useConnectionStore } from '../../stores/connection/connectionStore';
 import { useAuthStore } from '../../stores/auth/authStore';
 import { useServerStore } from '../../stores/server/serverStore';
 
 interface AppLayoutProps {
   children: React.ReactNode;
-  authService: AuthService;
+  // ARCHITECTURE FIX: Removed service props - components only use stores
 }
 
 /**
@@ -45,7 +45,6 @@ interface AppLayoutProps {
  * @component
  * @param {AppLayoutProps} props - Component props
  * @param {React.ReactNode} props.children - Child components to render
- * @param {AuthService} props.authService - Authentication service instance
  * @returns {JSX.Element} The application layout component
  *
  * @features
@@ -58,7 +57,7 @@ interface AppLayoutProps {
  *
  * @example
  * ```tsx
- * <AppLayout authService={authService}>
+ * <AppLayout>
  *   <Routes>
  *     <Route path="/cameras" element={<CameraPage />} />
  *   </Routes>
@@ -67,7 +66,7 @@ interface AppLayoutProps {
  *
  * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture
  */
-const AppLayout: React.FC<AppLayoutProps> = ({ children, authService }) => {
+const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const [anchorEl, setAnchorEl] = React.useState<null | HTMLElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
@@ -85,7 +84,6 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children, authService }) => {
   };
 
   const handleLogout = () => {
-    authService.logout();
     logout();
     handleMenuClose();
   };

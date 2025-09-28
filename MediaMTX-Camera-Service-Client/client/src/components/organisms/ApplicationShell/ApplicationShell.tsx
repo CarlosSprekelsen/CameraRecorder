@@ -29,14 +29,13 @@ import {
   Dashboard
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useUnifiedStore } from '../../../stores/UnifiedStateStore';
-import { APIClient } from '../../../services/abstraction/APIClient';
-import { LoggerService } from '../../../services/logger/LoggerService';
+import { useAuthStore } from '../../../stores/auth/authStore';
+import { logger } from '../../../services/logger/LoggerService';
+// ARCHITECTURE FIX: Logger is infrastructure - components can import it directly
 
 interface ApplicationShellProps {
   children: React.ReactNode;
-  apiClient: APIClient;
-  logger: LoggerService;
+  // ARCHITECTURE FIX: Removed service props - components only use stores
 }
 
 const navigationItems = [
@@ -47,14 +46,13 @@ const navigationItems = [
 ];
 
 export const ApplicationShell: React.FC<ApplicationShellProps> = ({ 
-  children, 
-  apiClient, 
-  logger 
+  children 
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { auth, logout, role } = useUnifiedStore();
+  const { role, logout } = useAuthStore();
+  // ARCHITECTURE FIX: Use correct auth store for all auth-related data
 
   useEffect(() => {
     logger.info('ApplicationShell initialized');
@@ -72,7 +70,7 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({
       navigate('/login');
       logger.info('User logged out');
     } catch (err) {
-      logger.error('Logout failed:', err);
+      logger.error('Logout failed:', { error: err });
     }
   };
 
@@ -98,7 +96,7 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({
             MediaMTX Camera Service
           </Typography>
           <Typography variant="body2" sx={{ mr: 2 }}>
-            {auth.role || 'Guest'}
+            {role || 'Guest'}
           </Typography>
           <Button color="inherit" onClick={handleLogout} startIcon={<Logout />}>
             Logout
@@ -127,8 +125,10 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({
               <ListItem 
                 key={item.path}
                 onClick={() => handleNavigation(item.path)}
-                selected={location.pathname === item.path}
-                sx={{ cursor: 'pointer' }}
+                sx={{ 
+                  cursor: 'pointer',
+                  backgroundColor: location.pathname === item.path ? 'action.selected' : 'transparent'
+                }}
               >
                 <ListItemIcon>
                   {item.icon}

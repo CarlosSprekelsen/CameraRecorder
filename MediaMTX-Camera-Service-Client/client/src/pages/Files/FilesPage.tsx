@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Box, Typography, Container, Alert, CircularProgress } from '@mui/material';
 import { useFileStore } from '../../stores/file/fileStore';
-import { serviceFactory } from '../../services/ServiceFactory';
+// ARCHITECTURE FIX: Removed serviceFactory import - components must use stores only
 import { logger } from '../../services/logger/LoggerService';
 import FileTabs from '../../components/Files/FileTabs';
 import FileTable from '../../components/Files/FileTable';
@@ -41,24 +41,16 @@ const FilesPage: React.FC = () => {
     currentTab,
     loadRecordings,
     loadSnapshots,
-    setFileService,
+    // ARCHITECTURE FIX: Removed setFileService - stores handle service injection
     setCurrentTab,
   } = useFileStore();
 
   // Initialize file service and load data
   useEffect(() => {
     const initializeServiceAndLoadData = async () => {
+      // ARCHITECTURE FIX: Removed direct service initialization - stores handle service injection
+      // Services are initialized in App.tsx and injected into stores
       try {
-        const wsService = serviceFactory.getWebSocketService();
-        if (!wsService) {
-          logger.error('WebSocket service not available');
-          return;
-        }
-
-        // Initialize FileService
-        const fileService = serviceFactory.createFileService(wsService);
-        setFileService(fileService);
-
         // Load initial data based on current tab
         if (currentTab === 'recordings') {
           await loadRecordings(pagination.limit, pagination.offset);
@@ -74,7 +66,7 @@ const FilesPage: React.FC = () => {
 
     initializeServiceAndLoadData();
   }, [
-    setFileService,
+    // ARCHITECTURE FIX: Removed setFileService - stores handle service injection
     loadRecordings,
     loadSnapshots,
     currentTab,

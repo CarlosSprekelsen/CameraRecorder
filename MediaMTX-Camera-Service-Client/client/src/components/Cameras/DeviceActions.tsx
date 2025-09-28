@@ -12,7 +12,7 @@ import { logger } from '../../services/logger/LoggerService';
 import { Snackbar, Alert } from '@mui/material';
 import TimedRecordDialog from './TimedRecordDialog';
 import { useRecordingStore } from '../../stores/recording/recordingStore';
-import { serviceFactory } from '../../services/ServiceFactory';
+// ARCHITECTURE FIX: Removed serviceFactory import - components must use stores only
 import PermissionGate from '../Security/PermissionGate';
 
 interface DeviceActionsProps {
@@ -34,17 +34,10 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({ device }) => {
   }>({ open: false, msg: '', sev: 'success' });
   const open = Boolean(anchorEl);
 
-  const { takeSnapshot, startRecording, stopRecording, setService } = useRecordingStore();
+  const { takeSnapshot, startRecording, stopRecording } = useRecordingStore();
+  // ARCHITECTURE FIX: Removed setService - components don't inject services
 
-  // Ensure service is set once (idempotent)
-  React.useEffect(() => {
-    const ws = serviceFactory.getWebSocketService();
-    if (ws) {
-      const apiClient = serviceFactory.createAPIClient(ws);
-      const recordingService = serviceFactory.createRecordingService(apiClient);
-      setService(recordingService);
-    }
-  }, [setService]);
+  // ARCHITECTURE FIX: Removed direct service initialization - stores handle service injection
 
   const handleClick = (event: React.MouseEvent<HTMLElement>) => {
     setAnchorEl(event.currentTarget);

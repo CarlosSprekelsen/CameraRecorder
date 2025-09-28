@@ -7,6 +7,9 @@ import { Box } from '@mui/material';
 import { useConnectionStore } from './stores/connection/connectionStore';
 import { useAuthStore } from './stores/auth/authStore';
 import { useServerStore } from './stores/server/serverStore';
+import { useDeviceStore } from './stores/device/deviceStore';
+import { useRecordingStore } from './stores/recording/recordingStore';
+import { useFileStore } from './stores/file/fileStore';
 import { serviceFactory } from './services/ServiceFactory';
 import { logger } from './services/logger/LoggerService';
 
@@ -51,13 +54,43 @@ function App(): React.JSX.Element {
   usePerformanceMonitor();
   useKeyboardShortcuts();
 
+  // Store hooks for service injection
+  const { setDeviceService } = useDeviceStore();
+  const { setService: setRecordingService } = useRecordingStore();
+  const { setFileService } = useFileStore();
+  const { setAuthService } = useAuthStore();
+  const { setServerService } = useServerStore();
+  const { setWebSocketService } = useConnectionStore();
+
+  // ARCHITECTURE COMPLIANCE: Inject services into stores
+  useEffect(() => {
+    if (isInitialized) {
+      // Create and inject services into stores
+      const deviceService = serviceFactory.createDeviceService(apiClient);
+      const recordingService = serviceFactory.createRecordingService(apiClient);
+      const fileService = serviceFactory.createFileService(wsService);
+
+      // Inject services into stores
+      setDeviceService(deviceService);
+      setRecordingService(recordingService);
+      setFileService(fileService);
+      setAuthService(authService);
+      setServerService(serverService);
+      setWebSocketService(wsService);
+
+      logger.info('Services injected into stores');
+    }
+  }, [isInitialized, apiClient, wsService, authService, serverService, setDeviceService, setRecordingService, setFileService, setAuthService, setServerService, setWebSocketService]);
+
   const {
     status: connectionStatus,
     setStatus: setConnectionStatus,
     setError: setConnectionError,
   } = useConnectionStore();
   const { isAuthenticated, login } = useAuthStore();
-  const { setInfo, setStatus, setStorage, setLoading, setError } = useServerStore();
+  const { loadAllServerData } = useServerStore();
+  
+  // ARCHITECTURE FIX: Store hooks moved after service injection useEffect
 
   // Memoized WebSocket event handlers for performance optimization
   const handleWebSocketConnect = useCallback(() => {
@@ -146,41 +179,9 @@ function App(): React.JSX.Element {
   // Load server info when connected and authenticated
   useEffect(() => {
     if (connectionStatus === 'connected' && isAuthenticated && isInitialized) {
-      const loadServerData = async () => {
-        try {
-          setLoading(true);
-          setError(null);
-
-          const [info, status, storage] = await Promise.all([
-            serverService.getServerInfo(),
-            serverService.getStatus(),
-            serverService.getStorageInfo(),
-          ]);
-
-          setInfo(info);
-          setStatus(status);
-          setStorage(storage);
-        } catch (error) {
-          logger.error('Failed to load server data', { error }, error as Error);
-          setError(error instanceof Error ? error.message : 'Failed to load server data');
-        } finally {
-          setLoading(false);
-        }
-      };
-
-      loadServerData();
+      loadAllServerData();
     }
-  }, [
-    connectionStatus,
-    isAuthenticated,
-    isInitialized,
-    serverService,
-    setInfo,
-    setStatus,
-    setStorage,
-    setLoading,
-    setError,
-  ]);
+  }, [connectionStatus, isAuthenticated, isInitialized, loadAllServerData]);
 
   if (!isInitialized) {
     return (
@@ -206,7 +207,7 @@ function App(): React.JSX.Element {
                   isAuthenticated ? (
                     <Navigate to="/about" replace />
                   ) : (
-                    <LoginPage authService={authService} />
+                    <LoginPage />
                   )
                 }
               />
@@ -214,7 +215,7 @@ function App(): React.JSX.Element {
                 path="/*"
                 element={
                   isAuthenticated ? (
-                    <AppLayout authService={authService}>
+                    <AppLayout>
                       <Suspense fallback={<LoadingSpinner />}>
                         <Routes>
                           <Route path="/" element={<Navigate to="/cameras" replace />} />

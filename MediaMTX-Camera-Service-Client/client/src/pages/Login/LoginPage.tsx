@@ -16,15 +16,15 @@ import {
   Alert,
   CircularProgress,
 } from '@mui/material';
-import { AuthService } from '../../services/auth/AuthService';
+// ARCHITECTURE FIX: Removed direct service import - components must use stores only
 import { useAuthStore } from '../../stores/auth/authStore';
 import { useConnectionStore } from '../../stores/connection/connectionStore';
 
 interface LoginPageProps {
-  authService: AuthService;
+  // ARCHITECTURE FIX: Removed service props - components only use stores
 }
 
-const LoginPage: React.FC<LoginPageProps> = memo(({ authService }) => {
+const LoginPage: React.FC<LoginPageProps> = memo(() => {
   const [token, setToken] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
