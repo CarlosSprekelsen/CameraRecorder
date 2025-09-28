@@ -74,6 +74,7 @@ vendor/
 coverage/
 *.cover
 *.coverprofile
+coverage.html
 
 # Go executables and build artifacts
 mediamtx-camera-service-go/pkg/
