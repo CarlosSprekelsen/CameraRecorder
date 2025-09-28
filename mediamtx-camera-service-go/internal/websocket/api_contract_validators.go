@@ -99,10 +99,10 @@ func validateRecordingSpecificError(t *testing.T, errorCode int, method string) 
 		method, errorCode)
 }
 
-// validatePingResponse validates ping API response structure
+// validatePingResponse validates ping API response structure using existing test patterns
 func validatePingResponse(t *testing.T, result interface{}) {
 	require.NotNil(t, result, "Ping result cannot be nil")
-
+	
 	// Ping should return "pong" string
 	assert.Equal(t, "pong", result, "Ping should return 'pong'")
 }

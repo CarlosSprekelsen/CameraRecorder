@@ -1005,28 +1005,3 @@ func (sm *streamManager) getRecordingOutputPath(cameraID, outputPath string) str
 	}
 	return "%path_%Y-%m-%d_%H-%M-%S"
 }
-
-// Helper method to check device type and determine if keepalive is needed
-// shouldUseKeepalive is UNUSED by design - keepalive decisions moved to recording-specific context
-// ARCHITECTURE: Keepalive only needed for MediaMTX on-demand recording activation
-// SCOPE: Not needed for general streaming, only for recording operations
-func (sm *streamManager) shouldUseKeepalive(devicePath string) bool {
-	// For V4L2 devices using runOnDemand, always need keepalive
-	if strings.HasPrefix(devicePath, "/dev/video") {
-		return true
-	}
-
-	// For external RTSP sources, check if they're configured with sourceOnDemand
-	if strings.HasPrefix(devicePath, "rtsp://") {
-		// Could check path configuration here to determine if keepalive needed
-		// ARCHITECTURE INVESTIGATION REQUIRED: External RTSP sources are ALSO on-demand in MediaMTX
-		// CURRENT ASSUMPTION: External sources don't need keepalive (MAY BE INCORRECT)
-		// REALITY: MediaMTX treats ALL sources as on-demand, including external RTSP
-		// QUESTION: Do external RTSP sources need keepalive for immediate recording start?
-		// INVESTIGATION NEEDED: Test recording start time with/without keepalive for external sources
-		return false
-	}
-
-	// Default to using keepalive for safety
-	return true
-}

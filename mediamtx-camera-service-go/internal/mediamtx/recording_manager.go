@@ -906,16 +906,6 @@ func (rm *RecordingManager) CleanupOldRecordings(ctx context.Context, maxAge tim
 	return deletedCount, spaceFreed, nil
 }
 
-// generateRandomString generates a random string of specified length
-func generateRandomString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyz0123456789"
-	result := make([]byte, length)
-	for i := range result {
-		result[i] = charset[time.Now().UnixNano()%int64(len(charset))]
-	}
-	return string(result)
-}
-
 // Recording configuration helper methods - derive from centralized config
 // These methods provide recording settings from the centralized MediaMTXConfig
 
@@ -1034,46 +1024,6 @@ func (rm *RecordingManager) patchRecordingOnPath(ctx context.Context, cameraID s
 	}).Info("Successfully patched recording flag using effective config name")
 
 	return nil
-}
-
-// pollUntilRecordingDisabled polls MediaMTX config until record=false is confirmed
-// This addresses the race condition where PATCH succeeds but GET still returns record=true
-func (rm *RecordingManager) pollUntilRecordingDisabled(ctx context.Context, pathName string) error {
-	maxAttempts := 5 // 5 attempts * 200ms = 1 second max (reduced from 2 seconds)
-	attempt := 0
-
-	for attempt < maxAttempts {
-		attempt++
-
-		// Check if recording is actually disabled
-		isRecording, err := rm.isPathRecording(ctx, pathName)
-		if err != nil {
-			rm.logger.WithFields(logging.Fields{
-				"path":    pathName,
-				"attempt": attempt,
-				"error":   err,
-			}).Warn("Failed to check recording status during polling")
-			time.Sleep(200 * time.Millisecond)
-			continue
-		}
-
-		if !isRecording {
-			rm.logger.WithFields(logging.Fields{
-				"path":    pathName,
-				"attempt": attempt,
-			}).Info("Recording successfully disabled and confirmed")
-			return nil
-		}
-
-		rm.logger.WithFields(logging.Fields{
-			"path":    pathName,
-			"attempt": attempt,
-		}).Info("Recording still enabled, polling again...")
-
-		time.Sleep(200 * time.Millisecond)
-	}
-
-	return fmt.Errorf("recording still enabled after %d attempts (1 second)", maxAttempts)
 }
 
 // isPathRecordingWithRetry checks if a path is recording with retry logic

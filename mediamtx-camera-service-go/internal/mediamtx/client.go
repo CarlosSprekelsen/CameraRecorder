@@ -379,23 +379,6 @@ func marshalCreatePathRequest(path *Path) ([]byte, error) {
 	return json.Marshal(request)
 }
 
-// marshalUpdatePathRequest marshals a path update request using proper API type
-// According to MediaMTX swagger.json, PATCH /v3/config/paths/patch/{name} expects PathConf directly
-func marshalUpdatePathRequest(config *PathConf) ([]byte, error) {
-	// MediaMTX API expects PathConf directly, not wrapped in { "config": {...} }
-	return json.Marshal(config)
-}
-
-// marshalCreateUSBPathRequest marshals a USB device path creation request (matches Python implementation)
-func marshalCreateUSBPathRequest(name, ffmpegCommand string) ([]byte, error) {
-	request := map[string]interface{}{
-		"source":             "publisher", // Publisher source for on-demand paths
-		"runOnDemand":        ffmpegCommand,
-		"runOnDemandRestart": true,
-	}
-	return json.Marshal(request)
-}
-
 // marshalPathConfForOnDemand marshals a complete on-demand path configuration
 func marshalPathConfForOnDemand(conf *PathConf) ([]byte, error) {
 	// MediaMTX expects specific field structure for on-demand paths

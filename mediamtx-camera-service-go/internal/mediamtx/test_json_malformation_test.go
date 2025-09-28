@@ -18,6 +18,7 @@ a real bug that needs to be fixed.
 package mediamtx
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -200,12 +201,12 @@ func TestJSONParsingFunctions_DangerousBugs(t *testing.T) {
 		config := &PathConf{
 			Source: "rtsp://localhost:8554/updated",
 		}
-		data, err := marshalUpdatePathRequest(config)
-		require.NoError(t, err, "marshalUpdatePathRequest should handle valid parameters")
-		require.NotNil(t, data, "marshalUpdatePathRequest should return data")
+		data, err := json.Marshal(config)
+		require.NoError(t, err, "json.Marshal should handle valid parameters")
+		require.NotNil(t, data, "json.Marshal should return data")
 		require.Contains(t, string(data), "rtsp://localhost:8554/updated", "marshaled data should contain updated source")
 
-		t.Logf("marshalUpdatePathRequest function works correctly")
+		t.Logf("json.Marshal function works correctly")
 	})
 
 	// Test all parsing functions using scenario registry for comprehensive coverage
