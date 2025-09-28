@@ -54,14 +54,50 @@ export const useRecordingStore = create<RecordingState & RecordingActions>()(
         // Use action dispatchers instead of direct service calls
         // Architecture requirement: Unidirectional data flow (ADR-002)
 
+        let service: RecordingService | null = null;
+
         return {
           ...initialState,
 
-          // REMOVED: setService - services should not be injected into stores
-          // REMOVED: takeSnapshot - business logic moved to actions
-          // ARCHITECTURE FIX: Pure state management only
-          // Business logic moved to RecordingActions
-          // Store only manages state, not business operations
+          setService: (recordingService: RecordingService) => {
+            service = recordingService;
+          },
+
+          takeSnapshot: async (device: string, filename?: string) => {
+            if (!service) throw new Error('Recording service not initialized');
+            set({ loading: true, error: null });
+            try {
+              const result = await service.takeSnapshot(device, filename);
+              // Update state based on result
+              set({ loading: false });
+            } catch (error) {
+              set({ loading: false, error: error instanceof Error ? error.message : 'Unknown error' });
+            }
+          },
+
+          startRecording: async (device: string, duration?: number, format?: string) => {
+            if (!service) throw new Error('Recording service not initialized');
+            set({ loading: true, error: null });
+            try {
+              const result = await service.startRecording(device, duration, format);
+              // Update state based on result
+              set({ loading: false });
+            } catch (error) {
+              set({ loading: false, error: error instanceof Error ? error.message : 'Unknown error' });
+            }
+          },
+
+          stopRecording: async (device: string) => {
+            if (!service) throw new Error('Recording service not initialized');
+            set({ loading: true, error: null });
+            try {
+              const result = await service.stopRecording(device);
+              // Update state based on result
+              set({ loading: false });
+            } catch (error) {
+              set({ loading: false, error: error instanceof Error ? error.message : 'Unknown error' });
+            }
+          },
 
           handleRecordingStatusUpdate: (info: RecordingInfo) => {
             set((state) => {

@@ -26,8 +26,6 @@ export const CameraManager: React.FC<CameraManagerProps> = ({ apiClient, logger 
     selectCamera,
     setDeviceLoading,
     setDeviceError,
-    setActiveRecording,
-    removeActiveRecording,
   } = useUnifiedStore();
 
   // Initialize actions

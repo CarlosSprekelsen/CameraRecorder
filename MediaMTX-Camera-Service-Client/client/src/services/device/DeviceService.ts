@@ -2,7 +2,7 @@ import { APIClient } from '../abstraction/APIClient';
 import { LoggerService } from '../logger/LoggerService';
 import { Camera, StreamInfo } from '../../stores/device/deviceStore';
 import { IDiscovery } from '../interfaces/ServiceInterfaces';
-import { CameraListResult, StreamUrlResult, CameraCapabilitiesResult, StreamStatusResult, StreamStartResult, StreamStopResult } from '../../types/api';
+import { CameraListResult, CameraStatusResult, StreamUrlResult, CameraCapabilitiesResult, StreamStatusResult, StreamStartResult, StreamStopResult } from '../../types/api';
 import { validateCameraDeviceId } from '../../utils/validation';
 
 /**
@@ -16,7 +16,7 @@ import { validateCameraDeviceId } from '../../utils/validation';
  *
  * @example
  * ```typescript
- * const deviceService = new DeviceService(wsService, logger);
+ * const deviceService = new DeviceService(apiClient, logger);
  * const cameras = await deviceService.getCameraList();
  * const streams = await deviceService.getStreams();
  * const url = await deviceService.getStreamUrl('camera-001');
@@ -71,9 +71,9 @@ export class DeviceService implements IDiscovery {
     try {
       this.logger.info(`Getting camera status for device: ${device}`);
 
-      const response = await this.wsService.sendRPC('get_camera_status', { device }) as CameraStatusResult;
+      const response = await this.apiClient.call<CameraStatusResult>('get_camera_status', { device });
 
-      this.logger.info(`Retrieved camera status for ${device}:`, response);
+      this.logger.info(`Retrieved camera status for ${device}:`, response as unknown as Record<string, unknown>);
       return response;
     } catch (error) {
       this.logger.error(`Failed to get camera status for device: ${device}`, error as Record<string, unknown>);
@@ -85,7 +85,7 @@ export class DeviceService implements IDiscovery {
    * Get the stream URL for a specific camera device
    * Implements get_stream_url RPC method
    */
-  async getStreamUrl(device: string): Promise<StreamUrlResult> {
+  async getStreamUrl(device: string): Promise<string | null> {
     if (!validateCameraDeviceId(device)) {
       throw new Error(`Invalid device ID format: ${device}. Expected format: camera[0-9]+`);
     }
@@ -93,10 +93,10 @@ export class DeviceService implements IDiscovery {
     try {
       this.logger.info(`Getting stream URL for device: ${device}`);
 
-      const response = await this.wsService.sendRPC('get_stream_url', { device }) as StreamUrlResult;
+      const response = await this.apiClient.call<StreamUrlResult>('get_stream_url', { device });
 
-      this.logger.info(`Retrieved stream URL for ${device}:`, response);
-      return response;
+      this.logger.info(`Retrieved stream URL for ${device}:`, response as unknown as Record<string, unknown>);
+      return response.stream_url || null;
     } catch (error) {
       this.logger.error(`Failed to get stream URL for device: ${device}`, error as Record<string, unknown>);
       throw error;
@@ -111,7 +111,7 @@ export class DeviceService implements IDiscovery {
     try {
       this.logger.info('Getting active streams');
 
-      const response = await this.wsService.sendRPC('get_streams') as StreamInfo[];
+      const response = await this.apiClient.call<StreamInfo[]>('get_streams', {});
 
       if (Array.isArray(response) && response.length > 0) {
         this.logger.info(`Retrieved ${response.length} active streams`);
@@ -134,9 +134,9 @@ export class DeviceService implements IDiscovery {
     try {
       this.logger.info(`Getting camera capabilities for device: ${device}`);
 
-      const response = await this.wsService.sendRPC('get_camera_capabilities', { device }) as CameraCapabilitiesResult;
+      const response = await this.apiClient.call<CameraCapabilitiesResult>('get_camera_capabilities', { device });
 
-      this.logger.info(`Retrieved capabilities for ${device}:`, response);
+      this.logger.info(`Retrieved capabilities for ${device}:`, response as unknown as Record<string, unknown>);
       return response;
     } catch (error) {
       this.logger.error(`Failed to get camera capabilities for device: ${device}`, error as Record<string, unknown>);
@@ -156,7 +156,7 @@ export class DeviceService implements IDiscovery {
     try {
       this.logger.info('Subscribing to camera status updates');
 
-      await this.wsService.sendRPC('subscribe_events', {
+      await this.apiClient.call('subscribe_events', {
         topics: ['camera_status_update'],
       });
 
@@ -175,7 +175,7 @@ export class DeviceService implements IDiscovery {
     try {
       this.logger.info('Unsubscribing from camera status updates');
 
-      await this.wsService.sendRPC('unsubscribe_events', {
+      await this.apiClient.call('unsubscribe_events', {
         topics: ['camera_status_update'],
       });
 
@@ -186,23 +186,6 @@ export class DeviceService implements IDiscovery {
     }
   }
 
-  /**
-   * Get detailed capabilities and supported formats for a specific camera device
-   * Implements get_camera_capabilities RPC method
-   */
-  async getCameraCapabilities(device: string): Promise<CameraCapabilitiesResult> {
-    try {
-      this.logger.info(`Getting capabilities for device: ${device}`);
-
-      const response = await this.wsService.sendRPC('get_camera_capabilities', { device }) as CameraCapabilitiesResult;
-
-      this.logger.info(`Retrieved capabilities for ${device}`);
-      return response;
-    } catch (error) {
-      this.logger.error(`Failed to get capabilities for device: ${device}`, error as Record<string, unknown>);
-      throw error;
-    }
-  }
 
   /**
    * Get detailed status information for a specific camera stream
@@ -212,7 +195,7 @@ export class DeviceService implements IDiscovery {
     try {
       this.logger.info(`Getting stream status for device: ${device}`);
 
-      const response = await this.wsService.sendRPC('get_stream_status', { device }) as StreamStatusResult;
+      const response = await this.apiClient.call<StreamStatusResult>('get_stream_status', { device });
 
       this.logger.info(`Retrieved stream status for ${device}`);
       return response;
@@ -230,7 +213,7 @@ export class DeviceService implements IDiscovery {
     try {
       this.logger.info(`Starting streaming for device: ${device}`);
 
-      const response = await this.wsService.sendRPC('start_streaming', { device }) as StreamStartResult;
+      const response = await this.apiClient.call<StreamStartResult>('start_streaming', { device });
 
       this.logger.info(`Started streaming for ${device}`);
       return response;
@@ -248,7 +231,7 @@ export class DeviceService implements IDiscovery {
     try {
       this.logger.info(`Stopping streaming for device: ${device}`);
 
-      const response = await this.wsService.sendRPC('stop_streaming', { device }) as StreamStopResult;
+      const response = await this.apiClient.call<StreamStopResult>('stop_streaming', { device });
 
       this.logger.info(`Stopped streaming for ${device}`);
       return response;

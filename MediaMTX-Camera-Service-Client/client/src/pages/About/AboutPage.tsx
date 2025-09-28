@@ -108,7 +108,7 @@ const AboutPage: React.FC = () => {
 
       <Grid container spacing={3}>
         {/* Server Info */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center" mb={2}>
@@ -165,7 +165,7 @@ const AboutPage: React.FC = () => {
         </Grid>
 
         {/* System Status */}
-        <Grid item xs={12} md={6}>
+        <Grid size={{ xs: 12, md: 6 }}>
           <Card>
             <CardContent>
               <Box display="flex" alignItems="center" mb={2}>

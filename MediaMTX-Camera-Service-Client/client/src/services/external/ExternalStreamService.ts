@@ -4,7 +4,7 @@ import {
   ExternalStreamDiscoveryResult, 
   ExternalStreamAddResult, 
   ExternalStreamRemoveResult, 
-  ExternalStreamListResult,
+  ExternalStreamsListResult,
   DiscoveryIntervalSetResult
 } from '../../types/api';
 

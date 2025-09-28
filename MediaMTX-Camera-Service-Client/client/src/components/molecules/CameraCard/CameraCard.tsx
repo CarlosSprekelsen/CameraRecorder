@@ -79,8 +79,7 @@ export const CameraCard: React.FC<CameraCardProps> = ({
         <Button
           variant={isRecording ? 'danger' : 'primary'}
           size="small"
-          onClick={(e) => {
-            e.stopPropagation();
+          onClick={() => {
             handleRecordingClick();
           }}
         >
@@ -90,8 +89,7 @@ export const CameraCard: React.FC<CameraCardProps> = ({
         <Button
           variant="secondary"
           size="small"
-          onClick={(e) => {
-            e.stopPropagation();
+          onClick={() => {
             onTakeSnapshot(camera.device);
           }}
         >

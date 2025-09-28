@@ -24,6 +24,7 @@ import { MockDataFactory } from '../../utils/mocks';
 // Use centralized mocks - eliminates duplication
 const mockWebSocketService = MockDataFactory.createMockWebSocketService();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
+const mockEventBus = MockDataFactory.createMockEventBus();
 
 describe('NotificationService Unit Tests', () => {
   let notificationService: NotificationService;
@@ -32,7 +33,7 @@ describe('NotificationService Unit Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockHandler = MockDataFactory.createMockEventHandler();
-    notificationService = new NotificationService(mockWebSocketService);
+    notificationService = new NotificationService(mockWebSocketService, mockLoggerService, mockEventBus);
   });
 
   describe('REQ-NOTIF-001: Notification subscription management', () => {

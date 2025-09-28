@@ -2,6 +2,8 @@
 // Implements dependency injection as required by architecture
 
 import { WebSocketService } from './websocket/WebSocketService';
+import { APIClient } from './abstraction/APIClient';
+import { EventBus } from './events/EventBus';
 import { AuthService } from './auth/AuthService';
 import { ServerService } from './server/ServerService';
 import { NotificationService } from './notifications/NotificationService';
@@ -14,6 +16,7 @@ import { logger } from './logger/LoggerService';
 export class ServiceFactory {
   private static instance: ServiceFactory;
   private wsService: WebSocketService | null = null;
+  private apiClient: APIClient | null = null;
   private authService: AuthService | null = null;
   private serverService: ServerService | null = null;
   private notificationService: NotificationService | null = null;
@@ -39,9 +42,17 @@ export class ServiceFactory {
     return this.wsService;
   }
 
-  createAuthService(wsService: WebSocketService): AuthService {
+  createAPIClient(wsService: WebSocketService): APIClient {
+    if (!this.apiClient) {
+      this.apiClient = new APIClient(wsService, logger);
+      logger.info('API Client created');
+    }
+    return this.apiClient;
+  }
+
+  createAuthService(apiClient: APIClient): AuthService {
     if (!this.authService) {
-      this.authService = new AuthService(wsService);
+      this.authService = new AuthService(apiClient, logger);
       logger.info('Auth service created');
     }
     return this.authService;
@@ -55,17 +66,17 @@ export class ServiceFactory {
     return this.serverService;
   }
 
-  createNotificationService(wsService: WebSocketService): NotificationService {
+  createNotificationService(wsService: WebSocketService, eventBus: EventBus): NotificationService {
     if (!this.notificationService) {
-      this.notificationService = new NotificationService(wsService);
+      this.notificationService = new NotificationService(wsService, logger, eventBus);
       logger.info('Notification service created');
     }
     return this.notificationService;
   }
 
-  createDeviceService(wsService: WebSocketService): DeviceService {
+  createDeviceService(apiClient: APIClient): DeviceService {
     if (!this.deviceService) {
-      this.deviceService = new DeviceService(wsService, logger);
+      this.deviceService = new DeviceService(apiClient, logger);
       logger.info('Device service created');
     }
     return this.deviceService;

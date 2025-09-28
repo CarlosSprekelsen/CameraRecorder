@@ -23,8 +23,10 @@ import { MockDataFactory } from '../../utils/mocks';
 import { APIResponseValidator } from '../../utils/validators';
 import { useRecordingStore } from '../../../src/stores/recording/recordingStore';
 
-// Use centralized mock - eliminates duplication
+// Use centralized mocks - eliminates duplication
 const mockRecordingService = MockDataFactory.createMockRecordingService();
+const mockWebSocketService = MockDataFactory.createMockWebSocketService();
+const mockLoggerService = MockDataFactory.createMockLoggerService();
 
 jest.mock('../../../src/services/recording/RecordingService', () => ({
   RecordingService: jest.fn().mockImplementation(() => mockRecordingService)

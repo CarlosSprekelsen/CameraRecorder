@@ -1,4 +1,4 @@
-import { WebSocketService } from '../websocket/WebSocketService';
+import { APIClient } from '../abstraction/APIClient';
 import { LoggerService } from '../logger/LoggerService';
 import { SnapshotResult, RecordingStartResult, RecordingStopResult } from '../../types/api';
 import { ICommand } from '../interfaces/ServiceInterfaces';
@@ -32,14 +32,14 @@ import { ICommand } from '../interfaces/ServiceInterfaces';
  */
 export class RecordingService implements ICommand {
   constructor(
-    private wsService: WebSocketService,
+    private apiClient: APIClient,
     private logger: LoggerService,
   ) {}
 
   async takeSnapshot(device: string, filename?: string): Promise<SnapshotResult> {
     try {
       this.logger.info('take_snapshot request', { device, filename });
-      return await this.wsService.sendRPC('take_snapshot', { device, filename });
+      return await this.apiClient.call('take_snapshot', { device, filename });
     } catch (error) {
       this.logger.error('take_snapshot failed', error as Record<string, unknown>);
       throw error;
@@ -53,7 +53,7 @@ export class RecordingService implements ICommand {
   ): Promise<RecordingStartResult> {
     try {
       this.logger.info('start_recording request', { device, duration, format });
-      return await this.wsService.sendRPC('start_recording', { device, duration, format });
+      return await this.apiClient.call('start_recording', { device, duration, format });
     } catch (error) {
       this.logger.error('start_recording failed', error as Record<string, unknown>);
       throw error;

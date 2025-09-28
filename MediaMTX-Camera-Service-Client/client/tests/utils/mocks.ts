@@ -971,6 +971,32 @@ export class MockDataFactory {
   }
 
   /**
+   * Centralized EventBus Mock - eliminates duplication in service tests
+   */
+  static createMockEventBus() {
+    return {
+      emit: jest.fn(),
+      emitWithTimestamp: jest.fn(),
+      subscribe: jest.fn(),
+      unsubscribe: jest.fn(),
+      getSubscribers: jest.fn(() => [])
+    };
+  }
+
+  /**
+   * Centralized APIClient Mock - eliminates duplication in service tests
+   */
+  static createMockAPIClient() {
+    return {
+      call: jest.fn(),
+      connect: jest.fn(),
+      disconnect: jest.fn(),
+      isConnected: true,
+      performanceMonitor: MockDataFactory.createMockPerformanceMonitor()
+    };
+  }
+
+  /**
    * Centralized Error Response Mock - eliminates duplication in service tests
    */
   static getErrorResponse(code: number, message?: string): any {
