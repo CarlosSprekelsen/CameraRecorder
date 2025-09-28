@@ -40,7 +40,7 @@ import (
 
 // TestUntestedAPI_DeleteRecording_Integration tests delete_recording method
 func TestUntestedAPI_DeleteRecording_Integration(t *testing.T) {
-	asserter := NewWebSocketIntegrationAsserter(t)
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Connect and authenticate
 	err := asserter.client.Connect()
@@ -71,7 +71,7 @@ func TestUntestedAPI_DeleteRecording_Integration(t *testing.T) {
 
 // TestUntestedAPI_StartStreaming_Integration tests start_streaming method
 func TestUntestedAPI_StartStreaming_Integration(t *testing.T) {
-	asserter := NewWebSocketIntegrationAsserter(t)
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Connect and authenticate
 	err := asserter.client.Connect()
@@ -96,7 +96,7 @@ func TestUntestedAPI_StartStreaming_Integration(t *testing.T) {
 
 // TestUntestedAPI_StopStreaming_Integration tests stop_streaming method
 func TestUntestedAPI_StopStreaming_Integration(t *testing.T) {
-	asserter := NewWebSocketIntegrationAsserter(t)
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Connect and authenticate
 	err := asserter.client.Connect()
@@ -125,7 +125,7 @@ func TestUntestedAPI_StopStreaming_Integration(t *testing.T) {
 
 // TestUntestedAPI_AddExternalStream_Integration tests add_external_stream method
 func TestUntestedAPI_AddExternalStream_Integration(t *testing.T) {
-	asserter := NewWebSocketIntegrationAsserter(t)
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Connect and authenticate
 	err := asserter.client.Connect()
@@ -154,7 +154,7 @@ func TestUntestedAPI_AddExternalStream_Integration(t *testing.T) {
 
 // TestUntestedAPI_RemoveExternalStream_Integration tests remove_external_stream method
 func TestUntestedAPI_RemoveExternalStream_Integration(t *testing.T) {
-	asserter := NewWebSocketIntegrationAsserter(t)
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Connect and authenticate
 	err := asserter.client.Connect()
@@ -196,7 +196,7 @@ func TestUntestedAPI_RemoveExternalStream_Integration(t *testing.T) {
 
 // TestCoveragePatterns_AsserterUsage demonstrates asserter patterns for coverage
 func TestCoveragePatterns_AsserterUsage(t *testing.T) {
-	asserter := NewWebSocketIntegrationAsserter(t)
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Pattern 1: Basic method testing
 	err := asserter.client.Connect()

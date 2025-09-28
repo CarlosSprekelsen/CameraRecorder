@@ -125,10 +125,10 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({
           <List>
             {navigationItems.map((item) => (
               <ListItem 
-                button 
                 key={item.path}
                 onClick={() => handleNavigation(item.path)}
                 selected={location.pathname === item.path}
+                sx={{ cursor: 'pointer' }}
               >
                 <ListItemIcon>
                   {item.icon}

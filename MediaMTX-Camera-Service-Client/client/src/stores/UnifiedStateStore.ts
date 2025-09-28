@@ -57,6 +57,12 @@ export interface UnifiedState {
     loading: boolean;
     error: string | null;
   };
+  role: string | null;
+  serverStatus: any | null;
+  systemMetrics: {
+    cpu_usage: number;
+    storage_usage: number;
+  } | null;
 }
 
 export interface UnifiedActions {
@@ -212,6 +218,37 @@ export const useUnifiedStore = create<UnifiedState & UnifiedActions>()(
       setAuthError: (error) => set((state) => ({ 
         auth: { ...state.auth, error } 
       })),
+
+      // Recording Actions
+      startRecording: async (device: string, duration?: number, format?: string) => {
+        // Implementation would call RecordingService
+        console.log('startRecording called', { device, duration, format });
+      },
+      stopRecording: async (device: string) => {
+        // Implementation would call RecordingService
+        console.log('stopRecording called', { device });
+      },
+      setRecordingError: (device: string, error: string) => set((state) => ({
+        recordings: { ...state.recordings, error }
+      })),
+
+      // Health Actions
+      checkHealth: async () => {
+        // Implementation would call ServerService
+        console.log('checkHealth called');
+      },
+      setHealthError: (error: string) => set((state) => ({
+        server: { ...state.server, error }
+      })),
+
+      // Auth Actions
+      logout: async () => {
+        // Implementation would call AuthService
+        console.log('logout called');
+      },
+      setRole: (role: string | null) => set((state) => ({ role })),
+      setServerStatus: (status: any) => set((state) => ({ serverStatus: status })),
+      setSystemMetrics: (metrics: { cpu_usage: number; storage_usage: number } | null) => set((state) => ({ systemMetrics: metrics })),
 
       // Global Actions
       clearAllErrors: () => set((state) => ({

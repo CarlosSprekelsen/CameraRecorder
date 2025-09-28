@@ -82,9 +82,9 @@ export class ServiceFactory {
     return this.deviceService;
   }
 
-  createRecordingService(wsService: WebSocketService): RecordingService {
+  createRecordingService(apiClient: APIClient): RecordingService {
     if (!this.recordingService) {
-      this.recordingService = new RecordingService(wsService, logger);
+      this.recordingService = new RecordingService(apiClient, logger);
       logger.info('Recording service created');
     }
     return this.recordingService;

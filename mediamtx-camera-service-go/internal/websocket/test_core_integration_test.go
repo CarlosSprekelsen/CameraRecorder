@@ -42,8 +42,7 @@ import (
 // accepts WebSocket connections immediately without waiting for component initialization
 func TestProgressiveReadiness_ImmediateConnection_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -56,8 +55,7 @@ func TestProgressiveReadiness_ImmediateConnection_Integration(t *testing.T) {
 // are accepted within the required time limits
 func TestProgressiveReadiness_Performance_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Test connection performance (should be <100ms for WebSocket connection)
 	serverURL := asserter.helper.GetServerURL()
@@ -78,8 +76,7 @@ func TestProgressiveReadiness_Performance_Integration(t *testing.T) {
 // multiple clients can connect simultaneously
 func TestProgressiveReadiness_ConcurrentConnections_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Test concurrent connection acceptance
 	serverURL := asserter.helper.GetServerURL()
@@ -129,8 +126,7 @@ func TestProgressiveReadiness_ConcurrentConnections_Integration(t *testing.T) {
 // with valid JWT tokens for different roles
 func TestAuthentication_ValidToken_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Test authentication with different roles
 	roles := []string{"viewer", "operator", "admin"}
@@ -159,8 +155,7 @@ func TestAuthentication_ValidToken_Integration(t *testing.T) {
 // for invalid JWT tokens
 func TestAuthentication_InvalidToken_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Test invalid authentication
 	serverURL := asserter.helper.GetServerURL()
@@ -181,8 +176,7 @@ func TestAuthentication_InvalidToken_Integration(t *testing.T) {
 // for expired JWT tokens (if applicable)
 func TestAuthentication_ExpiredToken_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Test expired token (if we can create one)
 	// For now, test with invalid token as proxy
@@ -204,8 +198,7 @@ func TestAuthentication_ExpiredToken_Integration(t *testing.T) {
 // authentication fail when no token is provided
 func TestAuthentication_NoToken_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	serverURL := asserter.helper.GetServerURL()
 	client := NewWebSocketTestClient(t, serverURL)
@@ -231,8 +224,7 @@ func TestAuthentication_NoToken_Integration(t *testing.T) {
 // works without authentication (as per API spec)
 func TestPing_Unauthenticated_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	serverURL := asserter.helper.GetServerURL()
 	client := NewWebSocketTestClient(t, serverURL)
@@ -252,8 +244,7 @@ func TestPing_Unauthenticated_Integration(t *testing.T) {
 // works with authentication as well
 func TestPing_Authenticated_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	serverURL := asserter.helper.GetServerURL()
 	client := NewWebSocketTestClient(t, serverURL)
@@ -280,8 +271,7 @@ func TestPing_Authenticated_Integration(t *testing.T) {
 // disconnect and reconnect successfully
 func TestConnection_Reconnection_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	serverURL := asserter.helper.GetServerURL()
 
@@ -319,8 +309,7 @@ func TestConnection_Reconnection_Integration(t *testing.T) {
 // follows JSON-RPC 2.0 protocol correctly
 func TestJSONRPC_ProtocolCompliance_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Test JSON-RPC protocol compliance
 	serverURL := asserter.helper.GetServerURL()
@@ -341,8 +330,7 @@ func TestJSONRPC_ProtocolCompliance_Integration(t *testing.T) {
 // follow JSON-RPC 2.0 error format
 func TestJSONRPC_ErrorHandling_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	serverURL := asserter.helper.GetServerURL()
 	client := NewWebSocketTestClient(t, serverURL)
@@ -369,8 +357,7 @@ func TestJSONRPC_ErrorHandling_Integration(t *testing.T) {
 // meet performance requirements
 func TestPerformance_BasicOperations_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Test performance metrics
 	serverURL := asserter.helper.GetServerURL()
@@ -394,8 +381,7 @@ func TestPerformance_BasicOperations_Integration(t *testing.T) {
 // can handle concurrent operations efficiently
 func TestPerformance_ConcurrentOperations_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Test concurrent operations
 	serverURL := asserter.helper.GetServerURL()
@@ -443,8 +429,7 @@ func TestPerformance_ConcurrentOperations_Integration(t *testing.T) {
 
 // TestEventIntegration_SystemEvents_Integration tests system event notifications
 func TestEventIntegration_SystemEvents_Integration(t *testing.T) {
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Test system event notifier
 	eventManager := asserter.helper.server.GetEventManager()
@@ -473,8 +458,7 @@ func TestEventIntegration_SystemEvents_Integration(t *testing.T) {
 
 // TestServerManagement_Metrics_Integration tests server metrics and status
 func TestServerManagement_Metrics_Integration(t *testing.T) {
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Test server metrics
 	metrics := asserter.helper.server.GetMetrics()
@@ -504,8 +488,7 @@ func TestServerManagement_Metrics_Integration(t *testing.T) {
 
 // TestServerManagement_EventBroadcasting_Integration tests event broadcasting
 func TestServerManagement_EventBroadcasting_Integration(t *testing.T) {
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Test event broadcasting
 	eventManager := asserter.helper.server.GetEventManager()
@@ -531,8 +514,7 @@ func TestServerManagement_EventBroadcasting_Integration(t *testing.T) {
 
 // TestServerManagement_ErrorHandling_Integration tests error response handling
 func TestServerManagement_ErrorHandling_Integration(t *testing.T) {
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Test error handling by sending invalid requests
 	client := NewWebSocketTestClient(t, asserter.helper.GetServerURL())
@@ -638,8 +620,7 @@ func TestHealthEndpoints_HTTP_Integration(t *testing.T) {
 
 // TestWebSocket_ConnectionStability_Integration tests WebSocket connection stability
 func TestWebSocket_ConnectionStability_Integration(t *testing.T) {
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Test 1: Long-running connection stability
 	t.Run("LongRunningConnection", func(t *testing.T) {
@@ -817,8 +798,7 @@ func TestWebSocket_ConnectionStability_Integration(t *testing.T) {
 
 // TestWebSocket_StabilityPerformance_Integration tests WebSocket performance under load
 func TestWebSocket_StabilityPerformance_Integration(t *testing.T) {
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Test 1: High-frequency operations
 	t.Run("HighFrequencyOperations", func(t *testing.T) {
@@ -931,8 +911,7 @@ func TestWebSocket_StabilityPerformance_Integration(t *testing.T) {
 
 // TestWebSocket_ErrorHandling_Integration tests enhanced WebSocket error handling
 func TestWebSocket_ErrorHandling_Integration(t *testing.T) {
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Test 1: Connection retry logic
 	t.Run("ConnectionRetryLogic", func(t *testing.T) {
@@ -1124,8 +1103,7 @@ func TestWebSocket_ErrorHandling_Integration(t *testing.T) {
 
 // TestWebSocket_ErrorRecoveryPatterns_Integration tests comprehensive error recovery patterns
 func TestWebSocket_ErrorRecoveryPatterns_Integration(t *testing.T) {
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Test 1: Network interruption recovery
 	t.Run("NetworkInterruptionRecovery", func(t *testing.T) {
@@ -1253,8 +1231,7 @@ func TestWebSocket_ErrorRecoveryPatterns_Integration(t *testing.T) {
 
 // TestWebSocket_API_Contract_Validation_Integration tests API contract validation
 func TestWebSocket_API_Contract_Validation_Integration(t *testing.T) {
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Test API contract validation for recording operations
 	t.Run("RecordingContractValidation", func(t *testing.T) {
@@ -1353,8 +1330,7 @@ func TestWebSocket_API_Contract_Validation_Integration(t *testing.T) {
 
 // TestWebSocket_Event_Integration_Integration tests event integration functionality
 func TestWebSocket_Event_Integration_Integration(t *testing.T) {
-	asserter := NewWebSocketIntegrationAsserter(t)
-	defer asserter.Cleanup()
+	asserter := testutils.GetSharedWebSocketAsserter(t)
 
 	// Test event integration through real WebSocket operations
 	t.Run("EventIntegrationThroughWebSocket", func(t *testing.T) {

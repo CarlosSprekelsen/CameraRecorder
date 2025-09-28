@@ -20,8 +20,9 @@ interface DeviceActionsProps {
 }
 
 /**
- * DeviceActions - Per-device action menu following architecture section 5.1
- * Provides device control actions (Sprint 3)
+ * DeviceActions - Per-device action menu
+ * Provides device control actions for camera operations
+ * Note: This component provides similar functionality to RecordingController as specified in architecture
  */
 const DeviceActions: React.FC<DeviceActionsProps> = ({ device }) => {
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
