@@ -197,7 +197,14 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingWorkflow() error {
 		require.NoError(a.t, err, "Recording file should be created with correct path and extension")
 	}
 
-	// Test list_recordings
+	// Test list_recordings - ensure client is still authenticated
+	// CRITICAL: Re-authenticate to ensure connection is maintained
+	authToken, err = a.helper.GetJWTToken("operator")
+	require.NoError(a.t, err, "Should be able to create JWT token")
+
+	err = a.client.Authenticate(authToken)
+	require.NoError(a.t, err, "Re-authentication should succeed")
+
 	response, err = a.client.ListRecordings(50, 0)
 	require.NoError(a.t, err, "list_recordings should succeed")
 

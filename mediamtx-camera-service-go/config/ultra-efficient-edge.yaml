@@ -6,17 +6,17 @@ server:
   host: "0.0.0.0"
   port: 8002
   websocket_path: "/ws"
-  max_connections: 10  # Reduced from 1000 for edge devices
-  read_timeout: 10s    # Increased for stability
-  write_timeout: 5s    # Increased for reliability
-  ping_interval: 60s   # Increased from 30s for power efficiency
-  pong_wait: 120s      # Increased from 60s for power efficiency
-  max_message_size: 524288  # Reduced to 512KB for edge devices
-  read_buffer_size: 1024    # Default buffer size
-  write_buffer_size: 1024   # Default buffer size
-  shutdown_timeout: 30s     # Graceful shutdown timeout
+  max_connections: 100  # Increased from 10 for better usability
+  read_timeout: 60s     # Increased from 10s for stability
+  write_timeout: 30s    # Increased from 5s for reliability
+  ping_interval: 30s    # Reduced from 60s for better connection health
+  pong_wait: 60s        # Reduced from 120s for better connection health
+  max_message_size: 1048576  # Increased to 1MB for better functionality
+  read_buffer_size: 2048     # Increased buffer size
+  write_buffer_size: 2048    # Increased buffer size
+  shutdown_timeout: 30s      # Graceful shutdown timeout
   client_cleanup_timeout: 10s  # Client cleanup timeout
-  auto_close_after: 0s      # Disabled for edge devices
+  auto_close_after: 0s        # Disabled for edge devices
 
 mediamtx:
   host: "localhost"
@@ -84,7 +84,7 @@ camera:
   event_handler_timeout: 5s         # Event handler timeout
 
 logging:
-  level: "error"
+  level: "info"  # Changed from "error" to "info" for better debugging
   format: "json"
   file_enabled: true
   file_path: "/var/log/camera-service.log"
@@ -222,9 +222,9 @@ retention_policy:
   max_size_gb: 0.5     # Reduced from 1 GB
   auto_cleanup: true
 
-# External discovery configuration (disabled by default for edge devices)
+# External discovery configuration (enabled for testing)
 external_discovery:
-  enabled: false                      # Disabled by default for edge devices
+  enabled: true                       # Enabled for testing
   scan_interval: 30                   # 30 seconds for testing (not 0 to prevent issues)
   scan_timeout: 30                    # 30 seconds max scan time
   max_concurrent_scans: 3             # Reduced from 5 for edge devices
