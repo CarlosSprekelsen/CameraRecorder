@@ -1,7 +1,7 @@
 /*
-WebSocket Test Utilities - SHARED Infrastructure Pattern
+WebSocket Shared Infrastructure - Singleton Pattern
 
-Creates SHARED WebSocket test infrastructure to eliminate the 149 instances
+Creates SHARED WebSocket test infrastructure to eliminate the 131 instances
 of duplicate test setup. Uses singleton pattern to reuse expensive components
 across all tests.
 
@@ -12,31 +12,29 @@ Design Principles:
 - MINIMAL CHANGE: Simple find-and-replace migration
 */
 
-package testutils
+package websocket
 
 import (
 	"sync"
 	"testing"
-
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
 )
 
 // SHARED WebSocket Infrastructure - Singleton Pattern
-// This eliminates the 149 instances of duplicate infrastructure creation
+// This eliminates the 131 instances of duplicate infrastructure creation
 
 var (
-	sharedWebSocketAsserter *websocket.WebSocketIntegrationAsserter
+	sharedWebSocketAsserter *WebSocketIntegrationAsserter
 	sharedAsserterOnce      sync.Once
 )
 
 // GetSharedWebSocketAsserter returns the SHARED WebSocket integration asserter
 // This creates the expensive infrastructure (MediaMTX, Camera, JWT, Server) ONCE
-// and reuses it across all tests, eliminating the 149 duplicate instances
-func GetSharedWebSocketAsserter(t *testing.T) *websocket.WebSocketIntegrationAsserter {
+// and reuses it across all tests, eliminating the 131 duplicate instances
+func GetSharedWebSocketAsserter(t *testing.T) *WebSocketIntegrationAsserter {
 	sharedAsserterOnce.Do(func() {
 		// Create ONE shared asserter with full infrastructure
 		// This is the ONLY place where expensive components are created
-		sharedWebSocketAsserter = websocket.NewWebSocketIntegrationAsserter(t)
+		sharedWebSocketAsserter = NewWebSocketIntegrationAsserter(t)
 	})
 	return sharedWebSocketAsserter
 }

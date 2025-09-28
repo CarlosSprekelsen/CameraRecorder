@@ -54,7 +54,7 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({
   const navigate = useNavigate();
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const { auth, logout } = useUnifiedStore();
+  const { auth, logout, role } = useUnifiedStore();
 
   useEffect(() => {
     logger.info('ApplicationShell initialized');

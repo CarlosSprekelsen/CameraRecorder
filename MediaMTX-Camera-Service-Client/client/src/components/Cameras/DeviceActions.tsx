@@ -40,7 +40,8 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({ device }) => {
   React.useEffect(() => {
     const ws = serviceFactory.getWebSocketService();
     if (ws) {
-      const recordingService = serviceFactory.createRecordingService(ws);
+      const apiClient = serviceFactory.createAPIClient(ws);
+      const recordingService = serviceFactory.createRecordingService(apiClient);
       setService(recordingService);
     }
   }, [setService]);

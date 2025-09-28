@@ -37,7 +37,7 @@ import (
 
 // TestTargetedCoverage_DeleteRecording tests delete_recording method
 func TestTargetedCoverage_DeleteRecording(t *testing.T) {
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Connect and authenticate
 	err := asserter.client.Connect()
@@ -80,7 +80,7 @@ func TestTargetedCoverage_DeleteRecording(t *testing.T) {
 
 // TestTargetedCoverage_StartStreaming tests start_streaming method
 func TestTargetedCoverage_StartStreaming(t *testing.T) {
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Connect and authenticate
 	err := asserter.client.Connect()
@@ -116,7 +116,7 @@ func TestTargetedCoverage_StartStreaming(t *testing.T) {
 
 // TestTargetedCoverage_StopStreaming tests stop_streaming method
 func TestTargetedCoverage_StopStreaming(t *testing.T) {
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Connect and authenticate
 	err := asserter.client.Connect()
@@ -144,7 +144,7 @@ func TestTargetedCoverage_StopStreaming(t *testing.T) {
 
 // TestTargetedCoverage_AddExternalStream tests add_external_stream method
 func TestTargetedCoverage_AddExternalStream(t *testing.T) {
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Connect and authenticate
 	err := asserter.client.Connect()
@@ -174,7 +174,7 @@ func TestTargetedCoverage_AddExternalStream(t *testing.T) {
 
 // TestTargetedCoverage_RemoveExternalStream tests remove_external_stream method
 func TestTargetedCoverage_RemoveExternalStream(t *testing.T) {
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Connect and authenticate
 	err := asserter.client.Connect()
@@ -203,7 +203,7 @@ func TestTargetedCoverage_RemoveExternalStream(t *testing.T) {
 
 // TestTargetedCoverage_SecurityBlockedMethods tests security-blocked methods
 func TestTargetedCoverage_SecurityBlockedMethods(t *testing.T) {
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Connect and authenticate
 	err := asserter.client.Connect()
@@ -240,7 +240,7 @@ func TestTargetedCoverage_SecurityBlockedMethods(t *testing.T) {
 
 // TestTargetedCoverage_AllUntestedMethods runs all untested methods in sequence
 func TestTargetedCoverage_AllUntestedMethods(t *testing.T) {
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Run all untested methods to maximize coverage
 	t.Run("DeleteRecording", func(t *testing.T) {

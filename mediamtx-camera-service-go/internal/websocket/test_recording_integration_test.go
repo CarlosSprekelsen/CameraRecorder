@@ -41,7 +41,7 @@ func TestRecording_FileLifecycle_Complete_Integration(t *testing.T) {
 	// Use testutils for comprehensive setup
 	dvh := testutils.NewDataValidationHelper(t)
 
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test complete recording file lifecycle using testutils validation
 	err := asserter.AssertFileLifecycleWorkflow()
@@ -56,7 +56,7 @@ func TestRecording_FileValidation_Comprehensive_Integration(t *testing.T) {
 	// Use testutils for comprehensive setup
 	dvh := testutils.NewDataValidationHelper(t)
 
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test recording validation using testutils
 	err := asserter.AssertRecordingWorkflow()
@@ -70,7 +70,7 @@ func TestRecording_FileValidation_Comprehensive_Integration(t *testing.T) {
 // architecture where MediaMTX is the source of truth
 func TestRecording_StatelessArchitecture_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -87,7 +87,7 @@ func TestRecording_StatelessArchitecture_Integration(t *testing.T) {
 // source of truth for recording status
 func TestRecording_MediaMTXSourceOfTruth_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -107,7 +107,7 @@ func TestRecording_MediaMTXSourceOfTruth_Integration(t *testing.T) {
 // TestRecording_BasicWorkflow_Integration validates basic recording start/stop workflow
 func TestRecording_BasicWorkflow_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -123,7 +123,7 @@ func TestRecording_BasicWorkflow_Integration(t *testing.T) {
 // TestRecording_StartRecording_Integration validates start recording functionality
 func TestRecording_StartRecording_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -139,7 +139,7 @@ func TestRecording_StartRecording_Integration(t *testing.T) {
 // TestRecording_StopRecording_Integration validates stop recording functionality
 func TestRecording_StopRecording_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -155,7 +155,7 @@ func TestRecording_StopRecording_Integration(t *testing.T) {
 // TestRecording_RecordingStatus_Integration validates recording status queries
 func TestRecording_RecordingStatus_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -175,7 +175,7 @@ func TestRecording_RecordingStatus_Integration(t *testing.T) {
 // TestRecording_DurationManagement_Integration validates recording duration management
 func TestRecording_DurationManagement_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -191,7 +191,7 @@ func TestRecording_DurationManagement_Integration(t *testing.T) {
 // TestRecording_FormatSupport_Integration validates recording format support
 func TestRecording_FormatSupport_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -207,7 +207,7 @@ func TestRecording_FormatSupport_Integration(t *testing.T) {
 // TestRecording_STANAG4609Compliance_Integration validates STANAG 4609 compliance
 func TestRecording_STANAG4609Compliance_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -227,7 +227,7 @@ func TestRecording_STANAG4609Compliance_Integration(t *testing.T) {
 // TestRecording_FileManagement_Integration validates recording file management operations
 func TestRecording_FileManagement_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -243,7 +243,7 @@ func TestRecording_FileManagement_Integration(t *testing.T) {
 // TestRecording_FileListing_Integration validates recording file listing
 func TestRecording_FileListing_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -259,7 +259,7 @@ func TestRecording_FileListing_Integration(t *testing.T) {
 // TestRecording_FileCleanup_Integration validates recording file cleanup operations
 func TestRecording_FileCleanup_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -279,7 +279,7 @@ func TestRecording_FileCleanup_Integration(t *testing.T) {
 // TestRecording_ConcurrentRecordings_Integration validates concurrent recording operations
 func TestRecording_ConcurrentRecordings_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -295,7 +295,7 @@ func TestRecording_ConcurrentRecordings_Integration(t *testing.T) {
 // TestRecording_MultipleCameras_Integration validates recording from multiple cameras
 func TestRecording_MultipleCameras_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -315,7 +315,7 @@ func TestRecording_MultipleCameras_Integration(t *testing.T) {
 // TestRecording_InvalidDevice_Integration validates error handling for invalid devices
 func TestRecording_InvalidDevice_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -331,7 +331,7 @@ func TestRecording_InvalidDevice_Integration(t *testing.T) {
 // TestRecording_UnauthorizedAccess_Integration validates authorization for recording operations
 func TestRecording_UnauthorizedAccess_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -347,7 +347,7 @@ func TestRecording_UnauthorizedAccess_Integration(t *testing.T) {
 // TestRecording_NetworkErrorRecovery_Integration validates network error recovery
 func TestRecording_NetworkErrorRecovery_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -367,7 +367,7 @@ func TestRecording_NetworkErrorRecovery_Integration(t *testing.T) {
 // TestRecording_PerformanceTargets_Integration validates recording performance targets
 func TestRecording_PerformanceTargets_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -383,7 +383,7 @@ func TestRecording_PerformanceTargets_Integration(t *testing.T) {
 // TestRecording_LoadTesting_Integration validates recording operations under load
 func TestRecording_LoadTesting_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := testutils.GetSharedWebSocketAsserter(t)
+	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
