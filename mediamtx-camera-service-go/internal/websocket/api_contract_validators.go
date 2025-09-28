@@ -472,6 +472,393 @@ func validateRecordingStatusUpdateNotification(t *testing.T, notification interf
 	assert.IsType(t, float64(0), notifMap["duration"], "duration must be number")
 }
 
+// validateAuthenticateResponse validates authenticate API response structure
+func validateAuthenticateResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "Authenticate result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "Authenticate result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "authenticated", "Authenticate result must contain 'authenticated' field")
+	assert.Contains(t, resultMap, "role", "Authenticate result must contain 'role' field")
+	assert.Contains(t, resultMap, "permissions", "Authenticate result must contain 'permissions' field")
+	assert.Contains(t, resultMap, "expires_at", "Authenticate result must contain 'expires_at' field")
+	assert.Contains(t, resultMap, "session_id", "Authenticate result must contain 'session_id' field")
+
+	// Validate field types
+	assert.IsType(t, true, resultMap["authenticated"], "Authenticated field must be boolean")
+	assert.IsType(t, "", resultMap["role"], "Role field must be string")
+	assert.IsType(t, []interface{}{}, resultMap["permissions"], "Permissions field must be array")
+	assert.IsType(t, "", resultMap["expires_at"], "Expires_at field must be string")
+	assert.IsType(t, "", resultMap["session_id"], "Session_id field must be string")
+}
+
+// validateGetCameraListResponse validates get_camera_list API response structure
+func validateGetCameraListResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "GetCameraList result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "GetCameraList result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "cameras", "GetCameraList result must contain 'cameras' field")
+
+	// Validate cameras array
+	cameras, ok := resultMap["cameras"].([]interface{})
+	require.True(t, ok, "Cameras field must be array")
+
+	// Validate each camera object
+	for i, camera := range cameras {
+		cameraMap, ok := camera.(map[string]interface{})
+		require.True(t, ok, "Camera %d must be object", i)
+
+		assert.Contains(t, cameraMap, "device", "Camera %d must contain 'device' field", i)
+		assert.Contains(t, cameraMap, "status", "Camera %d must contain 'status' field", i)
+		assert.Contains(t, cameraMap, "capabilities", "Camera %d must contain 'capabilities' field", i)
+
+		// Validate status values
+		status, ok := cameraMap["status"].(string)
+		require.True(t, ok, "Camera %d status must be string", i)
+		validStatuses := []string{"CONNECTED", "DISCONNECTED", "ERROR"}
+		assert.Contains(t, validStatuses, status, "Camera %d status must be valid", i)
+	}
+}
+
+// validateGetCameraStatusResponse validates get_camera_status API response structure
+func validateGetCameraStatusResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "GetCameraStatus result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "GetCameraStatus result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "device", "GetCameraStatus result must contain 'device' field")
+	assert.Contains(t, resultMap, "status", "GetCameraStatus result must contain 'status' field")
+	assert.Contains(t, resultMap, "capabilities", "GetCameraStatus result must contain 'capabilities' field")
+
+	// Validate status values
+	status, ok := resultMap["status"].(string)
+	require.True(t, ok, "Status must be string")
+	validStatuses := []string{"CONNECTED", "DISCONNECTED", "ERROR"}
+	assert.Contains(t, validStatuses, status, "Status must be valid")
+}
+
+// validateListRecordingsResponse validates list_recordings API response structure
+func validateListRecordingsResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "ListRecordings result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "ListRecordings result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "recordings", "ListRecordings result must contain 'recordings' field")
+
+	// Validate recordings array
+	recordings, ok := resultMap["recordings"].([]interface{})
+	require.True(t, ok, "Recordings field must be array")
+
+	// Validate each recording object
+	for i, recording := range recordings {
+		recordingMap, ok := recording.(map[string]interface{})
+		require.True(t, ok, "Recording %d must be object", i)
+
+		assert.Contains(t, recordingMap, "filename", "Recording %d must contain 'filename' field", i)
+		assert.Contains(t, recordingMap, "file_size", "Recording %d must contain 'file_size' field", i)
+		assert.Contains(t, recordingMap, "created_time", "Recording %d must contain 'created_time' field", i)
+	}
+}
+
+// validateDeleteRecordingResponse validates delete_recording API response structure
+func validateDeleteRecordingResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "DeleteRecording result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "DeleteRecording result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "status", "DeleteRecording result must contain 'status' field")
+
+	// Validate status values
+	status, ok := resultMap["status"].(string)
+	require.True(t, ok, "Status must be string")
+	validStatuses := []string{"SUCCESS", "FAILED"}
+	assert.Contains(t, validStatuses, status, "Status must be valid")
+}
+
+// validateListSnapshotsResponse validates list_snapshots API response structure
+func validateListSnapshotsResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "ListSnapshots result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "ListSnapshots result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "snapshots", "ListSnapshots result must contain 'snapshots' field")
+
+	// Validate snapshots array
+	snapshots, ok := resultMap["snapshots"].([]interface{})
+	require.True(t, ok, "Snapshots field must be array")
+
+	// Validate each snapshot object
+	for i, snapshot := range snapshots {
+		snapshotMap, ok := snapshot.(map[string]interface{})
+		require.True(t, ok, "Snapshot %d must be object", i)
+
+		assert.Contains(t, snapshotMap, "filename", "Snapshot %d must contain 'filename' field", i)
+		assert.Contains(t, snapshotMap, "file_size", "Snapshot %d must contain 'file_size' field", i)
+		assert.Contains(t, snapshotMap, "created_time", "Snapshot %d must contain 'created_time' field", i)
+	}
+}
+
+// validateDeleteSnapshotResponse validates delete_snapshot API response structure
+func validateDeleteSnapshotResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "DeleteSnapshot result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "DeleteSnapshot result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "status", "DeleteSnapshot result must contain 'status' field")
+
+	// Validate status values
+	status, ok := resultMap["status"].(string)
+	require.True(t, ok, "Status must be string")
+	validStatuses := []string{"SUCCESS", "FAILED"}
+	assert.Contains(t, validStatuses, status, "Status must be valid")
+}
+
+// validateStartStreamingResponse validates start_streaming API response structure
+func validateStartStreamingResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "StartStreaming result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "StartStreaming result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "status", "StartStreaming result must contain 'status' field")
+
+	// Validate status values
+	status, ok := resultMap["status"].(string)
+	require.True(t, ok, "Status must be string")
+	validStatuses := []string{"STARTED", "FAILED"}
+	assert.Contains(t, validStatuses, status, "Status must be valid")
+}
+
+// validateStopStreamingResponse validates stop_streaming API response structure
+func validateStopStreamingResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "StopStreaming result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "StopStreaming result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "status", "StopStreaming result must contain 'status' field")
+
+	// Validate status values
+	status, ok := resultMap["status"].(string)
+	require.True(t, ok, "Status must be string")
+	validStatuses := []string{"STOPPED", "FAILED"}
+	assert.Contains(t, validStatuses, status, "Status must be valid")
+}
+
+// validateGetStreamURLResponse validates get_stream_url API response structure
+func validateGetStreamURLResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "GetStreamURL result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "GetStreamURL result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "stream_url", "GetStreamURL result must contain 'stream_url' field")
+	assert.Contains(t, resultMap, "status", "GetStreamURL result must contain 'status' field")
+
+	// Validate status values
+	status, ok := resultMap["status"].(string)
+	require.True(t, ok, "Status must be string")
+	validStatuses := []string{"ACTIVE", "INACTIVE", "ERROR"}
+	assert.Contains(t, validStatuses, status, "Status must be valid")
+}
+
+// validateGetStreamStatusResponse validates get_stream_status API response structure
+func validateGetStreamStatusResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "GetStreamStatus result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "GetStreamStatus result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "status", "GetStreamStatus result must contain 'status' field")
+
+	// Validate status values
+	status, ok := resultMap["status"].(string)
+	require.True(t, ok, "Status must be string")
+	validStatuses := []string{"ACTIVE", "INACTIVE", "ERROR", "STARTING", "STOPPING"}
+	assert.Contains(t, validStatuses, status, "Status must be valid")
+}
+
+// validateDiscoverExternalStreamsResponse validates discover_external_streams API response structure
+func validateDiscoverExternalStreamsResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "DiscoverExternalStreams result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "DiscoverExternalStreams result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "streams", "DiscoverExternalStreams result must contain 'streams' field")
+	assert.Contains(t, resultMap, "status", "DiscoverExternalStreams result must contain 'status' field")
+
+	// Validate status values
+	status, ok := resultMap["status"].(string)
+	require.True(t, ok, "Status must be string")
+	validStatuses := []string{"SUCCESS", "FAILED"}
+	assert.Contains(t, validStatuses, status, "Status must be valid")
+}
+
+// validateAddExternalStreamResponse validates add_external_stream API response structure
+func validateAddExternalStreamResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "AddExternalStream result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "AddExternalStream result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "status", "AddExternalStream result must contain 'status' field")
+
+	// Validate status values
+	status, ok := resultMap["status"].(string)
+	require.True(t, ok, "Status must be string")
+	validStatuses := []string{"SUCCESS", "FAILED"}
+	assert.Contains(t, validStatuses, status, "Status must be valid")
+}
+
+// validateRemoveExternalStreamResponse validates remove_external_stream API response structure
+func validateRemoveExternalStreamResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "RemoveExternalStream result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "RemoveExternalStream result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "status", "RemoveExternalStream result must contain 'status' field")
+
+	// Validate status values
+	status, ok := resultMap["status"].(string)
+	require.True(t, ok, "Status must be string")
+	validStatuses := []string{"SUCCESS", "FAILED"}
+	assert.Contains(t, validStatuses, status, "Status must be valid")
+}
+
+// validateGetExternalStreamsResponse validates get_external_streams API response structure
+func validateGetExternalStreamsResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "GetExternalStreams result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "GetExternalStreams result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "streams", "GetExternalStreams result must contain 'streams' field")
+}
+
+// validateSetDiscoveryIntervalResponse validates set_discovery_interval API response structure
+func validateSetDiscoveryIntervalResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "SetDiscoveryInterval result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "SetDiscoveryInterval result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "status", "SetDiscoveryInterval result must contain 'status' field")
+
+	// Validate status values
+	status, ok := resultMap["status"].(string)
+	require.True(t, ok, "Status must be string")
+	validStatuses := []string{"SUCCESS", "FAILED"}
+	assert.Contains(t, validStatuses, status, "Status must be valid")
+}
+
+// validateSubscribeEventsResponse validates subscribe_events API response structure
+func validateSubscribeEventsResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "SubscribeEvents result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "SubscribeEvents result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "status", "SubscribeEvents result must contain 'status' field")
+
+	// Validate status values
+	status, ok := resultMap["status"].(string)
+	require.True(t, ok, "Status must be string")
+	validStatuses := []string{"SUCCESS", "FAILED"}
+	assert.Contains(t, validStatuses, status, "Status must be valid")
+}
+
+// validateUnsubscribeEventsResponse validates unsubscribe_events API response structure
+func validateUnsubscribeEventsResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "UnsubscribeEvents result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "UnsubscribeEvents result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "status", "UnsubscribeEvents result must contain 'status' field")
+
+	// Validate status values
+	status, ok := resultMap["status"].(string)
+	require.True(t, ok, "Status must be string")
+	validStatuses := []string{"SUCCESS", "FAILED"}
+	assert.Contains(t, validStatuses, status, "Status must be valid")
+}
+
+// validateGetSubscriptionStatsResponse validates get_subscription_stats API response structure
+func validateGetSubscriptionStatsResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "GetSubscriptionStats result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "GetSubscriptionStats result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "total_subscriptions", "GetSubscriptionStats result must contain 'total_subscriptions' field")
+	assert.Contains(t, resultMap, "active_connections", "GetSubscriptionStats result must contain 'active_connections' field")
+}
+
+// validateSetRetentionPolicyResponse validates set_retention_policy API response structure
+func validateSetRetentionPolicyResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "SetRetentionPolicy result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "SetRetentionPolicy result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "status", "SetRetentionPolicy result must contain 'status' field")
+
+	// Validate status values
+	status, ok := resultMap["status"].(string)
+	require.True(t, ok, "Status must be string")
+	validStatuses := []string{"SUCCESS", "FAILED"}
+	assert.Contains(t, validStatuses, status, "Status must be valid")
+}
+
+// validateCleanupOldFilesResponse validates cleanup_old_files API response structure
+func validateCleanupOldFilesResponse(t *testing.T, result interface{}) {
+	require.NotNil(t, result, "CleanupOldFiles result cannot be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(t, ok, "CleanupOldFiles result must be object")
+
+	// Required fields per API documentation
+	assert.Contains(t, resultMap, "status", "CleanupOldFiles result must contain 'status' field")
+	assert.Contains(t, resultMap, "files_deleted", "CleanupOldFiles result must contain 'files_deleted' field")
+	assert.Contains(t, resultMap, "space_freed", "CleanupOldFiles result must contain 'space_freed' field")
+
+	// Validate status values
+	status, ok := resultMap["status"].(string)
+	require.True(t, ok, "Status must be string")
+	validStatuses := []string{"SUCCESS", "FAILED"}
+	assert.Contains(t, validStatuses, status, "Status must be valid")
+}
+
 // validateAPICompliantError validates error follows JSON-RPC 2.0 and API specification
 func validateAPICompliantError(t *testing.T, err *JsonRpcError) {
 	require.NotNil(t, err, "Error cannot be nil")
