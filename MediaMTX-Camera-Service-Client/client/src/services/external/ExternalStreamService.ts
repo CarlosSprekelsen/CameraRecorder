@@ -46,10 +46,15 @@ export class ExternalStreamService {
    * Discover external streams based on criteria
    * Implements discover_external_streams RPC method
    */
-  async discoverExternalStreams(criteria?: Record<string, unknown>): Promise<ExternalStreamDiscoveryResult> {
+  async discoverExternalStreams(params: {
+    skydio_enabled?: boolean;
+    generic_enabled?: boolean;
+    force_rescan?: boolean;
+    include_offline?: boolean;
+  } = {}): Promise<ExternalStreamDiscoveryResult> {
     try {
-      this.logger.info('Discovering external streams', { criteria });
-      const response = await this.wsService.sendRPC('discover_external_streams', { criteria }) as ExternalStreamDiscoveryResult;
+      this.logger.info('Discovering external streams', params);
+      const response = await this.wsService.sendRPC('discover_external_streams', params) as ExternalStreamDiscoveryResult;
       this.logger.info(`Discovered ${response.streams?.length || 0} external streams`);
       return response;
     } catch (error) {
@@ -62,10 +67,14 @@ export class ExternalStreamService {
    * Add external stream to the system
    * Implements add_external_stream RPC method
    */
-  async addExternalStream(streamConfig: Record<string, unknown>): Promise<ExternalStreamAddResult> {
+  async addExternalStream(params: {
+    stream_url: string;
+    stream_name: string;
+    stream_type?: string;
+  }): Promise<ExternalStreamAddResult> {
     try {
-      this.logger.info('Adding external stream', { streamConfig });
-      const response = await this.wsService.sendRPC('add_external_stream', { streamConfig }) as ExternalStreamAddResult;
+      this.logger.info('Adding external stream', params);
+      const response = await this.wsService.sendRPC('add_external_stream', params) as ExternalStreamAddResult;
       this.logger.info(`External stream added: ${response.stream_name}`);
       return response;
     } catch (error) {
@@ -78,14 +87,14 @@ export class ExternalStreamService {
    * Remove external stream from the system
    * Implements remove_external_stream RPC method
    */
-  async removeExternalStream(streamId: string): Promise<ExternalStreamRemoveResult> {
+  async removeExternalStream(streamUrl: string): Promise<ExternalStreamRemoveResult> {
     try {
-      this.logger.info(`Removing external stream: ${streamId}`);
-      const response = await this.wsService.sendRPC('remove_external_stream', { stream_id: streamId }) as ExternalStreamRemoveResult;
-      this.logger.info(`External stream removed: ${streamId}`);
+      this.logger.info(`Removing external stream: ${streamUrl}`);
+      const response = await this.wsService.sendRPC('remove_external_stream', { stream_url: streamUrl }) as ExternalStreamRemoveResult;
+      this.logger.info(`External stream removed: ${streamUrl}`);
       return response;
     } catch (error) {
-      this.logger.error(`Failed to remove external stream: ${streamId}`, error as Record<string, unknown>);
+      this.logger.error(`Failed to remove external stream: ${streamUrl}`, error as Record<string, unknown>);
       throw error;
     }
   }
@@ -94,10 +103,10 @@ export class ExternalStreamService {
    * Get list of external streams
    * Implements get_external_streams RPC method
    */
-  async getExternalStreams(filter?: Record<string, unknown>): Promise<ExternalStreamListResult> {
+  async getExternalStreams(): Promise<ExternalStreamListResult> {
     try {
-      this.logger.info('Getting external streams', { filter });
-      const response = await this.wsService.sendRPC('get_external_streams', { filter }) as ExternalStreamListResult;
+      this.logger.info('Getting external streams');
+      const response = await this.wsService.sendRPC('get_external_streams', {}) as ExternalStreamListResult;
       this.logger.info(`Retrieved ${response.streams?.length || 0} external streams`);
       return response;
     } catch (error) {
@@ -110,14 +119,14 @@ export class ExternalStreamService {
    * Set discovery interval for external streams
    * Implements set_discovery_interval RPC method
    */
-  async setDiscoveryInterval(interval: number): Promise<DiscoveryIntervalSetResult> {
+  async setDiscoveryInterval(scanInterval: number): Promise<DiscoveryIntervalSetResult> {
     try {
-      this.logger.info(`Setting discovery interval: ${interval} seconds`);
-      const response = await this.wsService.sendRPC('set_discovery_interval', { interval }) as DiscoveryIntervalSetResult;
+      this.logger.info(`Setting discovery interval: ${scanInterval} seconds`);
+      const response = await this.wsService.sendRPC('set_discovery_interval', { scan_interval: scanInterval }) as DiscoveryIntervalSetResult;
       this.logger.info(`Discovery interval set to ${response.scan_interval} seconds`);
       return response;
     } catch (error) {
-      this.logger.error(`Failed to set discovery interval: ${interval}`, error as Record<string, unknown>);
+      this.logger.error(`Failed to set discovery interval: ${scanInterval}`, error as Record<string, unknown>);
       throw error;
     }
   }

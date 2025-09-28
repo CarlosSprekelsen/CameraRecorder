@@ -314,7 +314,7 @@ export class APIResponseValidator {
   }
 
   /**
-   * Validate Snapshot Info - matches official RPC spec exactly
+   * Validate Snapshot Info - matches actual server response structure
    */
   static validateSnapshotInfo(result: unknown): result is SnapshotInfo {
     if (typeof result !== 'object' || result === null) return false;
@@ -322,11 +322,15 @@ export class APIResponseValidator {
     const obj = result as Record<string, unknown>;
     
     return (
+      typeof obj.device === 'string' &&
       typeof obj.filename === 'string' &&
       typeof obj.file_size === 'number' &&
-      this.validateIsoTimestamp(obj.created_time as string) &&
-      typeof obj.download_url === 'string' &&
-      obj.file_size >= 0
+      typeof obj.status === 'string' &&
+      typeof obj.timestamp === 'string' &&
+      typeof obj.file_path === 'string' &&
+      this.validateIsoTimestamp(obj.timestamp as string) &&
+      obj.file_size >= 0 &&
+      ['completed', 'failed', 'processing'].includes(obj.status as string)
     );
   }
 

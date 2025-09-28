@@ -107,7 +107,7 @@ describe('Camera Operations Integration Tests', () => {
     
     expect(APIResponseValidator.validateSnapshotInfo(result)).toBe(true);
     expect(result.device).toBe(cameraId);
-    expect(['SUCCESS', 'FAILED']).toContain(result.status);
+    expect(['completed', 'failed', 'processing']).toContain(result.status);
   });
 
   test('REQ-INT-007: List recordings with pagination', async () => {

@@ -121,6 +121,78 @@ export class DeviceService implements IDiscovery {
   }
 
   /**
+   * Get camera capabilities for a specific device
+   * Implements get_camera_capabilities RPC method
+   */
+  async getCameraCapabilities(device: string): Promise<CameraCapabilitiesResult> {
+    try {
+      this.logger.info(`Getting camera capabilities for device: ${device}`);
+
+      const response = await this.wsService.sendRPC('get_camera_capabilities', { device }) as CameraCapabilitiesResult;
+
+      this.logger.info(`Retrieved capabilities for ${device}:`, response);
+      return response;
+    } catch (error) {
+      this.logger.error(`Failed to get camera capabilities for device: ${device}`, error as Record<string, unknown>);
+      throw error;
+    }
+  }
+
+  /**
+   * Start streaming for a specific device
+   * Implements start_streaming RPC method
+   */
+  async startStreaming(device: string): Promise<StreamStartResult> {
+    try {
+      this.logger.info(`Starting streaming for device: ${device}`);
+
+      const response = await this.wsService.sendRPC('start_streaming', { device }) as StreamStartResult;
+
+      this.logger.info(`Started streaming for ${device}:`, response);
+      return response;
+    } catch (error) {
+      this.logger.error(`Failed to start streaming for device: ${device}`, error as Record<string, unknown>);
+      throw error;
+    }
+  }
+
+  /**
+   * Stop streaming for a specific device
+   * Implements stop_streaming RPC method
+   */
+  async stopStreaming(device: string): Promise<StreamStopResult> {
+    try {
+      this.logger.info(`Stopping streaming for device: ${device}`);
+
+      const response = await this.wsService.sendRPC('stop_streaming', { device }) as StreamStopResult;
+
+      this.logger.info(`Stopped streaming for ${device}:`, response);
+      return response;
+    } catch (error) {
+      this.logger.error(`Failed to stop streaming for device: ${device}`, error as Record<string, unknown>);
+      throw error;
+    }
+  }
+
+  /**
+   * Get stream status for a specific device
+   * Implements get_stream_status RPC method
+   */
+  async getStreamStatus(device: string): Promise<StreamStatusResult> {
+    try {
+      this.logger.info(`Getting stream status for device: ${device}`);
+
+      const response = await this.wsService.sendRPC('get_stream_status', { device }) as StreamStatusResult;
+
+      this.logger.info(`Retrieved stream status for ${device}:`, response);
+      return response;
+    } catch (error) {
+      this.logger.error(`Failed to get stream status for device: ${device}`, error as Record<string, unknown>);
+      throw error;
+    }
+  }
+
+  /**
    * Subscribe to camera status update events
    * Implements subscribe_events RPC method
    */
