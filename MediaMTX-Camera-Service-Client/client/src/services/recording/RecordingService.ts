@@ -63,7 +63,7 @@ export class RecordingService implements ICommand {
   async stopRecording(device: string): Promise<RecordingStopResult> {
     try {
       this.logger.info('stop_recording request', { device });
-      return await this.wsService.sendRPC('stop_recording', { device });
+      return await this.apiClient.call('stop_recording', { device });
     } catch (error) {
       this.logger.error('stop_recording failed', error as Record<string, unknown>);
       throw error;
