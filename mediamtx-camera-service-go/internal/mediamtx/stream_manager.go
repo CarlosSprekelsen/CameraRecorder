@@ -340,7 +340,7 @@ func (sm *streamManager) startStreamForUseCase(ctx context.Context, cameraID str
 			}
 			return stream, nil
 		}
-		return nil, fmt.Errorf(streamName, "create_stream", "failed to create stream", err)
+		return nil, fmt.Errorf("failed to create stream %s: %w", streamName, err)
 	}
 
 	// PathManager.CreatePath succeeded - create stream response
@@ -462,7 +462,7 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 				}
 				return stream, nil
 			}
-			return nil, fmt.Errorf(name, "create_stream", "failed to create stream", err)
+			return nil, fmt.Errorf("failed to create stream %s: %w", name, err)
 		}
 
 		// PathManager.CreatePath succeeded - create stream response
@@ -520,7 +520,7 @@ func (sm *streamManager) CreateStream(ctx context.Context, name, source string) 
 				}
 				return stream, nil
 			}
-			return nil, fmt.Errorf(name, "create_stream", "failed to create stream", err)
+			return nil, fmt.Errorf("failed to create stream %s: %w", name, err)
 		}
 
 		// PathManager.CreatePath succeeded - create stream response
@@ -542,7 +542,7 @@ func (sm *streamManager) DeleteStream(ctx context.Context, id string) error {
 	// Use PathManager for proper architectural integration
 	err := sm.pathManager.DeletePath(ctx, id)
 	if err != nil {
-		return fmt.Errorf(id, "delete_stream", "failed to delete stream", err)
+		return fmt.Errorf("failed to delete stream %s: %w", id, err)
 	}
 
 	sm.logger.WithField("stream_id", id).Info("MediaMTX stream deleted successfully")
@@ -555,7 +555,7 @@ func (sm *streamManager) GetStream(ctx context.Context, id string) (*Path, error
 	// Use PathManager for proper architectural integration
 	path, err := sm.pathManager.GetPath(ctx, id)
 	if err != nil {
-		return nil, fmt.Errorf(id, "get_stream", "failed to get stream", err)
+		return nil, fmt.Errorf("failed to get stream %s: %w", id, err)
 	}
 
 	// Convert Path to Stream
@@ -635,7 +635,7 @@ func (sm *streamManager) MonitorStream(ctx context.Context, id string) error {
 	// Get stream status
 	status, err := sm.GetStreamStatus(ctx, id)
 	if err != nil {
-		return fmt.Errorf(id, "monitor_stream", "failed to get stream status", err)
+		return fmt.Errorf("failed to get stream status for %s: %w", id, err)
 	}
 
 	sm.logger.WithFields(logging.Fields{

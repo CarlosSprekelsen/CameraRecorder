@@ -19,6 +19,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strconv"
@@ -862,6 +863,27 @@ func (m *HybridCameraMonitor) TakeDirectSnapshot(ctx context.Context, devicePath
 
 	captureTime := time.Since(startTime)
 
+	// Embed metadata from device capabilities
+	if len(device.Formats) > 0 {
+		format := device.Formats[0]
+		widthStr := strconv.Itoa(format.Width)
+		heightStr := strconv.Itoa(format.Height)
+
+		if err := m.embedMetadataInSnapshot(outputPath, widthStr, heightStr); err != nil {
+			m.logger.WithError(err).WithFields(logging.Fields{
+				"device_path": devicePath,
+				"output_path": outputPath,
+				"width":       widthStr,
+				"height":      heightStr,
+			}).Warn("Failed to embed metadata, continuing with snapshot")
+		} else {
+			// Update file size after metadata embedding
+			if updatedFileInfo, err := os.Stat(outputPath); err == nil {
+				fileInfo = updatedFileInfo
+			}
+		}
+	}
+
 	// Create snapshot result
 	snapshot := &DirectSnapshot{
 		ID:          m.generateSnapshotID(devicePath),
@@ -891,6 +913,40 @@ func (m *HybridCameraMonitor) TakeDirectSnapshot(ctx context.Context, devicePath
 	}).Info("V4L2 direct snapshot successful")
 
 	return snapshot, nil
+}
+
+// embedMetadataInSnapshot embeds EXIF metadata into snapshot file using FFmpeg
+func (m *HybridCameraMonitor) embedMetadataInSnapshot(filePath, width, height string) error {
+	// Create temporary file for metadata embedding
+	tempPath := filePath + ".tmp"
+
+	// Build FFmpeg command to embed EXIF metadata
+	command := []string{
+		"ffmpeg",
+		"-i", filePath,
+		"-metadata", fmt.Sprintf("ExifImageWidth=%s", width),
+		"-metadata", fmt.Sprintf("ExifImageLength=%s", height),
+		"-c", "copy", // Stream copy, no transcoding
+		"-y", // Overwrite output file
+		tempPath,
+	}
+
+	// Execute FFmpeg command
+	cmd := exec.Command(command[0], command[1:]...)
+	if err := cmd.Run(); err != nil {
+		// Clean up temp file if it exists
+		os.Remove(tempPath)
+		return fmt.Errorf("failed to embed metadata: %w", err)
+	}
+
+	// Replace original file with metadata-embedded version
+	if err := os.Rename(tempPath, filePath); err != nil {
+		// Clean up temp file
+		os.Remove(tempPath)
+		return fmt.Errorf("failed to replace file with metadata version: %w", err)
+	}
+
+	return nil
 }
 
 // buildV4L2SnapshotArgs builds V4L2 command arguments for direct snapshot capture

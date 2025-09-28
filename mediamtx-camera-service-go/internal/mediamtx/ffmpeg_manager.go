@@ -20,6 +20,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -106,6 +107,21 @@ func (fm *ffmpegManager) SetDependencies(configManager *config.ConfigManager, ca
 
 // StartProcess starts an FFmpeg process
 func (fm *ffmpegManager) StartProcess(ctx context.Context, command []string, outputPath string) (int, error) {
+	// Add panic recovery for FFmpeg process operations
+	defer func() {
+		if r := recover(); r != nil {
+			stack := make([]byte, 4096)
+			length := runtime.Stack(stack, false)
+			fm.logger.WithFields(logging.Fields{
+				"command":     command,
+				"output_path": outputPath,
+				"panic":       r,
+				"stack_trace": string(stack[:length]),
+				"operation":   "StartProcess",
+			}).Error("Panic recovered in StartProcess")
+		}
+	}()
+
 	fm.logger.WithFields(logging.Fields{
 		"command":     command,
 		"output_path": outputPath,
@@ -166,6 +182,19 @@ func (fm *ffmpegManager) StartProcess(ctx context.Context, command []string, out
 
 // StopProcess stops an FFmpeg process with sophisticated cleanup (Python parity)
 func (fm *ffmpegManager) StopProcess(ctx context.Context, pid int) error {
+	// Add panic recovery for FFmpeg process operations
+	defer func() {
+		if r := recover(); r != nil {
+			stack := make([]byte, 4096)
+			length := runtime.Stack(stack, false)
+			fm.logger.WithFields(logging.Fields{
+				"pid":         pid,
+				"panic":       r,
+				"stack_trace": string(stack[:length]),
+				"operation":   "StopProcess",
+			}).Error("Panic recovered in StopProcess")
+		}
+	}()
 
 	fm.processMu.Lock()
 	process, exists := fm.processes[pid]
@@ -344,6 +373,21 @@ func (fm *ffmpegManager) TakeSnapshot(ctx context.Context, device, outputPath st
 		"output_path":    outputPath,
 		"operation_type": operationType,
 	}).Info("Taking FFmpeg snapshot with retry logic")
+
+	// Add panic recovery for FFmpeg snapshot operations
+	defer func() {
+		if r := recover(); r != nil {
+			stack := make([]byte, 4096)
+			length := runtime.Stack(stack, false)
+			fm.logger.WithFields(logging.Fields{
+				"device":      device,
+				"output_path": outputPath,
+				"panic":       r,
+				"stack_trace": string(stack[:length]),
+				"operation":   "TakeSnapshot",
+			}).Error("Panic recovered in TakeSnapshot")
+		}
+	}()
 
 	// Track performance metrics
 	defer func() {

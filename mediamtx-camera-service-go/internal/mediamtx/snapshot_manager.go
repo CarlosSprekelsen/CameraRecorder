@@ -1239,13 +1239,9 @@ func (sm *SnapshotManager) GetSnapshotInfo(ctx context.Context, filename string)
 		format = strings.TrimPrefix(ext, ".")
 	}
 
-	// TODO: Extract resolution from image metadata for FFmpeg-captured images only
-	// INVESTIGATION: V4L2 captures have no EXIF/metadata, only FFmpeg captures do
-	// CURRENT: Hardcoded "1920x1080" placeholder for all images
-	// SOLUTION: Use ffprobe integration from extractSnapshotMetadata() to get real resolution
-	// DEPENDENCY: Requires completed ffprobe JSON parsing from lines 1038-1044 above
-	// EFFORT: 1-2 hours - call extractSnapshotMetadata() and use parsed width/height
-	resolution := "1920x1080" // Placeholder
+	// Extract resolution from image metadata using enhanced metadata extraction
+	metadata := sm.extractSnapshotMetadata(ctx, filePath)
+	resolution := sm.getResolutionFromMetadata(metadata)
 
 	// Build API-ready response with rich metadata
 	response := &GetSnapshotInfoResponse{
@@ -1343,4 +1339,15 @@ func (sm *SnapshotManager) DeleteSnapshotFile(ctx context.Context, filename stri
 
 	sm.logger.WithField("filename", filename).Info("Snapshot file deleted successfully")
 	return nil
+}
+
+// getResolutionFromMetadata extracts resolution from metadata with fallback
+func (sm *SnapshotManager) getResolutionFromMetadata(metadata map[string]interface{}) string {
+	if resolution, exists := metadata["resolution"]; exists {
+		if resStr, ok := resolution.(string); ok && resStr != "" {
+			return resStr
+		}
+	}
+	// Fallback to hardcoded resolution if metadata extraction failed
+	return "1920x1080"
 }

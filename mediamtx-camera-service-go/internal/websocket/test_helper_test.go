@@ -250,3 +250,8 @@ func (h *WebSocketTestHelper) GetCameraMonitor() camera.CameraMonitor {
 	// This ensures we can always get the camera monitor for readiness checks
 	return nil
 }
+
+// GetMediaMTXController returns the MediaMTX controller for testing
+func (h *WebSocketTestHelper) GetMediaMTXController() mediamtx.MediaMTXController {
+	return h.mediaMTXController
+}
