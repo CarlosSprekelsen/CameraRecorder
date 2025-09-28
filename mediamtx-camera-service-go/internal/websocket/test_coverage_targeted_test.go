@@ -218,7 +218,7 @@ func TestTargetedCoverage_SecurityBlockedMethods(t *testing.T) {
 	// Test camera_status_update (security blocked - server-generated only)
 	response, err := asserter.client.SendJSONRPC("camera_status_update", map[string]interface{}{
 		"camera_id": "test_camera",
-		"status":    "online",
+		"status":    "CONNECTED",
 	})
 	require.NoError(t, err, "camera_status_update should not fail on client side")
 	require.NotNil(t, response, "Response should not be nil")
@@ -229,7 +229,7 @@ func TestTargetedCoverage_SecurityBlockedMethods(t *testing.T) {
 	// Test recording_status_update (security blocked - server-generated only)
 	response, err = asserter.client.SendJSONRPC("recording_status_update", map[string]interface{}{
 		"recording_id": "test_recording",
-		"status":       "started",
+		"status":       "SUCCESS",
 	})
 	require.NoError(t, err, "recording_status_update should not fail on client side")
 	require.NotNil(t, response, "Response should not be nil")

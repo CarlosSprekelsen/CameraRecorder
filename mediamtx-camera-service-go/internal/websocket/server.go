@@ -220,9 +220,9 @@ func (s *WebSocketServer) notifyRecordingStatusUpdate(device, status, filename s
 	// Determine event topic based on status
 	var topic EventTopic
 	switch status {
-	case "started":
+	case "SUCCESS":
 		topic = TopicRecordingStart
-	case "stopped":
+	case "STOPPED":
 		topic = TopicRecordingStop
 	case "error":
 		topic = TopicRecordingError

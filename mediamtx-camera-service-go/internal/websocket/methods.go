@@ -398,7 +398,7 @@ func (s *WebSocketServer) MethodGetCameraList(params map[string]interface{}, cli
 				"params":    params,
 				"action":    "invalid_params",
 			}).Warn("get_camera_list received unexpected parameters")
-			
+
 			return nil, fmt.Errorf("get_camera_list accepts no parameters, received: %v", params)
 		}
 
@@ -521,7 +521,7 @@ func (s *WebSocketServer) MethodGetStatus(params map[string]interface{}, client 
 
 		// Fallback if controller is not available
 		return map[string]interface{}{
-			"status":  "unhealthy",
+			"status":  "UNHEALTHY",
 			"uptime":  float64(0),
 			"version": "unknown",
 			"components": map[string]interface{}{

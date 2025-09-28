@@ -173,7 +173,7 @@ func (sm *SnapshotManager) TakeSnapshot(ctx context.Context, cameraID string, op
 	response := &TakeSnapshotResponse{
 		Device:    cameraID,                              // Use cameraID for API consistency
 		Filename:  filename,                              // Extracted filename
-		Status:    "completed",                           // Successful capture
+		Status:    "SUCCESS",                             // Successful capture (API spec compliance)
 		Timestamp: snapshot.Created.Format(time.RFC3339), // ISO 8601 timestamp
 		FileSize:  snapshot.Size,                         // Actual file size
 		FilePath:  snapshot.FilePath,                     // Full file path

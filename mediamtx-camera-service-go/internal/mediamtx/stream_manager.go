@@ -837,9 +837,9 @@ func (sm *streamManager) GetStreamURL(ctx context.Context, cameraID string) (*Ge
 		ActiveConsumers: streamStatus.Viewers,
 		StreamStatus: func() string {
 			if streamStatus.Status == "active" {
-				return "READY"
+				return "ACTIVE"
 			} else {
-				return "NOT_READY"
+				return "INACTIVE"
 			}
 		}(),
 	}

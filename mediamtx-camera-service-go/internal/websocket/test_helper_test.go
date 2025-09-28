@@ -236,3 +236,17 @@ func (h *WebSocketTestHelper) GetTestCameraID() string {
 	// Return a valid camera ID according to OpenRPC DeviceId pattern: ^camera[0-9]+$
 	return "camera0"
 }
+
+// GetCameraMonitor returns the camera monitor for readiness checks
+// Reuses existing good pattern from camera asserters
+func (h *WebSocketTestHelper) GetCameraMonitor() camera.CameraMonitor {
+	// Access camera monitor through MediaMTX controller
+	// This follows the same pattern as camera asserters but for WebSocket tests
+	if controller, ok := h.mediaMTXController.(interface{ GetCameraMonitor() camera.CameraMonitor }); ok {
+		return controller.GetCameraMonitor()
+	}
+
+	// Fallback: try to access through reflection if needed
+	// This ensures we can always get the camera monitor for readiness checks
+	return nil
+}

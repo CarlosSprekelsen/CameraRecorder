@@ -27,6 +27,7 @@ import (
 	"net/http"
 	"runtime"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -75,6 +76,7 @@ func (a *WebSocketIntegrationAsserter) Cleanup() {
 }
 
 // AssertProgressiveReadiness validates Progressive Readiness behavior
+// FIXED: Now includes camera monitor readiness check (reuses good pattern from camera asserters)
 func (a *WebSocketIntegrationAsserter) AssertProgressiveReadiness() error {
 	// Test immediate connection acceptance (Progressive Readiness pattern)
 	err := a.client.Connect()
@@ -84,7 +86,19 @@ func (a *WebSocketIntegrationAsserter) AssertProgressiveReadiness() error {
 	err = a.client.Ping()
 	require.NoError(a.t, err, "Ping should work immediately without authentication")
 
-	a.t.Log("✅ Progressive Readiness validated: immediate connection and ping")
+	// CRITICAL FIX: Wait for camera monitor readiness (reuses good pattern from camera asserters)
+	cameraMonitor := a.helper.GetCameraMonitor()
+	if cameraMonitor != nil {
+		// Use same pattern as camera asserters - Eventually with proper timeout
+		require.Eventually(a.t, func() bool {
+			return cameraMonitor.IsReady()
+		}, 5*time.Second, 100*time.Millisecond, "Camera monitor must be ready before operations")
+		a.t.Log("✅ Camera monitor readiness validated")
+	} else {
+		a.t.Log("⚠️ Camera monitor not available - skipping readiness check")
+	}
+
+	a.t.Log("✅ Progressive Readiness validated: connection, ping, and camera readiness")
 	return nil
 }
 
@@ -142,7 +156,8 @@ func (a *WebSocketIntegrationAsserter) AssertCameraManagementWorkflow() error {
 	a.client.AssertCameraListResult(response.Result)
 
 	// Test get_camera_status for specific camera
-	cameraID := a.helper.GetTestCameraID()
+	// FIXED: Use testutils instead of hardcoded helper method
+	cameraID := testutils.GetTestCameraID()
 	response, err = a.client.GetCameraStatus(cameraID)
 	require.NoError(a.t, err, "get_camera_status should succeed")
 
@@ -164,7 +179,8 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingWorkflow() error {
 	err = a.client.Authenticate(authToken)
 	require.NoError(a.t, err, "Authentication should succeed")
 
-	cameraID := a.helper.GetTestCameraID()
+	// FIXED: Use testutils instead of hardcoded helper method
+	cameraID := testutils.GetTestCameraID()
 
 	// Test start_recording
 	response, err := a.client.StartRecording(cameraID, 10, "mp4")
@@ -226,7 +242,8 @@ func (a *WebSocketIntegrationAsserter) AssertSnapshotWorkflow() error {
 	err = a.client.Authenticate(authToken)
 	require.NoError(a.t, err, "Authentication should succeed")
 
-	cameraID := a.helper.GetTestCameraID()
+	// FIXED: Use testutils instead of hardcoded helper method
+	cameraID := testutils.GetTestCameraID()
 	filename := "test_snapshot_" + time.Now().Format("2006-01-02_15-04-05") + ".jpg"
 
 	// Test take_snapshot
@@ -266,21 +283,15 @@ func (a *WebSocketIntegrationAsserter) AssertSnapshotWorkflow() error {
 }
 
 // validateSnapshotFileCreation validates that snapshot file was created with correct path and extension
-// Uses testutils DataValidationHelper for comprehensive validation
+// FIXED: Reuses existing testutils patterns to eliminate code duplication
 func (a *WebSocketIntegrationAsserter) validateSnapshotFileCreation(cameraID, filename string) error {
-	// Get snapshots path from testutils (configuration-driven, not hardcoded)
+	// Use testutils for comprehensive validation (reuses good pattern)
 	snapshotsPath := testutils.GetTestSnapshotsPath()
-
-	// Use testutils to build proper MediaMTX file path with subdirectories
 	expectedPath := testutils.BuildSnapshotFilePath(snapshotsPath, cameraID, filename, true, "jpg")
 
-	// Use testutils DataValidationHelper for comprehensive validation
+	// Use existing testutils DataValidationHelper (no duplication)
 	dvh := testutils.NewDataValidationHelper(a.t)
-
-	// Validate file exists with minimum size (V4L2 creates files > 0 bytes)
 	dvh.AssertFileExists(expectedPath, 1000, "Snapshot file creation validation")
-
-	// Validate file is accessible and readable
 	dvh.AssertFileAccessible(expectedPath, "Snapshot file accessibility")
 
 	a.t.Logf("✅ Snapshot file validated using testutils: %s", expectedPath)
@@ -288,34 +299,28 @@ func (a *WebSocketIntegrationAsserter) validateSnapshotFileCreation(cameraID, fi
 }
 
 // validateRecordingFileCreation validates that recording file was created with correct path and extension
-// CRITICAL: This test MUST validate actual file creation - if files aren't created, that's a BUG to fix!
+// FIXED: Reuses existing testutils patterns to eliminate code duplication
 func (a *WebSocketIntegrationAsserter) validateRecordingFileCreation(cameraID, filename string) error {
 	// CRITICAL: Wait for MediaMTX readiness like all other tests
 	err := a.AssertProgressiveReadiness()
 	require.NoError(a.t, err, "Progressive Readiness should work before file validation")
 
-	// Get recordings path from testutils (configuration-driven, not hardcoded)
+	// Use testutils for comprehensive validation (reuses good pattern)
 	recordingsPath := testutils.GetTestRecordingsPath()
-
-	// Use testutils DataValidationHelper for comprehensive validation
 	dvh := testutils.NewDataValidationHelper(a.t)
 
-	// PROPER FILE VALIDATION: Use FindRecordingFile to search for actual MediaMTX-created files
-	// MediaMTX creates files like: camera0_2025-09-26_03-00-42.mp4 in subdirectories
+	// Use existing testutils FindRecordingFile method (no duplication)
 	recordFormat := "fmp4" // STANAG 4609 compliant format used by MediaMTX
-
-	// Wait for file creation with proper timeout (MediaMTX needs time to write files)
-	maxRetries := 20              // Increased retries for real hardware
-	retryDelay := 1 * time.Second // Longer delay for real hardware
+	maxRetries := 20
+	retryDelay := 1 * time.Second
 
 	for attempt := 1; attempt <= maxRetries; attempt++ {
-		// Use proper MediaMTX file search method
 		foundFile, err := testutils.FindRecordingFile(recordingsPath, cameraID, recordFormat)
 		if err == nil {
-			// File found - validate it properly
+			// Use existing testutils validation methods (no duplication)
 			dvh.AssertFileExists(foundFile, 1000, "Recording file creation validation")
 			dvh.AssertFileAccessible(foundFile, "Recording file accessibility")
-			a.t.Logf("✅ Recording file validated using proper MediaMTX file search: %s", foundFile)
+			a.t.Logf("✅ Recording file validated using testutils: %s", foundFile)
 			return nil
 		}
 
@@ -347,7 +352,8 @@ func (a *WebSocketIntegrationAsserter) AssertFileLifecycleWorkflow() error {
 	err = a.client.Authenticate(authToken)
 	require.NoError(a.t, err, "Authentication should succeed")
 
-	cameraID := a.helper.GetTestCameraID()
+	// FIXED: Use testutils instead of hardcoded helper method
+	cameraID := testutils.GetTestCameraID()
 
 	// Use testutils for comprehensive file lifecycle validation
 	dvh := testutils.NewDataValidationHelper(a.t)
@@ -590,7 +596,8 @@ func (a *WebSocketIntegrationAsserter) AssertPerformanceRequirements() error {
 
 	// Test control method performance (<2s for V4L2 hardware capture)
 	start = time.Now()
-	cameraID := a.helper.GetTestCameraID()
+	// FIXED: Use testutils instead of hardcoded helper method
+	cameraID := testutils.GetTestCameraID()
 	_, err = a.client.TakeSnapshot(cameraID, "perf_test.jpg")
 	require.NoError(a.t, err, "take_snapshot should succeed")
 	controlTime := time.Since(start)
@@ -791,8 +798,14 @@ func (a *WebSocketIntegrationAsserter) AssertConcurrentSnapshotCaptures() error 
 	responses := make(chan *JSONRPCResponse, numConcurrent)
 	errors := make(chan error, numConcurrent)
 
+	// Use WaitGroup to ensure all goroutines complete before returning
+	var wg sync.WaitGroup
+	wg.Add(numConcurrent)
+
 	for i := 0; i < numConcurrent; i++ {
 		go func(index int) {
+			defer wg.Done()
+
 			// Create dedicated WebSocket client for this goroutine
 			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
@@ -825,6 +838,13 @@ func (a *WebSocketIntegrationAsserter) AssertConcurrentSnapshotCaptures() error 
 			responses <- response
 		}(i)
 	}
+
+	// Wait for all goroutines to complete
+	wg.Wait()
+
+	// Close channels to prevent further sends
+	close(responses)
+	close(errors)
 
 	// Collect results
 	successCount := 0
@@ -1518,8 +1538,14 @@ func (a *WebSocketIntegrationAsserter) AssertConcurrentRecordings() error {
 	responses := make(chan *JSONRPCResponse, numConcurrent)
 	errors := make(chan error, numConcurrent)
 
+	// Use WaitGroup to ensure all goroutines complete before returning
+	var wg sync.WaitGroup
+	wg.Add(numConcurrent)
+
 	for i := 0; i < numConcurrent; i++ {
 		go func(index int) {
+			defer wg.Done()
+
 			// Create dedicated WebSocket client for this goroutine
 			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
@@ -1555,6 +1581,13 @@ func (a *WebSocketIntegrationAsserter) AssertConcurrentRecordings() error {
 			responses <- response
 		}(i)
 	}
+
+	// Wait for all goroutines to complete
+	wg.Wait()
+
+	// Close channels to prevent further sends
+	close(responses)
+	close(errors)
 
 	// Collect results - SERIALIZED ACCESS EXPECTATION
 	successCount := 0

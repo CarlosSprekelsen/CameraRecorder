@@ -341,7 +341,7 @@ func (pm *pathManager) createPathInternal(ctx context.Context, name, source stri
 			"path_name":     name,
 			"method":        "POST",
 			"endpoint":      FormatConfigPathsAdd(name),
-			"status":        "failed",
+			"status":        "FAILED",
 			"body":          truncateString(string(data), 200), // Trimmed body
 			"error_type":    fmt.Sprintf("%T", err),
 			"error_message": errorMsg,
@@ -375,7 +375,7 @@ func (pm *pathManager) createPathInternal(ctx context.Context, name, source stri
 		"path_name":   name,
 		"method":      "POST",
 		"endpoint":    FormatConfigPathsAdd(name),
-		"status":      "success",
+		"status":      "SUCCESS",
 	}).Info("MediaMTX path created successfully")
 	return nil
 }
@@ -445,7 +445,7 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config *PathC
 				"path_name":   name,
 				"method":      "PATCH",
 				"endpoint":    FormatConfigPathsPatch(name),
-				"status":      "success",
+				"status":      "SUCCESS",
 			}).Info("MediaMTX path configuration patched successfully")
 			return nil
 		}
@@ -483,7 +483,7 @@ func (pm *pathManager) PatchPath(ctx context.Context, name string, config *PathC
 				"path_name":   name,
 				"method":      "PATCH",
 				"endpoint":    FormatConfigPathsPatch(name),
-				"status":      "failed",
+				"status":      "FAILED",
 				"body":        truncateString(string(data), 200), // Trimmed body
 				"attempt":     attempt + 1,
 				"error_msg":   errorMsg,

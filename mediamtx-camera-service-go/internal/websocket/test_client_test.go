@@ -571,7 +571,7 @@ func (c *WebSocketTestClient) AssertCameraStatusResult(result interface{}) {
 	// Validate status field
 	status, ok := resultMap["status"].(string)
 	require.True(c.t, ok, "Status should be string")
-	require.Contains(c.t, []string{"connected", "disconnected", "error"}, status, "Status should be valid")
+	require.Contains(c.t, []string{"CONNECTED", "DISCONNECTED", "ERROR"}, status, "Status should be valid")
 
 	// Validate capabilities field
 	capabilities, ok := resultMap["capabilities"].(map[string]interface{})

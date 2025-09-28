@@ -129,6 +129,12 @@ func (c *controller) IsReady() bool {
 	return true
 }
 
+// GetCameraMonitor returns the camera monitor for readiness checks
+// This allows test helpers to access camera monitor for proper readiness validation
+func (c *controller) GetCameraMonitor() camera.CameraMonitor {
+	return c.cameraMonitor
+}
+
 // emitReadinessEvent emits a readiness event to all subscribers
 // emitReadinessEvent is no longer needed with per-subscriber channels
 // Each subscriber gets their own channel, so no shared channel broadcasting
@@ -644,7 +650,7 @@ func (c *controller) CleanupOldFiles(ctx context.Context) (*CleanupOldFilesRespo
 		RecordingsRemoved: recordingsRemoved,
 		SnapshotsRemoved:  snapshotsRemoved,
 		SpaceFreed:        totalSize,
-		Status:            "completed",
+		Status:            "SUCCESS",
 		Message:           fmt.Sprintf("Cleaned up %d files (%d recordings, %d snapshots), freed %d bytes", deletedCount, recordingsRemoved, snapshotsRemoved, totalSize),
 	}
 	return response, nil
@@ -1403,7 +1409,7 @@ func (c *controller) SetDiscoveryInterval(interval int) (*SetDiscoveryIntervalRe
 	// Build API-ready response
 	response := &SetDiscoveryIntervalResponse{
 		ScanInterval: interval,
-		Status:       "updated",
+		Status:       "UPDATED",
 		Message:      "Discovery interval updated successfully",
 		Timestamp:    time.Now().Unix(),
 	}

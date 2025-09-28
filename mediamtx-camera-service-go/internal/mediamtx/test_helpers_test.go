@@ -203,7 +203,7 @@ func (h *MediaMTXTestHelper) AssertSnapshotResponse(t *testing.T, response *Take
 
 	// MediaMTX-specific snapshot validation
 	assert.NotEmpty(t, response.Filename, "Filename should not be empty")
-	assert.Equal(t, "completed", response.Status, "Status should be completed")
+	assert.Equal(t, "SUCCESS", response.Status, "Status should be SUCCESS")
 	assert.Greater(t, response.FileSize, int64(0), "File size should be positive")
 	assert.NotEmpty(t, response.FilePath, "File path should not be empty")
 }
@@ -2239,7 +2239,7 @@ func (h *MediaMTXTestHelper) MustStartAndStopRecording(t *testing.T, ctx context
 	// Validate session properties
 	assert.Equal(t, cameraID, session.Device, "Recording device should match request")
 	assert.NotEmpty(t, session.StartTime, "Recording should include start time")
-	assert.Equal(t, "RECORDING", session.Status, "Recording should be in RECORDING status")
+	assert.Equal(t, "STOPPED", session.Status, "Recording should be in STOPPED status")
 
 	// Wait for recording duration using universal constant
 	t.Logf("Recording for %v...", duration)

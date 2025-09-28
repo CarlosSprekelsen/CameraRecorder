@@ -309,7 +309,7 @@ func (esd *ExternalStreamDiscovery) checkSkydioStream(ctx context.Context, ip st
 			URL:          rtspURL,
 			Type:         "skydio_stanag4609",
 			Name:         fmt.Sprintf("Skydio_%s_%s_%s", ip, streamType, streamPath),
-			Status:       "discovered",
+			Status:       "DISCOVERED",
 			DiscoveredAt: time.Now(),
 			LastSeen:     time.Now(),
 			Capabilities: map[string]interface{}{
@@ -392,7 +392,7 @@ func (esd *ExternalStreamDiscovery) checkGenericStream(ctx context.Context, ip s
 			URL:          rtspURL,
 			Type:         "generic_rtsp",
 			Name:         fmt.Sprintf("Generic_%s_%d%s", ip, port, streamPath),
-			Status:       "discovered",
+			Status:       "DISCOVERED",
 			DiscoveredAt: time.Now(),
 			LastSeen:     time.Now(),
 			Capabilities: map[string]interface{}{
@@ -659,7 +659,7 @@ func (esd *ExternalStreamDiscovery) AddExternalStreamAPI(ctx context.Context, st
 	// Add stream to discovered streams
 	stream.DiscoveredAt = time.Now()
 	stream.LastSeen = time.Now()
-	stream.Status = "added"
+	stream.Status = "ADDED"
 	esd.discoveredStreams[stream.URL] = stream
 
 	// Build API-ready response
@@ -667,7 +667,7 @@ func (esd *ExternalStreamDiscovery) AddExternalStreamAPI(ctx context.Context, st
 		StreamURL:  stream.URL,
 		StreamName: stream.Name,
 		StreamType: stream.Type,
-		Status:     "added",
+		Status:     "ADDED",
 		Timestamp:  time.Now().Unix(),
 	}
 
@@ -696,7 +696,7 @@ func (esd *ExternalStreamDiscovery) RemoveExternalStreamAPI(ctx context.Context,
 	// Build API-ready response
 	response := &RemoveExternalStreamResponse{
 		StreamURL: streamURL,
-		Status:    "removed",
+		Status:    "REMOVED",
 		Timestamp: time.Now().Unix(),
 	}
 

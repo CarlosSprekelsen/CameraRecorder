@@ -183,7 +183,7 @@ func (fm *ffmpegManager) StopProcess(ctx context.Context, pid int) error {
 
 	// Update status based on cleanup result
 	if strings.Contains(cleanupResult, "graceful_exit") {
-		process.Status = "STOPPED"
+		process.Status = "SUCCESS"
 	} else if strings.Contains(cleanupResult, "force_exit") {
 		process.Status = "FORCE_STOPPED"
 	} else {

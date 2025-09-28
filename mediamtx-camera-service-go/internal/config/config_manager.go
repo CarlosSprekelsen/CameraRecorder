@@ -116,7 +116,7 @@ func (cm *ConfigManager) LoadConfig(configPath string) error {
 	cm.logger.WithFields(logging.Fields{
 		"config_path": configPath,
 		"action":      "load_config",
-		"status":      "success",
+		"status":      "SUCCESS",
 	}).Info("Configuration loaded successfully")
 
 	return nil
@@ -557,7 +557,7 @@ func (cm *ConfigManager) SaveConfig() error {
 	cm.logger.WithFields(logging.Fields{
 		"config_path": cm.configPath,
 		"action":      "save_config",
-		"status":      "success",
+		"status":      "SUCCESS",
 	}).Info("Configuration saved successfully")
 
 	return nil
