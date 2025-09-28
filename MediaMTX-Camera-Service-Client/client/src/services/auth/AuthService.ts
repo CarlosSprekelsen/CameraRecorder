@@ -1,6 +1,5 @@
 import { AuthenticateParams, AuthenticateResult } from '../../types/api';
 import { APIClient } from '../abstraction/APIClient';
-import { LoggerService } from '../logger/LoggerService';
 
 /**
  * Authentication Service
@@ -22,7 +21,6 @@ import { LoggerService } from '../logger/LoggerService';
 export class AuthService {
   constructor(
     private apiClient: APIClient,
-    private logger: LoggerService,
   ) {}
 
   async authenticate(token: string): Promise<AuthenticateResult> {
@@ -44,7 +42,7 @@ export class AuthService {
    * Login method for backward compatibility with tests
    * Architecture requirement: Maintain API compatibility during refactoring
    */
-  async login(username: string, password: string): Promise<{ success: boolean; error?: string; role?: string }> {
+  async login(username: string, _password: string): Promise<{ success: boolean; error?: string; role?: string }> {
     try {
       // For test compatibility, we'll use the username as a token
       // In real implementation, this would validate credentials and return a JWT

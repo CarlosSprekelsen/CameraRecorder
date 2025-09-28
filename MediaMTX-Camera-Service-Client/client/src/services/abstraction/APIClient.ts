@@ -20,8 +20,7 @@ export class APIClient {
 
   constructor(
     private wsService: WebSocketService,
-    private logger: LoggerService,
-    private config: APIClientConfig = {}
+    private logger: LoggerService
   ) {
     this.performanceMonitor = new PerformanceMonitor(logger);
   }

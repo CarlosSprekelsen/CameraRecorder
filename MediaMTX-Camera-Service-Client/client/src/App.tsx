@@ -45,7 +45,7 @@ function App(): React.JSX.Element {
   const [wsService] = useState(() => serviceFactory.createWebSocketService(WS_URL));
   const [apiClient] = useState(() => serviceFactory.createAPIClient(wsService));
   const [authService] = useState(() => serviceFactory.createAuthService(apiClient));
-  const [serverService] = useState(() => serviceFactory.createServerService(wsService));
+  const [serverService] = useState(() => serviceFactory.createServerService(apiClient));
   // Notification service will be used in future sprints
   // const [notificationService] = useState(() => serviceFactory.createNotificationService(wsService));
   const [isInitialized, setIsInitialized] = useState(false);
@@ -68,7 +68,7 @@ function App(): React.JSX.Element {
       // Create and inject services into stores
       const deviceService = serviceFactory.createDeviceService(apiClient);
       const recordingService = serviceFactory.createRecordingService(apiClient);
-      const fileService = serviceFactory.createFileService(wsService);
+      const fileService = serviceFactory.createFileService(apiClient);
 
       // Inject services into stores
       setDeviceService(deviceService);

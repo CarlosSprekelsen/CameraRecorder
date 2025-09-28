@@ -70,7 +70,7 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({
       navigate('/login');
       logger.info('User logged out');
     } catch (err) {
-      logger.error('Logout failed:', { error: err });
+      logger.error('Logout failed:', err as Error);
     }
   };
 

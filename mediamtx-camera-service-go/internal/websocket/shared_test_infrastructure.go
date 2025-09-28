@@ -20,6 +20,8 @@ package websocket
 import (
 	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
 // SHARED WebSocket Infrastructure - Singleton Pattern (Test-Only)
@@ -39,9 +41,31 @@ func GetSharedWebSocketAsserter(t *testing.T) *WebSocketIntegrationAsserter {
 	sharedAsserterOnce.Do(func() {
 		// Create ONE shared asserter with full infrastructure
 		// This is the ONLY place where expensive components are created
-		sharedWebSocketAsserter = GetSharedWebSocketAsserter(t)
+		// FIXED: Use the actual implementation instead of recursive call
+		sharedWebSocketAsserter = createSharedWebSocketAsserter(t)
 	})
 	return sharedWebSocketAsserter
+}
+
+// createSharedWebSocketAsserter creates the actual shared WebSocket integration asserter
+// This implements the logic from test_asserters_test.go but as a reusable function
+func createSharedWebSocketAsserter(t *testing.T) *WebSocketIntegrationAsserter {
+	helper := NewWebSocketTestHelper(t)
+
+	// Create real WebSocket server
+	err := helper.CreateRealServer()
+	require.NoError(t, err, "Failed to create real WebSocket server")
+
+	// Create WebSocket client
+	client := NewWebSocketTestClient(t, helper.GetServerURL())
+
+	asserter := &WebSocketIntegrationAsserter{
+		t:      t,
+		helper: helper,
+		client: client,
+	}
+
+	return asserter
 }
 
 // CleanupSharedWebSocketInfrastructure cleans up the shared infrastructure

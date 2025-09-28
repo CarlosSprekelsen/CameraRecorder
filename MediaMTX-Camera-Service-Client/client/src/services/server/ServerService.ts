@@ -28,7 +28,7 @@ export interface SystemMetrics {
     total_viewers: number;
   };
 }
-import { WebSocketService } from '../websocket/WebSocketService';
+import { APIClient } from '../abstraction/APIClient';
 import { SubscriptionResult, UnsubscriptionResult, SubscriptionStatsResult } from '../../types/api';
 
 /**
@@ -59,58 +59,30 @@ import { SubscriptionResult, UnsubscriptionResult, SubscriptionStatsResult } fro
  * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture
  */
 export class ServerService implements IStatus {
-  private wsService: WebSocketService;
-
-  constructor(wsService: WebSocketService) {
-    this.wsService = wsService;
-  }
+  constructor(private apiClient: APIClient) {}
 
   async getServerInfo(): Promise<ServerInfo> {
-    if (!this.wsService.isConnected) {
-      throw new Error('WebSocket not connected');
-    }
-
-    return this.wsService.sendRPC<ServerInfo>('get_server_info');
+    return this.apiClient.call<ServerInfo>('get_server_info');
   }
 
   async getStatus(): Promise<SystemStatus> {
-    if (!this.wsService.isConnected) {
-      throw new Error('WebSocket not connected');
-    }
-
-    return this.wsService.sendRPC<SystemStatus>('get_status');
+    return this.apiClient.call<SystemStatus>('get_status');
   }
 
   async getSystemStatus(): Promise<SystemStatus> {
-    if (!this.wsService.isConnected) {
-      throw new Error('WebSocket not connected');
-    }
-
-    return this.wsService.sendRPC<SystemStatus>('get_system_status');
+    return this.apiClient.call<SystemStatus>('get_system_status');
   }
 
   async getStorageInfo(): Promise<StorageInfo> {
-    if (!this.wsService.isConnected) {
-      throw new Error('WebSocket not connected');
-    }
-
-    return this.wsService.sendRPC<StorageInfo>('get_storage_info');
+    return this.apiClient.call<StorageInfo>('get_storage_info');
   }
 
   async getMetrics(): Promise<MetricsResult> {
-    if (!this.wsService.isConnected) {
-      throw new Error('WebSocket not connected');
-    }
-
-    return this.wsService.sendRPC<MetricsResult>('get_metrics');
+    return this.apiClient.call<MetricsResult>('get_metrics');
   }
 
   async ping(): Promise<string> {
-    if (!this.wsService.isConnected) {
-      throw new Error('WebSocket not connected');
-    }
-
-    return this.wsService.sendRPC<string>('ping');
+    return this.apiClient.call<string>('ping');
   }
 
   // IStatus interface implementation
@@ -118,26 +90,14 @@ export class ServerService implements IStatus {
     topics: string[],
     filters?: Record<string, unknown>,
   ): Promise<SubscriptionResult> {
-    if (!this.wsService.isConnected) {
-      throw new Error('WebSocket not connected');
-    }
-
-    return this.wsService.sendRPC('subscribe_events', { topics, filters });
+    return this.apiClient.call('subscribe_events', { topics, filters });
   }
 
   async unsubscribeEvents(topics?: string[]): Promise<UnsubscriptionResult> {
-    if (!this.wsService.isConnected) {
-      throw new Error('WebSocket not connected');
-    }
-
-    return this.wsService.sendRPC('unsubscribe_events', { topics });
+    return this.apiClient.call('unsubscribe_events', { topics });
   }
 
   async getSubscriptionStats(): Promise<SubscriptionStatsResult> {
-    if (!this.wsService.isConnected) {
-      throw new Error('WebSocket not connected');
-    }
-
-    return this.wsService.sendRPC('get_subscription_stats');
+    return this.apiClient.call('get_subscription_stats');
   }
 }

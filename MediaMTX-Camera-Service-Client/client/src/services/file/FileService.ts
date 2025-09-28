@@ -1,4 +1,4 @@
-import { WebSocketService } from '../websocket/WebSocketService';
+import { APIClient } from '../abstraction/APIClient';
 import { LoggerService } from '../logger/LoggerService';
 import { IFileCatalog, IFileActions } from '../interfaces/ServiceInterfaces';
 import { FileListResult, RecordingInfo, SnapshotInfo, DeleteResult, RetentionPolicySetResult, CleanupResult } from '../../types/api';
@@ -36,7 +36,7 @@ import { FileListResult, RecordingInfo, SnapshotInfo, DeleteResult, RetentionPol
  */
 export class FileService implements IFileCatalog, IFileActions {
   constructor(
-    private wsService: WebSocketService,
+    private apiClient: APIClient,
     private logger: LoggerService,
   ) {}
 
@@ -58,7 +58,7 @@ export class FileService implements IFileCatalog, IFileActions {
   }> {
     try {
       this.logger.info(`Listing recordings: limit=${limit}, offset=${offset}`);
-      const response = await this.wsService.sendRPC('list_recordings', { limit, offset }) as FileListResult;
+      const response = await this.apiClient.call('list_recordings', { limit, offset }) as FileListResult;
       this.logger.info(`Found ${response.files?.length || 0} recordings`);
       return response;
     } catch (error) {
@@ -85,7 +85,7 @@ export class FileService implements IFileCatalog, IFileActions {
   }> {
     try {
       this.logger.info(`Listing snapshots: limit=${limit}, offset=${offset}`);
-      const response = await this.wsService.sendRPC('list_snapshots', { limit, offset }) as FileListResult;
+      const response = await this.apiClient.call('list_snapshots', { limit, offset }) as FileListResult;
       this.logger.info(`Found ${response.files?.length || 0} snapshots`);
       return response;
     } catch (error) {
@@ -109,7 +109,7 @@ export class FileService implements IFileCatalog, IFileActions {
   }> {
     try {
       this.logger.info(`Getting recording info for: ${filename}`);
-      const response = await this.wsService.sendRPC('get_recording_info', { filename }) as RecordingInfo;
+      const response = await this.apiClient.call('get_recording_info', { filename }) as RecordingInfo;
       this.logger.info(`Recording info retrieved for ${filename}`);
       // Return API response directly as per authoritative specification
       return {
@@ -139,7 +139,7 @@ export class FileService implements IFileCatalog, IFileActions {
   }> {
     try {
       this.logger.info(`Getting snapshot info for: ${filename}`);
-      const response = await this.wsService.sendRPC('get_snapshot_info', { filename }) as SnapshotInfo;
+      const response = await this.apiClient.call('get_snapshot_info', { filename }) as SnapshotInfo;
       this.logger.info(`Snapshot info retrieved for ${filename}`);
       // Return API response directly as per authoritative specification
       return {
@@ -161,7 +161,7 @@ export class FileService implements IFileCatalog, IFileActions {
   async deleteRecording(filename: string): Promise<DeleteResult> {
     try {
       this.logger.info(`Deleting recording: ${filename}`);
-      const response = await this.wsService.sendRPC('delete_recording', { filename }) as DeleteResult;
+      const response = await this.apiClient.call('delete_recording', { filename }) as DeleteResult;
       this.logger.info(`Recording deleted: ${filename}`);
       return response;
     } catch (error) {
@@ -177,7 +177,7 @@ export class FileService implements IFileCatalog, IFileActions {
   async deleteSnapshot(filename: string): Promise<DeleteResult> {
     try {
       this.logger.info(`Deleting snapshot: ${filename}`);
-      const response = await this.wsService.sendRPC('delete_snapshot', { filename }) as DeleteResult;
+      const response = await this.apiClient.call('delete_snapshot', { filename }) as DeleteResult;
       this.logger.info(`Snapshot deleted: ${filename}`);
       return response;
     } catch (error) {
@@ -227,7 +227,7 @@ export class FileService implements IFileCatalog, IFileActions {
       if (maxAgeDays !== undefined) params.max_age_days = maxAgeDays;
       if (maxSizeGb !== undefined) params.max_size_gb = maxSizeGb;
       
-      const response = await this.wsService.sendRPC('set_retention_policy', params) as RetentionPolicySetResult;
+      const response = await this.apiClient.call('set_retention_policy', params) as RetentionPolicySetResult;
       this.logger.info('Retention policy set successfully');
       return response;
     } catch (error) {
@@ -243,7 +243,7 @@ export class FileService implements IFileCatalog, IFileActions {
   async cleanupOldFiles(): Promise<CleanupResult> {
     try {
       this.logger.info('Cleaning up old files');
-      const response = await this.wsService.sendRPC('cleanup_old_files') as CleanupResult;
+      const response = await this.apiClient.call('cleanup_old_files') as CleanupResult;
       this.logger.info(`Cleanup completed: ${response.files_deleted} files deleted`);
       return response;
     } catch (error) {

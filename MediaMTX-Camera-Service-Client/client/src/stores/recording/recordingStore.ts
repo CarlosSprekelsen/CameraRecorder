@@ -49,7 +49,7 @@ const initialState: RecordingState = {
 export const useRecordingStore = create<RecordingState & RecordingActions>()(
   devtools(
     persist(
-      (set, get) => {
+      (set) => {
         // ARCHITECTURE FIX: Remove direct service injection
         // Use action dispatchers instead of direct service calls
         // Architecture requirement: Unidirectional data flow (ADR-002)
@@ -67,7 +67,7 @@ export const useRecordingStore = create<RecordingState & RecordingActions>()(
             if (!service) throw new Error('Recording service not initialized');
             set({ loading: true, error: null });
             try {
-              const result = await service.takeSnapshot(device, filename);
+              await service.takeSnapshot(device, filename);
               // Update state based on result
               set({ loading: false });
             } catch (error) {
@@ -79,7 +79,7 @@ export const useRecordingStore = create<RecordingState & RecordingActions>()(
             if (!service) throw new Error('Recording service not initialized');
             set({ loading: true, error: null });
             try {
-              const result = await service.startRecording(device, duration, format);
+              await service.startRecording(device, duration, format);
               // Update state based on result
               set({ loading: false });
             } catch (error) {
@@ -91,7 +91,7 @@ export const useRecordingStore = create<RecordingState & RecordingActions>()(
             if (!service) throw new Error('Recording service not initialized');
             set({ loading: true, error: null });
             try {
-              const result = await service.stopRecording(device);
+              await service.stopRecording(device);
               // Update state based on result
               set({ loading: false });
             } catch (error) {

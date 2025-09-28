@@ -7,7 +7,7 @@
 
 import React, { useState } from 'react';
 import { Box, Typography, Button, Alert, CircularProgress } from '@mui/material';
-import { PlayArrow, Stop, Pause } from '@mui/icons-material';
+import { PlayArrow, Stop } from '@mui/icons-material';
 import { useRecordingStore } from '../../../stores/recording/recordingStore';
 import { logger } from '../../../services/logger/LoggerService';
 // ARCHITECTURE FIX: Logger is infrastructure - components can import it directly
@@ -20,7 +20,7 @@ interface RecordingControllerProps {
 export const RecordingController: React.FC<RecordingControllerProps> = ({ 
   device 
 }) => {
-  const { activeRecordings, startRecording, stopRecording, error: recordingError } = useRecordingStore();
+  const { activeRecordings, startRecording, stopRecording } = useRecordingStore();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +35,7 @@ export const RecordingController: React.FC<RecordingControllerProps> = ({
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to start recording';
       setError(errorMsg);
-      logger.error(`Failed to start recording for ${device}:`, err);
+      logger.error(`Failed to start recording for ${device}:`, { error: err });
     } finally {
       setLoading(false);
     }
@@ -50,7 +50,7 @@ export const RecordingController: React.FC<RecordingControllerProps> = ({
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to stop recording';
       setError(errorMsg);
-      logger.error(`Failed to stop recording for ${device}:`, err);
+      logger.error(`Failed to stop recording for ${device}:`, { error: err });
     } finally {
       setLoading(false);
     }

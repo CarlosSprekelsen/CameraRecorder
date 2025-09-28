@@ -58,9 +58,9 @@ export class ServiceFactory {
     return this.authService;
   }
 
-  createServerService(wsService: WebSocketService): ServerService {
+  createServerService(apiClient: APIClient): ServerService {
     if (!this.serverService) {
-      this.serverService = new ServerService(wsService);
+      this.serverService = new ServerService(apiClient);
       logger.info('Server service created');
     }
     return this.serverService;
@@ -90,9 +90,9 @@ export class ServiceFactory {
     return this.recordingService;
   }
 
-  createFileService(wsService: WebSocketService): FileService {
+  createFileService(apiClient: APIClient): FileService {
     if (!this.fileService) {
-      this.fileService = new FileService(wsService, logger);
+      this.fileService = new FileService(apiClient, logger);
       logger.info('File service created');
     }
     return this.fileService;

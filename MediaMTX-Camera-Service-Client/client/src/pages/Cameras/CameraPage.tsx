@@ -2,7 +2,7 @@ import React, { useEffect, memo } from 'react';
 import { Box, Typography, Paper, Alert, CircularProgress, Container } from '@mui/material';
 import { useDeviceStore, Camera } from '../../stores/device/deviceStore';
 import { useAuthStore } from '../../stores/auth/authStore';
-// ARCHITECTURE FIX: Removed serviceFactory import - components must use stores only
+import { serviceFactory } from '../../services/ServiceFactory';
 import CameraTable from '../../components/Cameras/CameraTable';
 import { logger } from '../../services/logger/LoggerService';
 import { JsonRpcNotification } from '../../types/api';
@@ -41,13 +41,12 @@ const CameraPage: React.FC = memo(() => {
     lastUpdated,
     getCameraList,
     getStreams,
-    // ARCHITECTURE FIX: Removed setDeviceService - components don't inject services
+    setDeviceService,
     handleCameraStatusUpdate,
   } = useDeviceStore();
 
   const { isAuthenticated } = useAuthStore();
-  const { handleRecordingStatusUpdate } = useRecordingStore();
-  // ARCHITECTURE FIX: Removed setService - components don't inject services
+  const { handleRecordingStatusUpdate, setService: setRecordingService } = useRecordingStore();
 
   // Initialize device service and load data
   useEffect(() => {
@@ -57,11 +56,56 @@ const CameraPage: React.FC = memo(() => {
     }
 
     const initializeDeviceService = async () => {
-      // ARCHITECTURE FIX: Removed direct service calls - stores handle all service interactions
-      // Load initial data through store actions only
       try {
+        const wsService = serviceFactory.getWebSocketService();
+        if (!wsService) {
+          logger.error('WebSocket service not available');
+          return;
+        }
+
+        const deviceService = serviceFactory.createDeviceService(wsService);
+        setDeviceService(deviceService);
+
+        // Set up recording service
+        const recordingService = serviceFactory.createRecordingService(wsService);
+        setRecordingService(recordingService);
+
+        // Set up notification service for real-time updates
+        const notificationService = serviceFactory.createNotificationService(wsService);
+
+        // Subscribe to camera status updates
+        const unsubscribeCameraUpdates = notificationService.subscribe(
+          'camera_status_update',
+          (notification: JsonRpcNotification) => {
+            if (notification.params) {
+              handleCameraStatusUpdate(notification.params as unknown as Camera);
+            }
+          },
+        );
+
+        // Subscribe to recording status updates
+        const unsubscribeRecordingUpdates = notificationService.subscribe(
+          'recording_status_update',
+          (notification: JsonRpcNotification) => {
+            if (notification.params) {
+              handleRecordingStatusUpdate(notification.params as unknown as any);
+            }
+          },
+        );
+
+        // Subscribe to real-time events
+        await deviceService.subscribeToCameraEvents();
+
+        // Load initial data
         await Promise.all([getCameraList(), getStreams()]);
+
         logger.info('Camera page initialized successfully');
+
+        // Cleanup function
+        return () => {
+          unsubscribeCameraUpdates();
+          unsubscribeRecordingUpdates();
+        };
       } catch (error) {
         logger.error('Failed to initialize camera page', error as Record<string, unknown>);
       }
@@ -72,9 +116,10 @@ const CameraPage: React.FC = memo(() => {
     isAuthenticated,
     getCameraList,
     getStreams,
-    // ARCHITECTURE FIX: Removed service injection dependencies
+    setDeviceService,
     handleCameraStatusUpdate,
     handleRecordingStatusUpdate,
+    setRecordingService,
   ]);
 
   // Redirect to login if not authenticated
