@@ -19,7 +19,7 @@ import (
 
 // TestWebSocket_FileLifecycle_Complete_Integration tests complete file lifecycle
 func TestWebSocket_FileLifecycle_Complete_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 
 	// Test complete file lifecycle using testutils validation
 	err := asserter.AssertFileLifecycleWorkflow()
@@ -28,7 +28,7 @@ func TestWebSocket_FileLifecycle_Complete_Integration(t *testing.T) {
 
 // TestWebSocket_FileValidation_Comprehensive_Integration tests file validation using testutils
 func TestWebSocket_FileValidation_Comprehensive_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 
 	// Test snapshot validation using testutils
 	err := asserter.AssertSnapshotWorkflow()
@@ -42,7 +42,7 @@ func TestWebSocket_FileValidation_Comprehensive_Integration(t *testing.T) {
 // TestWebSocket_ConfigurationDrivenPaths_Integration tests configuration-driven path handling
 func TestWebSocket_ConfigurationDrivenPaths_Integration(t *testing.T) {
 	// Use testutils for comprehensive setup
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.helper.Cleanup()
 
 	// Test that paths are loaded from testutils, not hardcoded

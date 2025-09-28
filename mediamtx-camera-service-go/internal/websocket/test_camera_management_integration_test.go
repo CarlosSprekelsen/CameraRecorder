@@ -22,7 +22,8 @@ import (
 // TestWebSocket_CameraManagement_Complete_Integration validates complete camera management workflow
 func TestWebSocket_CameraManagement_Complete_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// CRITICAL: Progressive Readiness - try operations immediately, no waiting
 
@@ -36,7 +37,8 @@ func TestWebSocket_CameraManagement_Complete_Integration(t *testing.T) {
 // TestWebSocket_CameraDiscovery_Integration validates camera discovery functionality
 func TestWebSocket_CameraDiscovery_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// CRITICAL: Progressive Readiness - try operations immediately, no waiting
 
@@ -66,7 +68,8 @@ func TestWebSocket_CameraDiscovery_Integration(t *testing.T) {
 // TestWebSocket_CameraStatus_Integration validates camera status queries
 func TestWebSocket_CameraStatus_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// CRITICAL: Progressive Readiness - try operations immediately, no waiting
 
@@ -97,7 +100,8 @@ func TestWebSocket_CameraStatus_Integration(t *testing.T) {
 // TestWebSocket_CameraCapabilities_Integration validates camera capability detection
 func TestWebSocket_CameraCapabilities_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// CRITICAL: Progressive Readiness - try operations immediately, no waiting
 
@@ -128,7 +132,8 @@ func TestWebSocket_CameraCapabilities_Integration(t *testing.T) {
 // TestWebSocket_DeviceMapping_Integration validates device mapping functionality
 func TestWebSocket_DeviceMapping_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// CRITICAL: Progressive Readiness - try operations immediately, no waiting
 
@@ -163,7 +168,8 @@ func TestWebSocket_DeviceMapping_Integration(t *testing.T) {
 // TestWebSocket_CameraManagement_Performance validates camera management performance
 func TestWebSocket_CameraManagement_Performance(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// CRITICAL: Progressive Readiness - try operations immediately, no waiting
 
@@ -195,7 +201,8 @@ func TestWebSocket_CameraManagement_Performance(t *testing.T) {
 // TestWebSocket_CameraManagement_ErrorHandling validates error handling
 func TestWebSocket_CameraManagement_ErrorHandling(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// CRITICAL: Progressive Readiness - try operations immediately, no waiting
 

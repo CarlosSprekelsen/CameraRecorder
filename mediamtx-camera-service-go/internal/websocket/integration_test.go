@@ -34,7 +34,8 @@ import (
 // TestWebSocket_ProgressiveReadiness_Integration validates Progressive Readiness behavior
 func TestWebSocket_ProgressiveReadiness_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -46,7 +47,8 @@ func TestWebSocket_ProgressiveReadiness_Integration(t *testing.T) {
 // TestWebSocket_Authentication_Integration validates authentication workflow
 func TestWebSocket_Authentication_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test complete authentication workflow
 	err := asserter.AssertAuthenticationWorkflow()
@@ -58,7 +60,8 @@ func TestWebSocket_Authentication_Integration(t *testing.T) {
 // TestWebSocket_CameraManagement_Integration validates camera management operations
 func TestWebSocket_CameraManagement_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test camera management workflow
 	err := asserter.AssertCameraManagementWorkflow()
@@ -70,7 +73,8 @@ func TestWebSocket_CameraManagement_Integration(t *testing.T) {
 // TestWebSocket_Recording_Integration validates recording workflow
 func TestWebSocket_Recording_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test complete recording workflow
 	err := asserter.AssertRecordingWorkflow()
@@ -82,7 +86,8 @@ func TestWebSocket_Recording_Integration(t *testing.T) {
 // TestWebSocket_Snapshot_Integration validates snapshot workflow
 func TestWebSocket_Snapshot_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test snapshot workflow
 	err := asserter.AssertSnapshotWorkflow()
@@ -94,7 +99,8 @@ func TestWebSocket_Snapshot_Integration(t *testing.T) {
 // TestWebSocket_ErrorRecovery_Integration validates error handling and recovery
 func TestWebSocket_ErrorRecovery_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test error recovery workflow
 	err := asserter.AssertErrorRecoveryWorkflow()
@@ -106,7 +112,8 @@ func TestWebSocket_ErrorRecovery_Integration(t *testing.T) {
 // TestWebSocket_Performance_Integration validates performance requirements
 func TestWebSocket_Performance_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test performance requirements
 	err := asserter.AssertPerformanceRequirements()
@@ -118,7 +125,8 @@ func TestWebSocket_Performance_Integration(t *testing.T) {
 // TestWebSocket_CompleteWorkflow_Integration validates complete end-to-end workflow
 func TestWebSocket_CompleteWorkflow_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test complete workflow
 	err := asserter.AssertCompleteWorkflow()
@@ -130,7 +138,8 @@ func TestWebSocket_CompleteWorkflow_Integration(t *testing.T) {
 // TestWebSocket_ConcurrentClients_Integration validates concurrent client support
 func TestWebSocket_ConcurrentClients_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test concurrent clients
 	numClients := 3
@@ -188,7 +197,8 @@ func TestWebSocket_ConcurrentClients_Integration(t *testing.T) {
 // TestWebSocket_SessionManagement_Integration validates session management
 func TestWebSocket_SessionManagement_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test session management workflow
 	client := NewWebSocketTestClient(t, asserter.helper.GetServerURL())
@@ -223,7 +233,8 @@ func TestWebSocket_SessionManagement_Integration(t *testing.T) {
 // TestWebSocket_OpenRPCCompliance_Integration validates OpenRPC API compliance
 func TestWebSocket_OpenRPCCompliance_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test OpenRPC API compliance
 	client := NewWebSocketTestClient(t, asserter.helper.GetServerURL())

@@ -40,7 +40,7 @@ func TestSnapshot_FileLifecycle_Complete_Integration(t *testing.T) {
 	// Use testutils for comprehensive setup
 	dvh := testutils.NewDataValidationHelper(t)
 
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 
 	// Test complete snapshot file lifecycle using testutils validation
 	err := asserter.AssertFileLifecycleWorkflow()
@@ -55,7 +55,7 @@ func TestSnapshot_FileValidation_Comprehensive_Integration(t *testing.T) {
 	// Use testutils for comprehensive setup
 	dvh := testutils.NewDataValidationHelper(t)
 
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 
 	// Test snapshot validation using testutils
 	err := asserter.AssertSnapshotWorkflow()
@@ -69,7 +69,8 @@ func TestSnapshot_FileValidation_Comprehensive_Integration(t *testing.T) {
 // architecture performance targets with real components
 func TestSnapshot_MultiTierPerformance_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -86,7 +87,8 @@ func TestSnapshot_MultiTierPerformance_Integration(t *testing.T) {
 // performance (<2s) for USB devices
 func TestSnapshot_Tier0DirectV4L2_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -103,7 +105,8 @@ func TestSnapshot_Tier0DirectV4L2_Integration(t *testing.T) {
 // performance (<200ms) when device is accessible
 func TestSnapshot_Tier1FFmpegDirect_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -120,7 +123,8 @@ func TestSnapshot_Tier1FFmpegDirect_Integration(t *testing.T) {
 // performance (<300ms) when stream is already active
 func TestSnapshot_Tier2RTSPReuse_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -137,7 +141,8 @@ func TestSnapshot_Tier2RTSPReuse_Integration(t *testing.T) {
 // performance (<500ms) when creating new MediaMTX path
 func TestSnapshot_Tier3StreamActivation_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -157,7 +162,8 @@ func TestSnapshot_Tier3StreamActivation_Integration(t *testing.T) {
 // TestSnapshot_BasicWorkflow_Integration validates basic snapshot capture workflow
 func TestSnapshot_BasicWorkflow_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -173,7 +179,8 @@ func TestSnapshot_BasicWorkflow_Integration(t *testing.T) {
 // TestSnapshot_CustomFilename_Integration validates snapshot capture with custom filename
 func TestSnapshot_CustomFilename_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -189,7 +196,8 @@ func TestSnapshot_CustomFilename_Integration(t *testing.T) {
 // TestSnapshot_ConcurrentCaptures_Integration validates concurrent snapshot captures
 func TestSnapshot_ConcurrentCaptures_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -209,7 +217,8 @@ func TestSnapshot_ConcurrentCaptures_Integration(t *testing.T) {
 // TestSnapshot_FileManagement_Integration validates snapshot file management operations
 func TestSnapshot_FileManagement_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -225,7 +234,8 @@ func TestSnapshot_FileManagement_Integration(t *testing.T) {
 // TestSnapshot_FileCleanup_Integration validates snapshot file cleanup operations
 func TestSnapshot_FileCleanup_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -241,7 +251,8 @@ func TestSnapshot_FileCleanup_Integration(t *testing.T) {
 // TestSnapshot_StorageInfo_Integration validates snapshot storage information
 func TestSnapshot_StorageInfo_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -261,7 +272,8 @@ func TestSnapshot_StorageInfo_Integration(t *testing.T) {
 // TestSnapshot_InvalidDevice_Integration validates error handling for invalid devices
 func TestSnapshot_InvalidDevice_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -277,7 +289,8 @@ func TestSnapshot_InvalidDevice_Integration(t *testing.T) {
 // TestSnapshot_UnauthorizedAccess_Integration validates authorization for snapshot operations
 func TestSnapshot_UnauthorizedAccess_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -293,7 +306,8 @@ func TestSnapshot_UnauthorizedAccess_Integration(t *testing.T) {
 // TestSnapshot_NetworkErrorRecovery_Integration validates network error recovery
 func TestSnapshot_NetworkErrorRecovery_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -313,7 +327,8 @@ func TestSnapshot_NetworkErrorRecovery_Integration(t *testing.T) {
 // TestSnapshot_PerformanceBenchmarks_Integration validates snapshot performance benchmarks
 func TestSnapshot_PerformanceBenchmarks_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()
@@ -329,7 +344,8 @@ func TestSnapshot_PerformanceBenchmarks_Integration(t *testing.T) {
 // TestSnapshot_LoadTesting_Integration validates snapshot operations under load
 func TestSnapshot_LoadTesting_Integration(t *testing.T) {
 	// Create integration asserter with real components
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test Progressive Readiness: immediate connection acceptance
 	err := asserter.AssertProgressiveReadiness()

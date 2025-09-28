@@ -35,7 +35,8 @@ import (
 
 // TestEventSystem_SubscribeEvents_Integration validates event subscription functionality
 func TestEventSystem_SubscribeEvents_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Connect and authenticate
 	err := asserter.client.Connect()
@@ -77,7 +78,8 @@ func TestEventSystem_SubscribeEvents_Integration(t *testing.T) {
 
 // TestEventSystem_UnsubscribeEvents_Integration validates event unsubscription functionality
 func TestEventSystem_UnsubscribeEvents_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Connect and authenticate
 	err := asserter.client.Connect()
@@ -112,7 +114,8 @@ func TestEventSystem_UnsubscribeEvents_Integration(t *testing.T) {
 
 // TestEventSystem_GetSubscriptionStats_Integration validates subscription statistics functionality
 func TestEventSystem_GetSubscriptionStats_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Connect and authenticate
 	err := asserter.client.Connect()
@@ -153,7 +156,8 @@ func TestEventSystem_GetSubscriptionStats_Integration(t *testing.T) {
 
 // TestEventSystem_EndToEndEventDelivery_Integration validates complete event delivery pipeline
 func TestEventSystem_EndToEndEventDelivery_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Connect and authenticate
 	err := asserter.client.Connect()
@@ -187,7 +191,8 @@ func TestEventSystem_EndToEndEventDelivery_Integration(t *testing.T) {
 
 // TestEventSystem_InvalidTopics_Integration validates error handling for invalid event topics
 func TestEventSystem_InvalidTopics_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Connect and authenticate
 	err := asserter.client.Connect()
@@ -220,7 +225,8 @@ func TestEventSystem_InvalidTopics_Integration(t *testing.T) {
 // TestEventSystem_ProgressiveReadiness_Integration validates that event system
 // is properly integrated with Progressive Readiness pattern
 func TestEventSystem_ProgressiveReadiness_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Test Progressive Readiness: event system should be available immediately
 	serverURL := asserter.helper.GetServerURL()
@@ -255,7 +261,8 @@ func TestEventSystem_ProgressiveReadiness_Integration(t *testing.T) {
 
 // TestEventSystem_MultipleClients_Integration validates event system with multiple clients
 func TestEventSystem_MultipleClients_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
+	defer asserter.Cleanup()
 
 	// Connect and authenticate first client
 	err := asserter.client.Connect()

@@ -35,7 +35,7 @@ import (
 // TestSessionManagement_SessionPersistence_Integration validates session
 // persistence across operations
 func TestSessionManagement_SessionPersistence_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -50,7 +50,7 @@ func TestSessionManagement_SessionPersistence_Integration(t *testing.T) {
 // TestSessionManagement_SessionState_Integration validates session state
 // management across operations
 func TestSessionManagement_SessionState_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -69,7 +69,7 @@ func TestSessionManagement_SessionState_Integration(t *testing.T) {
 // TestSessionManagement_SessionCleanup_Integration validates session
 // cleanup on disconnect
 func TestSessionManagement_SessionCleanup_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -84,7 +84,7 @@ func TestSessionManagement_SessionCleanup_Integration(t *testing.T) {
 // TestSessionManagement_ResourceCleanup_Integration validates resource
 // cleanup on session termination
 func TestSessionManagement_ResourceCleanup_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -103,7 +103,7 @@ func TestSessionManagement_ResourceCleanup_Integration(t *testing.T) {
 // TestSessionManagement_ConcurrentSessions_Integration validates concurrent
 // session handling
 func TestSessionManagement_ConcurrentSessions_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -118,7 +118,7 @@ func TestSessionManagement_ConcurrentSessions_Integration(t *testing.T) {
 // TestSessionManagement_SessionIsolation_Integration validates session
 // isolation between concurrent sessions
 func TestSessionManagement_SessionIsolation_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -137,7 +137,7 @@ func TestSessionManagement_SessionIsolation_Integration(t *testing.T) {
 // TestSessionManagement_SessionTimeout_Integration validates session
 // timeout handling
 func TestSessionManagement_SessionTimeout_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -152,7 +152,7 @@ func TestSessionManagement_SessionTimeout_Integration(t *testing.T) {
 // TestSessionManagement_IdleTimeout_Integration validates idle timeout
 // handling for inactive sessions
 func TestSessionManagement_IdleTimeout_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -171,7 +171,7 @@ func TestSessionManagement_IdleTimeout_Integration(t *testing.T) {
 // TestSessionManagement_SessionRecovery_Integration validates session
 // recovery after network issues
 func TestSessionManagement_SessionRecovery_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -186,7 +186,7 @@ func TestSessionManagement_SessionRecovery_Integration(t *testing.T) {
 // TestSessionManagement_Reconnection_Integration validates reconnection
 // handling for dropped sessions
 func TestSessionManagement_Reconnection_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -205,7 +205,7 @@ func TestSessionManagement_Reconnection_Integration(t *testing.T) {
 // TestSessionManagement_SessionSecurity_Integration validates session
 // security and authentication
 func TestSessionManagement_SessionSecurity_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -220,7 +220,7 @@ func TestSessionManagement_SessionSecurity_Integration(t *testing.T) {
 // TestSessionManagement_AuthenticationPersistence_Integration validates
 // authentication persistence across session operations
 func TestSessionManagement_AuthenticationPersistence_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -239,7 +239,7 @@ func TestSessionManagement_AuthenticationPersistence_Integration(t *testing.T) {
 // TestSessionManagement_ComprehensiveSession_Integration validates
 // comprehensive session management scenarios
 func TestSessionManagement_ComprehensiveSession_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -254,7 +254,7 @@ func TestSessionManagement_ComprehensiveSession_Integration(t *testing.T) {
 // TestSessionManagement_SessionLifecycle_Integration validates complete
 // session lifecycle management
 func TestSessionManagement_SessionLifecycle_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()

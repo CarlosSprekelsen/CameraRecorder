@@ -35,7 +35,7 @@ import (
 // TestPerformance_ConcurrentClients_Integration validates performance
 // with multiple concurrent WebSocket clients
 func TestPerformance_ConcurrentClients_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -50,7 +50,7 @@ func TestPerformance_ConcurrentClients_Integration(t *testing.T) {
 // TestPerformance_ConcurrentOperationsAdvanced_Integration validates performance
 // with concurrent operations from multiple clients
 func TestPerformance_ConcurrentOperationsAdvanced_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -69,7 +69,7 @@ func TestPerformance_ConcurrentOperationsAdvanced_Integration(t *testing.T) {
 // TestPerformance_LoadTesting_Integration validates system performance
 // under high load conditions
 func TestPerformance_LoadTesting_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -84,7 +84,7 @@ func TestPerformance_LoadTesting_Integration(t *testing.T) {
 // TestPerformance_StressTesting_Integration validates system stability
 // under stress conditions
 func TestPerformance_StressTesting_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -103,7 +103,7 @@ func TestPerformance_StressTesting_Integration(t *testing.T) {
 // TestPerformance_MemoryUsage_Integration validates memory usage
 // under various load conditions
 func TestPerformance_MemoryUsage_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -118,7 +118,7 @@ func TestPerformance_MemoryUsage_Integration(t *testing.T) {
 // TestPerformance_MemoryLeaks_Integration validates absence of memory leaks
 // during extended operations
 func TestPerformance_MemoryLeaks_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -137,7 +137,7 @@ func TestPerformance_MemoryLeaks_Integration(t *testing.T) {
 // TestPerformance_ResponseTime_Integration validates response time
 // requirements for various operations
 func TestPerformance_ResponseTime_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -152,7 +152,7 @@ func TestPerformance_ResponseTime_Integration(t *testing.T) {
 // TestPerformance_Throughput_Integration validates throughput
 // requirements for high-volume operations
 func TestPerformance_Throughput_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -171,7 +171,7 @@ func TestPerformance_Throughput_Integration(t *testing.T) {
 // TestPerformance_Scalability_Integration validates system scalability
 // with increasing load
 func TestPerformance_Scalability_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -186,7 +186,7 @@ func TestPerformance_Scalability_Integration(t *testing.T) {
 // TestPerformance_ResourceUtilization_Integration validates resource
 // utilization under various load conditions
 func TestPerformance_ResourceUtilization_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -205,7 +205,7 @@ func TestPerformance_ResourceUtilization_Integration(t *testing.T) {
 // TestPerformance_Regression_Integration validates performance
 // regression testing
 func TestPerformance_Regression_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
@@ -220,7 +220,7 @@ func TestPerformance_Regression_Integration(t *testing.T) {
 // TestPerformance_Baseline_Integration establishes performance baselines
 // for future regression testing
 func TestPerformance_Baseline_Integration(t *testing.T) {
-	asserter := GetSharedWebSocketAsserter(t)
+	asserter := NewWebSocketIntegrationAsserter(t)
 	defer asserter.EnhancedCleanup()
 
 	err := asserter.AssertProgressiveReadiness()
