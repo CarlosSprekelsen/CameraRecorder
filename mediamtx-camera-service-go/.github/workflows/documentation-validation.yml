@@ -1,0 +1,163 @@
+name: Documentation Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'docs/**'
+      - 'internal/websocket/**'
+      - 'scripts/validate-documentation.sh'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'docs/**'
+      - 'internal/websocket/**'
+      - 'scripts/validate-documentation.sh'
+
+jobs:
+  validate-documentation:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+        
+    - name: Install dependencies
+      run: |
+        go mod download
+        go mod tidy
+        
+    - name: Run documentation validation
+      run: |
+        chmod +x scripts/validate-documentation.sh
+        ./scripts/validate-documentation.sh
+        
+    - name: Upload validation report
+      if: always()
+      uses: actions/upload-artifact@v3
+      with:
+        name: documentation-validation-report
+        path: |
+          /tmp/implemented_methods.txt
+          /tmp/documented_methods.txt
+          /tmp/missing_docs.txt
+          /tmp/extra_docs.txt
+          
+    - name: Comment on PR
+      if: failure() && github.event_name == 'pull_request'
+      uses: actions/github-script@v6
+      with:
+        script: |
+          const fs = require('fs');
+          let report = '## 📋 Documentation Validation Failed\n\n';
+          
+          try {
+            const missing = fs.readFileSync('/tmp/missing_docs.txt', 'utf8');
+            if (missing.trim()) {
+              report += '### ❌ Missing Documentation\n\n';
+              report += 'The following methods are implemented but not documented:\n\n';
+              report += '```\n' + missing + '\n```\n\n';
+            }
+          } catch (e) {
+            // File might not exist
+          }
+          
+          try {
+            const extra = fs.readFileSync('/tmp/extra_docs.txt', 'utf8');
+            if (extra.trim()) {
+              report += '### ⚠️ Extra Documentation\n\n';
+              report += 'The following methods are documented but not implemented:\n\n';
+              report += '```\n' + extra + '\n```\n\n';
+            }
+          } catch (e) {
+            // File might not exist
+          }
+          
+          report += '### 🔧 Action Required\n\n';
+          report += '1. **Document missing methods** - Add documentation for all implemented methods\n';
+          report += '2. **Remove extra documentation** - Remove documentation for non-existent methods\n';
+          report += '3. **Update documentation** - Ensure documentation matches implementation\n\n';
+          report += 'See the [Documentation Guide](docs/development/) for more information.';
+          
+          github.rest.issues.createComment({
+            issue_number: context.issue.number,
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            body: report
+          });
+
+  validate-api-spec:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Validate OpenAPI spec
+      run: |
+        # Check if OpenAPI spec exists and is valid
+        if [ -f "docs/api/mediamtx_camera_service_openrpc.json" ]; then
+          echo "✅ OpenAPI spec found"
+          # Add JSON validation here if needed
+        else
+          echo "❌ OpenAPI spec missing"
+          exit 1
+        fi
+        
+    - name: Validate API documentation structure
+      run: |
+        # Check for required sections in API documentation
+        required_sections=(
+          "## JSON-RPC 2.0 Compliance"
+          "## Connection"
+          "## Authentication"
+          "## Core Methods"
+          "## Error Response Format"
+        )
+        
+        for section in "${required_sections[@]}"; do
+          if ! grep -q "$section" docs/api/json_rpc_methods.md; then
+            echo "❌ Missing required section: $section"
+            exit 1
+          fi
+        done
+        
+        echo "✅ API documentation structure is valid"
+
+  check-documentation-completeness:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Check method documentation completeness
+      run: |
+        # Extract documented methods
+        grep -n "### " docs/api/json_rpc_methods.md | \
+          grep -v "Version\|Compatibility\|Indicators\|Process\|Flow\|Token\|Generation\|Levels\|Matrix\|Guarantees\|Methods" | \
+          sed 's/.*### //' > /tmp/documented_methods.txt
+        
+        # Check each method for completeness
+        incomplete_methods=0
+        while IFS= read -r method; do
+          if grep -A 20 "### $method" docs/api/json_rpc_methods.md | \
+             grep -q "#### Parameters\|#### Response\|#### Example"; then
+            echo "✅ Method $method documentation is complete"
+          else
+            echo "❌ Method $method documentation is incomplete"
+            incomplete_methods=1
+          fi
+        done < /tmp/documented_methods.txt
+        
+        if [ $incomplete_methods -eq 1 ]; then
+          echo "❌ Some method documentation is incomplete"
+          exit 1
+        else
+          echo "✅ All method documentation is complete"
+        fi

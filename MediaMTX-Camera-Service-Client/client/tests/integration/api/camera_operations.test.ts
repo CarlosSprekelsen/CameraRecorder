@@ -18,6 +18,7 @@
 import { TestAPIClient } from '../../utils/api-client';
 import { AuthHelper } from '../../utils/auth-helper';
 import { APIResponseValidator } from '../../utils/validators';
+import { CameraIdHelper } from '../../utils/test-helpers';
 import { loadTestEnvironment } from '../../utils/test-helpers';
 
 describe('Camera Operations Integration Tests', () => {
@@ -54,47 +55,58 @@ describe('Camera Operations Integration Tests', () => {
 
   test('REQ-INT-002: Get camera list with authentication', async () => {
     // API client is already authenticated in loadTestEnvironment()
-    const result = await apiClient.call('get_camera_list');
+    const result = await apiClient.call('get_camera_list', {});
     
     expect(APIResponseValidator.validateCameraListResult(result)).toBe(true);
     expect(Array.isArray(result.cameras)).toBe(true);
     expect(typeof result.total).toBe('number');
     expect(typeof result.connected).toBe('number');
+    
+    // Validate camera IDs follow the correct pattern
+    if (result.cameras && result.cameras.length > 0) {
+      result.cameras.forEach((camera: any) => {
+        expect(APIResponseValidator.validateCameraDeviceId(camera.device)).toBe(true);
+      });
+    }
   });
 
   test('REQ-INT-003: Get camera status for specific device', async () => {
     // API client is already authenticated in loadTestEnvironment()
-    const result = await apiClient.call('get_camera_status', { device: 'camera0' });
+    const cameraId = CameraIdHelper.getFirstAvailableCameraId();
+    const result = await apiClient.call('get_camera_status', { device: cameraId });
     
     expect(APIResponseValidator.validateCamera(result)).toBe(true);
-    expect(result.device).toBe('camera0');
+    expect(result.device).toBe(cameraId);
     expect(['CONNECTED', 'DISCONNECTED', 'ERROR']).toContain(result.status);
   });
 
   test('REQ-INT-004: Start recording with valid parameters', async () => {
     // API client is already authenticated in loadTestEnvironment()
-    const result = await apiClient.call('start_recording', { device: 'camera0', duration: 60, format: 'mp4' });
+    const cameraId = CameraIdHelper.getFirstAvailableCameraId();
+    const result = await apiClient.call('start_recording', { device: cameraId, duration: 60, format: 'mp4' });
     
     expect(APIResponseValidator.validateRecordingStartResult(result)).toBe(true);
-    expect(result.device).toBe('camera0');
+    expect(result.device).toBe(cameraId);
     expect(['RECORDING', 'STARTING', 'STOPPING', 'PAUSED', 'ERROR', 'FAILED']).toContain(result.status);
   });
 
   test('REQ-INT-005: Stop recording for active device', async () => {
     // API client is already authenticated in loadTestEnvironment()
-    const result = await apiClient.call('stop_recording', { device: 'camera0' });
+    const cameraId = CameraIdHelper.getFirstAvailableCameraId();
+    const result = await apiClient.call('stop_recording', { device: cameraId });
     
     expect(APIResponseValidator.validateRecordingStopResult(result)).toBe(true);
-    expect(result.device).toBe('camera0');
+    expect(result.device).toBe(cameraId);
     expect(['STOPPED', 'FAILED']).toContain(result.status);
   });
 
   test('REQ-INT-006: Take snapshot with valid device', async () => {
     // API client is already authenticated in loadTestEnvironment()
-    const result = await apiClient.call('take_snapshot', { device: 'camera0' });
+    const cameraId = CameraIdHelper.getFirstAvailableCameraId();
+    const result = await apiClient.call('take_snapshot', { device: cameraId });
     
     expect(APIResponseValidator.validateSnapshotInfo(result)).toBe(true);
-    expect(result.device).toBe('camera0');
+    expect(result.device).toBe(cameraId);
     expect(['SUCCESS', 'FAILED']).toContain(result.status);
   });
 

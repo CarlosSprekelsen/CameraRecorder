@@ -44,6 +44,40 @@ import {
  */
 export class APIResponseValidator {
   // ============================================================================
+  // PARAMETER VALIDATION METHODS
+  // ============================================================================
+
+  /**
+   * Validates camera device ID format according to server documentation
+   * Pattern: camera[0-9]+ (e.g., camera0, camera1, camera10)
+   */
+  static validateCameraDeviceId(deviceId: string): boolean {
+    if (!deviceId || typeof deviceId !== 'string') {
+      return false;
+    }
+    
+    // Server documentation pattern: camera[0-9]+
+    const cameraIdPattern = /^camera\d+$/;
+    return cameraIdPattern.test(deviceId);
+  }
+
+  /**
+   * Validates parameter structure for API calls
+   * Ensures parameters are objects, not arrays
+   */
+  static validateParameterStructure(params: any): boolean {
+    if (params === null || params === undefined) {
+      return true; // Optional parameters are valid
+    }
+    
+    // Parameters must be objects, not arrays
+    if (Array.isArray(params)) {
+      return false;
+    }
+    
+    return typeof params === 'object';
+  }
+  // ============================================================================
   // CORE VALIDATION METHODS
   // ============================================================================
 
@@ -124,12 +158,17 @@ export class APIResponseValidator {
 
   /**
    * Validate Streams object - matches official RPC spec exactly
+   * Accepts empty object {} when no streams are active
    */
   static validateStreams(streams: unknown): boolean {
     if (typeof streams !== 'object' || streams === null) return false;
     
     const obj = streams as Record<string, unknown>;
     
+    // Empty streams object is valid (no active streams)
+    if (Object.keys(obj).length === 0) return true;
+    
+    // If streams object has content, validate the structure
     return (
       typeof obj.rtsp === 'string' &&
       typeof obj.hls === 'string' &&

@@ -51,7 +51,7 @@ describe('Recording Workflow E2E Tests', () => {
     expect(camera.status).toBe('CONNECTED');
     
     // Step 2: Start recording
-    const startResult = await apiClient.call('start_recording', [camera.device, 60, 'mp4']);
+    const startResult = await apiClient.call('start_recording', { device: camera.device, duration: 60, format: 'mp4' });
     expect(APIResponseValidator.validateRecordingStartResult(startResult)).toBe(true);
     expect(startResult.device).toBe(camera.device);
     expect(['RECORDING', 'STARTING', 'STOPPING', 'PAUSED', 'ERROR', 'FAILED']).toContain(startResult.status);
@@ -64,18 +64,18 @@ describe('Recording Workflow E2E Tests', () => {
     );
     
     // Step 4: Monitor recording status
-    const statusResult = await apiClient.call('get_camera_status', [camera.device]);
+    const statusResult = await apiClient.call('get_camera_status', { device: camera.device });
     expect(APIResponseValidator.validateCamera(statusResult)).toBe(true);
     expect(statusResult.device).toBe(camera.device);
     
     // Step 5: Stop recording
-    const stopResult = await apiClient.call('stop_recording', [camera.device]);
+    const stopResult = await apiClient.call('stop_recording', { device: camera.device });
     expect(APIResponseValidator.validateRecordingStopResult(stopResult)).toBe(true);
     expect(stopResult.device).toBe(camera.device);
     expect(['STOPPED', 'FAILED']).toContain(stopResult.status);
     
     // Step 6: Verify recording file was created
-    const recordings = await apiClient.call('list_recordings', [10, 0]);
+    const recordings = await apiClient.call('list_recordings', { limit: 10, offset: 0 });
     expect(APIResponseValidator.validateFileListResult(recordings)).toBe(true);
     expect(recordings.files.length).toBeGreaterThan(0);
     
@@ -99,13 +99,13 @@ describe('Recording Workflow E2E Tests', () => {
     expect(camera.status).toBe('CONNECTED');
     
     // Step 2: Take snapshot
-    const snapshotResult = await apiClient.call('take_snapshot', [camera.device]);
+    const snapshotResult = await apiClient.call('take_snapshot', { device: camera.device });
     expect(APIResponseValidator.validateSnapshotInfo(snapshotResult)).toBe(true);
     expect(snapshotResult.device).toBe(camera.device);
     expect(['SUCCESS', 'FAILED']).toContain(snapshotResult.status);
     
     // Step 3: Verify snapshot file was created
-    const snapshots = await apiClient.call('list_snapshots', [10, 0]);
+    const snapshots = await apiClient.call('list_snapshots', { limit: 10, offset: 0 });
     expect(APIResponseValidator.validateFileListResult(snapshots)).toBe(true);
     expect(snapshots.files.length).toBeGreaterThan(0);
     
@@ -122,25 +122,25 @@ describe('Recording Workflow E2E Tests', () => {
     await apiClient.authenticate(token);
     
     // Step 1: List recordings
-    const recordings = await apiClient.call('list_recordings', [50, 0]);
+    const recordings = await apiClient.call('list_recordings', { limit: 50, offset: 0 });
     expect(APIResponseValidator.validateFileListResult(recordings)).toBe(true);
     
     if (recordings.files.length > 0) {
       const recording = recordings.files[0];
       
       // Step 2: Get recording info
-      const recordingInfo = await apiClient.call('get_recording_info', [recording.filename]);
+      const recordingInfo = await apiClient.call('get_recording_info', { filename: recording.filename });
       expect(recordingInfo.filename).toBe(recording.filename);
       expect(typeof recordingInfo.file_size).toBe('number');
       expect(typeof recordingInfo.download_url).toBe('string');
       
       // Step 3: Delete recording
-      const deleteResult = await apiClient.call('delete_recording', [recording.filename]);
+      const deleteResult = await apiClient.call('delete_recording', { filename: recording.filename });
       expect(deleteResult.filename).toBe(recording.filename);
       expect(deleteResult.deleted).toBe(true);
       
       // Step 4: Verify deletion
-      const updatedRecordings = await apiClient.call('list_recordings', [50, 0]);
+      const updatedRecordings = await apiClient.call('list_recordings', { limit: 50, offset: 0 });
       const deletedFile = updatedRecordings.files.find(file => file.filename === recording.filename);
       expect(deletedFile).toBeUndefined();
     }
@@ -210,7 +210,7 @@ describe('Recording Workflow E2E Tests', () => {
     await apiClient.authenticate(token);
     
     // Step 1: Attempt operation with invalid device
-    await expect(apiClient.call('get_camera_status', ['invalid_device'])).rejects.toThrow();
+    await expect(apiClient.call('get_camera_status', { device: 'invalid_device' })).rejects.toThrow();
     
     // Step 2: Verify system is still operational
     const status = await apiClient.call('get_status');

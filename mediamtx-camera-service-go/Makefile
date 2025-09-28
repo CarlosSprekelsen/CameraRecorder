@@ -1,130 +1,203 @@
-# MediaMTX Camera Service - Go Implementation Makefile
+# MediaMTX Camera Service Makefile
+# Provides convenient commands for development and documentation
 
-.PHONY: build test run clean lint help
-
-# Build variables
-BINARY_NAME=mediamtx-camera-service-go
-BUILD_DIR=build
-MAIN_PATH=cmd/server/main.go
-
-# Version management - automatic extraction from git or environment
-VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-BUILD_DATE ?= $(shell date -u '+%Y-%m-%d_%H:%M:%S')
-GIT_COMMIT ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo "unknown")
-
-# Build flags for version injection
-LDFLAGS = -X github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx.Version=$(VERSION) \
-          -X github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx.BuildDate=$(BUILD_DATE) \
-          -X github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx.GitCommit=$(GIT_COMMIT)
+.PHONY: help build test clean docs-validate docs-audit docs-generate docs-serve
 
 # Default target
-all: build
+help:
+	@echo "MediaMTX Camera Service - Available Commands"
+	@echo "============================================="
+	@echo ""
+	@echo "Development:"
+	@echo "  build          - Build the camera service"
+	@echo "  test           - Run all tests"
+	@echo "  test-coverage  - Run tests with coverage report"
+	@echo "  clean          - Clean build artifacts"
+	@echo ""
+	@echo "Documentation:"
+	@echo "  docs-validate  - Validate documentation against implementation"
+	@echo "  docs-audit     - Run comprehensive documentation audit"
+	@echo "  docs-generate  - Generate API documentation from code"
+	@echo "  docs-serve     - Serve documentation locally"
+	@echo ""
+	@echo "Quality Assurance:"
+	@echo "  lint           - Run code linting"
+	@echo "  format         - Format code"
+	@echo "  security       - Run security checks"
+	@echo ""
+	@echo "Deployment:"
+	@echo "  install        - Install the service"
+	@echo "  uninstall      - Uninstall the service"
+	@echo "  restart        - Restart the service"
 
-# Build the application
+# Build the camera service
 build:
-	@echo "Building $(BINARY_NAME) version $(VERSION)..."
-	@mkdir -p $(BUILD_DIR)
-	go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_PATH)
-	@echo "Build complete: $(BUILD_DIR)/$(BINARY_NAME) (version $(VERSION))"
+	@echo "🔨 Building camera service..."
+	go build -o camera-service ./cmd/camera-service
+	@echo "✅ Build completed"
 
-# Run the application
-run:
-	@echo "Running $(BINARY_NAME)..."
-	go run $(MAIN_PATH)
-
-# Run tests
+# Run all tests
 test:
-	@echo "Running tests..."
+	@echo "🧪 Running tests..."
 	go test -v ./...
+	@echo "✅ Tests completed"
 
 # Run tests with coverage
 test-coverage:
-	@echo "Running tests with coverage..."
+	@echo "🧪 Running tests with coverage..."
 	go test -v -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
-	@echo "Coverage report generated: coverage.html"
+	@echo "✅ Coverage report generated: coverage.html"
 
 # Clean build artifacts
 clean:
-	@echo "Cleaning build artifacts..."
-	rm -rf $(BUILD_DIR)
+	@echo "🧹 Cleaning build artifacts..."
+	rm -f camera-service
 	rm -f coverage.out coverage.html
-	go clean
+	rm -rf /tmp/implemented_methods.txt
+	rm -rf /tmp/documented_methods.txt
+	rm -rf /tmp/missing_docs.txt
+	rm -rf /tmp/extra_docs.txt
+	@echo "✅ Clean completed"
 
-# Lint the code
+# Validate documentation
+docs-validate:
+	@echo "📚 Validating documentation..."
+	@chmod +x scripts/validate-documentation.sh
+	@./scripts/validate-documentation.sh
+	@echo "✅ Documentation validation completed"
+
+# Run comprehensive documentation audit
+docs-audit:
+	@echo "📊 Running documentation audit..."
+	@echo "📋 Implementation vs Documentation Audit"
+	@echo "======================================"
+	@chmod +x scripts/validate-documentation.sh
+	@./scripts/validate-documentation.sh
+	@echo ""
+	@echo "📈 Documentation Coverage Report"
+	@echo "==============================="
+	@if [ -f "/tmp/implemented_methods.txt" ]; then \
+		echo "Implemented methods: $$(wc -l < /tmp/implemented_methods.txt)"; \
+	fi
+	@if [ -f "/tmp/documented_methods.txt" ]; then \
+		echo "Documented methods: $$(wc -l < /tmp/documented_methods.txt)"; \
+	fi
+	@if [ -f "/tmp/missing_docs.txt" ]; then \
+		echo "Missing documentation: $$(wc -l < /tmp/missing_docs.txt)"; \
+		if [ -s "/tmp/missing_docs.txt" ]; then \
+			echo ""; \
+			echo "Missing methods:"; \
+			cat /tmp/missing_docs.txt | sed 's/^/  - /'; \
+		fi; \
+	fi
+	@if [ -f "/tmp/extra_docs.txt" ]; then \
+		echo "Extra documentation: $$(wc -l < /tmp/extra_docs.txt)"; \
+		if [ -s "/tmp/extra_docs.txt" ]; then \
+			echo ""; \
+			echo "Extra methods:"; \
+			cat /tmp/extra_docs.txt | sed 's/^/  - /'; \
+		fi; \
+	fi
+
+# Generate API documentation from code
+docs-generate:
+	@echo "📝 Generating API documentation from code..."
+	@echo "Extracting methods from implementation..."
+	@grep -r "Method.*func" ./internal/websocket/ | \
+		grep -v test | \
+		grep -o '"[^"]*"' | \
+		sed 's/"//g' | \
+		sort | uniq > /tmp/generated_methods.txt
+	@echo "Generated methods list: /tmp/generated_methods.txt"
+	@echo "✅ API documentation generation completed"
+
+# Serve documentation locally
+docs-serve:
+	@echo "🌐 Serving documentation locally..."
+	@if command -v python3 >/dev/null 2>&1; then \
+		python3 -m http.server 8080 --directory docs/; \
+	elif command -v python >/dev/null 2>&1; then \
+		python -m SimpleHTTPServer 8080; \
+	else \
+		echo "❌ Python not found. Please install Python to serve documentation."; \
+		exit 1; \
+	fi
+
+# Run code linting
 lint:
-	@echo "Running linter..."
-	golangci-lint run
-
-# Install dependencies
-deps:
-	@echo "Installing dependencies..."
-	go mod download
-	go mod tidy
+	@echo "🔍 Running code linting..."
+	@if command -v golangci-lint >/dev/null 2>&1; then \
+		golangci-lint run; \
+	else \
+		echo "⚠️  golangci-lint not found. Installing..."
+		go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+		golangci-lint run; \
+	fi
+	@echo "✅ Linting completed"
 
 # Format code
-fmt:
-	@echo "Formatting code..."
+format:
+	@echo "🎨 Formatting code..."
 	go fmt ./...
+	@echo "✅ Code formatting completed"
 
-# Vet code
-vet:
-	@echo "Vetting code..."
-	go vet ./...
+# Run security checks
+security:
+	@echo "🔒 Running security checks..."
+	@if command -v gosec >/dev/null 2>&1; then \
+		gosec ./...; \
+	else \
+		echo "⚠️  gosec not found. Installing..."
+		go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+		gosec ./...; \
+	fi
+	@echo "✅ Security checks completed"
 
-# Generate documentation
-docs:
-	@echo "Generating documentation..."
-	godoc -http=:6060
-
-# Build for production (optimized)
-build-prod:
-	@echo "Building for production version $(VERSION)..."
-	@mkdir -p $(BUILD_DIR)
-	CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME) $(MAIN_PATH)
-	@echo "Production build complete: $(BUILD_DIR)/$(BINARY_NAME) (version $(VERSION))"
-
-# Build for different platforms
-build-linux:
-	@echo "Building for Linux version $(VERSION)..."
-	@mkdir -p $(BUILD_DIR)
-	GOOS=linux GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-linux-amd64 $(MAIN_PATH)
-
-build-windows:
-	@echo "Building for Windows version $(VERSION)..."
-	@mkdir -p $(BUILD_DIR)
-	GOOS=windows GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-windows-amd64.exe $(MAIN_PATH)
-
-build-darwin:
-	@echo "Building for macOS version $(VERSION)..."
-	@mkdir -p $(BUILD_DIR)
-	GOOS=darwin GOARCH=amd64 go build -ldflags "$(LDFLAGS)" -o $(BUILD_DIR)/$(BINARY_NAME)-darwin-amd64 $(MAIN_PATH)
-
-# Build all platforms
-build-all: build-linux build-windows build-darwin
-
-# Install the application
+# Install the service
 install:
-	@echo "Installing $(BINARY_NAME)..."
-	go install $(MAIN_PATH)
+	@echo "📦 Installing camera service..."
+	@sudo cp camera-service /opt/camera-service/
+	@sudo cp -r config /opt/camera-service/
+	@sudo cp -r docs /opt/camera-service/
+	@sudo chown -R camera-service:camera-service /opt/camera-service
+	@sudo systemctl enable camera-service
+	@sudo systemctl start camera-service
+	@echo "✅ Service installed and started"
 
-# Show help
-help:
-	@echo "Available targets:"
-	@echo "  build        - Build the application"
-	@echo "  run          - Run the application"
-	@echo "  test         - Run tests"
-	@echo "  test-coverage- Run tests with coverage report"
-	@echo "  clean        - Clean build artifacts"
-	@echo "  lint         - Run linter"
-	@echo "  deps         - Install dependencies"
-	@echo "  fmt          - Format code"
-	@echo "  vet          - Vet code"
-	@echo "  docs         - Generate documentation"
-	@echo "  build-prod   - Build optimized for production"
-	@echo "  build-linux  - Build for Linux"
-	@echo "  build-windows- Build for Windows"
-	@echo "  build-darwin - Build for macOS"
-	@echo "  build-all    - Build for all platforms"
-	@echo "  install      - Install the application"
-	@echo "  help         - Show this help"
+# Uninstall the service
+uninstall:
+	@echo "🗑️  Uninstalling camera service..."
+	@sudo systemctl stop camera-service
+	@sudo systemctl disable camera-service
+	@sudo rm -rf /opt/camera-service
+	@echo "✅ Service uninstalled"
+
+# Restart the service
+restart:
+	@echo "🔄 Restarting camera service..."
+	@sudo systemctl restart camera-service
+	@echo "✅ Service restarted"
+
+# Development setup
+dev-setup:
+	@echo "🛠️  Setting up development environment..."
+	@echo "Installing development tools..."
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+	@go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+	@echo "Setting up git hooks..."
+	@cp scripts/pre-commit-doc-validation.sh .git/hooks/pre-commit
+	@chmod +x .git/hooks/pre-commit
+	@echo "✅ Development environment setup completed"
+
+# Full quality check
+quality-check: lint format security test docs-validate
+	@echo "✅ Full quality check completed"
+
+# Documentation workflow
+docs-workflow: docs-validate docs-audit docs-generate
+	@echo "✅ Documentation workflow completed"
+
+# Complete development workflow
+dev-workflow: clean build test docs-validate lint security
+	@echo "✅ Complete development workflow completed"

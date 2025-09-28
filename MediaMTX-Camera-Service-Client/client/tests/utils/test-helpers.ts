@@ -18,11 +18,77 @@
 import { TestAPIClient } from './api-client';
 import { AuthHelper } from './auth-helper';
 import { APIMocks } from './mocks';
+import { APIResponseValidator } from './validators';
 
 export interface TestEnvironment {
   apiClient: TestAPIClient;
   authHelper: AuthHelper;
   mocks: typeof APIMocks;
+}
+
+/**
+ * Camera ID Helper - manages dynamic camera ID discovery
+ * Replaces hardcoded 'camera0' with actual available camera IDs
+ */
+export class CameraIdHelper {
+  private static availableCameraIds: string[] = [];
+  private static initialized = false;
+
+  /**
+   * Initialize camera IDs by querying the server
+   */
+  static async initialize(apiClient: TestAPIClient): Promise<void> {
+    if (this.initialized) return;
+
+    try {
+      const cameraList = await apiClient.call('get_camera_list', {});
+      if (cameraList && cameraList.cameras && Array.isArray(cameraList.cameras)) {
+        this.availableCameraIds = cameraList.cameras
+          .map((camera: any) => camera.device)
+          .filter((device: string) => APIResponseValidator.validateCameraDeviceId(device));
+      }
+      this.initialized = true;
+    } catch (error) {
+      console.warn('Failed to initialize camera IDs, using fallback:', error);
+      this.availableCameraIds = ['camera0']; // Fallback
+      this.initialized = true;
+    }
+  }
+
+  /**
+   * Get the first available camera ID
+   */
+  static getFirstAvailableCameraId(): string {
+    if (!this.initialized) {
+      console.warn('CameraIdHelper not initialized, using fallback camera0');
+      return 'camera0';
+    }
+    
+    if (this.availableCameraIds.length === 0) {
+      throw new Error('No valid camera IDs available');
+    }
+    
+    return this.availableCameraIds[0];
+  }
+
+  /**
+   * Get all available camera IDs
+   */
+  static getAvailableCameraIds(): string[] {
+    if (!this.initialized) {
+      console.warn('CameraIdHelper not initialized, using fallback camera0');
+      return ['camera0'];
+    }
+    
+    return [...this.availableCameraIds];
+  }
+
+  /**
+   * Validate if a camera ID is available
+   */
+  static isCameraIdAvailable(deviceId: string): boolean {
+    return this.availableCameraIds.includes(deviceId);
+  }
 }
 
 /**
@@ -59,6 +125,9 @@ export async function loadTestEnvironment(): Promise<TestEnvironment> {
     if (!authResult.authenticated) {
       throw new Error('Failed to authenticate test client');
     }
+
+    // Initialize camera IDs for dynamic discovery
+    await CameraIdHelper.initialize(apiClient);
   }
 
   return {
