@@ -43,7 +43,7 @@ type WebSocketIntegrationAsserter struct {
 }
 
 // NewWebSocketIntegrationAsserter creates a new WebSocket integration asserter
-func NewWebSocketIntegrationAsserter(t *testing.T) *WebSocketIntegrationAsserter {
+func GetSharedWebSocketAsserter(t *testing.T) *WebSocketIntegrationAsserter {
 	helper := NewWebSocketTestHelper(t)
 
 	// Create real WebSocket server
