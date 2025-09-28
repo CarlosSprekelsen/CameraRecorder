@@ -27,7 +27,7 @@ export interface TestEnvironment {
 
 /**
  * Load test environment with all utilities
- * MANDATORY: Use this method for all test setup
+ * CRITICAL: Connect and authenticate during setup
  */
 export async function loadTestEnvironment(): Promise<TestEnvironment> {
   // Load environment variables
@@ -41,13 +41,25 @@ export async function loadTestEnvironment(): Promise<TestEnvironment> {
     timeout: parseInt(process.env.TEST_TIMEOUT || '30000')
   });
 
-  // Connect the API client for integration tests
-  if (!process.env.TEST_MOCK_MODE || process.env.TEST_MOCK_MODE === 'false') {
-    await apiClient.connect();
-  }
-
   const authHelper = AuthHelper;
   const mocks = APIMocks;
+
+  // CRITICAL: Connect and authenticate for integration tests
+  if (!process.env.TEST_MOCK_MODE || process.env.TEST_MOCK_MODE === 'false') {
+    await apiClient.connect();
+    
+    // Get real JWT token from environment
+    const token = authHelper.generateTestToken('admin');
+    if (!token) {
+      throw new Error('No admin token available. Check test environment setup.');
+    }
+    
+    // Authenticate the client
+    const authResult = await apiClient.authenticate(token);
+    if (!authResult.authenticated) {
+      throw new Error('Failed to authenticate test client');
+    }
+  }
 
   return {
     apiClient,

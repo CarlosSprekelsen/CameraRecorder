@@ -1,6 +1,7 @@
 package websocket
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
@@ -482,6 +483,31 @@ func (vh *ValidationHelper) CreateValidationErrorResponse(validationResult *Vali
 		JSONRPC: "2.0",
 		Error:   NewJsonRpcError(INVALID_PARAMS, reason, details, "Check parameter types and values"),
 	}
+}
+
+// ValidateCameraListParameters validates get_camera_list method parameters
+func (vh *ValidationHelper) ValidateCameraListParameters(params map[string]interface{}) *ValidationResult {
+	result := NewValidationResult()
+
+	// get_camera_list should accept no parameters or empty parameters only
+	// Any extra parameters should be rejected to maintain strict API contract
+	if params == nil {
+		// No parameters - this is valid
+		return result
+	}
+
+	// Check for any unexpected parameters
+	allowedParams := map[string]bool{
+		// get_camera_list accepts no parameters per API spec
+	}
+
+	for paramName := range params {
+		if !allowedParams[paramName] {
+			result.AddError(fmt.Sprintf("unexpected parameter '%s' - get_camera_list accepts no parameters", paramName))
+		}
+	}
+
+	return result
 }
 
 // LogValidationWarnings logs validation warnings for debugging

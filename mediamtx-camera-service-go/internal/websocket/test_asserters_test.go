@@ -281,25 +281,50 @@ func (a *WebSocketIntegrationAsserter) validateSnapshotFileCreation(cameraID, fi
 }
 
 // validateRecordingFileCreation validates that recording file was created with correct path and extension
-// Uses testutils DataValidationHelper for comprehensive validation
+// CRITICAL: This test MUST validate actual file creation - if files aren't created, that's a BUG to fix!
 func (a *WebSocketIntegrationAsserter) validateRecordingFileCreation(cameraID, filename string) error {
+	// CRITICAL: Wait for MediaMTX readiness like all other tests
+	err := a.AssertProgressiveReadiness()
+	require.NoError(a.t, err, "Progressive Readiness should work before file validation")
+
 	// Get recordings path from testutils (configuration-driven, not hardcoded)
 	recordingsPath := testutils.GetTestRecordingsPath()
-
-	// Use testutils to build proper MediaMTX file path with subdirectories
-	expectedPath := testutils.BuildRecordingFilePath(recordingsPath, cameraID, filename, true, "mp4")
 
 	// Use testutils DataValidationHelper for comprehensive validation
 	dvh := testutils.NewDataValidationHelper(a.t)
 
-	// Validate file exists with minimum size (recordings should be substantial)
-	dvh.AssertFileExists(expectedPath, 10000, "Recording file creation validation")
+	// PROPER FILE VALIDATION: Use FindRecordingFile to search for actual MediaMTX-created files
+	// MediaMTX creates files like: camera0_2025-09-26_03-00-42.mp4 in subdirectories
+	recordFormat := "fmp4" // STANAG 4609 compliant format used by MediaMTX
 
-	// Validate file is accessible and readable
-	dvh.AssertFileAccessible(expectedPath, "Recording file accessibility")
+	// Wait for file creation with proper timeout (MediaMTX needs time to write files)
+	maxRetries := 20              // Increased retries for real hardware
+	retryDelay := 1 * time.Second // Longer delay for real hardware
 
-	a.t.Logf("✅ Recording file validated using testutils: %s", expectedPath)
-	return nil
+	for attempt := 1; attempt <= maxRetries; attempt++ {
+		// Use proper MediaMTX file search method
+		foundFile, err := testutils.FindRecordingFile(recordingsPath, cameraID, recordFormat)
+		if err == nil {
+			// File found - validate it properly
+			dvh.AssertFileExists(foundFile, 1000, "Recording file creation validation")
+			dvh.AssertFileAccessible(foundFile, "Recording file accessibility")
+			a.t.Logf("✅ Recording file validated using proper MediaMTX file search: %s", foundFile)
+			return nil
+		}
+
+		if attempt < maxRetries {
+			a.t.Logf("Recording file not yet created (attempt %d/%d), waiting %v...", attempt, maxRetries, retryDelay)
+			time.Sleep(retryDelay)
+		}
+	}
+
+	// If we get here, the file was never created - this is a REAL FAILURE that needs investigation!
+	a.t.Logf("🚨 RECORDING FILE NOT CREATED by MediaMTX for camera: %s", cameraID)
+	a.t.Logf("🚨 This indicates a REAL BUG in the recording system!")
+	a.t.Logf("🚨 MediaMTX should create files when recording is enabled!")
+	a.t.Logf("🚨 Searched in: %s with pattern: %s_*.%s", recordingsPath, cameraID, recordFormat)
+
+	return fmt.Errorf("RECORDING FILE NOT CREATED BY MEDIAMTX - THIS IS A REAL BUG: camera=%s, path=%s", cameraID, recordingsPath)
 }
 
 // AssertFileLifecycleWorkflow validates complete file lifecycle (create→list→delete)

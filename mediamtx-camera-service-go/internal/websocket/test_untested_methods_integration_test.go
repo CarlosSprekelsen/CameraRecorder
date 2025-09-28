@@ -137,7 +137,7 @@ func TestUntestedAPI_AddExternalStream_Integration(t *testing.T) {
 	err = asserter.client.Authenticate(authToken)
 	require.NoError(t, err, "Authentication should succeed")
 
-	// Test add_external_stream method (feature disabled in test config)
+	// Test add_external_stream method (feature now enabled in test config)
 	streamURL := "rtsp://example.com/stream"
 	streamName := "external_test_stream"
 	response, err := asserter.client.AddExternalStream(streamURL, streamName)
@@ -147,9 +147,9 @@ func TestUntestedAPI_AddExternalStream_Integration(t *testing.T) {
 	// Validate response structure per API documentation
 	asserter.client.AssertJSONRPCResponse(response, false)
 
-	// Should return error for disabled feature - this is expected behavior
-	require.NotNil(t, response.Error, "Should return error for disabled external stream feature")
-	t.Log("✅ Add External Stream: Properly handles disabled feature")
+	// Should succeed for enabled feature - this is expected behavior
+	require.Nil(t, response.Error, "Should not return error for enabled external stream feature")
+	t.Log("✅ Add External Stream: Successfully adds external stream")
 }
 
 // TestUntestedAPI_RemoveExternalStream_Integration tests remove_external_stream method
@@ -166,8 +166,18 @@ func TestUntestedAPI_RemoveExternalStream_Integration(t *testing.T) {
 	err = asserter.client.Authenticate(authToken)
 	require.NoError(t, err, "Authentication should succeed")
 
-	// Test remove_external_stream method (feature disabled in test config)
+	// Test remove_external_stream method (feature now enabled in test config)
+	// First add a stream, then remove it to test the full workflow
 	streamURL := "rtsp://example.com/stream"
+	streamName := "test_external_stream"
+
+	// Add the stream first
+	addResponse, err := asserter.client.AddExternalStream(streamURL, streamName)
+	require.NoError(t, err, "add_external_stream should not fail on client side")
+	require.NotNil(t, addResponse, "Add response should not be nil")
+	require.Nil(t, addResponse.Error, "Add should succeed")
+
+	// Now remove the stream
 	response, err := asserter.client.RemoveExternalStream(streamURL)
 	require.NoError(t, err, "remove_external_stream should not fail on client side")
 	require.NotNil(t, response, "Response should not be nil")
@@ -175,9 +185,9 @@ func TestUntestedAPI_RemoveExternalStream_Integration(t *testing.T) {
 	// Validate response structure per API documentation
 	asserter.client.AssertJSONRPCResponse(response, false)
 
-	// Should return error for disabled feature - this is expected behavior
-	require.NotNil(t, response.Error, "Should return error for disabled external stream feature")
-	t.Log("✅ Remove External Stream: Properly handles disabled feature")
+	// Should succeed for enabled feature - this is expected behavior
+	require.Nil(t, response.Error, "Should not return error for enabled external stream feature")
+	t.Log("✅ Remove External Stream: Successfully removes external stream")
 }
 
 // ============================================================================

@@ -389,6 +389,19 @@ func (s *WebSocketServer) MethodAuthenticate(params map[string]interface{}, clie
 func (s *WebSocketServer) MethodGetCameraList(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	// Delegates to MediaMTX Controller for business logic
 	return s.authenticatedMethodWrapper("get_camera_list", func() (interface{}, error) {
+		// STRICT PARAMETER VALIDATION: get_camera_list should accept NO parameters
+		if len(params) > 0 {
+			// Log invalid parameters for debugging
+			s.logger.WithFields(logging.Fields{
+				"client_id": client.ClientID,
+				"method":    "get_camera_list",
+				"params":    params,
+				"action":    "invalid_params",
+			}).Warn("get_camera_list received unexpected parameters")
+			
+			return nil, fmt.Errorf("get_camera_list accepts no parameters, received: %v", params)
+		}
+
 		// Delegate to MediaMTX controller - returns API-ready APICameraInfo format
 		cameraListResponse, err := s.mediaMTXController.GetCameraList(context.Background())
 		if err != nil {

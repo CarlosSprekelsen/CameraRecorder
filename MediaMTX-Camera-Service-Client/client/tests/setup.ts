@@ -28,14 +28,16 @@ global.WebSocket = class MockWebSocket {
   private listeners: { [key: string]: Function[] } = {};
   public readyState = WebSocket.CONNECTING;
   public url: string;
+  private timeouts: NodeJS.Timeout[] = [];
 
   constructor(url: string) {
     this.url = url;
     // Simulate connection
-    setTimeout(() => {
+    const timeout = setTimeout(() => {
       this.readyState = WebSocket.OPEN;
       this.listeners['open']?.forEach(listener => listener());
     }, 10);
+    this.timeouts.push(timeout);
   }
 
   on(event: string, listener: Function): void {
@@ -50,16 +52,20 @@ global.WebSocket = class MockWebSocket {
     const request = JSON.parse(data);
     const response = this.getMockResponse(request);
     
-    setTimeout(() => {
+    const timeout = setTimeout(() => {
       this.listeners['message']?.forEach(listener => {
         listener({ data: JSON.stringify(response) });
       });
     }, 10);
+    this.timeouts.push(timeout);
   }
 
   close(): void {
     this.readyState = WebSocket.CLOSED;
     this.listeners['close']?.forEach(listener => listener());
+    // Clear all timeouts
+    this.timeouts.forEach(timeout => clearTimeout(timeout));
+    this.timeouts = [];
   }
 
   private getMockResponse(request: any): any {

@@ -303,6 +303,15 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 	// Create system metrics manager
 	systemMetricsManager := NewSystemMetricsManager(fullConfig, recordingConfig, configIntegration, logger)
 
+	// Create external stream discovery (optional component based on configuration)
+	var externalDiscovery *ExternalStreamDiscovery
+	if externalDiscoveryConfig, err := configIntegration.GetExternalDiscoveryConfig(); err == nil && externalDiscoveryConfig != nil && externalDiscoveryConfig.Enabled {
+		externalDiscovery = NewExternalStreamDiscovery(configIntegration, logger)
+		logger.Info("External stream discovery configured and enabled")
+	} else {
+		logger.Info("External stream discovery disabled or not configured")
+	}
+
 	// Create controller instance
 	ctrl := &controller{
 		client:                    client,
@@ -320,7 +329,7 @@ func ControllerWithConfigManager(configManager *config.ConfigManager, cameraMoni
 		logger:                    logger,
 		healthNotificationManager: healthNotificationManager,
 		systemMetricsManager:      systemMetricsManager,
-		// externalDiscovery: nil - intentionally not initialized (optional component)
+		externalDiscovery:         externalDiscovery, // Optional component based on configuration
 		// No local recording state - query MediaMTX directly
 	}
 
@@ -379,6 +388,15 @@ func (c *controller) Start(ctx context.Context) error {
 			return fmt.Errorf("failed to start path integration: %w", err)
 		}
 		c.logger.Info("Path integration started successfully")
+	}
+
+	// Start external stream discovery (optional component)
+	if c.externalDiscovery != nil {
+		if err := c.externalDiscovery.Start(ctx); err != nil {
+			c.logger.WithError(err).Error("Failed to start external stream discovery")
+			return fmt.Errorf("failed to start external stream discovery: %w", err)
+		}
+		c.logger.Info("External stream discovery started successfully")
 	}
 
 	// Register Controller as camera event handler (CRITICAL MISSING WIRING)

@@ -33,9 +33,29 @@ describe('Authenticated Functionality Tests', () => {
     loggerService = new LoggerService();
     webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
     
-    // Connect to the server
-    await webSocketService.connect();
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Connect to the server with retry logic
+    let connected = false;
+    let attempts = 0;
+    const maxAttempts = 3;
+    
+    while (!connected && attempts < maxAttempts) {
+      try {
+        await webSocketService.connect();
+        connected = true;
+      } catch (error) {
+        attempts++;
+        console.log(`Connection attempt ${attempts} failed:`, error);
+        if (attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    }
+    
+    if (!connected) {
+      throw new Error('Failed to connect to WebSocket after 3 attempts');
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, 1000));
     
     authService = new AuthService(webSocketService);
     deviceService = new DeviceService(webSocketService, loggerService);

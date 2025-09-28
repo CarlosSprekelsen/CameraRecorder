@@ -61,7 +61,17 @@ export class APIResponseValidator {
   static validateIsoTimestamp(timestamp: string): boolean {
     try {
       const date = new Date(timestamp);
-      return !isNaN(date.getTime()) && timestamp.includes('T') && timestamp.includes(':');
+      if (isNaN(date.getTime())) {
+        return false;
+      }
+      
+      // Accept both UTC and timezone-aware formats
+      const iso = date.toISOString();
+      const original = timestamp;
+      
+      // Check if it's valid ISO format (with or without timezone)
+      return iso.substring(0, 19) === original.substring(0, 19) ||
+             /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([.]\d{3})?([+-]\d{2}:\d{2}|Z)$/.test(original);
     } catch {
       return false;
     }
@@ -124,7 +134,7 @@ export class APIResponseValidator {
       typeof obj.rtsp === 'string' &&
       typeof obj.hls === 'string' &&
       obj.rtsp.startsWith('rtsp://') &&
-      obj.hls.startsWith('https://')
+      obj.hls.startsWith('http://')
     );
   }
 

@@ -61,6 +61,7 @@ export class WebSocketService {
       resolve: <T>(value: T) => void;
       reject: (error: Error) => void;
       timestamp: number;
+      timeout?: NodeJS.Timeout;
     }
   >();
   private requestId = 0;
@@ -80,10 +81,19 @@ export class WebSocketService {
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
       try {
+        // Add connection timeout
+        const connectionTimeout = setTimeout(() => {
+          if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
+            this.ws.close();
+            reject(new Error('WebSocket connection timeout'));
+          }
+        }, 10000); // 10 second timeout
+
         this.ws = new WebSocket(this.config.url);
 
         this.ws.onopen = () => {
           // WebSocket connected - handled by connection store
+          clearTimeout(connectionTimeout);
           this.reconnectAttempts = 0;
           this.startPingInterval();
           this.events.onConnect?.();
@@ -92,13 +102,16 @@ export class WebSocketService {
 
         this.ws.onclose = (event) => {
           // WebSocket closed - handled by connection store
+          clearTimeout(connectionTimeout);
           this.stopPingInterval();
           this.events.onDisconnect?.(new Error(`Connection closed: ${event.code} ${event.reason}`));
           this.handleReconnect();
         };
 
-        this.ws.onerror = () => {
+        this.ws.onerror = (error) => {
           // WebSocket error - handled by connection store
+          clearTimeout(connectionTimeout);
+          console.error('WebSocket connection error:', error);
           this.events.onError?.(new Error('WebSocket connection error'));
           reject(new Error('WebSocket connection failed'));
         };
@@ -126,8 +139,11 @@ export class WebSocketService {
       this.ws = null;
     }
 
-    // Reject all pending requests
-    this.pendingRequests.forEach(({ reject }) => {
+    // Reject all pending requests and clear timeouts
+    this.pendingRequests.forEach(({ reject, timeout }) => {
+      if (timeout) {
+        clearTimeout(timeout);
+      }
       reject(new Error('WebSocket disconnected'));
     });
     this.pendingRequests.clear();
@@ -155,12 +171,18 @@ export class WebSocketService {
       });
 
       // Set timeout for request
-      setTimeout(() => {
+      const requestTimeout = setTimeout(() => {
         if (this.pendingRequests.has(id)) {
           this.pendingRequests.delete(id);
           reject(new Error(`RPC request timeout: ${method}`));
         }
       }, 30000); // 30 second timeout
+      
+      // Store timeout for cleanup
+      const pendingRequest = this.pendingRequests.get(id);
+      if (pendingRequest) {
+        pendingRequest.timeout = requestTimeout;
+      }
 
       try {
         this.ws?.send(JSON.stringify(request));
@@ -206,6 +228,11 @@ export class WebSocketService {
     if (!pending) {
       // Received response for unknown request - handled by error boundary
       return;
+    }
+
+    // Clear timeout if it exists
+    if (pending.timeout) {
+      clearTimeout(pending.timeout);
     }
 
     this.pendingRequests.delete(response.id);

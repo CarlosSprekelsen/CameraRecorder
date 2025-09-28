@@ -31,6 +31,11 @@ export class TestAPIClient {
   private timeout: number;
   private messageId = 0;
   private pendingRequests = new Map<number, { resolve: Function; reject: Function }>();
+  
+  // CRITICAL: Authentication state management
+  private authToken: string | null = null;
+  private isAuthenticated = false;
+  private sessionId: string | null = null;
 
   constructor(config: TestAPIClientConfig = {}) {
     this.isMockMode = config.mockMode ?? process.env.NODE_ENV === 'test';
@@ -86,24 +91,46 @@ export class TestAPIClient {
       this.ws.close();
       this.ws = null;
     }
+    this.clearAuthState();
     this.pendingRequests.clear();
+  }
+
+  /**
+   * Clear authentication state
+   */
+  private clearAuthState(): void {
+    this.authToken = null;
+    this.isAuthenticated = false;
+    this.sessionId = null;
+  }
+
+  /**
+   * Get authentication status
+   */
+  get isAuth(): boolean {
+    return this.isAuthenticated;
   }
 
   /**
    * Call JSON-RPC method
    * MANDATORY: Use this method for all API calls
-   * Validates against documented API schema
+   * CRITICAL: Session-aware API calls - server maintains session after authenticate()
    */
-  async call(method: string, params: any[] = []): Promise<any> {
+  async call(method: string, params: Record<string, unknown> = {}): Promise<any> {
     if (!this.ws) {
       throw new Error('WebSocket not connected');
+    }
+
+    // For methods other than authenticate, ensure we're authenticated
+    if (method !== 'authenticate' && method !== 'ping' && !this.isAuthenticated) {
+      throw new Error('Authentication required. Call authenticate() first.');
     }
 
     const id = ++this.messageId;
     const request = {
       jsonrpc: '2.0',
       method,
-      params,
+      params, // DON'T add auth_token - server maintains session
       id
     };
 
@@ -131,10 +158,17 @@ export class TestAPIClient {
   /**
    * Authenticate using JWT token
    * MANDATORY: Use this method for all authentication tests
-   * Follows documented authentication flow exactly
+   * CRITICAL: Store authentication state for session persistence
    */
   async authenticate(token: string): Promise<AuthResult> {
     const result = await this.call('authenticate', { auth_token: token });
+    
+    // Store authentication state for session persistence
+    if (result.authenticated) {
+      this.authToken = token;
+      this.isAuthenticated = true;
+      this.sessionId = result.session_id;
+    }
     
     // Validate against documented AuthResult schema
     if (!this.validateAuthResult(result)) {
@@ -167,7 +201,7 @@ export class TestAPIClient {
         this.pendingRequests.delete(message.id);
         
         if (message.error) {
-          reject(new Error(message.error.message || 'RPC Error'));
+          reject(new Error(`${message.error.message} (Code: ${message.error.code})`));
         } else {
           resolve(message.result);
         }

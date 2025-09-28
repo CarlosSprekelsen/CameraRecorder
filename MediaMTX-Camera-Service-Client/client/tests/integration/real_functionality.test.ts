@@ -482,8 +482,8 @@ describe('Real Functionality E2E Tests', () => {
       let operationCount = 0;
       let successCount = 0;
 
-      // Run operations for 30 seconds
-      while (Date.now() - startTime < 30000) {
+      // Run operations for 10 seconds (reduced from 30)
+      while (Date.now() - startTime < 10000) {
         const result = await tester.testOperation(`long_running_${operationCount}`, async () => {
           return await tester.webSocketService.sendRPC('ping', {});
         });

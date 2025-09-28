@@ -166,11 +166,11 @@ external_discovery:
     enable_both_streams: true
     known_ips: ["192.168.42.10"]
   generic_uav:
-    enabled: false
-    network_ranges: []
+    enabled: true
+    network_ranges: ["192.168.1.0/24"]
     common_ports: [554, 8554]
     stream_paths: ["/stream", "/live", "/video"]
-    known_ips: []
+    known_ips: ["192.168.1.100"]
 
 # Retention policy (actually used)
 retention_policy:

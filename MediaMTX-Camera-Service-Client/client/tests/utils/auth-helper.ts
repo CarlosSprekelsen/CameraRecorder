@@ -33,19 +33,25 @@ export class AuthHelper {
 
   /**
    * Generate test JWT token with specified role
-   * MANDATORY: Use this method for all authentication tests
-   * NO hardcoded credentials allowed
+   * CRITICAL: Use pre-generated tokens from environment instead of generating new ones
    */
-  static async generateTestToken(role: UserRole = 'admin'): Promise<string> {
-    const payload: TestTokenPayload = {
-      sub: `test-user-${Date.now()}`,
-      role,
-      permissions: this.getRolePermissions(role),
-      exp: Math.floor(Date.now() / 1000) + this.TOKEN_EXPIRY,
-      iat: Math.floor(Date.now() / 1000)
-    };
+  static generateTestToken(role: UserRole = 'admin'): string {
+    // Use pre-generated tokens from environment
+    const tokenKey = `TEST_${role.toUpperCase()}_TOKEN`;
+    const token = process.env[tokenKey];
+    
+    if (!token) {
+      throw new Error(`Missing environment token: ${tokenKey}. Run reinstall-with-tokens.sh to generate tokens.`);
+    }
+    
+    return token;
+  }
 
-    return jwt.sign(payload, this.TEST_SECRET);
+  /**
+   * Get stored token for a role
+   */
+  getStoredToken(role: string): string | null {
+    return AuthHelper.generateTestToken(role as UserRole);
   }
 
   /**
