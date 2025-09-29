@@ -60,10 +60,7 @@ export const useDeviceStore = create<DeviceState & DeviceActions>()(
 
         // Discovery methods (I.Discovery interface)
         getCameraList: async () => {
-          if (!deviceService) {
-            set({ error: 'Device service not initialized' });
-            return;
-          }
+          if (!deviceService) throw new Error('Device service not initialized');
 
           set({ loading: true, error: null });
           try {
@@ -79,29 +76,24 @@ export const useDeviceStore = create<DeviceState & DeviceActions>()(
               loading: false,
               error: error instanceof Error ? error.message : 'Failed to get camera list',
             });
+            throw error;
           }
         },
 
         getStreamUrl: async (device: string) => {
-          if (!deviceService) {
-            set({ error: 'Device service not initialized' });
-            return null;
-          }
+          if (!deviceService) throw new Error('Device service not initialized');
 
           try {
             const streamUrl = await deviceService.getStreamUrl(device);
             return streamUrl;
           } catch (error) {
             set({ error: error instanceof Error ? error.message : 'Failed to get stream URL' });
-            return null;
+            throw error;
           }
         },
 
         getStreams: async () => {
-          if (!deviceService) {
-            set({ error: 'Device service not initialized' });
-            return;
-          }
+          if (!deviceService) throw new Error('Device service not initialized');
 
           set({ loading: true, error: null });
           try {
@@ -117,6 +109,7 @@ export const useDeviceStore = create<DeviceState & DeviceActions>()(
               loading: false,
               error: error instanceof Error ? error.message : 'Failed to get streams',
             });
+            throw error;
           }
         },
 

@@ -1,5 +1,9 @@
 import React, { useEffect, memo } from 'react';
-import { Box, Typography, Paper, Alert, CircularProgress, Container } from '@mui/material';
+import { Box } from '../../components/atoms/Box/Box';
+import { Typography } from '../../components/atoms/Typography/Typography';
+import { Card } from '../../components/atoms/Card/Card';
+import { Alert } from '../../components/atoms/Alert/Alert';
+import { CircularProgress } from '../../components/atoms/CircularProgress/CircularProgress';
 import { useDeviceStore } from '../../stores/device/deviceStore';
 // ARCHITECTURE FIX: Removed unused Camera import
 import { useAuthStore } from '../../stores/auth/authStore';
@@ -89,47 +93,47 @@ const CameraPage: React.FC = memo(() => {
   // Redirect to login if not authenticated
   if (!isAuthenticated) {
     return (
-      <Container maxWidth="lg">
-        <Box sx={{ mt: 4 }}>
-          <Alert severity="warning">Please log in to view camera devices.</Alert>
+      <Box className="max-w-6xl mx-auto">
+        <Box className="mt-4">
+          <Alert variant="warning">Please log in to view camera devices.</Alert>
         </Box>
-      </Container>
+      </Box>
     );
   }
 
   return (
-    <Container maxWidth="lg">
-      <Box sx={{ mt: 4, mb: 4 }}>
-        <Typography variant="h4" component="h1" gutterBottom>
+    <Box className="max-w-6xl mx-auto">
+      <Box className="mt-4 mb-4">
+        <Typography variant="h4" component="h1" className="mb-4">
           Camera Devices
         </Typography>
 
         {lastUpdated && (
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          <Typography variant="body2" color="secondary" className="mb-2">
             Last updated: {new Date(lastUpdated).toLocaleString()}
           </Typography>
         )}
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }}>
+          <Alert variant="error" className="mb-2">
             {error}
           </Alert>
         )}
 
-        <Paper sx={{ p: 2 }}>
+        <Card className="p-2">
           {loading ? (
-            <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+            <Box className="flex justify-center items-center min-h-[200px]">
               <CircularProgress />
-              <Typography variant="body1" sx={{ ml: 2 }}>
+              <Typography variant="body1" className="ml-2">
                 Loading camera devices...
               </Typography>
             </Box>
           ) : (
             <CameraTable cameras={cameras} streams={streams} onRefresh={getCameraList} />
           )}
-        </Paper>
+        </Card>
       </Box>
-    </Container>
+    </Box>
   );
 });
 

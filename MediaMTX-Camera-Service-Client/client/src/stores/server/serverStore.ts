@@ -121,6 +121,7 @@ export const useServerStore = create<ServerStore>((set) => {
           loading: false, 
           error: error instanceof Error ? error.message : 'Failed to load storage info' 
         });
+        throw error;
       }
     },
 
@@ -139,6 +140,7 @@ export const useServerStore = create<ServerStore>((set) => {
           loading: false, 
           error: error instanceof Error ? error.message : 'Failed to load server data' 
         });
+        throw error;
       }
     },
 

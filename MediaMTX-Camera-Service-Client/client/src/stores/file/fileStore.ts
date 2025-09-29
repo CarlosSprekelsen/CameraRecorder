@@ -101,10 +101,7 @@ export const useFileStore = create<FileState & FileActions>()(
           },
 
           loadRecordings: async (limit = 20, offset = 0) => {
-            if (!fileService) {
-              set({ error: 'File service not initialized' });
-              return;
-            }
+            if (!fileService) throw new Error('File service not initialized');
             set({ loading: true, error: null });
             try {
               const response = await fileService.listRecordings(limit, offset);
@@ -122,14 +119,12 @@ export const useFileStore = create<FileState & FileActions>()(
                 loading: false,
                 error: error instanceof Error ? error.message : 'Failed to load recordings',
               });
+              throw error;
             }
           },
 
           loadSnapshots: async (limit = 20, offset = 0) => {
-            if (!fileService) {
-              set({ error: 'File service not initialized' });
-              return;
-            }
+            if (!fileService) throw new Error('File service not initialized');
             set({ loading: true, error: null });
             try {
               const response = await fileService.listSnapshots(limit, offset);
@@ -147,14 +142,12 @@ export const useFileStore = create<FileState & FileActions>()(
                 loading: false,
                 error: error instanceof Error ? error.message : 'Failed to load snapshots',
               });
+              throw error;
             }
           },
 
           getRecordingInfo: async (filename: string) => {
-            if (!fileService) {
-              set({ error: 'File service not initialized' });
-              return null;
-            }
+            if (!fileService) throw new Error('File service not initialized');
             try {
               const info = await fileService.getRecordingInfo(filename);
               return info;
@@ -162,15 +155,12 @@ export const useFileStore = create<FileState & FileActions>()(
               set({
                 error: error instanceof Error ? error.message : 'Failed to get recording info',
               });
-              return null;
+              throw error;
             }
           },
 
           getSnapshotInfo: async (filename: string) => {
-            if (!fileService) {
-              set({ error: 'File service not initialized' });
-              return null;
-            }
+            if (!fileService) throw new Error('File service not initialized');
             try {
               const info = await fileService.getSnapshotInfo(filename);
               return info;
@@ -178,27 +168,22 @@ export const useFileStore = create<FileState & FileActions>()(
               set({
                 error: error instanceof Error ? error.message : 'Failed to get snapshot info',
               });
-              return null;
+              throw error;
             }
           },
 
           downloadFile: async (downloadUrl: string, filename: string) => {
-            if (!fileService) {
-              set({ error: 'File service not initialized' });
-              return;
-            }
+            if (!fileService) throw new Error('File service not initialized');
             try {
               await fileService.downloadFile(downloadUrl, filename);
             } catch (error) {
               set({ error: error instanceof Error ? error.message : 'Download failed' });
+              throw error;
             }
           },
 
           deleteRecording: async (filename: string) => {
-            if (!fileService) {
-              set({ error: 'File service not initialized' });
-              return false;
-            }
+            if (!fileService) throw new Error('File service not initialized');
             set({ loading: true, error: null });
             try {
               const response = await fileService.deleteRecording(filename);
@@ -217,15 +202,12 @@ export const useFileStore = create<FileState & FileActions>()(
                 loading: false,
                 error: error instanceof Error ? error.message : 'Delete failed',
               });
-              return false;
+              throw error;
             }
           },
 
           deleteSnapshot: async (filename: string) => {
-            if (!fileService) {
-              set({ error: 'File service not initialized' });
-              return false;
-            }
+            if (!fileService) throw new Error('File service not initialized');
             set({ loading: true, error: null });
             try {
               const response = await fileService.deleteSnapshot(filename);
@@ -244,7 +226,7 @@ export const useFileStore = create<FileState & FileActions>()(
                 loading: false,
                 error: error instanceof Error ? error.message : 'Delete failed',
               });
-              return false;
+              throw error;
             }
           },
 
@@ -288,10 +270,7 @@ export const useFileStore = create<FileState & FileActions>()(
           },
 
           setRetentionPolicy: async (policyType: 'age' | 'size' | 'manual', enabled: boolean, maxAgeDays?: number, maxSizeGb?: number) => {
-            if (!fileService) {
-              set({ error: 'File service not initialized' });
-              return null;
-            }
+            if (!fileService) throw new Error('File service not initialized');
             set({ loading: true, error: null });
             try {
               const response = await fileService.setRetentionPolicy(policyType, enabled, maxAgeDays, maxSizeGb);
@@ -302,15 +281,12 @@ export const useFileStore = create<FileState & FileActions>()(
                 loading: false,
                 error: error instanceof Error ? error.message : 'Failed to set retention policy',
               });
-              return null;
+              throw error;
             }
           },
 
           cleanupOldFiles: async () => {
-            if (!fileService) {
-              set({ error: 'File service not initialized' });
-              return null;
-            }
+            if (!fileService) throw new Error('File service not initialized');
             set({ loading: true, error: null });
             try {
               const response = await fileService.cleanupOldFiles();
@@ -321,7 +297,7 @@ export const useFileStore = create<FileState & FileActions>()(
                 loading: false,
                 error: error instanceof Error ? error.message : 'Failed to cleanup old files',
               });
-              return null;
+              throw error;
             }
           },
 
