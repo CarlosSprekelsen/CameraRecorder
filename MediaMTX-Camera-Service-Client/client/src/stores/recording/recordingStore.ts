@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { devtools, persist } from 'zustand/middleware';
 import { RecordingService } from '../../services/recording/RecordingService';
+import { RecordingInfo } from '../../types/api';
 
 // FIXED: Separate operation results from session state
 export interface RecordingOperationResult {
@@ -20,12 +21,11 @@ export interface RecordingSessionInfo {
   format?: string;
 }
 
-// Legacy interface for backward compatibility
-export interface RecordingInfo extends RecordingSessionInfo {}
+// Legacy interface removed - use RecordingSessionInfo directly
 
 export interface RecordingState {
-  activeRecordings: Record<string, RecordingInfo>;
-  history: RecordingInfo[];
+  activeRecordings: Record<string, RecordingSessionInfo>;
+  history: RecordingInfo[];  // Use API RecordingInfo for file history
   loading: boolean;
   error: string | null;
 }

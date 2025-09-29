@@ -26,10 +26,12 @@ import {
   Folder,
   Info,
   Logout,
-  Dashboard
+  Dashboard,
+  AdminPanelSettings
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../../stores/auth/authStore';
+import { usePermissions } from '../../../hooks/usePermissions';
 import { logger } from '../../../services/logger/LoggerService';
 // ARCHITECTURE FIX: Logger is infrastructure - components can import it directly
 
@@ -38,12 +40,20 @@ interface ApplicationShellProps {
   // ARCHITECTURE FIX: Removed service props - components only use stores
 }
 
-const navigationItems = [
-  { path: '/', label: 'Dashboard', icon: <Dashboard /> },
-  { path: '/cameras', label: 'Cameras', icon: <CameraAlt /> },
-  { path: '/files', label: 'Files', icon: <Folder /> },
-  { path: '/about', label: 'About', icon: <Info /> },
-];
+const getNavigationItems = (canViewAdminPanel: boolean) => {
+  const baseItems = [
+    { path: '/', label: 'Dashboard', icon: <Dashboard /> },
+    { path: '/cameras', label: 'Cameras', icon: <CameraAlt /> },
+    { path: '/files', label: 'Files', icon: <Folder /> },
+    { path: '/about', label: 'About', icon: <Info /> },
+  ];
+
+  if (canViewAdminPanel) {
+    baseItems.splice(3, 0, { path: '/admin', label: 'Admin', icon: <AdminPanelSettings /> });
+  }
+
+  return baseItems;
+};
 
 export const ApplicationShell: React.FC<ApplicationShellProps> = ({ 
   children 
@@ -52,6 +62,7 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { role, logout } = useAuthStore();
+  const { canViewAdminPanel } = usePermissions();
   // ARCHITECTURE FIX: Use correct auth store for all auth-related data
 
   useEffect(() => {
@@ -126,7 +137,7 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({
         <Toolbar />
         <Box sx={{ overflow: 'auto' }}>
           <List>
-            {navigationItems.map((item) => (
+            {getNavigationItems(canViewAdminPanel()).map((item) => (
               <ListItem 
                 key={item.path}
                 onClick={() => handleNavigation(item.path)}

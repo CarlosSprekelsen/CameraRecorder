@@ -14,6 +14,8 @@
  * API Documentation Reference: mediamtx_camera_service_openrpc.json
  */
 
+import { ServerService } from '../../../src/services/server/ServerService';
+import { APIClient } from '../../../src/services/abstraction/APIClient';
 import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
 import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { SubscriptionResult, UnsubscriptionResult, SubscriptionStatsResult } from '../../../src/types/api';
@@ -22,51 +24,17 @@ import { MockDataFactory } from '../../utils/mocks';
 // Use centralized mocks - eliminates duplication
 const mockWebSocketService = MockDataFactory.createMockWebSocketService();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
+const mockAPIClient = new APIClient(mockWebSocketService, mockLoggerService);
 
-// Create a mock event subscription service class
-class EventSubscriptionService {
-  constructor(
-    private wsService: WebSocketService,
-    private logger: LoggerService
-  ) {}
-
-  async subscribeEvents(topics: string[], filters?: Record<string, any>): Promise<SubscriptionResult> {
-    try {
-      this.logger.info('subscribe_events request', { topics, filters });
-      return await this.wsService.sendRPC('subscribe_events', { topics, filters });
-    } catch (error) {
-      this.logger.error('subscribe_events failed', error as Error);
-      throw error;
-    }
-  }
-
-  async unsubscribeEvents(topics?: string[]): Promise<UnsubscriptionResult> {
-    try {
-      this.logger.info('unsubscribe_events request', { topics });
-      return await this.wsService.sendRPC('unsubscribe_events', { topics });
-    } catch (error) {
-      this.logger.error('unsubscribe_events failed', error as Error);
-      throw error;
-    }
-  }
-
-  async getSubscriptionStats(): Promise<SubscriptionStatsResult> {
-    try {
-      this.logger.info('get_subscription_stats request');
-      return await this.wsService.sendRPC('get_subscription_stats');
-    } catch (error) {
-      this.logger.error('get_subscription_stats failed', error as Error);
-      throw error;
-    }
-  }
-}
+// Use real EventSubscriptionService with APIClient
+// Note: EventSubscriptionService is part of ServerService in the real implementation
 
 describe('EventSubscriptionService Unit Tests', () => {
-  let eventSubscriptionService: EventSubscriptionService;
+  let eventSubscriptionService: ServerService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    eventSubscriptionService = new EventSubscriptionService(mockWebSocketService, mockLoggerService);
+    eventSubscriptionService = new ServerService(mockAPIClient, mockLoggerService);
   });
 
   describe('REQ-EVENT-001: subscribe_events RPC method', () => {

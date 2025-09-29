@@ -15,6 +15,8 @@
  * API Documentation Reference: mediamtx_camera_service_openrpc.json
  */
 
+import { ServerService } from '../../../src/services/server/ServerService';
+import { APIClient } from '../../../src/services/abstraction/APIClient';
 import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
 import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { MetricsResult, StorageInfo, RetentionPolicySetResult, CleanupResult } from '../../../src/types/api';
@@ -23,66 +25,16 @@ import { MockDataFactory } from '../../utils/mocks';
 // Use centralized mocks - eliminates duplication
 const mockWebSocketService = MockDataFactory.createMockWebSocketService();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
+const mockAPIClient = new APIClient(mockWebSocketService, mockLoggerService);
 
-// Create a mock system admin service class
-class SystemAdminService {
-  constructor(
-    private wsService: WebSocketService,
-    private logger: LoggerService
-  ) {}
-
-  async getMetrics(): Promise<MetricsResult> {
-    try {
-      this.logger.info('get_metrics request');
-      return await this.wsService.sendRPC('get_metrics');
-    } catch (error) {
-      this.logger.error('get_metrics failed', error as Error);
-      throw error;
-    }
-  }
-
-  async getStorageInfo(): Promise<StorageInfo> {
-    try {
-      this.logger.info('get_storage_info request');
-      return await this.wsService.sendRPC('get_storage_info');
-    } catch (error) {
-      this.logger.error('get_storage_info failed', error as Error);
-      throw error;
-    }
-  }
-
-  async setRetentionPolicy(policy: {
-    policy_type: string;
-    max_age_days?: number;
-    max_size_gb?: number;
-    enabled: boolean;
-  }): Promise<RetentionPolicySetResult> {
-    try {
-      this.logger.info('set_retention_policy request', policy);
-      return await this.wsService.sendRPC('set_retention_policy', policy);
-    } catch (error) {
-      this.logger.error('set_retention_policy failed', error as Error);
-      throw error;
-    }
-  }
-
-  async cleanupOldFiles(): Promise<CleanupResult> {
-    try {
-      this.logger.info('cleanup_old_files request');
-      return await this.wsService.sendRPC('cleanup_old_files');
-    } catch (error) {
-      this.logger.error('cleanup_old_files failed', error as Error);
-      throw error;
-    }
-  }
-}
+// Use real ServerService with APIClient for admin functions
 
 describe('SystemAdminService Unit Tests', () => {
-  let systemAdminService: SystemAdminService;
+  let systemAdminService: ServerService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    systemAdminService = new SystemAdminService(mockWebSocketService, mockLoggerService);
+    systemAdminService = new ServerService(mockAPIClient, mockLoggerService);
   });
 
   describe('REQ-ADMIN-001: get_metrics RPC method', () => {

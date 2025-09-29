@@ -192,9 +192,10 @@ func (s *WebSocketServer) registerBuiltinMethods() {
 	s.registerMethod("get_stream_url", s.MethodGetStreamURL, "1.0")
 	s.registerMethod("get_stream_status", s.MethodGetStreamStatus, "1.0")
 
-	// Notification methods
-	s.registerMethod("camera_status_update", s.MethodCameraStatusUpdate, "1.0")
-	s.registerMethod("recording_status_update", s.MethodRecordingStatusUpdate, "1.0")
+	// ARCHITECTURE FIX: Notification methods are server-generated only
+	// These methods exist for internal server use but are NOT callable by clients
+	// camera_status_update and recording_status_update are notifications only
+	// They are handled by the WebSocket notification system, not as callable methods
 
 	// Event subscription methods
 	s.registerMethod("subscribe_events", s.MethodSubscribeEvents, "1.0")
@@ -981,31 +982,38 @@ func (s *WebSocketServer) MethodGetSnapshotInfo(params map[string]interface{}, c
 	})(params, client)
 }
 
-// MethodCameraStatusUpdate handles camera status update notifications
-// SECURITY: This method should not be called directly by clients - it's for server-generated notifications only
-// PURPOSE: WebSocket event system for real-time camera status notifications (REQ-API-020/021)
-func (s *WebSocketServer) MethodCameraStatusUpdate(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+// ARCHITECTURE FIX: These are notification handlers, not callable methods
+// They are used internally by the server notification system
+// They should NEVER be called by clients - they are server-generated notifications only
+
+// handleCameraStatusUpdateNotification processes camera status update notifications
+// This is called internally by the server notification system
+func (s *WebSocketServer) handleCameraStatusUpdateNotification(params map[string]interface{}) {
 	// REQ-API-020: WebSocket server shall support camera_status_update notifications
 	// REQ-API-021: Notifications shall include device, status, name, resolution, fps, and streams
 
-	// SECURITY: Prevent direct client calls to notification methods
-	return &JsonRpcResponse{
-		JSONRPC: "2.0",
-		Error:   NewJsonRpcError(METHOD_NOT_FOUND, "method_not_found", "camera_status_update", "Verify method name"),
-	}, nil
+	s.logger.WithFields(logging.Fields{
+		"method": "camera_status_update",
+		"params": params,
+	}).Info("Processing camera status update notification")
+
+	// This is handled by the WebSocket notification system
+	// The actual notification sending is done by notifyCameraStatusUpdate()
 }
 
-// MethodRecordingStatusUpdate handles recording status update notifications
-// SECURITY: This method should not be called directly by clients - it's for server-generated notifications only
-func (s *WebSocketServer) MethodRecordingStatusUpdate(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
+// handleRecordingStatusUpdateNotification processes recording status update notifications
+// This is called internally by the server notification system
+func (s *WebSocketServer) handleRecordingStatusUpdateNotification(params map[string]interface{}) {
 	// REQ-API-022: WebSocket server shall support recording_status_update notifications
 	// REQ-API-023: Notifications shall include device, status, filename, and duration
 
-	// SECURITY: Prevent direct client calls to notification methods
-	return &JsonRpcResponse{
-		JSONRPC: "2.0",
-		Error:   NewJsonRpcError(METHOD_NOT_FOUND, "method_not_found", "recording_status_update", "Verify method name"),
-	}, nil
+	s.logger.WithFields(logging.Fields{
+		"method": "recording_status_update",
+		"params": params,
+	}).Info("Processing recording status update notification")
+
+	// This is handled by the WebSocket notification system
+	// The actual notification sending is done by notifyRecordingStatusUpdate()
 }
 
 // MethodSubscribeEvents handles client subscription to event topics

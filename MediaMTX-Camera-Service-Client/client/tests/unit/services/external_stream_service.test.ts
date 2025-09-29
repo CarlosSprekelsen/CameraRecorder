@@ -16,6 +16,8 @@
  * API Documentation Reference: mediamtx_camera_service_openrpc.json
  */
 
+import { ExternalStreamService } from '../../../src/services/external/ExternalStreamService';
+import { APIClient } from '../../../src/services/abstraction/APIClient';
 import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
 import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { 
@@ -30,76 +32,16 @@ import { MockDataFactory } from '../../utils/mocks';
 // Use centralized mocks - eliminates duplication
 const mockWebSocketService = MockDataFactory.createMockWebSocketService();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
+const mockAPIClient = new APIClient(mockWebSocketService, mockLoggerService);
 
-// Create a mock external stream service class
-class ExternalStreamService {
-  constructor(
-    private wsService: WebSocketService,
-    private logger: LoggerService
-  ) {}
-
-  async discoverExternalStreams(options: {
-    skydio_enabled?: boolean;
-    generic_enabled?: boolean;
-    force_rescan?: boolean;
-    include_offline?: boolean;
-  } = {}): Promise<ExternalStreamDiscoveryResult> {
-    try {
-      this.logger.info('discover_external_streams request', options);
-      return await this.wsService.sendRPC('discover_external_streams', options);
-    } catch (error) {
-      this.logger.error('discover_external_streams failed', error as Error);
-      throw error;
-    }
-  }
-
-  async addExternalStream(streamUrl: string, streamName: string, streamType?: string): Promise<ExternalStreamAddResult> {
-    try {
-      this.logger.info('add_external_stream request', { streamUrl, streamName, streamType });
-      return await this.wsService.sendRPC('add_external_stream', { streamUrl, streamName, streamType });
-    } catch (error) {
-      this.logger.error('add_external_stream failed', error as Error);
-      throw error;
-    }
-  }
-
-  async removeExternalStream(streamUrl: string): Promise<ExternalStreamRemoveResult> {
-    try {
-      this.logger.info('remove_external_stream request', { streamUrl });
-      return await this.wsService.sendRPC('remove_external_stream', { streamUrl });
-    } catch (error) {
-      this.logger.error('remove_external_stream failed', error as Error);
-      throw error;
-    }
-  }
-
-  async getExternalStreams(): Promise<ExternalStreamsListResult> {
-    try {
-      this.logger.info('get_external_streams request');
-      return await this.wsService.sendRPC('get_external_streams');
-    } catch (error) {
-      this.logger.error('get_external_streams failed', error as Error);
-      throw error;
-    }
-  }
-
-  async setDiscoveryInterval(scanInterval: number): Promise<DiscoveryIntervalSetResult> {
-    try {
-      this.logger.info('set_discovery_interval request', { scanInterval });
-      return await this.wsService.sendRPC('set_discovery_interval', { scanInterval });
-    } catch (error) {
-      this.logger.error('set_discovery_interval failed', error as Error);
-      throw error;
-    }
-  }
-}
+// Use real ExternalStreamService with APIClient
 
 describe('ExternalStreamService Unit Tests', () => {
   let externalStreamService: ExternalStreamService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    externalStreamService = new ExternalStreamService(mockWebSocketService, mockLoggerService);
+    externalStreamService = new ExternalStreamService(mockAPIClient, mockLoggerService);
   });
 
   describe('REQ-EXT-001: discover_external_streams RPC method', () => {

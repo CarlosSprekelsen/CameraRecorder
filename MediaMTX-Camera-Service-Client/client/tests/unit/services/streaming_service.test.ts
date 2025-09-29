@@ -16,6 +16,8 @@
  * API Documentation Reference: mediamtx_camera_service_openrpc.json
  */
 
+import { StreamingService } from '../../../src/services/streaming/StreamingService';
+import { APIClient } from '../../../src/services/abstraction/APIClient';
 import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
 import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { StreamStartResult, StreamStopResult, StreamUrlResult, StreamStatusResult, StreamsListResult } from '../../../src/types/api';
@@ -24,71 +26,16 @@ import { MockDataFactory } from '../../utils/mocks';
 // Use centralized mocks - eliminates duplication
 const mockWebSocketService = MockDataFactory.createMockWebSocketService();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
+const mockAPIClient = new APIClient(mockWebSocketService, mockLoggerService);
 
-// Create a mock streaming service class
-class StreamingService {
-  constructor(
-    private wsService: WebSocketService,
-    private logger: LoggerService
-  ) {}
-
-  async startStreaming(device: string): Promise<StreamStartResult> {
-    try {
-      this.logger.info('start_streaming request', { device });
-      return await this.wsService.sendRPC('start_streaming', { device });
-    } catch (error) {
-      this.logger.error('start_streaming failed', error as Error);
-      throw error;
-    }
-  }
-
-  async stopStreaming(device: string): Promise<StreamStopResult> {
-    try {
-      this.logger.info('stop_streaming request', { device });
-      return await this.wsService.sendRPC('stop_streaming', { device });
-    } catch (error) {
-      this.logger.error('stop_streaming failed', error as Error);
-      throw error;
-    }
-  }
-
-  async getStreamUrl(device: string): Promise<StreamUrlResult> {
-    try {
-      this.logger.info('get_stream_url request', { device });
-      return await this.wsService.sendRPC('get_stream_url', { device });
-    } catch (error) {
-      this.logger.error('get_stream_url failed', error as Error);
-      throw error;
-    }
-  }
-
-  async getStreamStatus(device: string): Promise<StreamStatusResult> {
-    try {
-      this.logger.info('get_stream_status request', { device });
-      return await this.wsService.sendRPC('get_stream_status', { device });
-    } catch (error) {
-      this.logger.error('get_stream_status failed', error as Error);
-      throw error;
-    }
-  }
-
-  async getStreams(): Promise<StreamsListResult> {
-    try {
-      this.logger.info('get_streams request');
-      return await this.wsService.sendRPC('get_streams');
-    } catch (error) {
-      this.logger.error('get_streams failed', error as Error);
-      throw error;
-    }
-  }
-}
+// Use real StreamingService with APIClient
 
 describe('StreamingService Unit Tests', () => {
   let streamingService: StreamingService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    streamingService = new StreamingService(mockWebSocketService, mockLoggerService);
+    streamingService = new StreamingService(mockAPIClient, mockLoggerService);
   });
 
   describe('REQ-STREAM-001: start_streaming RPC method', () => {

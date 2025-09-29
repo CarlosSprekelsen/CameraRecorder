@@ -32,7 +32,7 @@ describe('RecordingService Unit Tests', () => {
     // Use centralized mocks - eliminates duplication
 
     // Create service instance
-    recordingService = new RecordingService(mockWebSocketService, mockLoggerService);
+    recordingService = new RecordingService(mockAPIClient, mockLoggerService);
   });
 
   afterEach(() => {

@@ -16,6 +16,7 @@ import AboutPage from './pages/About/AboutPage';
 // Lazy load heavy components for code splitting
 const CameraPage = lazy(() => import('./pages/Cameras/CameraPage'));
 const FilesPage = lazy(() => import('./pages/Files/FilesPage'));
+const AdminPage = lazy(() => import('./pages/Admin/AdminPage'));
 import LoadingSpinner from './components/Layout/LoadingSpinner';
 import ErrorBoundary from './components/Error/ErrorBoundary';
 import { AccessibilityProvider } from './components/Accessibility/AccessibilityProvider';
@@ -145,6 +146,7 @@ function App(): React.JSX.Element {
                           <Route path="/" element={<Navigate to="/cameras" replace />} />
                           <Route path="/cameras" element={<CameraPage />} />
                           <Route path="/files" element={<FilesPage />} />
+                          <Route path="/admin" element={<AdminPage />} />
                           <Route path="/about" element={<AboutPage />} />
                           <Route path="*" element={<Navigate to="/cameras" replace />} />
                         </Routes>
