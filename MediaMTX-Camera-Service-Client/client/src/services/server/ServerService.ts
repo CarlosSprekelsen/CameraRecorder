@@ -29,6 +29,7 @@ export interface SystemMetrics {
   };
 }
 import { APIClient } from '../abstraction/APIClient';
+import { LoggerService } from '../logger/LoggerService';
 import { SubscriptionResult, UnsubscriptionResult, SubscriptionStatsResult } from '../../types/api';
 
 /**
@@ -62,7 +63,9 @@ export class ServerService implements IStatus {
   constructor(
     private apiClient: APIClient,
     private logger: LoggerService,
-  ) {}
+  ) {
+    this.logger.info('ServerService initialized');
+  }
 
   async getServerInfo(): Promise<ServerInfo> {
     return this.apiClient.call<ServerInfo>('get_server_info');

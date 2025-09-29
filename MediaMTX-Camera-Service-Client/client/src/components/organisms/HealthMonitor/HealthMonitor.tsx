@@ -6,36 +6,33 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Card, 
-  CardContent, 
-  Alert, 
-  Chip, 
-  LinearProgress,
-  Grid 
-} from '@mui/material';
+import { Grid } from '../../atoms/Grid/Grid';
+import { Card } from '../../atoms/Card/Card';
+import { Alert } from '../../atoms/Alert/Alert';
+import { Badge } from '../../atoms/Badge/Badge';
 import { 
   CheckCircle, 
   Error, 
   Warning, 
   Storage,
+  Speed,
   Memory,
-  Speed 
+  Refresh
 } from '@mui/icons-material';
 import { useServerStore } from '../../../stores/server/serverStore';
 import { useConnectionStore } from '../../../stores/connection/connectionStore';
 
-interface HealthMonitorProps {
-  // ARCHITECTURE FIX: Components use stores, not direct service props
+export interface HealthMonitorProps {
+  className?: string;
 }
 
-export const HealthMonitor: React.FC<HealthMonitorProps> = () => {
-  const { status, loadSystemStatus, setError } = useServerStore();
-  const { status: connectionStatus } = useConnectionStore();
+export const HealthMonitor: React.FC<HealthMonitorProps> = ({ className = '' }) => {
   const [loading, setLoading] = useState(false);
   const [lastCheck, setLastCheck] = useState<Date | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  const { status, loadSystemStatus, setError: setServerError } = useServerStore();
+  const { status: connectionStatus } = useConnectionStore();
 
   useEffect(() => {
     // ARCHITECTURE FIX: Removed client-side timer - health checks are server-authoritative
@@ -51,6 +48,7 @@ export const HealthMonitor: React.FC<HealthMonitorProps> = () => {
       console.log('Health check completed successfully');
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Health check failed';
+      setServerError(errorMsg);
       setError(errorMsg);
       console.error('Health check failed:', err instanceof Error ? err.message : String(err));
     } finally {
@@ -71,86 +69,91 @@ export const HealthMonitor: React.FC<HealthMonitorProps> = () => {
   const healthStatus = getHealthStatus();
 
   return (
-    <Card sx={{ mb: 2 }}>
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-          {healthStatus.icon}
-          <Typography variant="h6" sx={{ ml: 1 }}>
-            System Health Monitor
-          </Typography>
-          <Chip 
-            label={healthStatus.status.toUpperCase()} 
-            color={healthStatus.color as any}
-            size="small"
-            sx={{ ml: 'auto' }}
-          />
-        </Box>
+    <div className={`health-monitor ${className}`}>
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-xl font-semibold">System Health</h2>
+        <button
+          onClick={handleHealthCheck}
+          disabled={loading}
+          className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+        >
+          <Refresh className="h-4 w-4" />
+          {loading ? 'Checking...' : 'Refresh'}
+        </button>
+      </div>
 
-        {loading && <LinearProgress sx={{ mb: 2 }} />}
+      {error && (
+        <Alert variant="error" className="mb-4">
+          {error}
+        </Alert>
+      )}
 
-        <Grid container spacing={2}>
-          <Grid item xs={12} md={4}>
-            <Card variant="outlined">
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Speed sx={{ mr: 1, color: 'primary.main' }} />
-                  <Typography variant="subtitle2">Server Status</Typography>
-                </Box>
-                <Typography variant="h6" color={serverStatus?.status === 'online' ? 'success.main' : 'error.main'}>
-                  {serverStatus?.status || 'Unknown'}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Last check: {lastCheck?.toLocaleTimeString() || 'Never'}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
+      {loading && (
+        <div className="w-full bg-gray-200 rounded-full h-2 mb-4">
+          <div className="bg-blue-600 h-2 rounded-full animate-pulse"></div>
+        </div>
+      )}
 
-          <Grid item xs={12} md={4}>
-            <Card variant="outlined">
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Memory sx={{ mr: 1, color: 'primary.main' }} />
-                  <Typography variant="subtitle2">CPU Usage</Typography>
-                </Box>
-                <Typography variant="h6">
-                  {systemMetrics?.cpu_usage?.toFixed(1) || 'N/A'}%
-                </Typography>
-                <LinearProgress 
-                  variant="determinate" 
-                  value={systemMetrics?.cpu_usage || 0}
-                  color={systemMetrics?.cpu_usage > 80 ? 'error' : 'primary'}
-                />
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} md={4}>
-            <Card variant="outlined">
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Storage sx={{ mr: 1, color: 'primary.main' }} />
-                  <Typography variant="subtitle2">Storage</Typography>
-                </Box>
-                <Typography variant="h6">
-                  {systemMetrics?.storage_usage?.toFixed(1) || 'N/A'}%
-                </Typography>
-                <LinearProgress 
-                  variant="determinate" 
-                  value={systemMetrics?.storage_usage || 0}
-                  color={systemMetrics?.storage_usage > 90 ? 'error' : 'primary'}
-                />
-              </CardContent>
-            </Card>
-          </Grid>
+      <Grid container spacing={2}>
+        <Grid item xs={12} md={4}>
+          <Card variant="outlined">
+            <div className="p-4">
+              <div className="flex items-center mb-2">
+                <Speed className="mr-2 text-blue-600" />
+                <h3 className="text-sm font-medium">Server Status</h3>
+              </div>
+              <h2 className={`text-lg font-semibold ${healthStatus.color === 'success' ? 'text-green-600' : healthStatus.color === 'warning' ? 'text-yellow-600' : 'text-red-600'}`}>
+                {status?.status || 'Unknown'}
+              </h2>
+              <p className="text-sm text-gray-500">
+                Last check: {lastCheck?.toLocaleTimeString() || 'Never'}
+              </p>
+            </div>
+          </Card>
         </Grid>
 
-        {serverStatus?.error && (
-          <Alert severity="error" sx={{ mt: 2 }}>
-            {serverStatus.error}
-          </Alert>
-        )}
-      </CardContent>
-    </Card>
+        <Grid item xs={12} md={4}>
+          <Card variant="outlined">
+            <div className="p-4">
+              <div className="flex items-center mb-2">
+                <Memory className="mr-2 text-blue-600" />
+                <h3 className="text-sm font-medium">System Metrics</h3>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">CPU Usage:</span>
+                  <Badge variant="info">{status?.cpu_usage || 'N/A'}%</Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Memory:</span>
+                  <Badge variant="info">{status?.memory_usage || 'N/A'}%</Badge>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Card variant="outlined">
+            <div className="p-4">
+              <div className="flex items-center mb-2">
+                <Storage className="mr-2 text-blue-600" />
+                <h3 className="text-sm font-medium">Storage</h3>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Available:</span>
+                  <Badge variant="success">{status?.storage_available || 'N/A'}</Badge>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Used:</span>
+                  <Badge variant="warning">{status?.storage_used || 'N/A'}</Badge>
+                </div>
+              </div>
+            </div>
+          </Card>
+        </Grid>
+      </Grid>
+    </div>
   );
 };

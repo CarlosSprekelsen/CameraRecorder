@@ -1,12 +1,12 @@
 import React, { useEffect, memo } from 'react';
 import { Box, Typography, Paper, Alert, CircularProgress, Container } from '@mui/material';
 import { useDeviceStore } from '../../stores/device/deviceStore';
-import { Camera } from '../../types/api';
+// ARCHITECTURE FIX: Removed unused Camera import
 import { useAuthStore } from '../../stores/auth/authStore';
 // ARCHITECTURE FIX: Removed direct service import - use stores only
 import CameraTable from '../../components/Cameras/CameraTable';
 import { logger } from '../../services/logger/LoggerService';
-import { JsonRpcNotification } from '../../types/api';
+// ARCHITECTURE FIX: Removed unused JsonRpcNotification import
 import { useRecordingStore } from '../../stores/recording/recordingStore';
 
 /**

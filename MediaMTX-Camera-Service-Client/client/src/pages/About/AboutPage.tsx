@@ -5,17 +5,10 @@
  */
 
 import React from 'react';
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Grid,
-  Chip,
-  Alert,
-  CircularProgress,
-  Divider,
-} from '@mui/material';
+import { Grid } from '../../components/atoms/Grid/Grid';
+import { Card } from '../../components/atoms/Card/Card';
+import { Alert } from '../../components/atoms/Alert/Alert';
+import { Badge } from '../../components/atoms/Badge/Badge';
 import {
   Info as InfoIcon,
   Storage as StorageIcon,
@@ -224,7 +217,7 @@ const AboutPage: React.FC = () => {
         {storage && (
           <Grid item xs={12}>
             <Card>
-              <CardContent>
+              <div className="p-4">
                 <Box display="flex" alignItems="center" mb={2}>
                   <StorageIcon sx={{ mr: 1 }} />
                   <Typography variant="h6">Storage Information</Typography>
@@ -281,7 +274,7 @@ const AboutPage: React.FC = () => {
                     Low storage space warning is active
                   </Alert>
                 )}
-              </CardContent>
+              </div>
             </Card>
           </Grid>
         )}

@@ -137,8 +137,8 @@ export class PerformanceMonitor {
   }
 
   private updateSuccessRate(): void {
-    if (this.totalRequests > 0) {
-      this.metrics.successRate = (this.successCount / this.totalRequests) * 100;
+    if (this.metrics.totalRequests > 0) {
+      this.metrics.successRate = (this.successCount / this.metrics.totalRequests) * 100;
     }
   }
 

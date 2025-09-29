@@ -5,7 +5,7 @@
  */
 
 import React, { useState, memo } from 'react';
-import PropTypes from 'prop-types';
+// ARCHITECTURE FIX: Removed unused PropTypes import
 import {
   Box,
   Card,
@@ -29,7 +29,7 @@ const LoginPage: React.FC<LoginPageProps> = memo(() => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { login } = useAuthStore();
+  const { } = useAuthStore();
   const { status: connectionStatus } = useConnectionStore();
 
   const handleSubmit = async (e: React.FormEvent) => {

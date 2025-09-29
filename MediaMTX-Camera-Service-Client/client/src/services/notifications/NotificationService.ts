@@ -44,6 +44,7 @@ export class NotificationService {
     private logger: LoggerService,
     private eventBus: EventBus,
   ) {
+    this.logger.info('NotificationService initialized');
     this.setupNotificationHandlers();
   }
 

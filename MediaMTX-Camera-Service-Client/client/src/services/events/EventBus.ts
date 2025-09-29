@@ -53,7 +53,7 @@ export class EventBus {
    * Emit an event
    * Architecture requirement: Event-driven communication patterns
    */
-  emit<T = any>(eventType: string, data: T): void {
+  emit<T = any>(eventType: string, data: T extends Record<string, unknown> ? T : Record<string, unknown>): void {
     const handlers = this.handlers.get(eventType);
     if (handlers && handlers.length > 0) {
       this.logger.info(`Emitting event: ${eventType}`, data);

@@ -4,6 +4,7 @@ import {
   ExternalStreamDiscoveryResult, 
   ExternalStreamAddResult, 
   ExternalStreamRemoveResult, 
+  ExternalStreamsListResult,
   DiscoveryIntervalSetResult
 } from '../../types/api';
 
@@ -54,7 +55,10 @@ export class ExternalStreamService {
     try {
       this.logger.info('Discovering external streams', params);
       const response = await this.apiClient.call('discover_external_streams', params) as ExternalStreamDiscoveryResult;
-      this.logger.info(`Discovered ${response.streams?.length || 0} external streams`);
+      const totalStreams = (response.discovered_streams?.length || 0) + 
+                           (response.skydio_streams?.length || 0) + 
+                           (response.generic_streams?.length || 0);
+      this.logger.info(`Discovered ${totalStreams} external streams`);
       return response;
     } catch (error) {
       this.logger.error('Failed to discover external streams', error as Record<string, unknown>);
@@ -102,11 +106,11 @@ export class ExternalStreamService {
    * Get list of external streams
    * Implements get_external_streams RPC method
    */
-  async getExternalStreams(): Promise<ExternalStreamListResult> {
+  async getExternalStreams(): Promise<ExternalStreamsListResult> {
     try {
       this.logger.info('Getting external streams');
-      const response = await this.apiClient.call('get_external_streams', {}) as ExternalStreamListResult;
-      this.logger.info(`Retrieved ${response.streams?.length || 0} external streams`);
+      const response = await this.apiClient.call('get_external_streams', {}) as ExternalStreamsListResult;
+      this.logger.info(`Retrieved ${response.external_streams?.length || 0} external streams`);
       return response;
     } catch (error) {
       this.logger.error('Failed to get external streams', error as Record<string, unknown>);

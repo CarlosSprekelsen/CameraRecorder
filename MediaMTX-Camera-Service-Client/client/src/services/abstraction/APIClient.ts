@@ -8,6 +8,7 @@
 import { WebSocketService } from '../websocket/WebSocketService';
 import { LoggerService } from '../logger/LoggerService';
 import { PerformanceMonitor } from '../monitoring/PerformanceMonitor';
+import { RpcMethod } from '../../types/api';
 
 export interface APIClientConfig {
   timeout?: number;
@@ -29,7 +30,7 @@ export class APIClient {
    * Execute RPC call with proper abstraction
    * Architecture requirement: Services should not directly access WebSocket
    */
-  async call<T = any>(method: string, params: Record<string, unknown> = {}): Promise<T> {
+  async call<T = any>(method: RpcMethod, params: Record<string, unknown> = {}): Promise<T> {
     // Start performance monitoring
     const endTimer = this.performanceMonitor.startCommandTimer();
     

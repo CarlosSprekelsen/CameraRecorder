@@ -1,5 +1,6 @@
 import { AuthenticateParams, AuthenticateResult } from '../../types/api';
 import { APIClient } from '../abstraction/APIClient';
+import { LoggerService } from '../logger/LoggerService';
 
 /**
  * Authentication Service
@@ -22,7 +23,9 @@ export class AuthService {
   constructor(
     private apiClient: APIClient,
     private logger: LoggerService,
-  ) {}
+  ) {
+    this.logger.info('AuthService initialized');
+  }
 
   async authenticate(token: string): Promise<AuthenticateResult> {
     if (!this.apiClient.isConnected) {
