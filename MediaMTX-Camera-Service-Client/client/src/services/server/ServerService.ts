@@ -59,7 +59,10 @@ import { SubscriptionResult, UnsubscriptionResult, SubscriptionStatsResult } fro
  * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture
  */
 export class ServerService implements IStatus {
-  constructor(private apiClient: APIClient) {}
+  constructor(
+    private apiClient: APIClient,
+    private logger: LoggerService,
+  ) {}
 
   async getServerInfo(): Promise<ServerInfo> {
     return this.apiClient.call<ServerInfo>('get_server_info');

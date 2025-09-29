@@ -6,7 +6,8 @@
  */
 
 import React, { useState } from 'react';
-import { Box, Typography, Button, Alert, CircularProgress } from '@mui/material';
+import { Button } from '../../atoms/Button/Button';
+import { Alert } from '../../atoms/Alert/Alert';
 import { PlayArrow, Stop } from '@mui/icons-material';
 import { useRecordingStore } from '../../../stores/recording/recordingStore';
 import { logger } from '../../../services/logger/LoggerService';
@@ -59,53 +60,53 @@ export const RecordingController: React.FC<RecordingControllerProps> = ({
   const isRecording = currentRecording?.status === 'RECORDING';
 
   return (
-    <Box sx={{ p: 2, border: 1, borderColor: 'grey.300', borderRadius: 1 }}>
-      <Typography variant="h6" gutterBottom>
+    <div className="p-4 border border-gray-300 rounded-lg">
+      <h6 className="text-lg font-semibold mb-4">
         Recording Control - {device}
-      </Typography>
+      </h6>
       
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert variant="error" className="mb-4">
           {error}
         </Alert>
       )}
 
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+      <div className="flex gap-4 items-center">
         {!isRecording ? (
           <Button
-            variant="contained"
-            color="primary"
-            startIcon={<PlayArrow />}
+            variant="primary"
             onClick={handleStartRecording}
             disabled={loading}
-            sx={{ minWidth: 140 }}
+            loading={loading}
+            className="min-w-[140px] flex items-center gap-2"
           >
-            {loading ? <CircularProgress size={20} /> : 'Start Recording'}
+            <PlayArrow className="h-4 w-4" />
+            Start Recording
           </Button>
         ) : (
           <Button
-            variant="contained"
-            color="error"
-            startIcon={<Stop />}
+            variant="danger"
             onClick={handleStopRecording}
             disabled={loading}
-            sx={{ minWidth: 140 }}
+            loading={loading}
+            className="min-w-[140px] flex items-center gap-2"
           >
-            {loading ? <CircularProgress size={20} /> : 'Stop Recording'}
+            <Stop className="h-4 w-4" />
+            Stop Recording
           </Button>
         )}
-      </Box>
+      </div>
 
       {currentRecording && (
-        <Box sx={{ mt: 2 }}>
-          <Typography variant="body2" color="text.secondary">
+        <div className="mt-4">
+          <p className="text-sm text-gray-600">
             Status: {currentRecording.status}
-          </Typography>
-          <Typography variant="body2" color="text.secondary">
+          </p>
+          <p className="text-sm text-gray-600">
             Started: {currentRecording.startTime ? new Date(currentRecording.startTime).toLocaleString() : 'Unknown'}
-          </Typography>
-        </Box>
+          </p>
+        </div>
       )}
-    </Box>
+    </div>
   );
 };

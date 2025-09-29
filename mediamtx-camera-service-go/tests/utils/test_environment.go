@@ -1,8 +1,15 @@
 /*
-Test Environment Management
+Test Environment Management - FIXED Resource Management
 
 Provides centralized test environment management for WebSocket tests,
-following the project testing standards and Go coding standards.
+using the good patterns from internal/testutils and eliminating
+resource management issues.
+
+FIXED ISSUES:
+- Eliminated duplicate mutex instances (leverages shared infrastructure)
+- Proper resource cleanup using UniversalTestSetup pattern
+- Progressive Readiness compliance
+- No global shared state (each test gets isolated resources)
 
 Requirements Coverage:
 - REQ-TEST-001: Test environment setup and management
@@ -16,60 +23,53 @@ API Documentation Reference: docs/api/json_rpc_methods.md
 package testutils
 
 import (
-	"context"
 	"os"
 	"path/filepath"
-	"sync"
 	"testing"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/require"
 )
 
-// TestEnvironmentManager manages the shared test environment
-type TestEnvironmentManager struct {
-	environment *TestEnvironment
-	initialized bool
+// FIXED: Removed global shared state and mutex duplication
+// Each test gets isolated resources through UniversalTestSetup
+
+// WebSocketTestEnvironmentManager manages isolated test environments
+// FIXED: No shared state, each test gets its own environment
+type WebSocketTestEnvironmentManager struct {
+	setup *testutils.UniversalTestSetup
 }
 
-var (
-	envManager *TestEnvironmentManager
-	envMutex   sync.RWMutex
-)
-
-// GetTestEnvironment returns the shared test environment
-func GetTestEnvironment(t *testing.T) *TestEnvironment {
+// GetWebSocketTestEnvironment returns an isolated test environment
+// FIXED: Uses UniversalTestSetup pattern for proper resource management
+func GetWebSocketTestEnvironment(t *testing.T) *WebSocketTestEnvironmentManager {
 	// REQ-TEST-001: Test environment setup and management
 
-	envMutex.Lock()
-	defer envMutex.Unlock()
+	// FIXED: Use good pattern from internal/testutils
+	setup := testutils.SetupTest(t, "config_websocket_test.yaml")
 
-	if envManager == nil {
-		envManager = &TestEnvironmentManager{}
+	return &WebSocketTestEnvironmentManager{
+		setup: setup,
 	}
-
-	if !envManager.initialized {
-		envManager.environment = SetupTestEnvironment(t)
-		envManager.initialized = true
-	}
-
-	return envManager.environment
 }
 
-// CleanupTestEnvironment cleans up the shared test environment
-func CleanupTestEnvironment(t *testing.T) {
+// CleanupWebSocketTestEnvironment cleans up the test environment
+// FIXED: Uses UniversalTestSetup cleanup pattern
+func CleanupWebSocketTestEnvironment(t *testing.T, manager *WebSocketTestEnvironmentManager) {
 	// REQ-TEST-003: Resource cleanup and isolation
 
-	envMutex.Lock()
-	defer envMutex.Unlock()
-
-	if envManager != nil && envManager.initialized {
-		TeardownTestEnvironment(t, envManager.environment)
-		envManager.initialized = false
-		envManager.environment = nil
+	if manager != nil && manager.setup != nil {
+		manager.setup.Cleanup() // This handles all cleanup properly
 	}
+}
+
+// GetSetup returns the UniversalTestSetup for resource management
+func (m *WebSocketTestEnvironmentManager) GetSetup() *testutils.UniversalTestSetup {
+	return m.setup
 }
 
 // CreateTestDirectories creates necessary test directories
+// FIXED: Uses UniversalTestSetup directory management
 func CreateTestDirectories(t *testing.T, baseDir string) map[string]string {
 	// REQ-TEST-001: Test environment setup and management
 
@@ -88,65 +88,40 @@ func CreateTestDirectories(t *testing.T, baseDir string) map[string]string {
 	return dirs
 }
 
-// ValidateTestEnvironment validates that the test environment is properly set up
-func ValidateTestEnvironment(t *testing.T, env *TestEnvironment) {
+// ValidateWebSocketTestEnvironment validates that the test environment is properly set up
+// FIXED: Uses UniversalTestSetup validation pattern
+func ValidateWebSocketTestEnvironment(t *testing.T, manager *WebSocketTestEnvironmentManager) {
 	// REQ-TEST-001: Test environment setup and management
 
-	require.NotNil(t, env, "Test environment should not be nil")
-	require.NotNil(t, env.Server, "Test server should not be nil")
-	require.NotNil(t, env.Config, "Test config should not be nil")
-	require.NotEmpty(t, env.TempDir, "Temp directory should not be empty")
-	require.NotNil(t, env.Logger, "Logger should not be nil")
-	require.NotEmpty(t, env.ConfigPath, "Config path should not be empty")
+	require.NotNil(t, manager, "Test environment manager should not be nil")
+	require.NotNil(t, manager.setup, "UniversalTestSetup should not be nil")
 
-	// Validate server is running
-	require.True(t, env.Server.IsRunning(), "Test server should be running")
+	// Validate UniversalTestSetup components
+	configManager := manager.setup.GetConfigManager()
+	logger := manager.setup.GetLogger()
 
-	// Validate temp directory exists
-	_, err := os.Stat(env.TempDir)
-	require.NoError(t, err, "Temp directory should exist")
+	require.NotNil(t, configManager, "Config manager should not be nil")
+	require.NotNil(t, logger, "Logger should not be nil")
+	require.NotNil(t, configManager.GetConfig(), "Config should not be nil")
 }
 
-// GetTestServerPort returns the port of the shared test server
-func GetTestServerPort() int {
-	envMutex.RLock()
-	defer envMutex.RUnlock()
+// FIXED: Removed shared server port functions - no more shared state
+// Each test environment manages its own resources through UniversalTestSetup
 
-	if envManager != nil && envManager.initialized && envManager.environment != nil {
-		return envManager.environment.Server.GetConfig().Port
+// IsWebSocketTestEnvironmentReady checks if the test environment is ready
+// FIXED: Uses UniversalTestSetup readiness pattern
+func IsWebSocketTestEnvironmentReady(manager *WebSocketTestEnvironmentManager) bool {
+	if manager == nil || manager.setup == nil {
+		return false
 	}
-	return 0
+
+	// FIXED: Use UniversalTestSetup readiness validation
+	configManager := manager.setup.GetConfigManager()
+	logger := manager.setup.GetLogger()
+
+	return configManager != nil && logger != nil && configManager.GetConfig() != nil
 }
 
-// IsTestEnvironmentReady checks if the test environment is ready
-func IsTestEnvironmentReady() bool {
-	envMutex.RLock()
-	defer envMutex.RUnlock()
-
-	return envManager != nil && envManager.initialized && envManager.environment != nil && envManager.environment.Server.IsRunning()
-}
-
-// ResetTestEnvironment resets the test environment (for cleanup between test suites)
-func ResetTestEnvironment(t *testing.T) {
-	// REQ-TEST-003: Resource cleanup and isolation
-
-	envMutex.Lock()
-	defer envMutex.Unlock()
-
-	if envManager != nil && envManager.initialized {
-		// Stop the shared server
-		if envManager.environment.Server != nil {
-			err := envManager.environment.Server.Stop(context.Background())
-			if err != nil {
-				t.Logf("Warning: Failed to stop test server during reset: %v", err)
-			}
-		}
-
-		// Clean up environment
-		TeardownTestEnvironment(t, envManager.environment)
-
-		// Reset state
-		envManager.initialized = false
-		envManager.environment = nil
-	}
-}
+// FIXED: Removed ResetTestEnvironment - no more shared state
+// Each test environment manages its own cleanup through UniversalTestSetup
+// Tests should use shared infrastructure pattern directly for proper resource management

@@ -48,13 +48,7 @@ function App(): React.JSX.Element {
   usePerformanceMonitor();
   useKeyboardShortcuts();
 
-  // Store hooks for service injection
-  const { setDeviceService } = useDeviceStore();
-  const { setService: setRecordingService } = useRecordingStore();
-  const { setFileService } = useFileStore();
-  const { setAuthService } = useAuthStore();
-  const { setServerService } = useServerStore();
-  const { setWebSocketService } = useConnectionStore();
+  // ARCHITECTURE FIX: Service injection removed - services are managed by ServiceFactory
 
   // ARCHITECTURE FIX: Services injected via store initialization
   useEffect(() => {
@@ -68,7 +62,7 @@ function App(): React.JSX.Element {
     setStatus: setConnectionStatus,
     setError: setConnectionError,
   } = useConnectionStore();
-  const { isAuthenticated, login } = useAuthStore();
+  const { isAuthenticated } = useAuthStore();
   const { loadAllServerData } = useServerStore();
   
   // ARCHITECTURE FIX: Store hooks moved after service injection useEffect

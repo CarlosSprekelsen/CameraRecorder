@@ -60,7 +60,7 @@ export class ServiceFactory {
 
   createServerService(apiClient: APIClient): ServerService {
     if (!this.serverService) {
-      this.serverService = new ServerService(apiClient);
+      this.serverService = new ServerService(apiClient, logger);
       logger.info('Server service created');
     }
     return this.serverService;

@@ -21,6 +21,7 @@ import { APIClient } from '../abstraction/APIClient';
 export class AuthService {
   constructor(
     private apiClient: APIClient,
+    private logger: LoggerService,
   ) {}
 
   async authenticate(token: string): Promise<AuthenticateResult> {

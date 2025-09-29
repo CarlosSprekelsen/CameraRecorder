@@ -6,9 +6,11 @@
 
 import React, { ReactNode, ErrorInfo } from 'react';
 import { ErrorBoundary as ReactErrorBoundary, FallbackProps } from 'react-error-boundary';
-import { Box, Typography, Button, Alert, AlertTitle } from '@mui/material';
+import { Button } from '../atoms/Button/Button';
+import { Alert } from '../atoms/Alert/Alert';
 import { Refresh as RefreshIcon, BugReport as BugIcon } from '@mui/icons-material';
-// ARCHITECTURE FIX: Removed direct service import - use store hooks instead
+import { logger } from '../../services/logger/LoggerService';
+// ARCHITECTURE FIX: Logger is infrastructure - components can import it directly
 
 interface Props {
   children: ReactNode;
@@ -51,54 +53,44 @@ const ErrorFallback: React.FC<FallbackProps> = ({ error, resetErrorBoundary }) =
   };
 
   return (
-    <Box
-      sx={{
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        minHeight: '400px',
-        p: 3,
-        textAlign: 'center',
-      }}
-    >
-      <Alert severity="error" sx={{ mb: 3, maxWidth: 600 }}>
-        <AlertTitle>Something went wrong</AlertTitle>
-        <Typography variant="body2" sx={{ mt: 1 }}>
+    <div className="flex flex-col items-center justify-center min-h-[400px] p-6 text-center">
+      <Alert variant="error" title="Something went wrong" className="mb-6 max-w-2xl">
+        <p className="text-sm mt-2">
           An unexpected error occurred. Please try refreshing the page or contact support if the
           problem persists.
-        </Typography>
+        </p>
       </Alert>
 
-      <Box display="flex" gap={2} mt={2}>
+      <div className="flex gap-4 mt-4">
         <Button
-          variant="contained"
-          startIcon={<RefreshIcon />}
+          variant="primary"
           onClick={resetErrorBoundary}
-          color="primary"
+          className="flex items-center gap-2"
         >
+          <RefreshIcon className="h-4 w-4" />
           Try Again
         </Button>
-        <Button variant="outlined" startIcon={<BugIcon />} onClick={handleReload} color="secondary">
+        <Button 
+          variant="secondary" 
+          onClick={handleReload}
+          className="flex items-center gap-2"
+        >
+          <BugIcon className="h-4 w-4" />
           Reload Page
         </Button>
-      </Box>
+      </div>
 
       {process.env.NODE_ENV === 'development' && error && (
-        <Box sx={{ mt: 3, p: 2, bgcolor: 'grey.100', borderRadius: 1, maxWidth: 800 }}>
-          <Typography variant="h6" color="error" gutterBottom>
+        <div className="mt-6 p-4 bg-gray-100 rounded-lg max-w-4xl">
+          <h6 className="text-lg font-semibold text-red-600 mb-2">
             Development Error Details:
-          </Typography>
-          <Typography
-            variant="body2"
-            component="pre"
-            sx={{ whiteSpace: 'pre-wrap', fontSize: '0.75rem' }}
-          >
+          </h6>
+          <pre className="text-xs font-mono whitespace-pre-wrap break-words">
             {error.toString()}
-          </Typography>
-        </Box>
+          </pre>
+        </div>
       )}
-    </Box>
+    </div>
   );
 };
 
@@ -109,8 +101,8 @@ const ErrorFallback: React.FC<FallbackProps> = ({ error, resetErrorBoundary }) =
  */
 const ErrorBoundary: React.FC<Props> = ({ children, fallback, onError }) => {
   const handleError = (error: Error, errorInfo: ErrorInfo) => {
-    // Log error to console
-    console.error('ErrorBoundary caught an error', error);
+    // Log error using professional logger
+    logger.error('ErrorBoundary caught an error', { error: error.message, stack: error.stack });
 
     // Call custom error handler if provided
     if (onError) {

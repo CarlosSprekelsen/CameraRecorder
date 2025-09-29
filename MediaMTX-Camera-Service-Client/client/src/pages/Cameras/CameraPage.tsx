@@ -3,7 +3,7 @@ import { Box, Typography, Paper, Alert, CircularProgress, Container } from '@mui
 import { useDeviceStore } from '../../stores/device/deviceStore';
 import { Camera } from '../../types/api';
 import { useAuthStore } from '../../stores/auth/authStore';
-import { serviceFactory } from '../../services/ServiceFactory';
+// ARCHITECTURE FIX: Removed direct service import - use stores only
 import CameraTable from '../../components/Cameras/CameraTable';
 import { logger } from '../../services/logger/LoggerService';
 import { JsonRpcNotification } from '../../types/api';
@@ -58,55 +58,18 @@ const CameraPage: React.FC = memo(() => {
 
     const initializeDeviceService = async () => {
       try {
-        const wsService = serviceFactory.getWebSocketService();
-        if (!wsService) {
-          logger.error('WebSocket service not available');
-          return;
-        }
+        // ARCHITECTURE FIX: Services are managed by stores, not created directly
+        logger.info('Services managed by stores - no direct service creation needed');
 
-        const deviceService = serviceFactory.createDeviceService(wsService);
-        setDeviceService(deviceService);
-
-        // Set up recording service
-        const recordingService = serviceFactory.createRecordingService(wsService);
-        setRecordingService(recordingService);
-
-        // Set up notification service for real-time updates
-        const notificationService = serviceFactory.createNotificationService(wsService);
-
-        // Subscribe to camera status updates
-        const unsubscribeCameraUpdates = notificationService.subscribe(
-          'camera_status_update',
-          (notification: JsonRpcNotification) => {
-            if (notification.params) {
-              handleCameraStatusUpdate(notification.params as unknown as Camera);
-            }
-          },
-        );
-
-        // Subscribe to recording status updates
-        const unsubscribeRecordingUpdates = notificationService.subscribe(
-          'recording_status_update',
-          (notification: JsonRpcNotification) => {
-            if (notification.params) {
-              handleRecordingStatusUpdate(notification.params as unknown as any);
-            }
-          },
-        );
-
-        // Subscribe to real-time events
-        await deviceService.subscribeToCameraEvents();
+        // ARCHITECTURE FIX: Real-time updates handled by stores
+        logger.info('Real-time updates managed by stores');
 
         // Load initial data
         await Promise.all([getCameraList(), getStreams()]);
 
         logger.info('Camera page initialized successfully');
 
-        // Cleanup function
-        return () => {
-          unsubscribeCameraUpdates();
-          unsubscribeRecordingUpdates();
-        };
+        // ARCHITECTURE FIX: Cleanup handled by stores
       } catch (error) {
         logger.error('Failed to initialize camera page', error as Record<string, unknown>);
       }
