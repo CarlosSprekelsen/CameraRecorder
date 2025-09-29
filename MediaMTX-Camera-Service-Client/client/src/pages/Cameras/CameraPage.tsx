@@ -47,7 +47,7 @@ const CameraPage: React.FC = memo(() => {
   } = useDeviceStore();
 
   const { isAuthenticated } = useAuthStore();
-  const { handleRecordingStatusUpdate, setService: setRecordingService } = useRecordingStore();
+  const { handleRecordingStatusUpdate, setRecordingService } = useRecordingStore();
 
   // Initialize device service and load data
   useEffect(() => {

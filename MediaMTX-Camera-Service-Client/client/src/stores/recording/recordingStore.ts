@@ -15,7 +15,7 @@ export interface RecordingSessionInfo {
   device: string;
   session_id: string;
   filename?: string;
-  status: 'RECORDING' | 'STOPPED' | 'ERROR';  // Session state
+  status: 'RECORDING' | 'STOPPED' | 'ERROR' | 'STARTING';  // Session state
   startTime?: string;
   duration?: number;
   format?: string;
@@ -31,11 +31,11 @@ export interface RecordingState {
 }
 
 export interface RecordingActions {
-  setService: (service: RecordingService) => void;
+  setRecordingService: (service: RecordingService) => void;
   takeSnapshot: (device: string, filename?: string) => Promise<void>;
   startRecording: (device: string, duration?: number, format?: string) => Promise<void>;
   stopRecording: (device: string) => Promise<void>;
-  handleRecordingStatusUpdate: (info: RecordingInfo) => void;
+  handleRecordingStatusUpdate: (info: RecordingSessionInfo) => void;
   reset: () => void;
 }
 
@@ -59,7 +59,7 @@ export const useRecordingStore = create<RecordingState & RecordingActions>()(
         return {
           ...initialState,
 
-          setService: (recordingService: RecordingService) => {
+          setRecordingService: (recordingService: RecordingService) => {
             service = recordingService;
           },
 
@@ -99,7 +99,7 @@ export const useRecordingStore = create<RecordingState & RecordingActions>()(
             }
           },
 
-          handleRecordingStatusUpdate: (info: RecordingInfo) => {
+          handleRecordingStatusUpdate: (info: RecordingSessionInfo) => {
             set((state) => {
               const nextActive = { ...state.activeRecordings };
               if (info.status === 'RECORDING' || info.status === 'STARTING') {
@@ -107,9 +107,8 @@ export const useRecordingStore = create<RecordingState & RecordingActions>()(
               } else if (info.status === 'STOPPED' || info.status === 'ERROR') {
                 delete nextActive[info.device];
               }
-              const nextHistory = [...state.history];
-              nextHistory.unshift(info);
-              return { activeRecordings: nextActive, history: nextHistory };
+              // Don't add session info to file history - that's for completed recordings
+              return { activeRecordings: nextActive };
             });
           },
 

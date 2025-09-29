@@ -42,34 +42,7 @@ export class AuthService {
     return result;
   }
 
-  /**
-   * Login method for backward compatibility with tests
-   * Architecture requirement: Maintain API compatibility during refactoring
-   */
-  async login(username: string, _password: string): Promise<{ success: boolean; error?: string; role?: string }> {
-    try {
-      // For test compatibility, we'll use the username as a token
-      // In real implementation, this would validate credentials and return a JWT
-      const result = await this.authenticate(username);
-      
-      return {
-        success: result.authenticated,
-        role: result.role,
-        error: result.authenticated ? undefined : 'Authentication failed'
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : 'Login failed'
-      };
-    }
-  }
-
-  async refreshToken(): Promise<void> {
-    // SECURITY: No client-side token storage or refresh
-    // Architecture requirement: Server manages all authentication state
-    throw new Error('Token refresh must be handled by server session management');
-  }
+  // Legacy methods removed - use authenticate() directly
 
   logout(): void {
     // SECURITY: No client-side credential storage to clear
