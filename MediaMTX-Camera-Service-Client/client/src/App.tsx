@@ -1,8 +1,6 @@
 import { useEffect, useState, lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import { Box } from '@mui/material';
+import { Box } from './components/atoms/Box/Box';
 
 import { useConnectionStore } from './stores/connection/connectionStore';
 import { useAuthStore } from './stores/auth/authStore';
@@ -29,18 +27,25 @@ import { AccessibilityProvider } from './components/Accessibility/AccessibilityP
 import { usePerformanceMonitor } from './hooks/usePerformanceMonitor';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 
-// Create theme
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-});
+// Global CSS styles for atomic design components
+const globalStyles = `
+  * {
+    box-sizing: border-box;
+  }
+  
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+      sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  
+  #root {
+    min-height: 100vh;
+  }
+`;
 
 // WebSocket configuration
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8002/ws';
@@ -140,19 +145,19 @@ function App(): React.JSX.Element {
 
   if (!isInitialized) {
     return (
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
+      <>
+        <style>{globalStyles}</style>
+        <Box className="flex justify-center items-center min-h-screen">
           <LoadingSpinner />
         </Box>
-      </ThemeProvider>
+      </>
     );
   }
 
   return (
-    <AccessibilityProvider>
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
+    <>
+      <style>{globalStyles}</style>
+      <AccessibilityProvider>
         <ErrorBoundary>
           <BrowserRouter>
             <Routes>
@@ -190,8 +195,8 @@ function App(): React.JSX.Element {
             </Routes>
           </BrowserRouter>
         </ErrorBoundary>
-      </ThemeProvider>
-    </AccessibilityProvider>
+      </AccessibilityProvider>
+    </>
   );
 }
 
