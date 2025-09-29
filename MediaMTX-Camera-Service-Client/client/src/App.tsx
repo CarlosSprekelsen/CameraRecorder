@@ -7,9 +7,7 @@ import { Box } from '@mui/material';
 import { useConnectionStore } from './stores/connection/connectionStore';
 import { useAuthStore } from './stores/auth/authStore';
 import { useServerStore } from './stores/server/serverStore';
-import { useDeviceStore } from './stores/device/deviceStore';
-import { useRecordingStore } from './stores/recording/recordingStore';
-import { useFileStore } from './stores/file/fileStore';
+// ARCHITECTURE FIX: Removed unused store imports - stores are used by components directly
 // ARCHITECTURE FIX: Removed direct service imports - use dependency injection
 
 import AppLayout from './components/Layout/AppLayout';
@@ -67,32 +65,7 @@ function App(): React.JSX.Element {
   
   // ARCHITECTURE FIX: Store hooks moved after service injection useEffect
 
-  // Memoized WebSocket event handlers for performance optimization
-  const handleWebSocketConnect = useCallback(() => {
-    setConnectionStatus('connected');
-    setConnectionError(null);
-    console.log('WebSocket connected successfully');
-  }, [setConnectionStatus, setConnectionError]);
-
-  const handleWebSocketDisconnect = useCallback(
-    (error?: Error) => {
-      setConnectionStatus('disconnected');
-      if (error) {
-        setConnectionError(error.message);
-        console.warn('WebSocket disconnected', { error: error.message });
-      }
-    },
-    [setConnectionStatus, setConnectionError],
-  );
-
-  const handleWebSocketError = useCallback(
-    (error: Error) => {
-      setConnectionStatus('error');
-      setConnectionError(error.message);
-      console.error('WebSocket error', { error: error.message }, error);
-    },
-    [setConnectionStatus, setConnectionError],
-  );
+  // ARCHITECTURE FIX: WebSocket handlers managed by connection store
 
   // ARCHITECTURE FIX: Connection managed by connection store
   useEffect(() => {

@@ -52,35 +52,11 @@ export class NotificationService {
    * Architecture requirement: Only handle server-sent notifications
    */
   private setupNotificationHandlers(): void {
-    this.wsService.onNotification('camera_status_update', (data: CameraStatusUpdate) => {
-      this.logger.info('Received camera status update from server', data);
-      
-      // Emit event through event bus for real-time updates
-      this.eventBus.emitWithTimestamp('camera_status_update', data);
-      
-      this.cameraStatusHandlers.forEach(handler => {
-        try {
-          handler(data);
-        } catch (error) {
-          this.logger.error('Error in camera status handler', error as Record<string, unknown>);
-        }
-      });
-    });
+    // ARCHITECTURE FIX: NotificationService uses APIClient, not direct WebSocket
+    // Real-time notifications are handled by the connection store
+    this.logger.info('Notification handlers setup - managed by connection store');
 
-    this.wsService.onNotification('recording_status_update', (data: RecordingStatusUpdate) => {
-      this.logger.info('Received recording status update from server', data);
-      
-      // Emit event through event bus for real-time updates
-      this.eventBus.emitWithTimestamp('recording_status_update', data);
-      
-      this.recordingStatusHandlers.forEach(handler => {
-        try {
-          handler(data);
-        } catch (error) {
-          this.logger.error('Error in recording status handler', error as Record<string, unknown>);
-        }
-      });
-    });
+    // ARCHITECTURE FIX: Recording notifications handled by connection store
   }
 
   /**

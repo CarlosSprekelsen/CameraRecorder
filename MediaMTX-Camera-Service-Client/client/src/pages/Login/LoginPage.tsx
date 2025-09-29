@@ -49,13 +49,8 @@ const LoginPage: React.FC<LoginPageProps> = memo(() => {
     setError(null);
 
     try {
-      const result = await authService.authenticate(token);
-
-      if (result.authenticated) {
-        login(token, result.role, result.session_id, result.expires_at, result.permissions);
-      } else {
-        setError('Authentication failed. Please check your token.');
-      }
+      await authenticate(token);
+      // Authentication success is handled by the store
     } catch (error) {
       // Authentication error - handled by error boundary
       setError(error instanceof Error ? error.message : 'Authentication failed');
@@ -161,8 +156,6 @@ const LoginPage: React.FC<LoginPageProps> = memo(() => {
 
 LoginPage.displayName = 'LoginPage';
 
-LoginPage.propTypes = {
-  authService: PropTypes.instanceOf(AuthService).isRequired,
-};
+// ARCHITECTURE FIX: Removed PropTypes - components use stores, not direct service props
 
 export default LoginPage;

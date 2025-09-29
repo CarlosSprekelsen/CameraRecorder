@@ -24,14 +24,16 @@ import {
   Memory,
   Speed 
 } from '@mui/icons-material';
-import { useUnifiedStore } from '../../../stores/UnifiedStateStore';
+import { useServerStore } from '../../../stores/server/serverStore';
+import { useConnectionStore } from '../../../stores/connection/connectionStore';
 
 interface HealthMonitorProps {
   // ARCHITECTURE FIX: Components use stores, not direct service props
 }
 
 export const HealthMonitor: React.FC<HealthMonitorProps> = () => {
-  const { serverStatus, systemMetrics, checkHealth, setHealthError } = useUnifiedStore();
+  const { status, loadSystemStatus, setError } = useServerStore();
+  const { status: connectionStatus } = useConnectionStore();
   const [loading, setLoading] = useState(false);
   const [lastCheck, setLastCheck] = useState<Date | null>(null);
 
@@ -44,22 +46,22 @@ export const HealthMonitor: React.FC<HealthMonitorProps> = () => {
   const handleHealthCheck = async () => {
     setLoading(true);
     try {
-      await checkHealth();
+      await loadSystemStatus();
       setLastCheck(new Date());
-      logger.info('Health check completed successfully');
+      console.log('Health check completed successfully');
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Health check failed';
-      setHealthError(errorMsg);
-      logger.error('Health check failed:', err);
+      setError(errorMsg);
+      console.error('Health check failed:', err instanceof Error ? err.message : String(err));
     } finally {
       setLoading(false);
     }
   };
 
   const getHealthStatus = () => {
-    if (serverStatus?.status === 'online' && systemMetrics?.cpu_usage < 80) {
+    if (connectionStatus === 'connected' && status?.status === 'HEALTHY') {
       return { status: 'healthy', color: 'success', icon: <CheckCircle /> };
-    } else if (serverStatus?.status === 'online' && systemMetrics?.cpu_usage >= 80) {
+    } else if (connectionStatus === 'connected' && status?.status === 'DEGRADED') {
       return { status: 'warning', color: 'warning', icon: <Warning /> };
     } else {
       return { status: 'error', color: 'error', icon: <Error /> };
