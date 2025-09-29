@@ -15,8 +15,16 @@ interface AuthStore extends AuthState {
   setAuthenticated: (authenticated: boolean) => void;
   
   // Actions that call services
+  login: (
+    token: string,
+    role: string,
+    sessionId: string,
+    expiresAt: string,
+    permissions: string[],
+  ) => void;
   logout: () => void;
   authenticate: (token: string) => Promise<void>;
+  refreshToken: () => Promise<void>;
   
   // Reset
   reset: () => void;
@@ -57,6 +65,23 @@ export const useAuthStore = create<AuthStore>((set) => {
       set((state) => ({ ...state, isAuthenticated: authenticated })),
 
     // Actions that call services
+    login: (
+      token: string,
+      role: string,
+      sessionId: string,
+      expiresAt: string,
+      permissions: string[],
+    ) =>
+      set((state) => ({
+        ...state,
+        token,
+        role: role as 'admin' | 'operator' | 'viewer',
+        session_id: sessionId,
+        isAuthenticated: true,
+        expires_at: expiresAt,
+        permissions,
+      })),
+
     logout: () => {
       if (authService) {
         authService.logout();
@@ -76,6 +101,12 @@ export const useAuthStore = create<AuthStore>((set) => {
       if (!authService) throw new Error('Auth service not initialized');
       // TODO: Implement authenticate via service
       console.log('authenticate called with token:', token);
+    },
+
+    refreshToken: async () => {
+      if (!authService) throw new Error('Auth service not initialized');
+      // TODO: Implement refresh token via service
+      console.log('refreshToken called');
     },
 
     reset: () => set(initialState),

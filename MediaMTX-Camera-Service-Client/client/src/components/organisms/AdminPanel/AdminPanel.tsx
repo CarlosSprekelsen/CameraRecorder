@@ -7,30 +7,20 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Card, 
-  CardContent, 
-  Typography, 
-  Button, 
-  TextField, 
-  Switch, 
-  FormControlLabel, 
-  Grid, 
-  Alert, 
-  Divider,
-  Chip,
-  CircularProgress
-} from '@mui/material';
-import { 
-  Settings, 
-  Storage, 
-  Delete, 
-  Save, 
-  Refresh,
-  AdminPanelSettings,
-  Warning
-} from '@mui/icons-material';
+import { Box } from '../../atoms/Box/Box';
+import { Card } from '../../atoms/Card/Card';
+import { CardContent } from '../../atoms/CardContent/CardContent';
+import { Typography } from '../../atoms/Typography/Typography';
+import { Button } from '../../atoms/Button/Button';
+import { TextField } from '../../atoms/TextField/TextField';
+import { Switch } from '../../atoms/Switch/Switch';
+import { FormControlLabel } from '../../atoms/FormControlLabel/FormControlLabel';
+import { Grid } from '../../atoms/Grid/Grid';
+import { Alert } from '../../atoms/Alert/Alert';
+import { Divider } from '../../atoms/Divider/Divider';
+import { Chip } from '../../atoms/Chip/Chip';
+import { CircularProgress } from '../../atoms/CircularProgress/CircularProgress';
+import { Icon } from '../../atoms/Icon/Icon';
 import { useFileStore } from '../../../stores/file/fileStore';
 import { usePermissions } from '../../../hooks/usePermissions';
 import { logger } from '../../../services/logger/LoggerService';
@@ -131,8 +121,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className = '' }) => {
 
   return (
     <Box className={`admin-panel ${className}`}>
-      <Box sx={{ mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-        <AdminPanelSettings sx={{ fontSize: 32, color: 'primary.main' }} />
+      <Box className="mb-3 flex items-center gap-2">
+        <Icon name="admin" size={32} color="#1976d2" />
         <Typography variant="h4" component="h1">
           Admin Panel
         </Typography>
@@ -140,7 +130,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className = '' }) => {
           label="Admin Only" 
           color="error" 
           size="small" 
-          icon={<Settings />}
+          icon={<Icon name="settings" size={16} />}
         />
       </Box>
 

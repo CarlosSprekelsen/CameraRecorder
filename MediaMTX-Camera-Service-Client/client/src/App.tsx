@@ -49,18 +49,34 @@ function App(): React.JSX.Element {
 
   // ARCHITECTURE FIX: Service injection removed - services are managed by ServiceFactory
 
-  // ARCHITECTURE FIX: Initialize WebSocket service and inject into stores
+  // ARCHITECTURE FIX: Initialize all services and inject into stores
   useEffect(() => {
     if (!isInitialized) {
-      console.log('Initializing WebSocket service for real-time notifications');
+      console.log('Initializing services for real-time notifications');
       
       // Create WebSocket service
       const wsService = new WebSocketService({ url: WS_URL });
       
-      // Inject into connection store
-      useConnectionStore.getState().setWebSocketService(wsService);
+      // Create APIClient
+      const apiClient = new APIClient(wsService, logger);
       
-      console.log('WebSocket service initialized and injected into stores');
+      // Create services using ServiceFactory
+      const serviceFactory = ServiceFactory.getInstance();
+      const authService = serviceFactory.createAuthService(apiClient);
+      const deviceService = serviceFactory.createDeviceService(apiClient);
+      const recordingService = serviceFactory.createRecordingService(apiClient);
+      const fileService = serviceFactory.createFileService(apiClient);
+      const serverService = serviceFactory.createServerService(apiClient);
+      
+      // Inject services into stores
+      useConnectionStore.getState().setWebSocketService(wsService);
+      useAuthStore.getState().setAuthService(authService);
+      useDeviceStore.getState().setDeviceService(deviceService);
+      useRecordingStore.getState().setRecordingService(recordingService);
+      useFileStore.getState().setFileService(fileService);
+      useServerStore.getState().setServerService(serverService);
+      
+      console.log('All services initialized and injected into stores');
     }
   }, [isInitialized]);
 
