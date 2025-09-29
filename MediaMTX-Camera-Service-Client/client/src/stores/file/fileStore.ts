@@ -47,6 +47,10 @@ export interface FileActions {
   downloadFile: (downloadUrl: string, filename: string) => Promise<void>;
   deleteRecording: (filename: string) => Promise<boolean>;
   deleteSnapshot: (filename: string) => Promise<boolean>;
+  
+  // Retention policy management (I.FileActions)
+  setRetentionPolicy: (policyType: 'age' | 'size' | 'manual', enabled: boolean, maxAgeDays?: number, maxSizeGb?: number) => Promise<any>;
+  cleanupOldFiles: () => Promise<any>;
 
   // State management
   setLoading: (loading: boolean) => void;
@@ -281,6 +285,44 @@ export const useFileStore = create<FileState & FileActions>()(
             const { pagination } = get();
             const newOffset = (page - 1) * pagination.limit;
             set({ pagination: { ...pagination, offset: newOffset } });
+          },
+
+          setRetentionPolicy: async (policyType: 'age' | 'size' | 'manual', enabled: boolean, maxAgeDays?: number, maxSizeGb?: number) => {
+            if (!fileService) {
+              set({ error: 'File service not initialized' });
+              return null;
+            }
+            set({ loading: true, error: null });
+            try {
+              const response = await fileService.setRetentionPolicy(policyType, enabled, maxAgeDays, maxSizeGb);
+              set({ loading: false });
+              return response;
+            } catch (error) {
+              set({
+                loading: false,
+                error: error instanceof Error ? error.message : 'Failed to set retention policy',
+              });
+              return null;
+            }
+          },
+
+          cleanupOldFiles: async () => {
+            if (!fileService) {
+              set({ error: 'File service not initialized' });
+              return null;
+            }
+            set({ loading: true, error: null });
+            try {
+              const response = await fileService.cleanupOldFiles();
+              set({ loading: false });
+              return response;
+            } catch (error) {
+              set({
+                loading: false,
+                error: error instanceof Error ? error.message : 'Failed to cleanup old files',
+              });
+              return null;
+            }
           },
 
           reset: () => set(initialState),

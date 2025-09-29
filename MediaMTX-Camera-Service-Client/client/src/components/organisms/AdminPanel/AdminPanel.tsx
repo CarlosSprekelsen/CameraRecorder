@@ -55,7 +55,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className = '' }) => {
   if (!canViewAdminPanel() || !isAdmin) {
     return (
       <Box className={`admin-panel ${className}`}>
-        <Alert severity="error" icon={<Warning />}>
+        <Alert variant="error" icon={<Icon name="warning" />}>
           Access denied. Admin privileges required to access this panel.
         </Alert>
       </Box>
@@ -135,13 +135,13 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className = '' }) => {
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
+        <Alert variant="error" className="mb-3">
           {error}
         </Alert>
       )}
 
       {success && (
-        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setSuccess(null)}>
+        <Alert variant="success" className="mb-3">
           {success}
         </Alert>
       )}
