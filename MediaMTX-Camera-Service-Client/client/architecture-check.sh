@@ -27,7 +27,7 @@ fi
 
 # RULE 2: Services use APIClient, not WebSocketService
 echo -n "Checking services use APIClient... "
-if grep -r "WebSocketService" src/services/ --include="*.ts" | grep -v "APIClient.ts" | grep -v "test" | grep -v "mock"; then
+if grep -r "WebSocketService" src/services/ --include="*.ts" | grep -v "APIClient.ts" | grep -v "test" | grep -v "mock" | grep -v "websocket/WebSocketService.ts"; then
     echo -e "${RED}❌ FAILED${NC}"
     echo "Services are using WebSocketService directly!"
     echo "Fix: Use APIClient instead of WebSocketService"

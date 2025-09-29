@@ -19,7 +19,6 @@ import { Grid } from '../../atoms/Grid/Grid';
 import { Alert } from '../../atoms/Alert/Alert';
 import { Divider } from '../../atoms/Divider/Divider';
 import { Chip } from '../../atoms/Chip/Chip';
-import { CircularProgress } from '../../atoms/CircularProgress/CircularProgress';
 import { Icon } from '../../atoms/Icon/Icon';
 import { useFileStore } from '../../../stores/file/fileStore';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -164,7 +163,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className = '' }) => {
                     control={
                       <Switch
                         checked={enabled}
-                        onChange={(e) => setEnabled(e.target.checked)}
+                        onChange={setEnabled}
                         color="primary"
                       />
                     }
@@ -178,8 +177,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className = '' }) => {
                     fullWidth
                     label="Policy Type"
                     value={policyType}
-                    onChange={(e) => setPolicyType(e.target.value as 'age' | 'size' | 'manual')}
-                    SelectProps={{ native: true }}
+                    onChange={(value) => setPolicyType(value as 'age' | 'size' | 'manual')}
                     disabled={!enabled}
                   >
                     <option value="age">Age-based (days)</option>
@@ -195,9 +193,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className = '' }) => {
                       type="number"
                       label="Max Age (days)"
                       value={maxAgeDays}
-                      onChange={(e) => setMaxAgeDays(parseInt(e.target.value) || 30)}
+                      onChange={(value) => setMaxAgeDays(parseInt(value) || 30)}
                       disabled={!enabled}
-                      inputProps={{ min: 1, max: 365 }}
                     />
                   </Grid>
                 )}
@@ -209,9 +206,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className = '' }) => {
                       type="number"
                       label="Max Size (GB)"
                       value={maxSizeGb}
-                      onChange={(e) => setMaxSizeGb(parseInt(e.target.value) || 10)}
+                      onChange={(value) => setMaxSizeGb(parseInt(value) || 10)}
                       disabled={!enabled}
-                      inputProps={{ min: 1, max: 1000 }}
                     />
                   </Grid>
                 )}
@@ -219,15 +215,15 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className = '' }) => {
                 <Grid item xs={12}>
                   <Box className="flex gap-2 mt-2">
                     <Button
-                      variant="contained"
+                      variant="primary"
                       onClick={handleSetRetentionPolicy}
                       disabled={loading}
-                      startIcon={loading ? <CircularProgress size={20} /> : <Save />}
+                      loading={loading}
                     >
                       {loading ? 'Setting...' : 'Set Policy'}
                     </Button>
                     <Button
-                      variant="outlined"
+                      variant="secondary"
                       onClick={handleResetForm}
                       disabled={loading}
                     >
@@ -251,25 +247,23 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className = '' }) => {
                 </Typography>
               </Box>
 
-              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              <Typography variant="body2" color="secondary" className="mb-2">
                 Manually trigger cleanup of old files based on current retention policy.
               </Typography>
 
               <Button
-                variant="contained"
-                color="error"
-                fullWidth
+                variant="danger"
                 onClick={handleCleanupOldFiles}
                 disabled={cleanupLoading}
-                startIcon={cleanupLoading ? <CircularProgress size={20} /> : <Delete />}
-                sx={{ mb: 2 }}
+                loading={cleanupLoading}
+                className="mb-2"
               >
                 {cleanupLoading ? 'Cleaning...' : 'Cleanup Old Files'}
               </Button>
 
               {cleanupResult && (
-                <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                  <Typography variant="body2" color="text.secondary">
+                <Box className="mt-2 p-2 bg-gray-50 rounded">
+                  <Typography variant="body2" color="secondary">
                     Last Cleanup Results:
                   </Typography>
                   <Typography variant="body2">
@@ -288,52 +282,52 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className = '' }) => {
         <Grid item xs={12}>
           <Card variant="outlined">
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                <Settings sx={{ mr: 1, color: 'primary.main' }} />
+              <Box className="flex items-center mb-2">
+                <Icon name="settings" size={20} color="#1976d2" />
                 <Typography variant="h6" component="h2">
                   System Information
                 </Typography>
               </Box>
 
-              <Divider sx={{ mb: 2 }} />
+              <Divider className="mb-2" />
 
               <Grid container spacing={2}>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                    <Typography variant="h6" color="primary.main">
+                  <Box className="text-center p-2 bg-gray-50 rounded">
+                    <Typography variant="h6" color="primary">
                       Admin Panel
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="secondary">
                       Version 1.0.0
                     </Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                    <Typography variant="h6" color="success.main">
+                  <Box className="text-center p-2 bg-gray-50 rounded">
+                    <Typography variant="h6" color="success">
                       Retention Policy
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="secondary">
                       {enabled ? 'Enabled' : 'Disabled'}
                     </Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                    <Typography variant="h6" color="info.main">
+                  <Box className="text-center p-2 bg-gray-50 rounded">
+                    <Typography variant="h6" color="primary">
                       Policy Type
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="secondary">
                       {policyType.charAt(0).toUpperCase() + policyType.slice(1)}
                     </Typography>
                   </Box>
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                  <Box sx={{ textAlign: 'center', p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-                    <Typography variant="h6" color="warning.main">
+                  <Box className="text-center p-2 bg-gray-50 rounded">
+                    <Typography variant="h6" color="warning">
                       Last Cleanup
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="secondary">
                       {cleanupResult ? `${cleanupResult.files_deleted} files` : 'Never'}
                     </Typography>
                   </Box>

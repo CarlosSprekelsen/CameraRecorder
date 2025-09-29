@@ -10,6 +10,7 @@ import { useServerStore } from './stores/server/serverStore';
 import { useDeviceStore } from './stores/device/deviceStore';
 import { useFileStore } from './stores/file/fileStore';
 import { useRecordingStore } from './stores/recording/recordingStore';
+import { useStreamingStore } from './stores/streaming/streamingStore';
 import { WebSocketService } from './services/websocket/WebSocketService';
 import { APIClient } from './services/abstraction/APIClient';
 import { ServiceFactory } from './services/ServiceFactory';
@@ -72,6 +73,7 @@ function App(): React.JSX.Element {
         const deviceService = serviceFactory.createDeviceService(apiClient);
         const recordingService = serviceFactory.createRecordingService(apiClient);
         const fileService = serviceFactory.createFileService(apiClient);
+        const streamingService = serviceFactory.createStreamingService(apiClient);
         const serverService = serviceFactory.createServerService(apiClient);
         
         // Inject services into stores
@@ -80,6 +82,7 @@ function App(): React.JSX.Element {
         useDeviceStore.getState().setDeviceService(deviceService);
         useRecordingStore.getState().setRecordingService(recordingService);
         useFileStore.getState().setFileService(fileService);
+        useStreamingStore.getState().setStreamingService(streamingService);
         useServerStore.getState().setServerService(serverService);
         
         console.log('All services initialized and injected into stores');

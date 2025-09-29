@@ -7,11 +7,14 @@ import {
   Stop as StopIcon,
   AccessTime as TimedIcon,
   Settings as SettingsIcon,
+  PlayArrow as StreamIcon,
+  Pause as PauseIcon,
 } from '@mui/icons-material';
 // ARCHITECTURE FIX: Removed direct service import - use store hooks instead
 import { Snackbar, Alert } from '@mui/material';
 import TimedRecordDialog from './TimedRecordDialog';
 import { useRecordingStore } from '../../stores/recording/recordingStore';
+import { useStreamingStore } from '../../stores/streaming/streamingStore';
 // ARCHITECTURE FIX: Removed serviceFactory import - components must use stores only
 import PermissionGate from '../Security/PermissionGate';
 

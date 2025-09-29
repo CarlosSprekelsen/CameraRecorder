@@ -78,6 +78,7 @@ export const useServerStore = create<ServerStore>((set) => {
           loading: false, 
           error: error instanceof Error ? error.message : 'Failed to load server info' 
         });
+        throw error;
       }
     },
 

@@ -99,14 +99,28 @@ export const useAuthStore = create<AuthStore>((set) => {
 
     authenticate: async (token: string) => {
       if (!authService) throw new Error('Auth service not initialized');
-      // TODO: Implement authenticate via service
-      console.log('authenticate called with token:', token);
+      set({ loading: true, error: null });
+      try {
+        const result = await authService.authenticate(token);
+        set({ loading: false });
+        return result;
+      } catch (error) {
+        set({ loading: false, error: error instanceof Error ? error.message : 'Authentication failed' });
+        throw error;
+      }
     },
 
     refreshToken: async () => {
       if (!authService) throw new Error('Auth service not initialized');
-      // TODO: Implement refresh token via service
-      console.log('refreshToken called');
+      set({ loading: true, error: null });
+      try {
+        const result = await authService.refreshToken();
+        set({ loading: false });
+        return result;
+      } catch (error) {
+        set({ loading: false, error: error instanceof Error ? error.message : 'Token refresh failed' });
+        throw error;
+      }
     },
 
     reset: () => set(initialState),

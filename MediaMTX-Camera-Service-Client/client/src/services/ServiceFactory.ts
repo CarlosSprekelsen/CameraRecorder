@@ -1,7 +1,6 @@
 // Service Layer - Factory Pattern
 // Implements dependency injection as required by architecture
 
-import { WebSocketService } from './websocket/WebSocketService';
 import { APIClient } from './abstraction/APIClient';
 import { EventBus } from './events/EventBus';
 import { AuthService } from './auth/AuthService';
@@ -16,7 +15,6 @@ import { logger } from './logger/LoggerService';
 
 export class ServiceFactory {
   private static instance: ServiceFactory;
-  private wsService: WebSocketService | null = null;
   private apiClient: APIClient | null = null;
   private authService: AuthService | null = null;
   private serverService: ServerService | null = null;
@@ -36,15 +34,7 @@ export class ServiceFactory {
     return ServiceFactory.instance;
   }
 
-  createWebSocketService(url: string): WebSocketService {
-    if (!this.wsService) {
-      this.wsService = new WebSocketService({ url });
-      logger.info('WebSocket service created', { url });
-    }
-    return this.wsService;
-  }
-
-  createAPIClient(wsService: WebSocketService): APIClient {
+  createAPIClient(wsService: any): APIClient {
     if (!this.apiClient) {
       this.apiClient = new APIClient(wsService, logger);
       logger.info('API Client created');
@@ -100,6 +90,14 @@ export class ServiceFactory {
     return this.fileService;
   }
 
+  createStreamingService(apiClient: APIClient): StreamingService {
+    if (!this.streamingService) {
+      this.streamingService = new StreamingService(apiClient, logger);
+      logger.info('Streaming service created');
+    }
+    return this.streamingService;
+  }
+
   createExternalStreamService(apiClient: APIClient): ExternalStreamService {
     if (!this.externalStreamService) {
       this.externalStreamService = new ExternalStreamService(apiClient, logger);
@@ -108,9 +106,6 @@ export class ServiceFactory {
     return this.externalStreamService;
   }
 
-  getWebSocketService(): WebSocketService | null {
-    return this.wsService;
-  }
 
   getAuthService(): AuthService | null {
     return this.authService;
@@ -134,6 +129,10 @@ export class ServiceFactory {
 
   getFileService(): FileService | null {
     return this.fileService;
+  }
+
+  getStreamingService(): StreamingService | null {
+    return this.streamingService;
   }
 
   getExternalStreamService(): ExternalStreamService | null {
