@@ -55,7 +55,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className = '' }) => {
   if (!canViewAdminPanel() || !isAdmin) {
     return (
       <Box className={`admin-panel ${className}`}>
-        <Alert variant="error" icon={<Icon name="warning" />}>
+        <Alert variant="error">
           Access denied. Admin privileges required to access this panel.
         </Alert>
       </Box>
@@ -151,8 +151,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className = '' }) => {
         <Grid item xs={12} md={8}>
           <Card variant="outlined">
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <Storage sx={{ mr: 1, color: 'primary.main' }} />
+              <Box className="flex items-center mb-3">
+                <Icon name="storage" size={20} color="#1976d2" />
                 <Typography variant="h6" component="h2">
                   File Retention Policy
                 </Typography>
@@ -217,7 +217,7 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className = '' }) => {
                 )}
 
                 <Grid item xs={12}>
-                  <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+                  <Box className="flex gap-2 mt-2">
                     <Button
                       variant="contained"
                       onClick={handleSetRetentionPolicy}
@@ -244,8 +244,8 @@ export const AdminPanel: React.FC<AdminPanelProps> = ({ className = '' }) => {
         <Grid item xs={12} md={4}>
           <Card variant="outlined">
             <CardContent>
-              <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-                <Delete sx={{ mr: 1, color: 'error.main' }} />
+              <Box className="flex items-center mb-3">
+                <Icon name="delete" size={20} color="#d32f2f" />
                 <Typography variant="h6" component="h2">
                   File Cleanup
                 </Typography>

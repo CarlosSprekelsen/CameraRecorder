@@ -7,8 +7,13 @@ import { Box } from '@mui/material';
 import { useConnectionStore } from './stores/connection/connectionStore';
 import { useAuthStore } from './stores/auth/authStore';
 import { useServerStore } from './stores/server/serverStore';
+import { useDeviceStore } from './stores/device/deviceStore';
+import { useFileStore } from './stores/file/fileStore';
+import { useRecordingStore } from './stores/recording/recordingStore';
 import { WebSocketService } from './services/websocket/WebSocketService';
-// ARCHITECTURE FIX: WebSocket service injection for real-time notifications
+import { APIClient } from './services/abstraction/APIClient';
+import { ServiceFactory } from './services/ServiceFactory';
+import { logger } from './services/logger/LoggerService';
 
 import AppLayout from './components/Layout/AppLayout';
 import LoginPage from './pages/Login/LoginPage';
@@ -54,31 +59,39 @@ function App(): React.JSX.Element {
     if (!isInitialized) {
       console.log('Initializing services for real-time notifications');
       
-      // Create WebSocket service
-      const wsService = new WebSocketService({ url: WS_URL });
-      
-      // Create APIClient
-      const apiClient = new APIClient(wsService, logger);
-      
-      // Create services using ServiceFactory
-      const serviceFactory = ServiceFactory.getInstance();
-      const authService = serviceFactory.createAuthService(apiClient);
-      const deviceService = serviceFactory.createDeviceService(apiClient);
-      const recordingService = serviceFactory.createRecordingService(apiClient);
-      const fileService = serviceFactory.createFileService(apiClient);
-      const serverService = serviceFactory.createServerService(apiClient);
-      
-      // Inject services into stores
-      useConnectionStore.getState().setWebSocketService(wsService);
-      useAuthStore.getState().setAuthService(authService);
-      useDeviceStore.getState().setDeviceService(deviceService);
-      useRecordingStore.getState().setRecordingService(recordingService);
-      useFileStore.getState().setFileService(fileService);
-      useServerStore.getState().setServerService(serverService);
-      
-      console.log('All services initialized and injected into stores');
+      try {
+        // Create WebSocket service
+        const wsService = new WebSocketService({ url: WS_URL });
+        
+        // Create APIClient
+        const apiClient = new APIClient(wsService, logger);
+        
+        // Create services using ServiceFactory
+        const serviceFactory = ServiceFactory.getInstance();
+        const authService = serviceFactory.createAuthService(apiClient);
+        const deviceService = serviceFactory.createDeviceService(apiClient);
+        const recordingService = serviceFactory.createRecordingService(apiClient);
+        const fileService = serviceFactory.createFileService(apiClient);
+        const serverService = serviceFactory.createServerService(apiClient);
+        
+        // Inject services into stores
+        useConnectionStore.getState().setWebSocketService(wsService);
+        useAuthStore.getState().setAuthService(authService);
+        useDeviceStore.getState().setDeviceService(deviceService);
+        useRecordingStore.getState().setRecordingService(recordingService);
+        useFileStore.getState().setFileService(fileService);
+        useServerStore.getState().setServerService(serverService);
+        
+        console.log('All services initialized and injected into stores');
+        setIsInitialized(true);
+      } catch (error) {
+        console.error('Failed to initialize services', error);
+        setConnectionStatus('error');
+        setConnectionError(error instanceof Error ? error.message : 'Service initialization failed');
+        setIsInitialized(true);
+      }
     }
-  }, [isInitialized]);
+  }, [isInitialized, setConnectionStatus, setConnectionError]);
 
   const {
     status: connectionStatus,
@@ -102,13 +115,11 @@ function App(): React.JSX.Element {
         // Connect using WebSocket service
         await useConnectionStore.getState().connect();
         
-        setIsInitialized(true);
         console.log('Application initialized successfully with real-time notifications');
       } catch (error) {
         console.error('Failed to initialize connection', error);
         setConnectionStatus('error');
         setConnectionError(error instanceof Error ? error.message : 'Connection failed');
-        setIsInitialized(true);
       }
     };
 

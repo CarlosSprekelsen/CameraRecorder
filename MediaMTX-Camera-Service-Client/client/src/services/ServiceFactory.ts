@@ -10,6 +10,7 @@ import { NotificationService } from './notifications/NotificationService';
 import { DeviceService } from './device/DeviceService';
 import { RecordingService } from './recording/RecordingService';
 import { FileService } from './file/FileService';
+import { StreamingService } from './streaming/StreamingService';
 import { ExternalStreamService } from './external/ExternalStreamService';
 import { logger } from './logger/LoggerService';
 
@@ -23,6 +24,7 @@ export class ServiceFactory {
   private deviceService: DeviceService | null = null;
   private recordingService: RecordingService | null = null;
   private fileService: FileService | null = null;
+  private streamingService: StreamingService | null = null;
   private externalStreamService: ExternalStreamService | null = null;
 
   private constructor() {}
