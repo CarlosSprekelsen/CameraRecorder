@@ -59,7 +59,7 @@ export class APIClient {
    * Execute authenticated RPC call
    * Architecture requirement: Centralized authentication handling
    */
-  async authenticatedCall<T = any>(method: string, params: Record<string, unknown> = {}): Promise<T> {
+  async authenticatedCall<T = any>(method: RpcMethod, params: Record<string, unknown> = {}): Promise<T> {
     // Authentication is handled by the WebSocket service session
     return this.call<T>(method, params);
   }
@@ -68,7 +68,7 @@ export class APIClient {
    * Execute batch RPC calls
    * Architecture requirement: Efficient batch operations
    */
-  async batchCall<T = any>(calls: Array<{method: string, params: Record<string, unknown>}>): Promise<T[]> {
+  async batchCall<T = any>(calls: Array<{method: RpcMethod, params: Record<string, unknown>}>): Promise<T[]> {
     const results: T[] = [];
     
     for (const call of calls) {

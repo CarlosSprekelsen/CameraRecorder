@@ -102,7 +102,7 @@ export const useRecordingStore = create<RecordingState & RecordingActions>()(
           handleRecordingStatusUpdate: (info: RecordingInfo) => {
             set((state) => {
               const nextActive = { ...state.activeRecordings };
-              if (info.status === 'RECORDING' || info.status === 'STARTED') {
+              if (info.status === 'RECORDING' || info.status === 'STARTING') {
                 nextActive[info.device] = info;
               } else if (info.status === 'STOPPED' || info.status === 'ERROR') {
                 delete nextActive[info.device];

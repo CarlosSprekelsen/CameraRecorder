@@ -10,6 +10,7 @@ import React from 'react';
 export interface AlertProps {
   children: React.ReactNode;
   variant?: 'info' | 'success' | 'warning' | 'error';
+  severity?: 'info' | 'success' | 'warning' | 'error'; // Material-UI compatibility
   title?: string;
   dismissible?: boolean;
   onDismiss?: () => void;
@@ -19,11 +20,14 @@ export interface AlertProps {
 export const Alert: React.FC<AlertProps> = ({
   children,
   variant = 'info',
+  severity,
   title,
   dismissible = false,
   onDismiss,
   className = '',
 }) => {
+  // Use severity if provided, otherwise use variant
+  const alertVariant = severity || variant;
   const baseClasses = 'rounded-md p-4 border-l-4';
   
   const variantClasses = {
@@ -41,10 +45,10 @@ export const Alert: React.FC<AlertProps> = ({
   };
 
   return (
-    <div className={`${baseClasses} ${variantClasses[variant]} ${className}`}>
+    <div className={`${baseClasses} ${variantClasses[alertVariant]} ${className}`}>
       <div className="flex">
         <div className="flex-shrink-0">
-          <span className="text-lg">{iconMap[variant]}</span>
+          <span className="text-lg">{iconMap[alertVariant]}</span>
         </div>
         <div className="ml-3 flex-1">
           {title && (

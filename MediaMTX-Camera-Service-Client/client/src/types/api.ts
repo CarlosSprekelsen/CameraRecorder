@@ -224,7 +224,7 @@ export interface ServerInfo {
   max_cameras: number;
 }
 
-// System Status from official spec
+// System Status from official spec (get_status - admin only)
 export interface SystemStatus {
   status: 'HEALTHY' | 'DEGRADED' | 'UNHEALTHY';
   uptime: number;
@@ -234,6 +234,14 @@ export interface SystemStatus {
     camera_monitor: 'RUNNING' | 'STOPPED' | 'ERROR' | 'STARTING' | 'STOPPING';
     mediamtx: 'RUNNING' | 'STOPPED' | 'ERROR' | 'STARTING' | 'STOPPING';
   };
+}
+
+// System Readiness Status from official spec (get_system_status - viewer accessible)
+export interface SystemReadinessStatus {
+  status: 'ready' | 'partial' | 'starting';
+  message: string;
+  available_cameras: string[];
+  discovery_active: boolean;
 }
 
 // Storage Info from official spec
@@ -486,6 +494,7 @@ export interface AuthState {
 export interface ServerState {
   info: ServerInfo | null;
   status: SystemStatus | null;
+  systemReadiness: SystemReadinessStatus | null;
   storage: StorageInfo | null;
   loading: boolean;
   error: string | null;

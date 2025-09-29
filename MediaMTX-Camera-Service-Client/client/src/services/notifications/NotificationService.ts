@@ -45,6 +45,8 @@ export class NotificationService {
     private eventBus: EventBus,
   ) {
     this.logger.info('NotificationService initialized');
+    this.logger.info('APIClient available for future notification operations');
+    this.logger.info('EventBus available for event emission');
     this.setupNotificationHandlers();
   }
 

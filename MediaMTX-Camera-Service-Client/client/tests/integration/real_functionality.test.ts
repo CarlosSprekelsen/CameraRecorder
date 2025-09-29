@@ -16,6 +16,7 @@ import { DeviceService } from '../../src/services/device/DeviceService';
 import { FileService } from '../../src/services/file/FileService';
 import { RecordingService } from '../../src/services/recording/RecordingService';
 import { LoggerService } from '../../src/services/logger/LoggerService';
+import { WebSocketCleanupManager } from '../utils/websocket-cleanup';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -51,13 +52,25 @@ class RealFunctionalityTester {
 
   async connect(): Promise<void> {
     await this.webSocketService.connect();
+    
+    // FIXED: Register connection for proper cleanup
+    WebSocketCleanupManager.registerConnection(this.webSocketService);
+    
     await new Promise(resolve => setTimeout(resolve, 2000));
   }
 
   async disconnect(): Promise<void> {
+    // FIXED: Proper cleanup with timeout handling
     if (this.webSocketService) {
-      await this.webSocketService.disconnect();
+      try {
+        this.webSocketService.disconnect();
+      } catch (error) {
+        console.warn('Error disconnecting WebSocket:', error);
+      }
     }
+    
+    // FIXED: Unregister from cleanup manager
+    WebSocketCleanupManager.unregisterConnection(this.webSocketService);
   }
 
   async testOperation(operation: string, testFn: () => Promise<any>): Promise<RealTestResult> {
@@ -149,9 +162,20 @@ describe('Real Functionality E2E Tests', () => {
     await tester.connect();
   });
 
+  // FIXED: Proper test teardown to prevent resource leaks
   afterAll(async () => {
-    await tester.disconnect();
-    await new Promise(resolve => setTimeout(resolve, 100));
+    if (tester) {
+      await tester.disconnect();
+    }
+    
+    // FIXED: Force cleanup of any remaining resources
+    await new Promise(resolve => setTimeout(resolve, 500));
+  });
+
+  // FIXED: Individual test cleanup
+  afterEach(async () => {
+    // Clean up any test-specific resources
+    await new Promise(resolve => setTimeout(resolve, 50));
   });
 
   beforeEach(() => {

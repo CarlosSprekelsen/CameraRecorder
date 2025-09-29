@@ -1,4 +1,4 @@
-import { ServerInfo, SystemStatus, StorageInfo, MetricsResult } from '../../types/api';
+import { ServerInfo, SystemStatus, SystemReadinessStatus, StorageInfo, MetricsResult } from '../../types/api';
 import { IStatus } from '../interfaces/ServiceInterfaces';
 
 /**
@@ -75,8 +75,8 @@ export class ServerService implements IStatus {
     return this.apiClient.call<SystemStatus>('get_status');
   }
 
-  async getSystemStatus(): Promise<SystemStatus> {
-    return this.apiClient.call<SystemStatus>('get_system_status');
+  async getSystemStatus(): Promise<SystemReadinessStatus> {
+    return this.apiClient.call<SystemReadinessStatus>('get_system_status');
   }
 
   async getStorageInfo(): Promise<StorageInfo> {

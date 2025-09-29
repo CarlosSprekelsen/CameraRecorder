@@ -5,6 +5,7 @@
  */
 
 import { LoggerService } from '../../src/services/logger/LoggerService';
+import { WebSocketCleanupManager } from '../utils/websocket-cleanup';
 
 // Import WebSocket for Node.js environment
 const WebSocket = require('ws');
@@ -41,20 +42,17 @@ beforeAll(async () => {
   console.log('📊 Performance Tests: Enabled');
 });
 
-// Global test teardown
+// FIXED: Proper global test teardown to prevent resource leaks
 afterAll(async () => {
   console.log('✅ Integration Tests Completed');
   console.log('📊 Performance metrics collected');
   console.log('🔒 Security validation completed');
   console.log('📡 API compliance verified');
   
-  // Force cleanup of any remaining WebSocket connections
-  if (typeof global.gc === 'function') {
-    global.gc();
-  }
+  // FIXED: Use WebSocketCleanupManager for proper cleanup
+  await WebSocketCleanupManager.forceCleanup(1000);
   
-  // Give time for cleanup
-  await new Promise(resolve => setTimeout(resolve, 100));
+  console.log(`🧹 Cleaned up ${WebSocketCleanupManager.getActiveConnectionCount()} WebSocket connections`);
 });
 
 // Test timeout configuration

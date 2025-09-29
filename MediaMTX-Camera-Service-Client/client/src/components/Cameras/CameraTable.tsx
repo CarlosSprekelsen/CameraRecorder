@@ -222,7 +222,9 @@ const CameraTable: React.FC<CameraTableProps> = ({ cameras, streams, onRefresh }
 
                   <TableCell>
                     <Box display="flex" gap={1}>
-                      <CopyLinkButton device={camera.device} streams={camera.streams} />
+                      {camera.streams && (
+                        <CopyLinkButton device={camera.device} streams={camera.streams} />
+                      )}
                       <DeviceActions device={camera.device} />
                     </Box>
                   </TableCell>

@@ -7,8 +7,8 @@ import { Box } from '@mui/material';
 import { useConnectionStore } from './stores/connection/connectionStore';
 import { useAuthStore } from './stores/auth/authStore';
 import { useServerStore } from './stores/server/serverStore';
-// ARCHITECTURE FIX: Removed unused store imports - stores are used by components directly
-// ARCHITECTURE FIX: Removed direct service imports - use dependency injection
+import { WebSocketService } from './services/websocket/WebSocketService';
+// ARCHITECTURE FIX: WebSocket service injection for real-time notifications
 
 import AppLayout from './components/Layout/AppLayout';
 import LoginPage from './pages/Login/LoginPage';
@@ -48,10 +48,18 @@ function App(): React.JSX.Element {
 
   // ARCHITECTURE FIX: Service injection removed - services are managed by ServiceFactory
 
-  // ARCHITECTURE FIX: Services injected via store initialization
+  // ARCHITECTURE FIX: Initialize WebSocket service and inject into stores
   useEffect(() => {
-    if (isInitialized) {
-      console.log('Application initialized - services managed by stores');
+    if (!isInitialized) {
+      console.log('Initializing WebSocket service for real-time notifications');
+      
+      // Create WebSocket service
+      const wsService = new WebSocketService({ url: WS_URL });
+      
+      // Inject into connection store
+      useConnectionStore.getState().setWebSocketService(wsService);
+      
+      console.log('WebSocket service initialized and injected into stores');
     }
   }, [isInitialized]);
 
@@ -67,16 +75,18 @@ function App(): React.JSX.Element {
 
   // ARCHITECTURE FIX: WebSocket handlers managed by connection store
 
-  // ARCHITECTURE FIX: Connection managed by connection store
+  // ARCHITECTURE FIX: Connection managed by connection store with WebSocket service
   useEffect(() => {
     const initializeConnection = async () => {
       try {
         setConnectionStatus('connecting');
         console.log('Initializing connection', { url: WS_URL });
 
-        // Connection handled by stores
+        // Connect using WebSocket service
+        await useConnectionStore.getState().connect();
+        
         setIsInitialized(true);
-        console.log('Application initialized successfully');
+        console.log('Application initialized successfully with real-time notifications');
       } catch (error) {
         console.error('Failed to initialize connection', error);
         setConnectionStatus('error');
@@ -85,8 +95,10 @@ function App(): React.JSX.Element {
       }
     };
 
-    initializeConnection();
-  }, [setConnectionStatus, setConnectionError]);
+    if (isInitialized) {
+      initializeConnection();
+    }
+  }, [isInitialized, setConnectionStatus, setConnectionError]);
 
   // Load server info when connected and authenticated
   useEffect(() => {

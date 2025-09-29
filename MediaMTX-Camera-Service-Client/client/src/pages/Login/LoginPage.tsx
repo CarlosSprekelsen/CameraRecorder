@@ -29,7 +29,7 @@ const LoginPage: React.FC<LoginPageProps> = memo(() => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const { } = useAuthStore();
+  const { authenticate } = useAuthStore();
   const { status: connectionStatus } = useConnectionStore();
 
   const handleSubmit = async (e: React.FormEvent) => {

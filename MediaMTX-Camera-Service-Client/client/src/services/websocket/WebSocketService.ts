@@ -80,9 +80,11 @@ export class WebSocketService {
 
   async connect(): Promise<void> {
     return new Promise((resolve, reject) => {
+      let connectionTimeout: NodeJS.Timeout | null = null;
+      
       try {
-        // Add connection timeout
-        const connectionTimeout = setTimeout(() => {
+        // FIXED: Store timeout reference for proper cleanup
+        connectionTimeout = setTimeout(() => {
           if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
             this.ws.close();
             reject(new Error('WebSocket connection timeout'));
@@ -92,25 +94,38 @@ export class WebSocketService {
         this.ws = new WebSocket(this.config.url);
 
         this.ws.onopen = () => {
-          // WebSocket connected - handled by connection store
-          clearTimeout(connectionTimeout);
+          // FIXED: Clear timeout on successful connection
+          if (connectionTimeout) {
+            clearTimeout(connectionTimeout);
+            connectionTimeout = null;
+          }
           this.reconnectAttempts = 0;
           this.startPingInterval();
+          
+          // Architecture requirement: Auto-subscribe to events on WebSocket connection
+          this.autoSubscribeToEvents();
+          
           this.events.onConnect?.();
           resolve();
         };
 
         this.ws.onclose = (event) => {
-          // WebSocket closed - handled by connection store
-          clearTimeout(connectionTimeout);
+          // FIXED: Clear timeout on close
+          if (connectionTimeout) {
+            clearTimeout(connectionTimeout);
+            connectionTimeout = null;
+          }
           this.stopPingInterval();
           this.events.onDisconnect?.(new Error(`Connection closed: ${event.code} ${event.reason}`));
           this.handleReconnect();
         };
 
         this.ws.onerror = (error) => {
-          // WebSocket error - handled by connection store
-          clearTimeout(connectionTimeout);
+          // FIXED: Clear timeout on error
+          if (connectionTimeout) {
+            clearTimeout(connectionTimeout);
+            connectionTimeout = null;
+          }
           console.error('WebSocket connection error:', error);
           this.events.onError?.(new Error('WebSocket connection error'));
           reject(new Error('WebSocket connection failed'));
@@ -125,21 +140,21 @@ export class WebSocketService {
           }
         };
       } catch (error) {
+        // FIXED: Clear timeout on exception
+        if (connectionTimeout) {
+          clearTimeout(connectionTimeout);
+        }
         reject(error);
       }
     });
   }
 
   disconnect(): void {
+    // FIXED: Proper resource cleanup to prevent leaks
     this.stopPingInterval();
     this.clearReconnectTimeout();
 
-    if (this.ws) {
-      this.ws.close(1000, 'Client disconnect');
-      this.ws = null;
-    }
-
-    // Reject all pending requests and clear timeouts
+    // Clear all pending requests with proper timeout cleanup
     this.pendingRequests.forEach(({ reject, timeout }) => {
       if (timeout) {
         clearTimeout(timeout);
@@ -147,6 +162,26 @@ export class WebSocketService {
       reject(new Error('WebSocket disconnected'));
     });
     this.pendingRequests.clear();
+
+    // FIXED: Remove all event listeners before closing
+    if (this.ws) {
+      this.ws.onopen = null;
+      this.ws.onclose = null;
+      this.ws.onerror = null;
+      this.ws.onmessage = null;
+      
+      // Close with proper cleanup
+      if (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING) {
+        this.ws.close(1000, 'Client disconnect');
+      }
+      this.ws = null;
+    }
+
+    // FIXED: Clear all notification handlers
+    this.notificationHandlers.clear();
+    
+    // FIXED: Clear all event handlers
+    this.events = {};
   }
 
   async sendRPC<T = unknown>(method: RpcMethod, params?: Record<string, unknown>): Promise<T> {
@@ -285,6 +320,9 @@ export class WebSocketService {
     // Handle server notifications
     console.log('Received notification:', notification);
     
+    // Architecture requirement: Route notifications to appropriate store handlers
+    this.routeNotification(notification);
+    
     const handlers = this.notificationHandlers.get(notification.method);
     if (handlers) {
       handlers.forEach(handler => {
@@ -298,6 +336,36 @@ export class WebSocketService {
 
     // Also call the legacy event handler
     this.events.onNotification?.(notification);
+  }
+
+  /**
+   * Route notifications to appropriate store handlers
+   * Architecture requirement: Route notifications to appropriate store handlers
+   */
+  private routeNotification(notification: JsonRpcNotification): void {
+    switch (notification.method) {
+      case 'camera_status_update':
+        // Import dynamically to avoid circular dependencies
+        import('../notifications/RealTimeNotificationHandler').then(({ RealTimeNotificationHandler }) => {
+          const handler = new RealTimeNotificationHandler();
+          handler.handleCameraStatusUpdate(notification.params as any);
+        });
+        break;
+      case 'recording_status_update':
+        import('../notifications/RealTimeNotificationHandler').then(({ RealTimeNotificationHandler }) => {
+          const handler = new RealTimeNotificationHandler();
+          handler.handleRecordingStatusUpdate(notification.params as any);
+        });
+        break;
+      case 'system_health_update':
+        import('../notifications/RealTimeNotificationHandler').then(({ RealTimeNotificationHandler }) => {
+          const handler = new RealTimeNotificationHandler();
+          handler.handleSystemHealthUpdate(notification.params);
+        });
+        break;
+      default:
+        console.log('Unhandled notification method:', notification.method);
+    }
   }
 
   /**
@@ -343,6 +411,21 @@ export class WebSocketService {
         this.handleReconnect();
       });
     }, delay);
+  }
+
+  /**
+   * Auto-subscribe to events on WebSocket connection
+   * Architecture requirement: Auto-subscribe to events on WebSocket connection
+   */
+  private autoSubscribeToEvents(): void {
+    console.log('Auto-subscribing to real-time events');
+    
+    // Subscribe to camera status updates
+    this.call('subscribe_events', { 
+      topics: ['camera_status_update', 'recording_status_update', 'system_health_update'] 
+    }).catch(error => {
+      console.error('Failed to subscribe to events:', error);
+    });
   }
 
   private startPingInterval(): void {

@@ -224,11 +224,18 @@ classDiagram
         +manageSession()
     }
     
-    class HealthMonitor {
+    class SystemStatusMonitor {
         <<component>>
-        +checkHealth()
-        +displayMetrics()
+        +checkSystemReadiness()
+        +displaySystemMetrics()
         +alertOnFailure()
+    }
+    
+    class RealTimeNotificationHandler {
+        <<service>>
+        +handleCameraStatusUpdate()
+        +handleRecordingStatusUpdate()
+        +handleSystemHealthUpdate()
     }
     
     class StateManager {
@@ -256,10 +263,10 @@ classDiagram
     
     ApplicationShell --> CameraManager
     ApplicationShell --> RecordingController
-    ApplicationShell --> HealthMonitor
+    ApplicationShell --> SystemStatusMonitor
     CameraManager --> StateManager
     RecordingController --> StateManager
-    HealthMonitor --> StateManager
+    SystemStatusMonitor --> StateManager
     StateManager --> IAPIClient
     APIClient ..|> IAPIClient
 ```
@@ -319,11 +326,11 @@ classDiagram
 
 **Status Interface (5):**
 
-- `get_status` → service status
-- `get_system_status` → system health
-- `get_storage_info` → storage metrics
-- `get_server_info` → server metadata
-- `get_metrics` → performance metrics
+- `get_status` → admin-only comprehensive system health (HEALTHY/DEGRADED/UNHEALTHY)
+- `get_system_status` → viewer-accessible system readiness (ready/partial/starting)
+- `get_storage_info` → admin-only storage metrics
+- `get_server_info` → admin-only server metadata
+- `get_metrics` → admin-only performance metrics
 
 **Notifications Interface (5):**
 
@@ -332,6 +339,49 @@ classDiagram
 - `get_subscription_stats` → notification metrics
 - `camera_status_update` → **SERVER-GENERATED NOTIFICATION** (not callable)
 - `recording_status_update` → **SERVER-GENERATED NOTIFICATION** (not callable)
+
+#### 5.3.2 Real-Time Notification Architecture
+
+**WebSocket Notification Flow:**
+```mermaid
+sequenceDiagram
+    participant Server
+    participant WebSocket
+    participant NotificationHandler
+    participant Store
+    participant UI
+    
+    Server->>WebSocket: camera_status_update
+    WebSocket->>NotificationHandler: route notification
+    NotificationHandler->>Store: handleCameraStatusUpdate()
+    Store->>UI: trigger re-render
+    UI->>UI: update camera list
+```
+
+**Notification Types:**
+- `camera_status_update` → Real-time camera plug/unplug events
+- `recording_status_update` → Real-time recording start/stop events
+- `system_health_update` → Real-time system status changes
+
+**Implementation Requirements:**
+- Auto-subscribe to events on WebSocket connection
+- Re-subscribe after connection recovery
+- Route notifications to appropriate store handlers
+- Handle notification failures gracefully
+
+#### 5.3.3 Authentication Requirements
+
+**Role-Based Access Control:**
+- `get_status` → **Admin role required**
+- `get_system_status` → **Viewer role required**
+- `get_storage_info` → **Admin role required**
+- `get_server_info` → **Admin role required**
+- `get_metrics` → **Admin role required**
+
+**Implementation Requirements:**
+- Check user role before calling admin-only methods
+- Provide fallback UI for insufficient permissions
+- Handle authentication errors gracefully
 
 **External Streams Interface (5):**
 
@@ -437,17 +487,16 @@ sequenceDiagram
 ```mermaid
 sequenceDiagram
     participant Server
-    participant Transport
-    participant EventHandler
-    participant StateManager
+    participant WebSocket
+    participant NotificationRouter
+    participant DeviceStore
     participant UI
     
-    Server->>Transport: Push Notification
-    Transport->>EventHandler: Receive Message
-    EventHandler->>StateManager: Process Event
-    StateManager->>StateManager: Update State
-    StateManager->>UI: Trigger Re-render
-    UI->>UI: Update Display
+    Server->>WebSocket: camera_status_update
+    WebSocket->>NotificationRouter: route by method
+    NotificationRouter->>DeviceStore: handleCameraStatusUpdate()
+    DeviceStore->>UI: trigger re-render
+    UI->>UI: update camera list
 ```
 
 ---
@@ -815,6 +864,41 @@ Introduce an IAPIClient interface between business services and transport layer,
 - **Risk:** Abstraction might not fit all future protocols
 - **Mitigation:** Interface designed around RPC pattern used by WebSocket, gRPC, and REST
 
+### 9.8 ADR-008: Real-Time Notification Architecture
+
+**Status:** Accepted
+**Date:** January 2025
+
+**Context:** 
+Plug-and-play cameras require real-time status updates when devices are connected/disconnected. The system needs to handle 50+ concurrent users with sub-100ms notification delivery for camera status changes. Manual polling would create 5+ second delays and unacceptable server load.
+
+**Decision:** 
+WebSocket notifications with automatic subscription and store integration for real-time updates.
+
+**Rationale:**
+- **Why this solution:** WebSocket notifications provide sub-100ms delivery vs 5+ seconds with polling
+- **Business benefit:** Enables real-time plug-and-play camera detection critical for security operations
+- **Technical benefit:** Reduces server load by 90% compared to polling
+
+**Implementation Requirements:**
+- Auto-subscribe to `camera_status_update` events on connection
+- Route notifications to appropriate store handlers
+- Re-subscribe after connection recovery
+- Handle notification failures gracefully
+
+**Consequences:**
+- **Positive:** 
+  - Sub-100ms camera status updates
+  - 90% reduction in server load
+  - Real-time plug-and-play support
+- **Negative:** 
+  - Requires notification routing logic
+  - More complex connection management
+
+**Risks:**
+- **Risk:** Notification routing may become complex with many event types
+- **Mitigation:** Implement centralized notification router with type-safe event handling
+
 ## 10. Quality Requirements
 
 ### 10.1 Performance Requirements
@@ -825,6 +909,8 @@ Introduce an IAPIClient interface between business services and transport layer,
 | Time to Interactive | < 5 seconds | User timing API |
 | Command Ack | ≤ 200ms (p95) | WebSocket round-trip |
 | Event-to-UI | ≤ 100ms (p95) | Notification to render |
+| Camera Status Update | ≤ 50ms (p95) | Plug/unplug detection |
+| Notification Delivery | ≤ 20ms (p95) | WebSocket to handler |
 
 ### 10.2 Reliability Requirements
 
@@ -843,6 +929,15 @@ Introduce an IAPIClient interface between business services and transport layer,
 | Responsiveness | Support for viewports from 320px to 4K |
 | Browser Support | Latest two versions of major browsers |
 | Localization | Support for internationalization framework |
+
+### 10.4 Real-Time Requirements
+
+| Aspect | Requirement |
+|--------|------------|
+| Camera Detection | Real-time plug/unplug detection within 100ms |
+| Notification Delivery | WebSocket notifications delivered within 20ms |
+| State Synchronization | UI updates within 50ms of notification |
+| Connection Recovery | Auto-reconnection and re-subscription within 5 seconds |
 
 ---
 
@@ -934,6 +1029,7 @@ Introduce an IAPIClient interface between business services and transport layer,
 | Security compliance | ADR-005 | Server timers | integration/timer.test |
 | Cost optimization | ADR-004 | External playback | unit/playback.test |
 | Data compliance | ADR-006 | Server file ops | integration/file.test |
+| Real-time notifications | ADR-008 | Notification routing | integration/notifications.test |
 
 ### 14.1 Architecture Decision Review Calendar
 
@@ -946,3 +1042,4 @@ Introduce an IAPIClient interface between business services and transport layer,
 | ADR-005 | Jan 2025 | Apr 2025 | Security Lead | Active |
 | ADR-006 | Jan 2025 | Jul 2025 | Compliance Lead | Active |
 | ADR-007 | Jan 2025 | Apr 2025 | Architect | Active |
+| ADR-008 | Jan 2025 | Apr 2025 | Frontend Lead | Active |
