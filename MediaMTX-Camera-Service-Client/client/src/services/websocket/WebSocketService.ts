@@ -421,9 +421,9 @@ export class WebSocketService {
     console.log('Auto-subscribing to real-time events');
     
     // Subscribe to camera status updates
-    this.call('subscribe_events', { 
+    this.sendRPC('subscribe_events', { 
       topics: ['camera_status_update', 'recording_status_update', 'system_health_update'] 
-    }).catch(error => {
+    }).catch((error: any) => {
       console.error('Failed to subscribe to events:', error);
     });
   }

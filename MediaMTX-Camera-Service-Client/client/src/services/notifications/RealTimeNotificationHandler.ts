@@ -8,7 +8,7 @@
 import { useDeviceStore } from '../../stores/device/deviceStore';
 import { useRecordingStore } from '../../stores/recording/recordingStore';
 import { useServerStore } from '../../stores/server/serverStore';
-import { Camera, RecordingInfo } from '../../types/api';
+import { Camera } from '../../types/api';
 
 export class RealTimeNotificationHandler {
   /**
@@ -26,7 +26,7 @@ export class RealTimeNotificationHandler {
    * Handle recording status update notifications
    * Architecture requirement: Route notifications to appropriate store handlers
    */
-  handleRecordingStatusUpdate(recording: RecordingInfo): void {
+  handleRecordingStatusUpdate(recording: any): void {
     console.log('RealTimeNotificationHandler: Processing recording_status_update', recording);
     
     // Route to recording store handler

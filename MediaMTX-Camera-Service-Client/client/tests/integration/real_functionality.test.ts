@@ -11,6 +11,7 @@
  */
 
 import { WebSocketService } from '../../src/services/websocket/WebSocketService';
+import { APIClient } from '../../src/services/abstraction/APIClient';
 import { AuthService } from '../../src/services/auth/AuthService';
 import { DeviceService } from '../../src/services/device/DeviceService';
 import { FileService } from '../../src/services/file/FileService';
@@ -44,10 +45,14 @@ class RealFunctionalityTester {
   constructor() {
     this.loggerService = new LoggerService();
     this.webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
-    this.authService = new AuthService(this.webSocketService, this.loggerService);
-    this.deviceService = new DeviceService(this.webSocketService, this.loggerService);
-    this.fileService = new FileService(this.webSocketService, this.loggerService);
-    this.recordingService = new RecordingService(this.webSocketService, this.loggerService);
+    
+    // Create APIClient for services (architecture compliance)
+    const apiClient = new APIClient(this.webSocketService, this.loggerService);
+    
+    this.authService = new AuthService(apiClient, this.loggerService);
+    this.deviceService = new DeviceService(apiClient, this.loggerService);
+    this.fileService = new FileService(apiClient, this.loggerService);
+    this.recordingService = new RecordingService(apiClient, this.loggerService);
   }
 
   async connect(): Promise<void> {

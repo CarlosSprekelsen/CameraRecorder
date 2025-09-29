@@ -15,7 +15,7 @@ import { FileListResult, RecordingInfo, SnapshotInfo, DeleteResult, RetentionPol
  *
  * @example
  * ```typescript
- * const fileService = new FileService(wsService, logger);
+ * const fileService = new FileService(apiClient, logger);
  *
  * // List recordings with pagination
  * const recordings = await fileService.listRecordings(10, 0);

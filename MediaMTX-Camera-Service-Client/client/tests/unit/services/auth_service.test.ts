@@ -17,12 +17,16 @@
  */
 
 import { AuthService } from '../../../src/services/auth/AuthService';
+import { APIClient } from '../../../src/services/abstraction/APIClient';
 import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
+import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { MockDataFactory } from '../../utils/mocks';
 import { APIResponseValidator } from '../../utils/validators';
 
 // Use centralized mocks - eliminates duplication
 const mockWebSocketService = MockDataFactory.createMockWebSocketService();
+const mockLoggerService = MockDataFactory.createMockLoggerService();
+const mockAPIClient = new APIClient(mockWebSocketService, mockLoggerService);
 const mockSessionStorage = MockDataFactory.createMockSessionStorage();
 
 // Mock sessionStorage for jsdom environment
@@ -43,7 +47,7 @@ describe('AuthService Unit Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockWebSocketService.isConnected = true;
-    authService = new AuthService(mockWebSocketService);
+    authService = new AuthService(mockAPIClient, mockLoggerService);
   });
 
   describe('REQ-AUTH-001: Authentication with JWT tokens', () => {

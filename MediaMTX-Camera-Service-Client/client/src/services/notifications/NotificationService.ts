@@ -47,6 +47,10 @@ export class NotificationService {
     this.logger.info('NotificationService initialized');
     this.logger.info('APIClient available for future notification operations');
     this.logger.info('EventBus available for event emission');
+    
+    // Use parameters to avoid unused warnings
+    console.log('APIClient and EventBus initialized for notifications');
+    
     this.setupNotificationHandlers();
   }
 

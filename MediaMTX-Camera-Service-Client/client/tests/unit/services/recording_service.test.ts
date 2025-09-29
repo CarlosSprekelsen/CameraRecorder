@@ -15,6 +15,7 @@
  */
 
 import { RecordingService } from '../../../src/services/recording/RecordingService';
+import { APIClient } from '../../../src/services/abstraction/APIClient';
 import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
 import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { MockDataFactory } from '../../utils/mocks';
@@ -22,6 +23,7 @@ import { MockDataFactory } from '../../utils/mocks';
 // Use centralized mocks - eliminates duplication
 const mockWebSocketService = MockDataFactory.createMockWebSocketService();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
+const mockAPIClient = new APIClient(mockWebSocketService, mockLoggerService);
 
 describe('RecordingService Unit Tests', () => {
   let recordingService: RecordingService;

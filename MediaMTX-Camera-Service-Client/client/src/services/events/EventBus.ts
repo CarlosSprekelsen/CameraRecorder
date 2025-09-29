@@ -79,7 +79,7 @@ export class EventBus {
       timestamp: Date.now()
     };
 
-    this.emit('event_bus', event as Record<string, unknown>);
+    this.emit('event_bus', event as unknown as Record<string, unknown>);
     this.emit(eventType, data as Record<string, unknown>);
   }
 

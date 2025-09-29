@@ -17,6 +17,7 @@
  */
 
 import { DeviceService } from '../../../src/services/device/DeviceService';
+import { APIClient } from '../../../src/services/abstraction/APIClient';
 import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
 import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { MockDataFactory } from '../../utils/mocks';
@@ -25,13 +26,14 @@ import { APIResponseValidator } from '../../utils/validators';
 // Use centralized mocks - eliminates duplication
 const mockWebSocketService = MockDataFactory.createMockWebSocketService();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
+const mockAPIClient = new APIClient(mockWebSocketService, mockLoggerService);
 
 describe('DeviceService Unit Tests', () => {
   let deviceService: DeviceService;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    deviceService = new DeviceService(mockWebSocketService, mockLoggerService);
+    deviceService = new DeviceService(mockAPIClient, mockLoggerService);
   });
 
   describe('REQ-DEV-001: Camera discovery and listing', () => {

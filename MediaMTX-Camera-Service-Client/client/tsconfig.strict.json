@@ -1,0 +1,46 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    // STRICT TYPE CHECKING
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictPropertyInitialization": true,
+    "strictBindCallApply": true,
+    "alwaysStrict": true,
+    
+    // PREVENT ACCIDENTAL ARCHITECTURE VIOLATIONS
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedIndexedAccess": true,
+    "noPropertyAccessFromIndexSignature": true,
+    
+    // ENFORCE EXPLICIT TYPES
+    "noImplicitOverride": true,
+    "exactOptionalPropertyTypes": true,
+    
+    // MODULE BOUNDARIES
+    "paths": {
+      "@/components/*": ["src/components/*"],
+      "@/stores/*": ["src/stores/*"],
+      "@/services/*": ["src/services/*"],
+      "@/types/*": ["src/types/*"],
+      "@/pages/*": ["src/pages/*"]
+    }
+  },
+  
+  // ARCHITECTURE ENFORCEMENT via file patterns
+  "include": [
+    "src/**/*"
+  ],
+  
+  // Type-check these files extra strictly
+  "files": [
+    "src/types/api.ts",  // API types must match server exactly
+    "src/services/abstraction/APIClient.ts"  // Critical architecture component
+  ]
+}

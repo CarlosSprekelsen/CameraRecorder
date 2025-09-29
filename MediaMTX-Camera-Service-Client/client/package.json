@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc && vite build",
+    "dev": "npm run arch:check && vite",
+    "build": "npm run arch:check && npm run type:check && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
     "test:unit": "npx jest --config tests/config/jest-unit.config.cjs",
@@ -13,7 +13,28 @@
     "test:all": "npm run test:unit && npm run test:integration && npm run test:e2e",
     "test:unit:coverage": "npm run test:unit -- --coverage",
     "test:integration:coverage": "npm run test:integration -- --coverage",
-    "test:coverage": "npm run test:unit:coverage && npm run test:integration:coverage"
+    "test:coverage": "npm run test:unit:coverage && npm run test:integration:coverage",
+    
+    "arch:check": "bash ./architecture-check.sh",
+    "arch:lint": "eslint . --config .eslintrc.architecture.js",
+    "arch:fix": "node ./scripts/fix-architecture.js",
+    
+    "type:check": "tsc --noEmit",
+    "type:strict": "tsc --noEmit --project tsconfig.strict.json",
+    
+    "fix:services": "node ./scripts/fix-services-to-apiclient.js",
+    "fix:imports": "node ./scripts/fix-import-violations.js",
+    
+    "test:arch": "jest --testMatch='**/*.arch.test.ts'",
+    
+    "precommit": "npm run arch:check && npm run type:strict && npm run arch:lint",
+    "prepush": "npm run test:arch",
+    
+    "clean:legacy": "node ./scripts/remove-legacy-code.js",
+    
+    "report:arch": "madge --circular src/",
+    "report:deps": "madge --depends src/components/ src/",
+    "report:orphans": "madge --orphans src/"
   },
   "dependencies": {
     "@mui/icons-material": "^7.3.2",
@@ -49,5 +70,20 @@
     "typescript": "^5.2.2",
     "vite": "^4.5.0",
     "ws": "^8.18.3"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run precommit",
+      "pre-push": "npm run prepush"
+    }
+  },
+  "madge": {
+    "detectiveOptions": {
+      "ts": {
+        "skipAsyncImports": true
+      }
+    },
+    "fileExtensions": ["ts", "tsx"],
+    "excludeRegExp": [".*\\.test\\..*", ".*\\.spec\\..*"]
   }
 }

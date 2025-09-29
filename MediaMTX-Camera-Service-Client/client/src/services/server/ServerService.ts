@@ -44,7 +44,7 @@ import { SubscriptionResult, UnsubscriptionResult, SubscriptionStatsResult } fro
  *
  * @example
  * ```typescript
- * const serverService = new ServerService(wsService);
+ * const serverService = new ServerService(apiClient, logger);
  *
  * // Get system status
  * const status = await serverService.getStatus();

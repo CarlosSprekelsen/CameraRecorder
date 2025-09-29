@@ -17,12 +17,16 @@
  */
 
 import { ServerService } from '../../../src/services/server/ServerService';
+import { APIClient } from '../../../src/services/abstraction/APIClient';
 import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
+import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { MockDataFactory } from '../../utils/mocks';
 import { APIResponseValidator } from '../../utils/validators';
 
 // Use centralized mocks - eliminates duplication
 const mockWebSocketService = MockDataFactory.createMockWebSocketService();
+const mockLoggerService = MockDataFactory.createMockLoggerService();
+const mockAPIClient = new APIClient(mockWebSocketService, mockLoggerService);
 
 describe('ServerService Unit Tests', () => {
   let serverService: ServerService;
@@ -30,7 +34,7 @@ describe('ServerService Unit Tests', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockWebSocketService.isConnected = true;
-    serverService = new ServerService(mockWebSocketService);
+    serverService = new ServerService(mockAPIClient, mockLoggerService);
   });
 
   describe('REQ-SERVER-001: Server information retrieval', () => {

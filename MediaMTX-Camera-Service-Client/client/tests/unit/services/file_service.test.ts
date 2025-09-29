@@ -17,6 +17,7 @@
  */
 
 import { FileService } from '../../../src/services/file/FileService';
+import { APIClient } from '../../../src/services/abstraction/APIClient';
 import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
 import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { MockDataFactory } from '../../utils/mocks';
@@ -25,6 +26,7 @@ import { APIResponseValidator } from '../../utils/validators';
 // Use centralized mocks - eliminates duplication
 const mockWebSocketService = MockDataFactory.createMockWebSocketService();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
+const mockAPIClient = new APIClient(mockWebSocketService, mockLoggerService);
 const mockDocument = MockDataFactory.createMockDocument();
 
 // Mock global document object - use manual assignment to avoid redefinition errors
@@ -58,7 +60,7 @@ describe('FileService Unit Tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    fileService = new FileService(mockWebSocketService, mockLoggerService);
+    fileService = new FileService(mockAPIClient, mockLoggerService);
   });
 
   describe('REQ-FILE-001: File listing with pagination', () => {
