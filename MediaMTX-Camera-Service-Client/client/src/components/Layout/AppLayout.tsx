@@ -124,7 +124,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
       <AppBar position="static">
         <Toolbar>
           <IconButton size="large" edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }}>
-            <MenuIcon />
+            <Icon name="menu" size={20} />
           </IconButton>
 
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
@@ -135,7 +135,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           <Box sx={{ mr: 2 }}>
             <Button
               color="inherit"
-              startIcon={<CameraIcon />}
+              startIcon={<Icon name="camera" size={16} />}
               onClick={() => navigate('/cameras')}
               sx={{
                 backgroundColor:
@@ -147,7 +147,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             </Button>
             <Button
               color="inherit"
-              startIcon={<FilesIcon />}
+              startIcon={<Icon name="folder" size={16} />}
               onClick={() => navigate('/files')}
               sx={{
                 backgroundColor:
@@ -159,7 +159,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             </Button>
             <Button
               color="inherit"
-              startIcon={<InfoIcon />}
+              startIcon={<Icon name="info" size={16} />}
               onClick={() => navigate('/about')}
               sx={{
                 backgroundColor:

@@ -31,7 +31,7 @@ const FileTabs: React.FC<FileTabsProps> = ({
         <Tab
           icon={
             <Badge badgeContent={recordingsCount} color="primary">
-              <RecordingsIcon />
+              <Icon name="recordings" size={16} />
             </Badge>
           }
           iconPosition="start"
@@ -41,7 +41,7 @@ const FileTabs: React.FC<FileTabsProps> = ({
         <Tab
           icon={
             <Badge badgeContent={snapshotsCount} color="primary">
-              <SnapshotsIcon />
+              <Icon name="camera" size={16} />
             </Badge>
           }
           iconPosition="start"

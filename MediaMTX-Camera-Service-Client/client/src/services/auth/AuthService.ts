@@ -1,5 +1,5 @@
 import { AuthenticateParams, AuthenticateResult } from '../../types/api';
-import { APIClient } from '../abstraction/APIClient';
+import { IAPIClient } from '../abstraction/IAPIClient';
 import { LoggerService } from '../logger/LoggerService';
 
 /**
@@ -21,7 +21,7 @@ import { LoggerService } from '../logger/LoggerService';
  */
 export class AuthService {
   constructor(
-    private apiClient: APIClient,
+    private apiClient: IAPIClient,
     private logger: LoggerService,
   ) {
     this.logger.info('AuthService initialized');

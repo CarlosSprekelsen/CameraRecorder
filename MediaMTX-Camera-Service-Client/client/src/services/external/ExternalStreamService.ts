@@ -1,4 +1,4 @@
-import { APIClient } from '../abstraction/APIClient';
+import { IAPIClient } from '../abstraction/IAPIClient';
 import { LoggerService } from '../logger/LoggerService';
 import { 
   ExternalStreamDiscoveryResult, 
@@ -38,7 +38,7 @@ import {
  */
 export class ExternalStreamService {
   constructor(
-    private apiClient: APIClient,
+    private apiClient: IAPIClient,
     private logger: LoggerService,
   ) {}
 

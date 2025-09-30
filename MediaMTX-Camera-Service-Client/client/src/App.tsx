@@ -10,7 +10,6 @@ import { useFileStore } from './stores/file/fileStore';
 import { useRecordingStore } from './stores/recording/recordingStore';
 import { useStreamingStore } from './stores/streaming/streamingStore';
 import { WebSocketService } from './services/websocket/WebSocketService';
-import { APIClient } from './services/abstraction/APIClient';
 import { ServiceFactory } from './services/ServiceFactory';
 import { logger } from './services/logger/LoggerService';
 
@@ -76,11 +75,9 @@ function App(): React.JSX.Element {
         // Create WebSocket service
         const wsService = new WebSocketService({ url: WS_URL });
         
-        // Create APIClient
-        const apiClient = new APIClient(wsService, logger);
-        
         // Create services using ServiceFactory
         const serviceFactory = ServiceFactory.getInstance();
+        const apiClient = serviceFactory.createAPIClient(wsService);
         const authService = serviceFactory.createAuthService(apiClient);
         const deviceService = serviceFactory.createDeviceService(apiClient);
         const recordingService = serviceFactory.createRecordingService(apiClient);

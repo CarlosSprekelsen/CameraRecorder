@@ -28,7 +28,7 @@ export interface SystemMetrics {
     total_viewers: number;
   };
 }
-import { APIClient } from '../abstraction/APIClient';
+import { IAPIClient } from '../abstraction/IAPIClient';
 import { LoggerService } from '../logger/LoggerService';
 import { SubscriptionResult, UnsubscriptionResult, SubscriptionStatsResult } from '../../types/api';
 
@@ -61,7 +61,7 @@ import { SubscriptionResult, UnsubscriptionResult, SubscriptionStatsResult } fro
  */
 export class ServerService implements IStatus {
   constructor(
-    private apiClient: APIClient,
+    private apiClient: IAPIClient,
     private logger: LoggerService,
   ) {
     this.logger.info('ServerService initialized');

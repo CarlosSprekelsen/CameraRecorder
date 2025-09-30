@@ -1,8 +1,8 @@
 import React from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions } from '../../atoms/Dialog/Dialog';
-import { Button } from '../../atoms/Button/Button';
-import { Typography } from '../../atoms/Typography/Typography';
-import { Alert } from '../../atoms/Alert/Alert';
+import { Dialog, DialogTitle, DialogContent, DialogActions } from '../atoms/Dialog/Dialog';
+import { Button } from '../atoms/Button/Button';
+import { Typography } from '../atoms/Typography/Typography';
+import { Alert } from '../atoms/Alert/Alert';
 
 interface ConfirmDialogProps {
   open: boolean;

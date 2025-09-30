@@ -12,15 +12,15 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-} from '../../atoms/Table/Table';
-import { Paper } from '../../atoms/Paper/Paper';
-import { IconButton } from '../../atoms/IconButton/IconButton';
-import { Box } from '../../atoms/Box/Box';
-import { Typography } from '../../atoms/Typography/Typography';
-import { CircularProgress } from '../../atoms/CircularProgress/CircularProgress';
-import { Checkbox } from '../../atoms/Checkbox/Checkbox';
-import { Tooltip } from '../../atoms/Tooltip/Tooltip';
-import { Icon } from '../../atoms/Icon/Icon';
+} from '../atoms/Table/Table';
+import { Paper } from '../atoms/Paper/Paper';
+import { IconButton } from '../atoms/IconButton/IconButton';
+import { Box } from '../atoms/Box/Box';
+import { Typography } from '../atoms/Typography/Typography';
+import { CircularProgress } from '../atoms/CircularProgress/CircularProgress';
+import { Checkbox } from '../atoms/Checkbox/Checkbox';
+import { Tooltip } from '../atoms/Tooltip/Tooltip';
+import { Icon } from '../atoms/Icon/Icon';
 import { useFileStore } from '../../stores/file/fileStore';
 import { FileListItem } from '../../stores/file/fileStore';
 import ConfirmDialog from './ConfirmDialog';

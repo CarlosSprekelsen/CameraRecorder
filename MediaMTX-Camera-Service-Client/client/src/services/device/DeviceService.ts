@@ -1,4 +1,4 @@
-import { APIClient } from '../abstraction/APIClient';
+import { IAPIClient } from '../abstraction/IAPIClient';
 import { LoggerService } from '../logger/LoggerService';
 import { Camera, StreamsListResult } from '../../types/api';
 import { IDiscovery } from '../interfaces/ServiceInterfaces';
@@ -27,7 +27,7 @@ import { validateCameraDeviceId } from '../../utils/validation';
  */
 export class DeviceService implements IDiscovery {
   constructor(
-    private apiClient: APIClient,
+    private apiClient: IAPIClient,
     private logger: LoggerService,
   ) {}
 

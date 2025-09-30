@@ -1,9 +1,9 @@
 import React from 'react';
-import { Box } from '../../atoms/Box/Box';
-import { Pagination } from '../../atoms/Pagination/Pagination';
-import { Typography } from '../../atoms/Typography/Typography';
-import { Select } from '../../atoms/Select/Select';
-import { FormControl, InputLabel } from '../../atoms/FormControl/FormControl';
+import { Box } from '../atoms/Box/Box';
+import { Pagination } from '../atoms/Pagination/Pagination';
+import { Typography } from '../atoms/Typography/Typography';
+import { Select } from '../atoms/Select/Select';
+import { FormControl, InputLabel } from '../atoms/FormControl/FormControl';
 
 interface PaginationProps {
   pagination: {

@@ -1,4 +1,4 @@
-import { APIClient } from '../abstraction/APIClient';
+import { IAPIClient } from '../abstraction/IAPIClient';
 import { LoggerService } from '../logger/LoggerService';
 import { IFileCatalog, IFileActions } from '../interfaces/ServiceInterfaces';
 import { FileListResult, RecordingInfo, SnapshotInfo, DeleteResult, RetentionPolicySetResult, CleanupResult } from '../../types/api';
@@ -36,7 +36,7 @@ import { FileListResult, RecordingInfo, SnapshotInfo, DeleteResult, RetentionPol
  */
 export class FileService implements IFileCatalog, IFileActions {
   constructor(
-    private apiClient: APIClient,
+    private apiClient: IAPIClient,
     private logger: LoggerService,
   ) {}
 

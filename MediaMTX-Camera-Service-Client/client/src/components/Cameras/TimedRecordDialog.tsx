@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Dialog, DialogTitle, DialogContent, DialogActions } from '../../atoms/Dialog/Dialog';
-import { Button } from '../../atoms/Button/Button';
-import { TextField } from '../../atoms/TextField/TextField';
+import { Dialog, DialogTitle, DialogContent, DialogActions } from '../atoms/Dialog/Dialog';
+import { Button } from '../atoms/Button/Button';
+import { TextField } from '../atoms/TextField/TextField';
 
 interface TimedRecordDialogProps {
   open: boolean;

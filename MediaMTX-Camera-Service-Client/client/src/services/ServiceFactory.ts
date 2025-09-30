@@ -43,7 +43,7 @@ export class ServiceFactory {
     return this.apiClient;
   }
 
-  createAuthService(apiClient: APIClient): AuthService {
+  createAuthService(apiClient: IAPIClient): AuthService {
     if (!this.authService) {
       this.authService = new AuthService(apiClient, logger);
       logger.info('Auth service created');
@@ -51,7 +51,7 @@ export class ServiceFactory {
     return this.authService;
   }
 
-  createServerService(apiClient: APIClient): ServerService {
+  createServerService(apiClient: IAPIClient): ServerService {
     if (!this.serverService) {
       this.serverService = new ServerService(apiClient, logger);
       logger.info('Server service created');
@@ -60,7 +60,7 @@ export class ServiceFactory {
   }
 
 
-  createDeviceService(apiClient: APIClient): DeviceService {
+  createDeviceService(apiClient: IAPIClient): DeviceService {
     if (!this.deviceService) {
       this.deviceService = new DeviceService(apiClient, logger);
       logger.info('Device service created');
@@ -68,7 +68,7 @@ export class ServiceFactory {
     return this.deviceService;
   }
 
-  createRecordingService(apiClient: APIClient): RecordingService {
+  createRecordingService(apiClient: IAPIClient): RecordingService {
     if (!this.recordingService) {
       this.recordingService = new RecordingService(apiClient, logger);
       logger.info('Recording service created');
@@ -76,7 +76,7 @@ export class ServiceFactory {
     return this.recordingService;
   }
 
-  createFileService(apiClient: APIClient): FileService {
+  createFileService(apiClient: IAPIClient): FileService {
     if (!this.fileService) {
       this.fileService = new FileService(apiClient, logger);
       logger.info('File service created');
@@ -84,7 +84,7 @@ export class ServiceFactory {
     return this.fileService;
   }
 
-  createStreamingService(apiClient: APIClient): StreamingService {
+  createStreamingService(apiClient: IAPIClient): StreamingService {
     if (!this.streamingService) {
       this.streamingService = new StreamingService(apiClient, logger);
       logger.info('Streaming service created');
@@ -92,7 +92,7 @@ export class ServiceFactory {
     return this.streamingService;
   }
 
-  createExternalStreamService(apiClient: APIClient): ExternalStreamService {
+  createExternalStreamService(apiClient: IAPIClient): ExternalStreamService {
     if (!this.externalStreamService) {
       this.externalStreamService = new ExternalStreamService(apiClient, logger);
       logger.info('External stream service created');

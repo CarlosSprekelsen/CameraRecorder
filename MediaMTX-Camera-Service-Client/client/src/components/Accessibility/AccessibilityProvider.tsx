@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { ThemeProvider, createTheme } from '../../atoms/ThemeProvider/ThemeProvider';
+import { ThemeProvider, createTheme } from '../atoms/ThemeProvider/ThemeProvider';
 
 interface AccessibilityContextType {
   highContrast: boolean;

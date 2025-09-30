@@ -67,7 +67,7 @@ const ErrorFallback: React.FC<FallbackProps> = ({ error, resetErrorBoundary }) =
           onClick={resetErrorBoundary}
           className="flex items-center gap-2"
         >
-          <RefreshIcon className="h-4 w-4" />
+          <Icon name="refresh" size={16} />
           Try Again
         </Button>
         <Button 
@@ -75,7 +75,7 @@ const ErrorFallback: React.FC<FallbackProps> = ({ error, resetErrorBoundary }) =
           onClick={handleReload}
           className="flex items-center gap-2"
         >
-          <BugIcon className="h-4 w-4" />
+          <Icon name="bug" size={16} />
           Reload Page
         </Button>
       </div>

@@ -5,7 +5,7 @@
  * Implements IStreaming interface for streaming operations
  */
 
-import { APIClient } from '../abstraction/APIClient';
+import { IAPIClient } from '../abstraction/IAPIClient';
 import { LoggerService } from '../logger/LoggerService';
 import { IStreaming } from '../interfaces/IStreaming';
 import { StreamStartResult, StreamStopResult, StreamStatusResult } from '../../types/api';
@@ -13,7 +13,7 @@ import { validateCameraDeviceId } from '../../utils/validation';
 
 export class StreamingService implements IStreaming {
   constructor(
-    private apiClient: APIClient,
+    private apiClient: IAPIClient,
     private logger: LoggerService,
   ) {}
 
