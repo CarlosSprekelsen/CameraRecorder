@@ -143,26 +143,6 @@ function App(): React.JSX.Element {
     }
   }, [connectionStatus, isAuthenticated, isInitialized, loadAllServerData]);
 
-  // ARCHITECTURE FIX: Explicitly subscribe to events after authentication
-  useEffect(() => {
-    if (connectionStatus === 'connected' && isAuthenticated && isInitialized) {
-      const subscribeToEvents = async () => {
-        try {
-          const { subscribeEvents } = useServerStore.getState();
-          await subscribeEvents([
-            'camera_status_update',
-            'recording_status_update',
-            'system_health_update'
-          ]);
-          console.log('Successfully subscribed to real-time events');
-        } catch (error) {
-          console.error('Failed to subscribe to events:', error);
-        }
-      };
-      
-      subscribeToEvents();
-    }
-  }, [connectionStatus, isAuthenticated, isInitialized]);
 
   if (!isInitialized) {
     return (
