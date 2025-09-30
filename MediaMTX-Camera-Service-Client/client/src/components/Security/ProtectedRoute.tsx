@@ -35,14 +35,14 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
   if (requiredRole && !hasRole(requiredRole)) {
     if (showAccessDenied) {
       return (
-        <Box sx={{ p: 3, textAlign: 'center' }}>
-          <Alert severity="error" sx={{ mb: 2 }}>
+        <Box sx={{ padding: 3, textAlign: 'center' }}>
+          <Alert severity="error" className="mb-2">
             Access Denied
           </Alert>
-          <Typography variant="h6" color="text.secondary">
+          <Typography variant="h6" color="secondary">
             You don&apos;t have permission to access this page.
           </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          <Typography variant="body2" color="secondary" className="mt-1">
             Required role: {requiredRole}
           </Typography>
         </Box>

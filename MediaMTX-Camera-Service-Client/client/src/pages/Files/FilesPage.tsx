@@ -92,13 +92,7 @@ const FilesPage: React.FC = () => {
     return (
       <Container
         maxWidth="lg"
-        sx={{
-          mt: 4,
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minHeight: '60vh',
-        }}
+        className="mt-4 flex justify-center items-center min-h-[60vh]"
       >
         <CircularProgress />
       </Container>
@@ -106,15 +100,15 @@ const FilesPage: React.FC = () => {
   }
 
   return (
-    <Container maxWidth="lg" sx={{ mt: 4 }}>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+    <Container maxWidth="lg" className="mt-4">
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
         <Typography variant="h4" component="h1">
           Files
         </Typography>
       </Box>
 
       {error && (
-        <Alert severity="error" sx={{ mb: 2 }}>
+        <Alert severity="error" className="mb-2">
           {error}
         </Alert>
       )}
@@ -126,7 +120,7 @@ const FilesPage: React.FC = () => {
         snapshotsCount={snapshots.length}
       />
 
-      <Box sx={{ mt: 2 }}>
+      <Box sx={{ marginTop: 8 }}>
         <FileTable
           files={currentTab === 'recordings' ? recordings : snapshots}
           fileType={currentTab}
@@ -134,7 +128,7 @@ const FilesPage: React.FC = () => {
         />
       </Box>
 
-      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'center' }}>
+      <Box sx={{ marginTop: 8, display: 'flex', justifyContent: 'center' }}>
         <Pagination
           pagination={pagination}
           onPageChange={(page) => {

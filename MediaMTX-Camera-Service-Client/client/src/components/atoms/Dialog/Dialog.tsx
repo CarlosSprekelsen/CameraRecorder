@@ -37,7 +37,7 @@ export const Dialog: React.FC<DialogProps> = ({
     <div className="dialog fixed inset-0 z-50 overflow-y-auto">
       <div className="dialog-backdrop fixed inset-0 bg-black bg-opacity-50" onClick={onClose} />
       <div className="dialog-container flex min-h-full items-center justify-center p-4">
-        <div className={`dialog-content relative bg-white rounded-lg shadow-xl ${maxWidthClasses[maxWidth]} ${fullWidth ? 'w-full' : ''} ${className}`} {...props}>
+        <div className={`dialog-content relative bg-white rounded-lg shadow-xl ${maxWidth ? maxWidthClasses[maxWidth] : ''} ${fullWidth ? 'w-full' : ''} ${className}`} {...props}>
           {children}
         </div>
       </div>

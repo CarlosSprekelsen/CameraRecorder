@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box } from '../atoms/Box/Box';
-import { Pagination } from '../atoms/Pagination/Pagination';
+import { Pagination as PaginationAtom } from '../atoms/Pagination/Pagination';
 import { Typography } from '../atoms/Typography/Typography';
 import { Select } from '../atoms/Select/Select';
 import { FormControl, InputLabel } from '../atoms/FormControl/FormControl';
@@ -30,9 +30,9 @@ const Pagination: React.FC<PaginationProps> = ({ pagination, onPageChange, onLim
     onPageChange(page);
   };
 
-  const handleLimitChange = (value: number) => {
+  const handleLimitChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     if (onLimitChange) {
-      onLimitChange(value);
+      onLimitChange(Number(event.target.value));
     }
   };
 
@@ -47,23 +47,21 @@ const Pagination: React.FC<PaginationProps> = ({ pagination, onPageChange, onLim
       </Typography>
 
       {onLimitChange && (
-        <FormControl size="small" className="min-w-[120px]">
+        <FormControl className="min-w-[120px]">
           <InputLabel>Per page</InputLabel>
           <Select 
             value={limit} 
-            label="Per page" 
             onChange={handleLimitChange}
-            options={[
-              { value: 10, label: '10' },
-              { value: 20, label: '20' },
-              { value: 50, label: '50' },
-              { value: 100, label: '100' }
-            ]}
-          />
+          >
+            <option value={10}>10</option>
+            <option value={20}>20</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </Select>
         </FormControl>
       )}
 
-      <Pagination
+      <PaginationAtom
         count={totalPages}
         page={currentPage}
         onChange={handlePageChange}

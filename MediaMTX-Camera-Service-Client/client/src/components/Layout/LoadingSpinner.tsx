@@ -9,9 +9,9 @@ interface LoadingSpinnerProps {
 
 const LoadingSpinner: React.FC<LoadingSpinnerProps> = ({ message = 'Loading...' }) => {
   return (
-    <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" gap={2}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
       <CircularProgress />
-      <Typography variant="body2" color="text.secondary">
+      <Typography variant="body2" color="secondary">
         {message}
       </Typography>
     </Box>

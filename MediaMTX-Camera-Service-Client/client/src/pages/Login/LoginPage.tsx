@@ -89,26 +89,28 @@ const LoginPage: React.FC<LoginPageProps> = memo(() => {
 
   return (
     <Box
-      display="flex"
-      justifyContent="center"
-      alignItems="center"
-      minHeight="100vh"
-      bgcolor="grey.100"
+      sx={{
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        minHeight: '100vh',
+        backgroundColor: '#f5f5f5'
+      }}
     >
-      <Card sx={{ width: '100%', maxWidth: 400 }}>
-        <CardContent sx={{ p: 4 }}>
-          <Box textAlign="center" mb={3}>
-            <Typography variant="h4" component="h1" gutterBottom>
+      <Card className="w-full max-w-md">
+        <CardContent className="p-6">
+          <Box sx={{ textAlign: 'center', marginBottom: 3 }}>
+            <Typography variant="h4" component="h1">
               MediaMTX Camera Service
             </Typography>
-            <Typography variant="body2" color="text.secondary">
+            <Typography variant="body2" color="secondary">
               Enter your authentication token to continue
             </Typography>
           </Box>
 
           <Alert
             severity={getConnectionStatusColor() as 'success' | 'error' | 'warning' | 'info'}
-            sx={{ mb: 2 }}
+            className="mb-2"
           >
             Status: {getConnectionStatusText()}
           </Alert>
@@ -119,31 +121,28 @@ const LoginPage: React.FC<LoginPageProps> = memo(() => {
               label="Authentication Token"
               type="password"
               value={token}
-              onChange={(e) => setToken(e.target.value)}
+              onChange={(e) => setToken(e)}
               disabled={loading || connectionStatus !== 'connected'}
-              margin="normal"
-              required
-              autoFocus
+              className="mb-4"
             />
 
             {error && (
-              <Alert severity="error" sx={{ mt: 2 }}>
+              <Alert severity="error" className="mt-2">
                 {error}
               </Alert>
             )}
 
             <Button
-              type="submit"
-              fullWidth
-              variant="contained"
+              variant="primary"
               disabled={loading || connectionStatus !== 'connected'}
-              sx={{ mt: 3, mb: 2 }}
+              className="w-full mt-3 mb-2"
+              onClick={handleSubmit}
             >
               {loading ? <CircularProgress size={24} /> : 'Connect'}
             </Button>
           </form>
 
-          <Typography variant="body2" color="text.secondary" textAlign="center">
+          <Typography variant="body2" color="secondary" className="text-center">
             Contact your administrator for access credentials
           </Typography>
         </CardContent>

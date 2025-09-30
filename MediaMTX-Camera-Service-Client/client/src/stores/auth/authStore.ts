@@ -1,8 +1,23 @@
 import { create } from 'zustand';
-import { AuthState } from '../../types/api';
+import { devtools } from 'zustand/middleware';
+import { AuthenticateResult } from '../../types/api';
 import { AuthService } from '../../services/auth/AuthService';
 
-interface AuthStore extends AuthState {
+export interface AuthStoreState {
+  // API state (from server)
+  token: string | null;
+  role: 'admin' | 'operator' | 'viewer' | null;
+  session_id: string | null;
+  isAuthenticated: boolean;
+  expires_at: string | null;
+  permissions: string[];
+  
+  // UI state (client-side)
+  loading: boolean;
+  error: string | null;
+}
+
+export interface AuthActions {
   // Service injection
   setAuthService: (service: AuthService) => void;
   
@@ -23,23 +38,29 @@ interface AuthStore extends AuthState {
     permissions: string[],
   ) => void;
   logout: () => void;
-  authenticate: (token: string) => Promise<void>;
-  refreshToken: () => Promise<void>;
+  authenticate: (token: string) => Promise<AuthenticateResult>;
   
   // Reset
   reset: () => void;
 }
 
-const initialState: AuthState = {
+const initialState: AuthStoreState = {
+  // API state (from server)
   token: null,
   role: null,
   session_id: null,
   isAuthenticated: false,
   expires_at: null,
   permissions: [],
+  
+  // UI state (client-side)
+  loading: false,
+  error: null,
 };
 
-export const useAuthStore = create<AuthStore>((set) => {
+export const useAuthStore = create<AuthStoreState & AuthActions>()(
+  devtools(
+    (set) => {
   let authService: AuthService | null = null;
 
   return {
@@ -110,19 +131,12 @@ export const useAuthStore = create<AuthStore>((set) => {
       }
     },
 
-    refreshToken: async () => {
-      if (!authService) throw new Error('Auth service not initialized');
-      set({ loading: true, error: null });
-      try {
-        const result = await authService.refreshToken();
-        set({ loading: false });
-        return result;
-      } catch (error) {
-        set({ loading: false, error: error instanceof Error ? error.message : 'Token refresh failed' });
-        throw error;
-      }
-    },
 
     reset: () => set(initialState),
   };
-});
+},
+{
+  name: 'auth-store',
+},
+),
+);

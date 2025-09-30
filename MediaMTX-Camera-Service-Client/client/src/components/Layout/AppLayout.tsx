@@ -11,6 +11,7 @@ import { Chip } from '../atoms/Chip/Chip';
 import { Menu, MenuItem } from '../atoms/Menu/Menu';
 import { Button } from '../atoms/Button/Button';
 import { Icon } from '../atoms/Icon/Icon';
+import { IconButton } from '../atoms/IconButton/IconButton';
 import { AppBar, Toolbar } from '../atoms/AppBar/AppBar';
 import { useNavigate, useLocation } from 'react-router-dom';
 // ARCHITECTURE FIX: Removed direct service import - components must use stores only
@@ -123,49 +124,38 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
     <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <AppBar position="static">
         <Toolbar>
-          <IconButton size="large" edge="start" color="inherit" aria-label="menu" sx={{ mr: 2 }}>
+          <IconButton size="large" color="inherit" className="mr-2">
             <Icon name="menu" size={20} />
           </IconButton>
 
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+          <Typography variant="h6" component="div" className="flex-grow">
             MediaMTX Camera Service
           </Typography>
 
           {/* Navigation */}
-          <Box sx={{ mr: 2 }}>
+          <Box className="mr-2">
             <Button
-              color="inherit"
-              startIcon={<Icon name="camera" size={16} />}
+              variant="secondary"
               onClick={() => navigate('/cameras')}
-              sx={{
-                backgroundColor:
-                  location.pathname === '/cameras' ? 'rgba(255,255,255,0.1)' : 'transparent',
-                mr: 1,
-              }}
+              className={`mr-1 ${location.pathname === '/cameras' ? 'bg-white bg-opacity-10' : 'bg-transparent'}`}
             >
+              <Icon name="camera" size={16} />
               Cameras
             </Button>
             <Button
-              color="inherit"
-              startIcon={<Icon name="folder" size={16} />}
+              variant="secondary"
               onClick={() => navigate('/files')}
-              sx={{
-                backgroundColor:
-                  location.pathname === '/files' ? 'rgba(255,255,255,0.1)' : 'transparent',
-                mr: 1,
-              }}
+              className={`mr-1 ${location.pathname === '/files' ? 'bg-white bg-opacity-10' : 'bg-transparent'}`}
             >
+              <Icon name="folder" size={16} />
               Files
             </Button>
             <Button
-              color="inherit"
-              startIcon={<Icon name="info" size={16} />}
+              variant="secondary"
               onClick={() => navigate('/about')}
-              sx={{
-                backgroundColor:
-                  location.pathname === '/about' ? 'rgba(255,255,255,0.1)' : 'transparent',
-              }}
+              className={location.pathname === '/about' ? 'bg-white bg-opacity-10' : 'bg-transparent'}
             >
+              <Icon name="info" size={16} />
               About
             </Button>
           </Box>
@@ -173,25 +163,25 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           {/* Connection Status */}
           <Chip
             label={getConnectionStatusText()}
-            color={getConnectionStatusColor() as 'success' | 'error' | 'warning' | 'info'}
+            color={getConnectionStatusColor() as 'success' | 'error' | 'warning' | 'primary'}
             size="small"
-            sx={{ mr: 2 }}
+            className="mr-2"
           />
 
           {/* Server Info */}
           {info && (
-            <Typography variant="body2" sx={{ mr: 2 }}>
+            <Typography variant="body2" className="mr-2">
               {info.name} v{info.version}
             </Typography>
           )}
 
           {/* User Menu */}
-          <Box display="flex" alignItems="center">
+          <Box className="flex items-center">
             <Chip
               label={role?.toUpperCase() || 'UNKNOWN'}
-              color={getRoleColor(role || '') as 'success' | 'error' | 'warning' | 'info'}
+              color={getRoleColor(role || '') as 'primary' | 'secondary' | 'success' | 'warning' | 'error'}
               size="small"
-              sx={{ mr: 1 }}
+              className="mr-1"
             />
 
             <IconButton
@@ -200,28 +190,18 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
               aria-controls="menu-appbar"
               aria-haspopup="true"
               onClick={handleMenuOpen}
-              color="inherit"
+              color="default"
             >
-              <AccountCircle />
+              <Icon name="user" size={20} />
             </IconButton>
 
             <Menu
-              id="menu-appbar"
               anchorEl={anchorEl}
-              anchorOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
-              keepMounted
-              transformOrigin={{
-                vertical: 'top',
-                horizontal: 'right',
-              }}
               open={Boolean(anchorEl)}
               onClose={handleMenuClose}
             >
               <MenuItem onClick={handleLogout}>
-                <Logout sx={{ mr: 1 }} />
+                <Icon name="logout" size={16} className="mr-1" />
                 Logout
               </MenuItem>
             </Menu>
@@ -229,7 +209,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </Toolbar>
       </AppBar>
 
-      <Box component="main" sx={{ flexGrow: 1, p: 0 }}>
+      <Box component="main" sx={{ flexGrow: 1, padding: 0 }}>
         {children}
       </Box>
     </Box>

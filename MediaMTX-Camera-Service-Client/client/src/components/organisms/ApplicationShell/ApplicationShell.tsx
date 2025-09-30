@@ -80,24 +80,23 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({
   return (
     <Box sx={{ display: 'flex', height: '100vh' }}>
       {/* App Bar */}
-      <AppBar position="fixed" sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+      <AppBar>
         <Toolbar>
           <IconButton
-            color="inherit"
+            color="default"
             aria-label="open drawer"
             onClick={toggleDrawer}
-            edge="start"
-            sx={{ mr: 2 }}
+            className="mr-2"
           >
             <Icon name="menu" size={20} />
           </IconButton>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
+          <Typography variant="h6" component="div" className="flex-grow">
             MediaMTX Camera Service
           </Typography>
-          <Typography variant="body2" sx={{ mr: 2 }}>
+          <Typography variant="body2" className="mr-2">
             {role || 'Guest'}
           </Typography>
-          <Button color="inherit" onClick={handleLogout}>
+          <Button variant="secondary" onClick={handleLogout}>
             <Icon name="logout" size={16} className="mr-2" />
             Logout
           </Button>

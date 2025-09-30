@@ -30,7 +30,7 @@ export const Pagination: React.FC<PaginationProps> = ({
   ...props
 }) => {
   const totalPages = Math.ceil(count);
-  const pages = [];
+  // const pages = [];
   
   // Generate page numbers with ellipsis logic
   const getPageNumbers = () => {

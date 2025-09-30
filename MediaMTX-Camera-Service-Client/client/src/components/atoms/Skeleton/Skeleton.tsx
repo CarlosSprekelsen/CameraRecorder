@@ -39,7 +39,7 @@ export const Skeleton: React.FC<SkeletonProps> = ({
 
   return (
     <div
-      className={`skeleton bg-gray-200 rounded ${variantClasses[variant]} ${animationClasses[animation]} ${className}`}
+      className={`skeleton bg-gray-200 rounded ${variantClasses[variant]} ${animation ? animationClasses[animation] : ''} ${className}`}
       style={style}
       {...props}
     />

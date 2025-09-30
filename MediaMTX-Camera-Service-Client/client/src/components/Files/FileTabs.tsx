@@ -21,32 +21,35 @@ const FileTabs: React.FC<FileTabsProps> = ({
   recordingsCount,
   snapshotsCount,
 }) => {
-  const handleChange = (_event: React.SyntheticEvent, newValue: 'recordings' | 'snapshots') => {
-    onTabChange(newValue);
+  const handleChange = (_event: React.SyntheticEvent, newValue: number) => {
+    const tabValue = newValue === 0 ? 'recordings' : 'snapshots';
+    onTabChange(tabValue);
   };
 
+  const currentIndex = currentTab === 'recordings' ? 0 : 1;
+
   return (
-    <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-      <Tabs value={currentTab} onChange={handleChange} aria-label="file tabs">
+    <Box className="border-b border-gray-200">
+      <Tabs value={currentIndex} onChange={handleChange}>
         <Tab
-          icon={
-            <Badge badgeContent={recordingsCount} color="primary">
-              <Icon name="recordings" size={16} />
-            </Badge>
+          label={
+            <div className="flex items-center gap-2">
+              <Badge badgeContent={recordingsCount} color="primary">
+                <Icon name="recordings" size={16} />
+              </Badge>
+              <span>Recordings</span>
+            </div>
           }
-          iconPosition="start"
-          label="Recordings"
-          value="recordings"
         />
         <Tab
-          icon={
-            <Badge badgeContent={snapshotsCount} color="primary">
-              <Icon name="camera" size={16} />
-            </Badge>
+          label={
+            <div className="flex items-center gap-2">
+              <Badge badgeContent={snapshotsCount} color="primary">
+                <Icon name="camera" size={16} />
+              </Badge>
+              <span>Snapshots</span>
+            </div>
           }
-          iconPosition="start"
-          label="Snapshots"
-          value="snapshots"
         />
       </Tabs>
     </Box>

@@ -25,11 +25,11 @@ const AdminPage: React.FC = () => {
   if (!canViewAdminPanel() || !isAdmin) {
     return (
       <Container maxWidth="lg">
-        <Box sx={{ py: 4, textAlign: 'center' }}>
-          <Typography variant="h4" color="error" gutterBottom>
+        <Box sx={{ paddingY: 4, textAlign: 'center' }}>
+          <Typography variant="h4" color="error">
             Access Denied
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography variant="body1" color="secondary">
             Admin privileges required to access this page.
           </Typography>
         </Box>
@@ -39,7 +39,7 @@ const AdminPage: React.FC = () => {
 
   return (
     <Container maxWidth="lg">
-      <Box sx={{ py: 3 }}>
+      <Box sx={{ paddingY: 3 }}>
         <AdminPanel />
       </Box>
     </Container>

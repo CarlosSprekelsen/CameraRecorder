@@ -2,7 +2,7 @@
  * Tabs Atom - Atomic Design Pattern
  */
 
-import React, { useState } from 'react';
+import React from 'react';
 
 export interface TabsProps {
   children: React.ReactNode;

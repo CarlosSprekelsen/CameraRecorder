@@ -69,7 +69,7 @@ function App(): React.JSX.Element {
   // ARCHITECTURE FIX: Initialize all services and inject into stores
   useEffect(() => {
     if (!isInitialized) {
-      console.log('Initializing services for real-time notifications');
+      logger.info('Initializing services for real-time notifications');
       
       try {
         // Create WebSocket service
@@ -94,10 +94,10 @@ function App(): React.JSX.Element {
         useStreamingStore.getState().setStreamingService(streamingService);
         useServerStore.getState().setServerService(serverService);
         
-        console.log('All services initialized and injected into stores');
+        logger.info('All services initialized and injected into stores');
         setIsInitialized(true);
       } catch (error) {
-        console.error('Failed to initialize services', error);
+        logger.error('Failed to initialize services', { error: error instanceof Error ? error.message : 'Unknown error' });
         setConnectionStatus('error');
         setConnectionError(error instanceof Error ? error.message : 'Service initialization failed');
         setIsInitialized(true);
@@ -112,14 +112,14 @@ function App(): React.JSX.Element {
     const initializeConnection = async () => {
       try {
         setConnectionStatus('connecting');
-        console.log('Initializing connection', { url: WS_URL });
+        logger.info('Initializing connection', { url: WS_URL });
 
         // Connect using WebSocket service
         await useConnectionStore.getState().connect();
         
-        console.log('Application initialized successfully with real-time notifications');
+        logger.info('Application initialized successfully with real-time notifications');
       } catch (error) {
-        console.error('Failed to initialize connection', error);
+        logger.error('Failed to initialize connection', { error: error instanceof Error ? error.message : 'Unknown error' });
         setConnectionStatus('error');
         setConnectionError(error instanceof Error ? error.message : 'Connection failed');
       }

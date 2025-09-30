@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { StreamingService } from '../../services/streaming/StreamingService';
 import { StreamStartResult, StreamStopResult, StreamStatusResult } from '../../types/api';
+import { logger } from '../../services/logger/LoggerService';
 
 export interface StreamingState {
   activeStreams: Record<string, StreamStatusResult>;
@@ -56,7 +57,7 @@ export const useStreamingStore = create<StreamingState & StreamingActions>()(
           set({ loading: true, error: null });
           try {
             const result = await streamingService.startStreaming(device);
-            console.log('Streaming started:', result);
+            logger.info('Streaming started', { device, status: result.status });
             set({ loading: false, lastUpdated: new Date().toISOString() });
           } catch (error) {
             set({
@@ -73,7 +74,7 @@ export const useStreamingStore = create<StreamingState & StreamingActions>()(
           set({ loading: true, error: null });
           try {
             const result = await streamingService.stopStreaming(device);
-            console.log('Streaming stopped:', result);
+            logger.info('Streaming stopped', { device, status: result.status });
             set({ loading: false, lastUpdated: new Date().toISOString() });
           } catch (error) {
             set({

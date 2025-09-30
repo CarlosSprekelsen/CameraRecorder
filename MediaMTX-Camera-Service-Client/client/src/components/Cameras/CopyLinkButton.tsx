@@ -75,7 +75,7 @@ const CopyLinkButton: React.FC<CopyLinkButtonProps> = ({ device, streams }) => {
 
   return (
     <>
-      <Button onClick={handleClick} size="small" variant="primary" title="Copy stream links">
+      <Button onClick={handleClick} size="small" variant="primary">
         <Icon name="settings" size={16} />
       </Button>
 

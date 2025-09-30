@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { DeviceService } from '../../services/device/DeviceService';
-import { Camera } from '../../types/api';
+import { Camera, StreamsListResult } from '../../types/api';
 
 // ARCHITECTURE FIX: Use official API types from types/ directory
 // Removed duplicate type definitions - using authoritative types/api.ts

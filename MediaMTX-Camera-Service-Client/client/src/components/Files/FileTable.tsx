@@ -240,7 +240,7 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
                     </PermissionGate>
 
                     <Tooltip title="Info">
-                      <IconButton size="small" color="info">
+                      <IconButton size="small" color="default">
                         <Icon name="info" size={16} />
                       </IconButton>
                     </Tooltip>

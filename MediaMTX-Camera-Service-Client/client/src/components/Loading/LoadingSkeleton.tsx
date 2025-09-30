@@ -26,7 +26,7 @@ const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
   const renderTableSkeleton = () => (
     <Box>
       {/* Table header skeleton */}
-      <Box display="flex" gap={2} mb={2}>
+      <Box sx={{ display: 'flex', gap: 8, marginBottom: 8 }}>
         {Array.from({ length: columns }).map((_, index) => (
           <Skeleton key={`header-${index}`} variant="rectangular" width={120} height={40} />
         ))}
@@ -34,7 +34,7 @@ const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
 
       {/* Table rows skeleton */}
       {Array.from({ length: rows }).map((_, rowIndex) => (
-        <Box key={`row-${rowIndex}`} display="flex" gap={2} mb={1}>
+        <Box key={`row-${rowIndex}`} sx={{ display: 'flex', gap: 8, marginBottom: 4 }}>
           {Array.from({ length: columns }).map((_, colIndex) => (
             <Skeleton
               key={`cell-${rowIndex}-${colIndex}`}
@@ -52,9 +52,9 @@ const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
     <Card>
       <CardContent>
         <Skeleton variant="text" width="60%" height={32} />
-        <Skeleton variant="text" width="40%" height={24} sx={{ mt: 1 }} />
-        <Skeleton variant="rectangular" width="100%" height={200} sx={{ mt: 2 }} />
-        <Box display="flex" gap={1} mt={2}>
+        <Skeleton variant="text" width="40%" height={24} className="mt-1" />
+        <Skeleton variant="rectangular" width="100%" height={200} className="mt-2" />
+        <Box sx={{ display: 'flex', gap: 4, marginTop: 8 }}>
           <Skeleton variant="rectangular" width={80} height={32} />
           <Skeleton variant="rectangular" width={80} height={32} />
         </Box>
@@ -65,9 +65,9 @@ const LoadingSkeleton: React.FC<LoadingSkeletonProps> = ({
   const renderListSkeleton = () => (
     <Box>
       {Array.from({ length: rows }).map((_, index) => (
-        <Box key={`list-item-${index}`} display="flex" alignItems="center" mb={2}>
-          <Skeleton variant="circular" width={40} height={40} sx={{ mr: 2 }} />
-          <Box flex={1}>
+        <Box key={`list-item-${index}`} className="flex items-center mb-2">
+          <Skeleton variant="circular" width={40} height={40} className="mr-2" />
+          <Box className="flex-1">
             <Skeleton variant="text" width="70%" height={24} />
             <Skeleton variant="text" width="50%" height={20} />
           </Box>
