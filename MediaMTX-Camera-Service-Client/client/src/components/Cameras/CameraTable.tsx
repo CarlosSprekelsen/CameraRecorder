@@ -124,7 +124,7 @@ const CameraTable: React.FC<CameraTableProps> = ({ cameras, streams, onRefresh }
 
   return (
     <Box>
-      <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+      <Box className="flex justify-between items-center mb-2">
         <Typography variant="h6">Connected Devices ({cameras.length})</Typography>
         <Button variant="secondary" onClick={onRefresh} size="small">
           <Icon name="settings" size={16} className="mr-2" />
