@@ -1,44 +1,49 @@
 /**
  * Badge Atom - Atomic Design Pattern
- * 
- * Architecture requirement: "Atomic design pattern with hierarchical component structure" (Section 5.2)
- * Basic building block for all status indicators and labels
  */
 
 import React from 'react';
 
 export interface BadgeProps {
   children: React.ReactNode;
-  variant?: 'default' | 'success' | 'warning' | 'error' | 'info';
-  size?: 'small' | 'medium' | 'large';
+  badgeContent?: React.ReactNode;
+  color?: 'default' | 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
+  variant?: 'standard' | 'dot';
+  max?: number;
   className?: string;
 }
 
 export const Badge: React.FC<BadgeProps> = ({
   children,
-  variant = 'default',
-  size = 'medium',
+  badgeContent,
+  color = 'default',
+  variant = 'standard',
+  max = 99,
   className = '',
+  ...props
 }) => {
-  const baseClasses = 'inline-flex items-center font-medium rounded-full';
-  
-  const variantClasses = {
-    default: 'bg-gray-100 text-gray-800',
-    success: 'bg-green-100 text-green-800',
-    warning: 'bg-yellow-100 text-yellow-800',
-    error: 'bg-red-100 text-red-800',
-    info: 'bg-blue-100 text-blue-800',
-  };
-  
-  const sizeClasses = {
-    small: 'px-2 py-0.5 text-xs',
-    medium: 'px-2.5 py-1 text-sm',
-    large: 'px-3 py-1.5 text-base',
+  const colorClasses = {
+    default: 'bg-gray-500 text-white',
+    primary: 'bg-blue-500 text-white',
+    secondary: 'bg-gray-400 text-white',
+    error: 'bg-red-500 text-white',
+    warning: 'bg-yellow-500 text-white',
+    info: 'bg-blue-400 text-white',
+    success: 'bg-green-500 text-white',
   };
 
+  const displayContent = typeof badgeContent === 'number' && badgeContent > max 
+    ? `${max}+` 
+    : badgeContent;
+
   return (
-    <span className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}>
+    <span className={`badge relative inline-block ${className}`} {...props}>
       {children}
+      {badgeContent !== undefined && (
+        <span className={`badge-content absolute -top-2 -right-2 min-w-5 h-5 px-1 text-xs font-medium rounded-full flex items-center justify-center ${colorClasses[color]}`}>
+          {variant === 'dot' ? '' : displayContent}
+        </span>
+      )}
     </span>
   );
 };

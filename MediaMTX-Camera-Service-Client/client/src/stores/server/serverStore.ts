@@ -21,6 +21,7 @@ interface ServerStore extends ServerState {
   loadSystemReadiness: () => Promise<void>;
   loadStorageInfo: () => Promise<void>;
   loadAllServerData: () => Promise<void>;
+  ping: () => Promise<string>;
   
   // Real-time notification handlers
   handleSystemStatusUpdate: (status: any) => void;
@@ -139,6 +140,22 @@ export const useServerStore = create<ServerStore>((set) => {
         set({ 
           loading: false, 
           error: error instanceof Error ? error.message : 'Failed to load server data' 
+        });
+        throw error;
+      }
+    },
+
+    ping: async () => {
+      if (!serverService) throw new Error('Server service not initialized');
+      set({ loading: true, error: null });
+      try {
+        const result = await serverService.ping();
+        set({ loading: false, lastUpdated: new Date().toISOString() });
+        return result;
+      } catch (error) {
+        set({ 
+          loading: false, 
+          error: error instanceof Error ? error.message : 'Failed to ping server' 
         });
         throw error;
       }

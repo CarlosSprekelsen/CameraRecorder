@@ -7,7 +7,9 @@
  */
 
 import React from 'react';
-import { Box, Container, Typography } from '@mui/material';
+import { Box } from '../../components/atoms/Box/Box';
+import { Container } from '../../components/atoms/Container/Container';
+import { Typography } from '../../components/atoms/Typography/Typography';
 import { AdminPanel } from '../../components/organisms/AdminPanel/AdminPanel';
 import { usePermissions } from '../../hooks/usePermissions';
 import { logger } from '../../services/logger/LoggerService';

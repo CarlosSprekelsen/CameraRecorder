@@ -33,8 +33,10 @@ export const SystemStatusMonitor: React.FC<SystemStatusMonitorProps> = ({ classN
   const [loading, setLoading] = useState(false);
   const [lastCheck, setLastCheck] = useState<Date | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [pingStatus, setPingStatus] = useState<'idle' | 'checking' | 'success' | 'failed'>('idle');
+  const [pingResult, setPingResult] = useState<string | null>(null);
 
-  const { systemReadiness, loadSystemReadiness, setError: setServerError } = useServerStore();
+  const { systemReadiness, loadSystemReadiness, setError: setServerError, ping } = useServerStore();
   const { status: connectionStatus } = useConnectionStore();
 
   useEffect(() => {
@@ -61,6 +63,19 @@ export const SystemStatusMonitor: React.FC<SystemStatusMonitorProps> = ({ classN
       console.error('System readiness check failed:', errorMsg);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePing = async () => {
+    setPingStatus('checking');
+    try {
+      const result = await ping();
+      setPingResult(result);
+      setPingStatus('success');
+      console.log('Ping successful:', result);
+    } catch (err: unknown) {
+      setPingStatus('failed');
+      console.error('Ping failed:', err);
     }
   };
 
@@ -165,6 +180,44 @@ export const SystemStatusMonitor: React.FC<SystemStatusMonitorProps> = ({ classN
                   <span className="text-sm text-gray-600">Storage Info:</span>
                   <Badge variant="info">Available</Badge>
                 </div>
+              </div>
+            </div>
+          </Card>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Card variant="outlined">
+            <div className="p-4">
+              <div className="flex items-center mb-2">
+                <Speed className="mr-2 text-blue-600" />
+                <h3 className="text-sm font-medium">Connection Health</h3>
+              </div>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-600">Ping Status:</span>
+                  <Badge variant={
+                    pingStatus === 'success' ? 'success' : 
+                    pingStatus === 'failed' ? 'error' : 
+                    pingStatus === 'checking' ? 'info' : 'default'
+                  }>
+                    {pingStatus === 'checking' ? 'Checking...' : 
+                     pingStatus === 'success' ? 'Connected' : 
+                     pingStatus === 'failed' ? 'Failed' : 'Not Checked'}
+                  </Badge>
+                </div>
+                {pingResult && (
+                  <div className="flex justify-between">
+                    <span className="text-sm text-gray-600">Response:</span>
+                    <span className="text-sm text-green-600">{pingResult}</span>
+                  </div>
+                )}
+                <button
+                  onClick={handlePing}
+                  disabled={pingStatus === 'checking'}
+                  className="w-full mt-2 px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {pingStatus === 'checking' ? 'Pinging...' : 'Test Connection'}
+                </button>
               </div>
             </div>
           </Card>

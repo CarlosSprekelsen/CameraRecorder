@@ -1,5 +1,7 @@
 import React from 'react';
-import { Box, CircularProgress, Typography } from '@mui/material';
+import { Box } from '../atoms/Box/Box';
+import { CircularProgress } from '../atoms/CircularProgress/CircularProgress';
+import { Typography } from '../atoms/Typography/Typography';
 
 interface LoadingSpinnerProps {
   message?: string;

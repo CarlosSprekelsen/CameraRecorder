@@ -5,25 +5,13 @@
  */
 
 import React from 'react';
-import {
-  Box,
-  AppBar,
-  Toolbar,
-  Typography,
-  IconButton,
-  Chip,
-  Menu,
-  MenuItem,
-  Button,
-} from '@mui/material';
-import {
-  Menu as MenuIcon,
-  AccountCircle,
-  Logout,
-  Videocam as CameraIcon,
-  Folder as FilesIcon,
-  Info as InfoIcon,
-} from '@mui/icons-material';
+import { Box } from '../atoms/Box/Box';
+import { Typography } from '../atoms/Typography/Typography';
+import { Chip } from '../atoms/Chip/Chip';
+import { Menu, MenuItem } from '../atoms/Menu/Menu';
+import { Button } from '../atoms/Button/Button';
+import { Icon } from '../atoms/Icon/Icon';
+import { AppBar, Toolbar } from '../atoms/AppBar/AppBar';
 import { useNavigate, useLocation } from 'react-router-dom';
 // ARCHITECTURE FIX: Removed direct service import - components must use stores only
 import { useConnectionStore } from '../../stores/connection/connectionStore';

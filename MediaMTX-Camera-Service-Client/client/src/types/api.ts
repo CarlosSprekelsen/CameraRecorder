@@ -78,7 +78,7 @@ export interface SnapshotResult {
 export interface RecordingStartResult {
   device: DeviceId;
   filename: string;
-  status: 'RECORDING';  // FIXED: Server returns 'RECORDING' status
+  status: 'RECORDING' | 'STARTING' | 'STOPPING' | 'PAUSED' | 'ERROR' | 'FAILED';
   start_time: IsoTimestamp;
   format: string;
 }
@@ -87,7 +87,7 @@ export interface RecordingStartResult {
 export interface RecordingStopResult {
   device: DeviceId;
   filename: string;
-  status: 'STOPPED';
+  status: 'STOPPED' | 'STARTING' | 'STOPPING' | 'PAUSED' | 'ERROR' | 'FAILED';
   start_time: IsoTimestamp;
   end_time: IsoTimestamp;
   duration: number;

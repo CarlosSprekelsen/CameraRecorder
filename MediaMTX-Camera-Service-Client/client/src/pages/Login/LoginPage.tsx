@@ -6,16 +6,14 @@
 
 import React, { useState, memo } from 'react';
 // ARCHITECTURE FIX: Removed unused PropTypes import
-import {
-  Box,
-  Card,
-  CardContent,
-  TextField,
-  Button,
-  Typography,
-  Alert,
-  CircularProgress,
-} from '@mui/material';
+import { Box } from '../../components/atoms/Box/Box';
+import { Card } from '../../components/atoms/Card/Card';
+import { CardContent } from '../../components/atoms/CardContent/CardContent';
+import { TextField } from '../../components/atoms/TextField/TextField';
+import { Button } from '../../components/atoms/Button/Button';
+import { Typography } from '../../components/atoms/Typography/Typography';
+import { Alert } from '../../components/atoms/Alert/Alert';
+import { CircularProgress } from '../../components/atoms/CircularProgress/CircularProgress';
 // ARCHITECTURE FIX: Removed direct service import - components must use stores only
 import { useAuthStore } from '../../stores/auth/authStore';
 import { useConnectionStore } from '../../stores/connection/connectionStore';
