@@ -8,7 +8,6 @@ import React from 'react';
 import { Box } from '../atoms/Box/Box';
 import { Typography } from '../atoms/Typography/Typography';
 import { Button } from '../atoms/Button/Button';
-import { Card } from '../atoms/Card/Card';
 import { Chip } from '../atoms/Chip/Chip';
 import { Icon } from '../atoms/Icon/Icon';
 import { Table, TableContainer, TableHead, TableBody, TableRow, TableCell } from '../atoms/Table/Table';
@@ -59,13 +58,13 @@ const CameraTable: React.FC<CameraTableProps> = ({ cameras, streams, onRefresh }
   const getStatusIcon = (status: Camera['status']) => {
     switch (status) {
       case 'CONNECTED':
-        return <ConnectedIcon color="success" />;
+        return <Icon name="connected" size={20} color="#10b981" />;
       case 'ERROR':
-        return <ErrorIcon color="error" />;
+        return <Icon name="error" size={20} color="#ef4444" />;
       case 'DISCONNECTED':
-        return <DisconnectedIcon color="disabled" />;
+        return <Icon name="disconnected" size={20} color="#6b7280" />;
       default:
-        return <CameraIcon color="disabled" />;
+        return <Icon name="camera" size={20} color="#6b7280" />;
     }
   };
 
@@ -171,7 +170,7 @@ const CameraTable: React.FC<CameraTableProps> = ({ cameras, streams, onRefresh }
                     <Chip
                       label={camera.status}
                       color={
-                        getStatusColor(camera.status) as 'success' | 'error' | 'warning' | 'info'
+                        getStatusColor(camera.status) as 'success' | 'error' | 'warning' | 'default'
                       }
                       size="small"
                     />
