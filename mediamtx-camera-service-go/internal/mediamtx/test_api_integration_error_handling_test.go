@@ -279,7 +279,11 @@ func TestConcurrentRecordingOperations(t *testing.T) {
 					RunOnDemand: "ffmpeg -f v4l2 -i /dev/video0 -c:v libx264 -f rtsp rtsp://localhost:8554/" + cameraID,
 				}
 
-				_, err := controller.StartRecording(ctx, cameraID, options)
+				_, err := controller.StartRecording(ctx, map[string]interface{}{
+					"device":   cameraID,
+					"format":   options.RecordFormat,
+					"duration": options.RecordDeleteAfter,
+				})
 				if err != nil {
 					mu.Lock()
 					errors = append(errors, fmt.Errorf("iteration %d: %w", iteration, err))
@@ -295,7 +299,11 @@ func TestConcurrentRecordingOperations(t *testing.T) {
 			Record:       true,
 			RecordFormat: "fmp4",
 		}
-		_, err = controller.StartRecording(ctx, cameraID, options)
+		_, err = controller.StartRecording(ctx, map[string]interface{}{
+			"device":   cameraID,
+			"format":   options.RecordFormat,
+			"duration": options.RecordDeleteAfter,
+		})
 		// This might succeed or fail depending on current state
 
 		// Check error patterns
@@ -320,7 +328,11 @@ func TestConcurrentRecordingOperations(t *testing.T) {
 			// Add runOnDemand for local device support
 			RunOnDemand: "ffmpeg -f v4l2 -i /dev/video0 -c:v libx264 -f rtsp rtsp://localhost:8554/" + cameraID,
 		}
-		_, err := controller.StartRecording(ctx, cameraID, options)
+		_, err := controller.StartRecording(ctx, map[string]interface{}{
+			"device":   cameraID,
+			"format":   options.RecordFormat,
+			"duration": options.RecordDeleteAfter,
+		})
 		require.NoError(t, err, "Initial recording start should succeed - cameras are available")
 
 		// Brief wait for recording to be fully established before concurrent operations
@@ -386,7 +398,11 @@ func TestConcurrentRecordingOperations(t *testing.T) {
 						// Add runOnDemand for local device support
 						RunOnDemand: "ffmpeg -f v4l2 -i /dev/video0 -c:v libx264 -f rtsp rtsp://localhost:8554/" + cameraID,
 					}
-					_, err = controller.StartRecording(ctx, cameraID, options)
+					_, err = controller.StartRecording(ctx, map[string]interface{}{
+						"device":   cameraID,
+						"format":   options.RecordFormat,
+						"duration": options.RecordDeleteAfter,
+					})
 				} else {
 					// Stop recording
 					_, err = controller.StopRecording(ctx, cameraID)

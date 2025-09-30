@@ -323,7 +323,7 @@ type MediaMTXController interface {
 	SetDiscoveryInterval(interval int) (*SetDiscoveryIntervalResponse, error)
 
 	// Recording operations (device-based, no session IDs)
-	StartRecording(ctx context.Context, device string, options *PathConf) (*StartRecordingResponse, error)
+	StartRecording(ctx context.Context, params map[string]interface{}) (*StartRecordingResponse, error)
 	StopRecording(ctx context.Context, device string) (*StopRecordingResponse, error)
 
 	// Streaming operations
@@ -400,7 +400,7 @@ type MediaMTXControllerAPI interface {
 	GetStreamStatus(ctx context.Context, device string) (*GetStreamStatusResponse, error)
 
 	// Recording and snapshots (device-based, no session IDs)
-	StartRecording(ctx context.Context, device string, options *PathConf) (*StartRecordingResponse, error)
+	StartRecording(ctx context.Context, params map[string]interface{}) (*StartRecordingResponse, error)
 	StopRecording(ctx context.Context, device string) (*StopRecordingResponse, error)
 	TakeAdvancedSnapshot(ctx context.Context, device string, options *SnapshotOptions) (*TakeSnapshotResponse, error)
 	GetRecordingInfo(ctx context.Context, filename string) (*GetRecordingInfoResponse, error)

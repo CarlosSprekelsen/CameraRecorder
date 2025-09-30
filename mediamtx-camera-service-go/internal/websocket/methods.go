@@ -820,70 +820,11 @@ func (s *WebSocketServer) MethodTakeSnapshot(params map[string]interface{}, clie
 
 // MethodStartRecording implements the start_recording method
 func (s *WebSocketServer) MethodStartRecording(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// Centralized authentication check
-	if !client.Authenticated {
-		s.logger.WithFields(logging.Fields{
-			"client_id": client.ClientID,
-			"method":    "start_recording",
-			"action":    "auth_required",
-			"component": "security_middleware",
-		}).Warn("Authentication required for method")
-
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error:   NewJsonRpcError(AUTHENTICATION_REQUIRED, "auth_required", "Authentication required", "Authenticate first"),
-		}, nil
-	}
-
-	// 1. Input validation only (JSON-RPC API contract validation)
-	validationResult := s.validationHelper.ValidateRecordingParameters(params)
-	if !validationResult.Valid {
-		s.validationHelper.LogValidationWarnings(validationResult, "start_recording", client.ClientID)
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error:   NewJsonRpcError(INVALID_PARAMS, "invalid_params", "validation failed", "Provide valid recording parameters"),
-		}, nil
-	}
-
-	// 2. Extract JSON-RPC API parameters only (per docs/api/json_rpc_methods.md)
-	device := validationResult.Data["device"].(string)
-
-	// 3. Build PathConf with only JSON-RPC API parameters (no internal MediaMTX fields)
-	options := &mediamtx.PathConf{}
-	if format, ok := params["format"].(string); ok && format != "" {
-		options.RecordFormat = format
-	}
-	if duration, ok := params["duration"].(int); ok && duration > 0 {
-		options.RecordDeleteAfter = fmt.Sprintf("%ds", duration) // Convert to MediaMTX duration format
-	}
-
-	// 4. Pure delegation - Controller returns API-ready response
-	recordingResponse, err := s.mediaMTXController.StartRecording(context.Background(), device, options)
-	if err != nil {
-		// ✅ FIX 1: Map camera-specific errors to proper API error codes
-		if strings.Contains(err.Error(), "not found") || strings.Contains(err.Error(), "not available") {
-			return &JsonRpcResponse{
-				JSONRPC: "2.0",
-				Error:   NewJsonRpcError(CAMERA_NOT_FOUND, "camera_not_found", "Camera not found or disconnected", "Check camera identifier"),
-			}, nil
-		}
-		if strings.Contains(err.Error(), "recording") && strings.Contains(err.Error(), "progress") {
-			return &JsonRpcResponse{
-				JSONRPC: "2.0",
-				Error:   NewJsonRpcError(RECORDING_IN_PROGRESS, "recording_in_progress", "Recording already in progress", "Stop current recording first"),
-			}, nil
-		}
-		// For other errors, return internal error
-		return &JsonRpcResponse{
-			JSONRPC: "2.0",
-			Error:   NewJsonRpcError(INTERNAL_ERROR, "internal_error", fmt.Sprintf("start_recording error: %v", err), "Retry or contact support if persistent"),
-		}, nil
-	}
-
-	return &JsonRpcResponse{
-		JSONRPC: "2.0",
-		Result:  recordingResponse,
-	}, nil
+	return s.authenticatedMethodWrapper("start_recording", func() (interface{}, error) {
+		// Pure delegation - pass raw params to controller
+		// Controller handles all parameter extraction and business logic
+		return s.mediaMTXController.StartRecording(context.Background(), params)
+	})(params, client)
 }
 
 // MethodStopRecording implements the stop_recording method

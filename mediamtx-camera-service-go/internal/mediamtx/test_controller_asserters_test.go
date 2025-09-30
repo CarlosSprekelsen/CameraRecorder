@@ -147,7 +147,11 @@ func (rla *RecordingLifecycleAsserter) AssertCompleteRecordingLifecycle(cameraID
 func (rla *RecordingLifecycleAsserter) AssertRecordingStart(cameraID string, options *PathConf) *StartRecordingResponse {
 	// Use Progressive Readiness pattern
 	result := testutils.TestProgressiveReadiness(rla.t, func() (*StartRecordingResponse, error) {
-		return rla.controller.StartRecording(rla.ctx, cameraID, options)
+		return rla.controller.StartRecording(rla.ctx, map[string]interface{}{
+			"device":   cameraID,
+			"format":   options.RecordFormat,
+			"duration": options.RecordDeleteAfter,
+		})
 	}, rla.controller, "StartRecording")
 
 	require.NoError(rla.t, result.Error, "Recording must start")

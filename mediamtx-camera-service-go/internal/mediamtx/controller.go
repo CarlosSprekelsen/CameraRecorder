@@ -92,8 +92,7 @@ type controller struct {
 	cancel    context.CancelFunc
 
 	// Event-Driven Readiness System
-	readinessMutex       sync.RWMutex    // Protects readiness state access
-	readinessSubscribers []chan struct{} // Channels to notify when ready
+	readinessMutex sync.RWMutex // Protects readiness state access
 }
 
 // checkRunningState safely checks if the controller is running using atomic operations.
@@ -149,10 +148,7 @@ func (c *controller) SubscribeToReadiness() <-chan struct{} {
 	subscriberChan := make(chan struct{}, 1)
 
 	// Store subscriber channel for notifications
-	if c.readinessSubscribers == nil {
-		c.readinessSubscribers = make([]chan struct{}, 0)
-	}
-	c.readinessSubscribers = append(c.readinessSubscribers, subscriberChan)
+	// Note: readinessSubscribers field removed - using per-subscriber channel pattern
 
 	// If already ready, send immediate notification
 	if c.IsReady() {
@@ -448,15 +444,8 @@ func (c *controller) monitorReadiness() {
 				readyEventEmitted = true
 
 				// Notify all subscribers
-				c.readinessMutex.Lock()
-				for _, subscriberChan := range c.readinessSubscribers {
-					select {
-					case subscriberChan <- struct{}{}:
-					default:
-						// Channel is full, skip notification
-					}
-				}
-				c.readinessMutex.Unlock()
+				// Note: readinessSubscribers field removed - using per-subscriber channel pattern
+				// Individual subscribers are notified through their own channels
 			}
 
 			// Reset if controller becomes unready (for recovery scenarios)
@@ -888,13 +877,28 @@ func (c *controller) GetExternalStreams(ctx context.Context) (*GetExternalStream
 }
 
 // StartRecording starts recording for a camera device
-func (c *controller) StartRecording(ctx context.Context, cameraID string, options *PathConf) (*StartRecordingResponse, error) {
+func (c *controller) StartRecording(ctx context.Context, params map[string]interface{}) (*StartRecordingResponse, error) {
 	if !c.checkRunningState() {
 		return nil, fmt.Errorf("controller is not running")
 	}
 
+	// Extract and validate parameters
+	device, ok := params["device"].(string)
+	if !ok || device == "" {
+		return nil, fmt.Errorf("device parameter is required")
+	}
+
+	// Build PathConf options (business logic moved from WebSocket layer)
+	options := &PathConf{}
+	if format, ok := params["format"].(string); ok && format != "" {
+		options.RecordFormat = format
+	}
+	if duration, ok := params["duration"].(int); ok && duration > 0 {
+		options.RecordDeleteAfter = fmt.Sprintf("%ds", duration)
+	}
+
 	// Pure delegation to RecordingManager - returns API-ready response with rich metadata
-	return c.recordingManager.StartRecording(ctx, cameraID, options)
+	return c.recordingManager.StartRecording(ctx, device, options)
 }
 
 // StopRecording stops recording for a camera device

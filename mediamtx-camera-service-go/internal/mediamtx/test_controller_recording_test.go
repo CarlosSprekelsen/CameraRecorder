@@ -145,7 +145,11 @@ func TestController_StartRecording_ReqMTX002_InvalidCamera_Error(t *testing.T) {
 	}
 
 	// This should fail gracefully
-	session, err := asserter.GetReadyController().StartRecording(asserter.GetContext(), invalidCameraID, options)
+	session, err := asserter.GetReadyController().StartRecording(asserter.GetContext(), map[string]interface{}{
+		"device":   invalidCameraID,
+		"format":   options.RecordFormat,
+		"duration": options.RecordDeleteAfter,
+	})
 
 	// Should get an error about camera not found
 	assert.Error(t, err, "Recording should fail with invalid camera")
@@ -170,7 +174,11 @@ func TestController_StartRecording_ReqMTX002_EmptyCamera_Error(t *testing.T) {
 		RecordFormat: asserter.GetHelper().GetConfiguredRecordingFormat(),
 	}
 
-	session, err := asserter.GetReadyController().StartRecording(asserter.GetContext(), "", options)
+	session, err := asserter.GetReadyController().StartRecording(asserter.GetContext(), map[string]interface{}{
+		"device":   "",
+		"format":   options.RecordFormat,
+		"duration": options.RecordDeleteAfter,
+	})
 
 	// Should get an error about invalid camera identifier
 	assert.Error(t, err, "Recording should fail with empty camera ID")
@@ -205,7 +213,11 @@ func TestController_StartRecording_ReqMTX002_AlreadyRecording_Error(t *testing.T
 	assert.NotNil(t, session1, "First recording should start successfully")
 
 	// Try to start second recording on same camera
-	session2, err := asserter.GetReadyController().StartRecording(asserter.GetContext(), cameraID, options)
+	session2, err := asserter.GetReadyController().StartRecording(asserter.GetContext(), map[string]interface{}{
+		"device":   cameraID,
+		"format":   options.RecordFormat,
+		"duration": options.RecordDeleteAfter,
+	})
 
 	// Behavior depends on implementation:
 	// Option 1: Should fail with "already recording" error
