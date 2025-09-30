@@ -31,6 +31,11 @@ export interface Camera {
   resolution?: string;
   fps?: number;
   streams?: Streams;
+  metrics?: {
+    bytes_sent: number;
+    readers: number;
+    uptime: number;
+  };
 }
 
 // Camera List Result from official spec
