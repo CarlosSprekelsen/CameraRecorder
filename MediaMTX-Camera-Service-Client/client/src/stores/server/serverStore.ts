@@ -22,6 +22,7 @@ interface ServerStore extends ServerState {
   loadStorageInfo: () => Promise<void>;
   loadAllServerData: () => Promise<void>;
   ping: () => Promise<string>;
+  subscribeEvents: (topics: string[]) => Promise<void>;
   
   // Real-time notification handlers
   handleSystemStatusUpdate: (status: any) => void;
@@ -157,6 +158,17 @@ export const useServerStore = create<ServerStore>((set) => {
           loading: false, 
           error: error instanceof Error ? error.message : 'Failed to ping server' 
         });
+        throw error;
+      }
+    },
+
+    subscribeEvents: async (topics: string[]) => {
+      if (!serverService) throw new Error('Server service not initialized');
+      try {
+        await serverService.subscribeEvents(topics);
+        console.log('Successfully subscribed to events:', topics);
+      } catch (error) {
+        console.error('Failed to subscribe to events:', error);
         throw error;
       }
     },

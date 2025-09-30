@@ -1,6 +1,8 @@
 import React from 'react';
-import { Box, Tabs, Tab, Badge } from '@mui/material';
-import { VideoLibrary as RecordingsIcon, PhotoLibrary as SnapshotsIcon } from '@mui/icons-material';
+import { Box } from '../atoms/Box/Box';
+import { Tabs, Tab } from '../atoms/Tabs/Tabs';
+import { Badge } from '../atoms/Badge/Badge';
+import { Icon } from '../atoms/Icon/Icon';
 
 interface FileTabsProps {
   currentTab: 'recordings' | 'snapshots';

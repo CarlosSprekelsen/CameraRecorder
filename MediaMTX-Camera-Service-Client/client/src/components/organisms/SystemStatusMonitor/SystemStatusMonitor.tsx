@@ -11,17 +11,7 @@ import { Grid } from '../../atoms/Grid/Grid';
 import { Card } from '../../atoms/Card/Card';
 import { Alert } from '../../atoms/Alert/Alert';
 import { Badge } from '../../atoms/Badge/Badge';
-import { 
-  CheckCircle, 
-  Error, 
-  Warning, 
-  Storage,
-  Speed,
-  Memory,
-  Refresh,
-  Camera,
-  Autorenew
-} from '@mui/icons-material';
+import { Icon } from '../../atoms/Icon/Icon';
 import { useServerStore } from '../../../stores/server/serverStore';
 import { useConnectionStore } from '../../../stores/connection/connectionStore';
 
@@ -81,15 +71,15 @@ export const SystemStatusMonitor: React.FC<SystemStatusMonitorProps> = ({ classN
 
   const getSystemReadinessStatus = () => {
     if (connectionStatus === 'connected' && systemReadiness?.status === 'ready') {
-      return { status: 'ready', color: 'success', icon: <CheckCircle /> };
+      return { status: 'ready', color: 'success', icon: <Icon name="checkCircle" /> };
     } else if (connectionStatus === 'connected' && systemReadiness?.status === 'partial') {
-      return { status: 'partial', color: 'warning', icon: <Warning /> };
+      return { status: 'partial', color: 'warning', icon: <Icon name="warning" /> };
     } else if (connectionStatus === 'connected' && systemReadiness?.status === 'starting') {
-      return { status: 'starting', color: 'info', icon: <Autorenew className="animate-spin" /> };
+      return { status: 'starting', color: 'info', icon: <Icon name="autorenew" className="animate-spin" /> };
     } else if (connectionStatus === 'connecting') {
-      return { status: 'connecting', color: 'info', icon: <Autorenew className="animate-spin" /> };
+      return { status: 'connecting', color: 'info', icon: <Icon name="autorenew" className="animate-spin" /> };
     } else {
-      return { status: 'disconnected', color: 'error', icon: <Error /> };
+      return { status: 'disconnected', color: 'error', icon: <Icon name="error" /> };
     }
   };
 
@@ -104,7 +94,7 @@ export const SystemStatusMonitor: React.FC<SystemStatusMonitorProps> = ({ classN
           disabled={loading}
           className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
         >
-          <Refresh className="h-4 w-4" />
+          <Icon name="refresh" size={16} />
           {loading ? 'Checking...' : 'Refresh'}
         </button>
       </div>
@@ -126,7 +116,7 @@ export const SystemStatusMonitor: React.FC<SystemStatusMonitorProps> = ({ classN
           <Card variant="outlined">
             <div className="p-4">
               <div className="flex items-center mb-2">
-                <Speed className="mr-2 text-blue-600" />
+                <Icon name="speed" size={20} color="rgb(37 99 235)" className="mr-2" />
                 <h3 className="text-sm font-medium">Server Status</h3>
               </div>
               <h2 className={`text-lg font-semibold ${systemReadinessStatus.color === 'success' ? 'text-green-600' : systemReadinessStatus.color === 'warning' ? 'text-yellow-600' : systemReadinessStatus.color === 'info' ? 'text-blue-600' : 'text-red-600'}`}>
@@ -143,7 +133,7 @@ export const SystemStatusMonitor: React.FC<SystemStatusMonitorProps> = ({ classN
           <Card variant="outlined">
             <div className="p-4">
               <div className="flex items-center mb-2">
-                <Memory className="mr-2 text-blue-600" />
+                <Icon name="memory" size={20} color="rgb(37 99 235)" className="mr-2" />
                 <h3 className="text-sm font-medium">System Metrics</h3>
               </div>
               <div className="space-y-2">
@@ -172,7 +162,7 @@ export const SystemStatusMonitor: React.FC<SystemStatusMonitorProps> = ({ classN
           <Card variant="outlined">
             <div className="p-4">
               <div className="flex items-center mb-2">
-                <Storage className="mr-2 text-blue-600" />
+                <Icon name="storage" size={20} color="rgb(37 99 235)" className="mr-2" />
                 <h3 className="text-sm font-medium">Storage</h3>
               </div>
               <div className="space-y-2">
@@ -189,7 +179,7 @@ export const SystemStatusMonitor: React.FC<SystemStatusMonitorProps> = ({ classN
           <Card variant="outlined">
             <div className="p-4">
               <div className="flex items-center mb-2">
-                <Speed className="mr-2 text-blue-600" />
+                <Icon name="speed" size={20} color="rgb(37 99 235)" className="mr-2" />
                 <h3 className="text-sm font-medium">Connection Health</h3>
               </div>
               <div className="space-y-2">
@@ -230,7 +220,7 @@ export const SystemStatusMonitor: React.FC<SystemStatusMonitorProps> = ({ classN
           <Card variant="outlined">
             <div className="p-4">
               <div className="flex items-center mb-2">
-                <Camera className="mr-2 text-blue-600" />
+                <Icon name="camera" size={20} color="rgb(37 99 235)" className="mr-2" />
                 <h3 className="text-sm font-medium">Available Cameras</h3>
               </div>
               <div className="flex flex-wrap gap-2">

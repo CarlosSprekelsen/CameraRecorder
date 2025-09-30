@@ -8,7 +8,7 @@ import React, { ReactNode, ErrorInfo } from 'react';
 import { ErrorBoundary as ReactErrorBoundary, FallbackProps } from 'react-error-boundary';
 import { Button } from '../atoms/Button/Button';
 import { Alert } from '../atoms/Alert/Alert';
-import { Refresh as RefreshIcon, BugReport as BugIcon } from '@mui/icons-material';
+import { Icon } from '../atoms/Icon/Icon';
 import { logger } from '../../services/logger/LoggerService';
 // ARCHITECTURE FIX: Logger is infrastructure - components can import it directly
 
