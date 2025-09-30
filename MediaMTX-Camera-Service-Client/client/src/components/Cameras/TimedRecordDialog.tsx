@@ -1,13 +1,7 @@
 import React, { useState } from 'react';
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  MenuItem,
-} from '@mui/material';
+import { Dialog, DialogTitle, DialogContent, DialogActions } from '../../atoms/Dialog/Dialog';
+import { Button } from '../../atoms/Button/Button';
+import { TextField } from '../../atoms/TextField/TextField';
 
 interface TimedRecordDialogProps {
   open: boolean;
@@ -27,23 +21,24 @@ const TimedRecordDialog: React.FC<TimedRecordDialogProps> = ({ open, onCancel, o
           label="Duration (seconds)"
           type="number"
           value={duration}
-          onChange={(e) => setDuration(Number(e.target.value))}
+          onChange={(value) => setDuration(Number(value))}
           fullWidth
-          margin="normal"
-          inputProps={{ min: 1, max: 86400 }}
+          className="mb-4"
+          min={1}
+          max={86400}
         />
         <TextField
-          select
           label="Format"
           value={format}
-          onChange={(e) => setFormat(e.target.value)}
+          onChange={(value) => setFormat(value)}
           fullWidth
-          margin="normal"
-        >
-          <MenuItem value="fmp4">fMP4 (default)</MenuItem>
-          <MenuItem value="mp4">MP4</MenuItem>
-          <MenuItem value="mkv">MKV</MenuItem>
-        </TextField>
+          className="mb-4"
+          options={[
+            { value: 'fmp4', label: 'fMP4 (default)' },
+            { value: 'mp4', label: 'MP4' },
+            { value: 'mkv', label: 'MKV' }
+          ]}
+        />
       </DialogContent>
       <DialogActions>
         <Button onClick={onCancel}>Cancel</Button>

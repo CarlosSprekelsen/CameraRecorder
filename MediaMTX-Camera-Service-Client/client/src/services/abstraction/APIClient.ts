@@ -9,6 +9,7 @@ import { WebSocketService } from '../websocket/WebSocketService';
 import { LoggerService } from '../logger/LoggerService';
 import { PerformanceMonitor } from '../monitoring/PerformanceMonitor';
 import { RpcMethod } from '../../types/api';
+import { IAPIClient } from './IAPIClient';
 
 export interface APIClientConfig {
   timeout?: number;
@@ -16,7 +17,7 @@ export interface APIClientConfig {
   retryDelay?: number;
 }
 
-export class APIClient {
+export class APIClient implements IAPIClient {
   private performanceMonitor: PerformanceMonitor;
 
   constructor(

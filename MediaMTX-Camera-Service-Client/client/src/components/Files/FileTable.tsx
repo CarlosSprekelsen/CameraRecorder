@@ -12,19 +12,15 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  Paper,
-  IconButton,
-  Box,
-  Typography,
-  CircularProgress,
-  Checkbox,
-  Tooltip,
-} from '@mui/material';
-import {
-  Download as DownloadIcon,
-  Delete as DeleteIcon,
-  Info as InfoIcon,
-} from '@mui/icons-material';
+} from '../../atoms/Table/Table';
+import { Paper } from '../../atoms/Paper/Paper';
+import { IconButton } from '../../atoms/IconButton/IconButton';
+import { Box } from '../../atoms/Box/Box';
+import { Typography } from '../../atoms/Typography/Typography';
+import { CircularProgress } from '../../atoms/CircularProgress/CircularProgress';
+import { Checkbox } from '../../atoms/Checkbox/Checkbox';
+import { Tooltip } from '../../atoms/Tooltip/Tooltip';
+import { Icon } from '../../atoms/Icon/Icon';
 import { useFileStore } from '../../stores/file/fileStore';
 import { FileListItem } from '../../stores/file/fileStore';
 import ConfirmDialog from './ConfirmDialog';
@@ -226,7 +222,7 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
                           onClick={() => handleDownload(file)}
                           color="primary"
                         >
-                          <DownloadIcon />
+                          <Icon name="download" size={16} />
                         </IconButton>
                       </Tooltip>
                     </PermissionGate>
@@ -238,14 +234,14 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
                           onClick={() => handleDeleteClick(file.filename)}
                           color="error"
                         >
-                          <DeleteIcon />
+                          <Icon name="delete" size={16} />
                         </IconButton>
                       </Tooltip>
                     </PermissionGate>
 
                     <Tooltip title="Info">
                       <IconButton size="small" color="info">
-                        <InfoIcon />
+                        <Icon name="info" size={16} />
                       </IconButton>
                     </Tooltip>
                   </Box>

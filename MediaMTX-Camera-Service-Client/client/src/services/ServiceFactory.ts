@@ -2,6 +2,7 @@
 // Implements dependency injection as required by architecture
 
 import { APIClient } from './abstraction/APIClient';
+import { IAPIClient } from './abstraction/IAPIClient';
 import { EventBus } from './events/EventBus';
 import { AuthService } from './auth/AuthService';
 import { ServerService } from './server/ServerService';
@@ -10,11 +11,12 @@ import { RecordingService } from './recording/RecordingService';
 import { FileService } from './file/FileService';
 import { StreamingService } from './streaming/StreamingService';
 import { ExternalStreamService } from './external/ExternalStreamService';
+import { StateManager } from './state/StateManager';
 import { logger } from './logger/LoggerService';
 
 export class ServiceFactory {
   private static instance: ServiceFactory;
-  private apiClient: APIClient | null = null;
+  private apiClient: IAPIClient | null = null;
   private authService: AuthService | null = null;
   private serverService: ServerService | null = null;
   private deviceService: DeviceService | null = null;
@@ -22,6 +24,7 @@ export class ServiceFactory {
   private fileService: FileService | null = null;
   private streamingService: StreamingService | null = null;
   private externalStreamService: ExternalStreamService | null = null;
+  private stateManager: StateManager | null = null;
 
   private constructor() {}
 
@@ -32,7 +35,7 @@ export class ServiceFactory {
     return ServiceFactory.instance;
   }
 
-  createAPIClient(wsService: any): APIClient {
+  createAPIClient(wsService: any): IAPIClient {
     if (!this.apiClient) {
       this.apiClient = new APIClient(wsService, logger);
       logger.info('API Client created');
@@ -127,6 +130,21 @@ export class ServiceFactory {
     return this.externalStreamService;
   }
 
+  createStateManager(): StateManager {
+    if (!this.stateManager) {
+      this.stateManager = new StateManager({
+        enableLogging: true,
+        enablePersistence: false
+      });
+      logger.info('State manager created');
+    }
+    return this.stateManager;
+  }
+
+  getStateManager(): StateManager | null {
+    return this.stateManager;
+  }
+
   // Cleanup method for testing
   reset(): void {
     this.wsService = null;
@@ -136,6 +154,7 @@ export class ServiceFactory {
     this.recordingService = null;
     this.fileService = null;
     this.externalStreamService = null;
+    this.stateManager = null;
     logger.info('Service factory reset');
   }
 }

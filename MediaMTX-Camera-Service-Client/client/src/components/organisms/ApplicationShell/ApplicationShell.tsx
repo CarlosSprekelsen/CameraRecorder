@@ -6,29 +6,12 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  AppBar, 
-  Toolbar, 
-  Typography, 
-  Button, 
-  IconButton,
-  Drawer,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Divider
-} from '@mui/material';
-import { 
-  Menu as MenuIcon,
-  CameraAlt,
-  Folder,
-  Info,
-  Logout,
-  Dashboard,
-  AdminPanelSettings
-} from '@mui/icons-material';
+import { Box } from '../../atoms/Box/Box';
+import { AppBar, Toolbar } from '../../atoms/AppBar/AppBar';
+import { Typography } from '../../atoms/Typography/Typography';
+import { Button } from '../../atoms/Button/Button';
+import { IconButton } from '../../atoms/IconButton/IconButton';
+import { Icon } from '../../atoms/Icon/Icon';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../../stores/auth/authStore';
 import { usePermissions } from '../../../hooks/usePermissions';
@@ -42,14 +25,14 @@ interface ApplicationShellProps {
 
 const getNavigationItems = (canViewAdminPanel: boolean) => {
   const baseItems = [
-    { path: '/', label: 'Dashboard', icon: <Dashboard /> },
-    { path: '/cameras', label: 'Cameras', icon: <CameraAlt /> },
-    { path: '/files', label: 'Files', icon: <Folder /> },
-    { path: '/about', label: 'About', icon: <Info /> },
+    { path: '/', label: 'Dashboard', icon: <Icon name="dashboard" size={20} /> },
+    { path: '/cameras', label: 'Cameras', icon: <Icon name="camera" size={20} /> },
+    { path: '/files', label: 'Files', icon: <Icon name="folder" size={20} /> },
+    { path: '/about', label: 'About', icon: <Icon name="info" size={20} /> },
   ];
 
   if (canViewAdminPanel) {
-    baseItems.splice(3, 0, { path: '/admin', label: 'Admin', icon: <AdminPanelSettings /> });
+    baseItems.splice(3, 0, { path: '/admin', label: 'Admin', icon: <Icon name="admin" size={20} /> });
   }
 
   return baseItems;
@@ -106,7 +89,7 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({
             edge="start"
             sx={{ mr: 2 }}
           >
-            <MenuIcon />
+            <Icon name="menu" size={20} />
           </IconButton>
           <Typography variant="h6" component="div" sx={{ flexGrow: 1 }}>
             MediaMTX Camera Service
@@ -114,7 +97,8 @@ export const ApplicationShell: React.FC<ApplicationShellProps> = ({
           <Typography variant="body2" sx={{ mr: 2 }}>
             {role || 'Guest'}
           </Typography>
-          <Button color="inherit" onClick={handleLogout} startIcon={<Logout />}>
+          <Button color="inherit" onClick={handleLogout}>
+            <Icon name="logout" size={16} className="mr-2" />
             Logout
           </Button>
         </Toolbar>

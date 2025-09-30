@@ -41,24 +41,29 @@ const Pagination: React.FC<PaginationProps> = ({ pagination, onPageChange, onLim
   }
 
   return (
-    <Box display="flex" alignItems="center" gap={2} flexWrap="wrap">
-      <Typography variant="body2" color="text.secondary">
+    <Box className="flex items-center gap-2 flex-wrap">
+      <Typography variant="body2" color="secondary">
         Showing {startItem}-{endItem} of {total} files
       </Typography>
 
       {onLimitChange && (
-        <FormControl size="small" sx={{ minWidth: 120 }}>
+        <FormControl size="small" className="min-w-[120px]">
           <InputLabel>Per page</InputLabel>
-          <Select value={limit} label="Per page" onChange={handleLimitChange}>
-            <MenuItem value={10}>10</MenuItem>
-            <MenuItem value={20}>20</MenuItem>
-            <MenuItem value={50}>50</MenuItem>
-            <MenuItem value={100}>100</MenuItem>
-          </Select>
+          <Select 
+            value={limit} 
+            label="Per page" 
+            onChange={handleLimitChange}
+            options={[
+              { value: 10, label: '10' },
+              { value: 20, label: '20' },
+              { value: 50, label: '50' },
+              { value: 100, label: '100' }
+            ]}
+          />
         </FormControl>
       )}
 
-      <MuiPagination
+      <Pagination
         count={totalPages}
         page={currentPage}
         onChange={handlePageChange}
