@@ -56,14 +56,7 @@ export class APIClient implements IAPIClient {
     }
   }
 
-  /**
-   * Execute authenticated RPC call
-   * Architecture requirement: Centralized authentication handling
-   */
-  async authenticatedCall<T = any>(method: RpcMethod, params: Record<string, unknown> = {}): Promise<T> {
-    // Authentication is handled by the WebSocket service session
-    return this.call<T>(method, params);
-  }
+  
 
   /**
    * Execute batch RPC calls
