@@ -20,7 +20,7 @@ import { ServiceFactory } from '../../../src/services/ServiceFactory';
 import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
 import { AuthService } from '../../../src/services/auth/AuthService';
 import { ServerService } from '../../../src/services/server/ServerService';
-import { NotificationService } from '../../../src/services/notifications/NotificationService';
+import { RealTimeNotificationHandler } from '../../../src/services/notifications/RealTimeNotificationHandler';
 import { DeviceService } from '../../../src/services/device/DeviceService';
 import { RecordingService } from '../../../src/services/recording/RecordingService';
 import { FileService } from '../../../src/services/file/FileService';
@@ -38,8 +38,8 @@ jest.mock('../../../src/services/auth/AuthService', () => ({
 jest.mock('../../../src/services/server/ServerService', () => ({
   ServerService: jest.fn().mockImplementation(() => MockDataFactory.createMockServerService())
 }));
-jest.mock('../../../src/services/notifications/NotificationService', () => ({
-  NotificationService: jest.fn().mockImplementation(() => MockDataFactory.createMockEventHandler())
+jest.mock('../../../src/services/notifications/RealTimeNotificationHandler', () => ({
+  RealTimeNotificationHandler: jest.fn().mockImplementation(() => MockDataFactory.createMockEventHandler())
 }));
 jest.mock('../../../src/services/device/DeviceService', () => ({
   DeviceService: jest.fn().mockImplementation(() => MockDataFactory.createMockDeviceService())

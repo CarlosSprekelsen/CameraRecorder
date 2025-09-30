@@ -143,7 +143,7 @@ export class StateManager {
    * Useful for testing and error recovery
    */
   resetAllStores(): void {
-    for (const [storeName, store] of this.stores) {
+    for (const [, store] of this.stores) {
       const storeState = store.getState();
       if (typeof storeState.reset === 'function') {
         storeState.reset();

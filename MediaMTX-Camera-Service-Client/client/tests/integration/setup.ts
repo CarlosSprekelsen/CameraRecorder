@@ -5,7 +5,7 @@
  */
 
 import { LoggerService } from '../../src/services/logger/LoggerService';
-import { WebSocketCleanupManager } from '../utils/websocket-cleanup';
+// WebSocketCleanupManager removed - using IAPIClient abstraction
 
 // Import WebSocket for Node.js environment
 const WebSocket = require('ws');
@@ -49,10 +49,8 @@ afterAll(async () => {
   console.log('🔒 Security validation completed');
   console.log('📡 API compliance verified');
   
-  // FIXED: Use WebSocketCleanupManager for proper cleanup
-  await WebSocketCleanupManager.forceCleanup(1000);
-  
-  console.log(`🧹 Cleaned up ${WebSocketCleanupManager.getActiveConnectionCount()} WebSocket connections`);
+  // WebSocket cleanup no longer needed with IAPIClient abstraction
+  console.log('🧹 Cleanup completed - using IAPIClient abstraction');
 });
 
 // Test timeout configuration

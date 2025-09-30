@@ -17,16 +17,14 @@
  */
 
 import { StreamingService } from '../../../src/services/streaming/StreamingService';
-import { APIClient } from '../../../src/services/abstraction/APIClient';
-import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
+import { IAPIClient } from '../../../src/services/abstraction/IAPIClient';
 import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { StreamStartResult, StreamStopResult, StreamUrlResult, StreamStatusResult, StreamsListResult } from '../../../src/types/api';
 import { MockDataFactory } from '../../utils/mocks';
 
-// Use centralized mocks - eliminates duplication
-const mockWebSocketService = MockDataFactory.createMockWebSocketService();
+// Use centralized mocks - aligned with refactored architecture
+const mockAPIClient = MockDataFactory.createMockAPIClient();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
-const mockAPIClient = new APIClient(mockWebSocketService, mockLoggerService);
 
 // Use real StreamingService with APIClient
 
@@ -51,14 +49,14 @@ describe('StreamingService Unit Tests', () => {
         auto_close_after: '300s'
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await streamingService.startStreaming(device);
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('start_streaming request', { device });
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('start_streaming', { device });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('start_streaming', { device });
       expect(result).toEqual(expectedResult);
     });
 
@@ -66,7 +64,7 @@ describe('StreamingService Unit Tests', () => {
       // Arrange
       const device = 'camera0';
       const error = new Error('Streaming failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert
       await expect(streamingService.startStreaming(device)).rejects.toThrow(error);
@@ -88,14 +86,14 @@ describe('StreamingService Unit Tests', () => {
         stream_continues: false
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await streamingService.stopStreaming(device);
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('stop_streaming request', { device });
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('stop_streaming', { device });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('stop_streaming', { device });
       expect(result).toEqual(expectedResult);
     });
 
@@ -103,7 +101,7 @@ describe('StreamingService Unit Tests', () => {
       // Arrange
       const device = 'camera0';
       const error = new Error('Stop streaming failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert
       await expect(streamingService.stopStreaming(device)).rejects.toThrow(error);
@@ -124,14 +122,14 @@ describe('StreamingService Unit Tests', () => {
         stream_status: 'READY'
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await streamingService.getStreamUrl(device);
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('get_stream_url request', { device });
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('get_stream_url', { device });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_stream_url', { device });
       expect(result).toEqual(expectedResult);
     });
 
@@ -139,7 +137,7 @@ describe('StreamingService Unit Tests', () => {
       // Arrange
       const device = 'camera0';
       const error = new Error('Get stream URL failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert
       await expect(streamingService.getStreamUrl(device)).rejects.toThrow(error);
@@ -175,14 +173,14 @@ describe('StreamingService Unit Tests', () => {
         start_time: '2025-01-15T14:30:00Z'
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await streamingService.getStreamStatus(device);
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('get_stream_status request', { device });
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('get_stream_status', { device });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_stream_status', { device });
       expect(result).toEqual(expectedResult);
     });
 
@@ -190,7 +188,7 @@ describe('StreamingService Unit Tests', () => {
       // Arrange
       const device = 'camera0';
       const error = new Error('Get stream status failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert
       await expect(streamingService.getStreamStatus(device)).rejects.toThrow(error);
@@ -218,21 +216,21 @@ describe('StreamingService Unit Tests', () => {
         }
       ];
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await streamingService.getStreams();
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('get_streams request');
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('get_streams');
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_streams');
       expect(result).toEqual(expectedResult);
     });
 
     test('Should handle errors correctly', async () => {
       // Arrange
       const error = new Error('Get streams failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert
       await expect(streamingService.getStreams()).rejects.toThrow(error);

@@ -1,6 +1,7 @@
 /**
  * SINGLE authentication utility for all tests
- * Dynamic token generation - NO hardcoded credentials
+ * Dynamic token generation - NO credential storage patterns
+ * Architecture requirement: Server manages all authentication state
  * 
  * Ground Truth References:
  * - API Documentation: ../mediamtx-camera-service-go/docs/api/mediamtx_camera_service_openrpc.json
@@ -8,7 +9,7 @@
  * Requirements Coverage:
  * - REQ-AUTH-001: JWT token generation
  * - REQ-AUTH-002: Role-based access control
- * - REQ-AUTH-003: Session management
+ * - REQ-AUTH-003: Session management (server-managed)
  * 
  * Test Categories: Unit/Integration/Security
  * API Documentation Reference: mediamtx_camera_service_openrpc.json
@@ -48,10 +49,11 @@ export class AuthHelper {
   }
 
   /**
-   * Get stored token for a role
+   * Generate fresh token for a role - no storage patterns
+   * Architecture requirement: Server manages all authentication state
    */
-  getStoredToken(role: string): string | null {
-    return AuthHelper.generateTestToken(role as UserRole);
+  static generateFreshToken(role: UserRole = 'admin'): string {
+    return AuthHelper.generateTestToken(role);
   }
 
   /**

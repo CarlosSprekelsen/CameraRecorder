@@ -33,9 +33,6 @@ jest.mock('../../../src/services/file/FileService', () => ({
 
 describe('File Store', () => {
   beforeEach(() => {
-    // Reset the store to initial state
-    useFileStore.getState().reset();
-    
     // Reset all mocks
     jest.clearAllMocks();
     
@@ -46,6 +43,12 @@ describe('File Store', () => {
     (mockFileService.getSnapshotInfo as jest.Mock).mockResolvedValue(MockDataFactory.getFileListResult().files[0]);
     (mockFileService.deleteRecording as jest.Mock).mockResolvedValue(MockDataFactory.getDeleteResult());
     (mockFileService.deleteSnapshot as jest.Mock).mockResolvedValue(MockDataFactory.getDeleteResult());
+    
+    // Reset the store to initial state
+    useFileStore.getState().reset();
+    
+    // Set up service injection after reset
+    useFileStore.getState().setFileService(mockFileService as any);
   });
 
   afterEach(() => {

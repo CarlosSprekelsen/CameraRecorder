@@ -56,53 +56,49 @@ export const AccessibilityProvider: React.FC<AccessibilityProviderProps> = ({ ch
   // Create accessible theme
   const theme = createTheme({
     palette: {
-      mode: 'light',
       primary: {
         main: highContrast ? '#000000' : '#1976d2',
+        light: highContrast ? '#333333' : '#42a5f5',
+        dark: highContrast ? '#000000' : '#1565c0',
       },
       secondary: {
         main: highContrast ? '#000000' : '#dc004e',
+        light: highContrast ? '#333333' : '#ff5983',
+        dark: highContrast ? '#000000' : '#9a0036',
       },
-      contrastThreshold: highContrast ? 7 : 3,
+      error: {
+        main: highContrast ? '#000000' : '#f44336',
+        light: highContrast ? '#333333' : '#e57373',
+        dark: highContrast ? '#000000' : '#d32f2f',
+      },
+      warning: {
+        main: highContrast ? '#000000' : '#ff9800',
+        light: highContrast ? '#333333' : '#ffb74d',
+        dark: highContrast ? '#000000' : '#f57c00',
+      },
+      info: {
+        main: highContrast ? '#000000' : '#2196f3',
+        light: highContrast ? '#333333' : '#64b5f6',
+        dark: highContrast ? '#000000' : '#1976d2',
+      },
+      success: {
+        main: highContrast ? '#000000' : '#4caf50',
+        light: highContrast ? '#333333' : '#81c784',
+        dark: highContrast ? '#000000' : '#388e3c',
+      },
+      background: {
+        default: highContrast ? '#ffffff' : '#fafafa',
+        paper: highContrast ? '#ffffff' : '#ffffff',
+      },
+      text: {
+        primary: highContrast ? '#000000' : 'rgba(0, 0, 0, 0.87)',
+        secondary: highContrast ? '#000000' : 'rgba(0, 0, 0, 0.6)',
+        disabled: highContrast ? '#000000' : 'rgba(0, 0, 0, 0.38)',
+      },
     },
     typography: {
+      fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
       fontSize: fontSize === 'small' ? 12 : fontSize === 'large' ? 16 : 14,
-    },
-    components: {
-      MuiButton: {
-        styleOverrides: {
-          root: {
-            minHeight: 44, // WCAG minimum touch target
-            minWidth: 44,
-          },
-        },
-      },
-      MuiIconButton: {
-        styleOverrides: {
-          root: {
-            minHeight: 44,
-            minWidth: 44,
-          },
-        },
-      },
-      MuiChip: {
-        styleOverrides: {
-          root: {
-            minHeight: 32,
-          },
-        },
-      },
-    },
-    transitions: {
-      duration: {
-        shortest: reducedMotion ? 0 : 150,
-        shorter: reducedMotion ? 0 : 200,
-        short: reducedMotion ? 0 : 250,
-        standard: reducedMotion ? 0 : 300,
-        complex: reducedMotion ? 0 : 375,
-        enteringScreen: reducedMotion ? 0 : 225,
-        leavingScreen: reducedMotion ? 0 : 195,
-      },
     },
   });
 

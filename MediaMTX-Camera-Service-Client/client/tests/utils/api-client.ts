@@ -1,5 +1,5 @@
 /**
- * SINGLE WebSocket client abstraction for all tests
+ * Test API Client - implements IAPIClient interface for testing
  * Environment-driven: real connections for integration, mocks for unit
  * 
  * Ground Truth References:
@@ -7,7 +7,7 @@
  * - Client Architecture: ../docs/architecture/client-architechture.md
  * 
  * Requirements Coverage:
- * - REQ-API-001: WebSocket connection management
+ * - REQ-API-001: IAPIClient interface compliance
  * - REQ-API-002: JSON-RPC 2.0 protocol compliance
  * - REQ-API-003: Authentication token handling
  * 
@@ -16,7 +16,9 @@
  */
 
 import WebSocket from 'ws';
-import { AuthResult } from '@/types/api';
+import { IAPIClient, ConnectionStatus } from '../../src/services/abstraction/IAPIClient';
+import { RpcMethod } from '../../src/types/api';
+import { AuthenticateResult } from '../../src/types/api';
 
 export interface TestAPIClientConfig {
   mockMode?: boolean;
@@ -24,7 +26,7 @@ export interface TestAPIClientConfig {
   timeout?: number;
 }
 
-export class TestAPIClient {
+export class TestAPIClient implements IAPIClient {
   private ws: WebSocket | null = null;
   private isMockMode: boolean;
   private serverUrl: string;
@@ -112,11 +114,38 @@ export class TestAPIClient {
   }
 
   /**
-   * Call JSON-RPC method
+   * Check if client is connected - implements IAPIClient interface
+   */
+  isConnected(): boolean {
+    return this.ws?.readyState === WebSocket.OPEN;
+  }
+
+  /**
+   * Get connection status - implements IAPIClient interface
+   */
+  getConnectionStatus(): ConnectionStatus {
+    return {
+      connected: this.isConnected(),
+      ready: this.isConnected() && this.isAuthenticated
+    };
+  }
+
+  /**
+   * Execute batch RPC calls - implements IAPIClient interface
+   */
+  async batchCall<T = any>(calls: Array<{method: RpcMethod, params: Record<string, unknown>}>): Promise<T[]> {
+    const results = await Promise.all(
+      calls.map(call => this.call<T>(call.method, call.params))
+    );
+    return results;
+  }
+
+  /**
+   * Call JSON-RPC method - implements IAPIClient interface
    * MANDATORY: Use this method for all API calls
    * CRITICAL: Session-aware API calls - server maintains session after authenticate()
    */
-  async call(method: string, params: Record<string, unknown> = {}): Promise<any> {
+  async call<T = any>(method: RpcMethod, params?: Record<string, unknown>): Promise<T> {
     if (!this.ws) {
       throw new Error('WebSocket not connected');
     }
@@ -160,7 +189,7 @@ export class TestAPIClient {
    * MANDATORY: Use this method for all authentication tests
    * CRITICAL: Store authentication state for session persistence
    */
-  async authenticate(token: string): Promise<AuthResult> {
+  async authenticate(token: string): Promise<AuthenticateResult> {
     const result = await this.call('authenticate', { auth_token: token });
     
     // Store authentication state for session persistence
@@ -170,7 +199,7 @@ export class TestAPIClient {
       this.sessionId = result.session_id;
     }
     
-    // Validate against documented AuthResult schema
+    // Validate against documented AuthenticateResult schema
     if (!this.validateAuthResult(result)) {
       throw new Error('Invalid authentication result format');
     }

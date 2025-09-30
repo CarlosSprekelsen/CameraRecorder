@@ -16,16 +16,14 @@
  */
 
 import { ServerService } from '../../../src/services/server/ServerService';
-import { APIClient } from '../../../src/services/abstraction/APIClient';
-import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
+import { IAPIClient } from '../../../src/services/abstraction/IAPIClient';
 import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { MetricsResult, StorageInfo, RetentionPolicySetResult, CleanupResult } from '../../../src/types/api';
 import { MockDataFactory } from '../../utils/mocks';
 
-// Use centralized mocks - eliminates duplication
-const mockWebSocketService = MockDataFactory.createMockWebSocketService();
+// Use centralized mocks - aligned with refactored architecture
+const mockAPIClient = MockDataFactory.createMockAPIClient();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
-const mockAPIClient = new APIClient(mockWebSocketService, mockLoggerService);
 
 // Use real ServerService with APIClient for admin functions
 
@@ -84,21 +82,21 @@ describe('SystemAdminService Unit Tests', () => {
         }
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await systemAdminService.getMetrics();
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('get_metrics request');
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('get_metrics');
+      expect(mockAPIClient.call).toHaveBeenCalledWith('get_metrics');
       expect(result).toEqual(expectedResult);
     });
 
     test('Should handle errors correctly', async () => {
       // Arrange
       const error = new Error('Get metrics failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert
       await expect(systemAdminService.getMetrics()).rejects.toThrow(error);
@@ -119,21 +117,21 @@ describe('SystemAdminService Unit Tests', () => {
         low_space_warning: false
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await systemAdminService.getStorageInfo();
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('get_storage_info request');
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('get_storage_info');
+      expect(mockAPIClient.call).toHaveBeenCalledWith('get_storage_info');
       expect(result).toEqual(expectedResult);
     });
 
     test('Should handle errors correctly', async () => {
       // Arrange
       const error = new Error('Get storage info failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert
       await expect(systemAdminService.getStorageInfo()).rejects.toThrow(error);
@@ -156,14 +154,14 @@ describe('SystemAdminService Unit Tests', () => {
         message: 'Retention policy configured successfully'
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await systemAdminService.setRetentionPolicy(policy);
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('set_retention_policy request', policy);
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('set_retention_policy', policy);
+      expect(mockAPIClient.call).toHaveBeenCalledWith('set_retention_policy', policy);
       expect(result).toEqual(expectedResult);
     });
 
@@ -181,14 +179,14 @@ describe('SystemAdminService Unit Tests', () => {
         message: 'Retention policy configured successfully'
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await systemAdminService.setRetentionPolicy(policy);
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('set_retention_policy request', policy);
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('set_retention_policy', policy);
+      expect(mockAPIClient.call).toHaveBeenCalledWith('set_retention_policy', policy);
       expect(result).toEqual(expectedResult);
     });
 
@@ -204,14 +202,14 @@ describe('SystemAdminService Unit Tests', () => {
         message: 'Retention policy configured successfully'
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await systemAdminService.setRetentionPolicy(policy);
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('set_retention_policy request', policy);
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('set_retention_policy', policy);
+      expect(mockAPIClient.call).toHaveBeenCalledWith('set_retention_policy', policy);
       expect(result).toEqual(expectedResult);
     });
 
@@ -223,7 +221,7 @@ describe('SystemAdminService Unit Tests', () => {
         enabled: true
       };
       const error = new Error('Set retention policy failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert
       await expect(systemAdminService.setRetentionPolicy(policy)).rejects.toThrow(error);
@@ -241,21 +239,21 @@ describe('SystemAdminService Unit Tests', () => {
         message: 'Cleanup completed successfully'
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await systemAdminService.cleanupOldFiles();
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('cleanup_old_files request');
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('cleanup_old_files');
+      expect(mockAPIClient.call).toHaveBeenCalledWith('cleanup_old_files');
       expect(result).toEqual(expectedResult);
     });
 
     test('Should handle errors correctly', async () => {
       // Arrange
       const error = new Error('Cleanup old files failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert
       await expect(systemAdminService.cleanupOldFiles()).rejects.toThrow(error);
@@ -298,7 +296,7 @@ describe('SystemAdminService Unit Tests', () => {
         message: 'Cleanup completed successfully'
       };
 
-      mockWebSocketService.sendRPC
+      (mockAPIClient.call as jest.Mock)
         .mockResolvedValueOnce(metricsResult)
         .mockResolvedValueOnce(storageResult)
         .mockResolvedValueOnce(policyResult)
@@ -319,7 +317,7 @@ describe('SystemAdminService Unit Tests', () => {
       expect(storage).toEqual(storageResult);
       expect(policy).toEqual(policyResult);
       expect(cleanup).toEqual(cleanupResult);
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledTimes(4);
+      expect(mockAPIClient.call).toHaveBeenCalledTimes(4);
     });
   });
 });

@@ -17,16 +17,14 @@
  */
 
 import { ServerService } from '../../../src/services/server/ServerService';
-import { APIClient } from '../../../src/services/abstraction/APIClient';
-import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
+import { IAPIClient } from '../../../src/services/abstraction/IAPIClient';
 import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { MockDataFactory } from '../../utils/mocks';
 import { APIResponseValidator } from '../../utils/validators';
 
-// Use centralized mocks - eliminates duplication
-const mockWebSocketService = MockDataFactory.createMockWebSocketService();
+// Use centralized mocks - aligned with refactored architecture
+const mockAPIClient = MockDataFactory.createMockAPIClient();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
-const mockAPIClient = new APIClient(mockWebSocketService, mockLoggerService);
 
 describe('ServerService Unit Tests', () => {
   let serverService: ServerService;
@@ -40,11 +38,11 @@ describe('ServerService Unit Tests', () => {
   describe('REQ-SERVER-001: Server information retrieval', () => {
     test('should get server info successfully', async () => {
       const expectedInfo = MockDataFactory.getServerInfo();
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedInfo);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedInfo);
 
       const result = await serverService.getServerInfo();
 
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('get_server_info');
+      expect(mockAPIClient.call).toHaveBeenCalledWith('get_server_info');
       expect(result).toEqual(expectedInfo);
       expect(APIResponseValidator.validateServerInfo(result)).toBe(true);
     });
@@ -57,14 +55,14 @@ describe('ServerService Unit Tests', () => {
 
     test('should handle server info errors', async () => {
       const error = new Error('Server info unavailable');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(serverService.getServerInfo()).rejects.toThrow('Server info unavailable');
     });
 
     test('should validate server info structure', async () => {
       const serverInfo = MockDataFactory.getServerInfo();
-      mockWebSocketService.sendRPC.mockResolvedValue(serverInfo);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(serverInfo);
 
       const result = await serverService.getServerInfo();
 
@@ -82,11 +80,11 @@ describe('ServerService Unit Tests', () => {
   describe('REQ-SERVER-002: System status monitoring', () => {
     test('should get system status successfully', async () => {
       const expectedStatus = MockDataFactory.getSystemStatus();
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedStatus);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedStatus);
 
       const result = await serverService.getStatus();
 
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('get_status');
+      expect(mockAPIClient.call).toHaveBeenCalledWith('get_status');
       expect(result).toEqual(expectedStatus);
       expect(APIResponseValidator.validateSystemStatus(result)).toBe(true);
     });
@@ -99,14 +97,14 @@ describe('ServerService Unit Tests', () => {
 
     test('should handle status errors', async () => {
       const error = new Error('Status unavailable');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(serverService.getStatus()).rejects.toThrow('Status unavailable');
     });
 
     test('should validate status structure', async () => {
       const status = MockDataFactory.getSystemStatus();
-      mockWebSocketService.sendRPC.mockResolvedValue(status);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(status);
 
       const result = await serverService.getStatus();
 
@@ -120,11 +118,11 @@ describe('ServerService Unit Tests', () => {
   describe('REQ-SERVER-003: Storage information', () => {
     test('should get storage info successfully', async () => {
       const expectedStorage = MockDataFactory.getStorageInfo();
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedStorage);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedStorage);
 
       const result = await serverService.getStorageInfo();
 
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('get_storage_info');
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_storage_info');
       expect(result).toEqual(expectedStorage);
       expect(APIResponseValidator.validateStorageInfo(result)).toBe(true);
     });
@@ -137,14 +135,14 @@ describe('ServerService Unit Tests', () => {
 
     test('should handle storage info errors', async () => {
       const error = new Error('Storage info unavailable');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(serverService.getStorageInfo()).rejects.toThrow('Storage info unavailable');
     });
 
     test('should validate storage info structure', async () => {
       const storage = MockDataFactory.getStorageInfo();
-      mockWebSocketService.sendRPC.mockResolvedValue(storage);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(storage);
 
       const result = await serverService.getStorageInfo();
 
@@ -161,11 +159,11 @@ describe('ServerService Unit Tests', () => {
   describe('REQ-SERVER-004: System metrics collection', () => {
     test('should get metrics successfully', async () => {
       const expectedMetrics = MockDataFactory.getMetricsResult();
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedMetrics);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedMetrics);
 
       const result = await serverService.getMetrics();
 
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('get_metrics');
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_metrics');
       expect(result).toEqual(expectedMetrics);
       expect(APIResponseValidator.validateMetricsResult(result)).toBe(true);
     });
@@ -178,14 +176,14 @@ describe('ServerService Unit Tests', () => {
 
     test('should handle metrics errors', async () => {
       const error = new Error('Metrics unavailable');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(serverService.getMetrics()).rejects.toThrow('Metrics unavailable');
     });
 
     test('should validate metrics structure', async () => {
       const metrics = MockDataFactory.getMetricsResult();
-      mockWebSocketService.sendRPC.mockResolvedValue(metrics);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(metrics);
 
       const result = await serverService.getMetrics();
 
@@ -207,11 +205,11 @@ describe('ServerService Unit Tests', () => {
         subscription_id: 'sub-123'
       };
       
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       const result = await serverService.subscribeEvents(topics, filters);
 
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('subscribe_events', {
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('subscribe_events', {
         topics,
         filters
       });
@@ -226,11 +224,11 @@ describe('ServerService Unit Tests', () => {
         subscription_id: 'sub-456'
       };
       
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       const result = await serverService.subscribeEvents(topics);
 
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('subscribe_events', {
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('subscribe_events', {
         topics,
         filters: undefined
       });
@@ -245,11 +243,11 @@ describe('ServerService Unit Tests', () => {
         subscription_id: 'sub-123'
       };
       
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       const result = await serverService.unsubscribeEvents(topics);
 
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('unsubscribe_events', {
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('unsubscribe_events', {
         topics
       });
       expect(result).toEqual(expectedResult);
@@ -262,11 +260,11 @@ describe('ServerService Unit Tests', () => {
         subscription_id: 'sub-123'
       };
       
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       const result = await serverService.unsubscribeEvents();
 
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('unsubscribe_events', {
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('unsubscribe_events', {
         topics: undefined
       });
       expect(result).toEqual(expectedResult);
@@ -282,11 +280,11 @@ describe('ServerService Unit Tests', () => {
         }
       };
       
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedStats);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedStats);
 
       const result = await serverService.getSubscriptionStats();
 
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('get_subscription_stats');
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_subscription_stats');
       expect(result).toEqual(expectedStats);
     });
 
@@ -300,7 +298,7 @@ describe('ServerService Unit Tests', () => {
 
     test('should handle subscription errors', async () => {
       const error = new Error('Subscription failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(serverService.subscribeEvents(['test'])).rejects.toThrow('Subscription failed');
       await expect(serverService.unsubscribeEvents(['test'])).rejects.toThrow('Subscription failed');
@@ -311,11 +309,11 @@ describe('ServerService Unit Tests', () => {
   describe('Ping functionality', () => {
     test('should ping server successfully', async () => {
       const expectedPong = 'pong';
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedPong);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedPong);
 
       const result = await serverService.ping();
 
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('ping');
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('ping');
       expect(result).toBe(expectedPong);
     });
 
@@ -327,7 +325,7 @@ describe('ServerService Unit Tests', () => {
 
     test('should handle ping errors', async () => {
       const error = new Error('Ping failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(serverService.ping()).rejects.toThrow('Ping failed');
     });
@@ -346,7 +344,7 @@ describe('ServerService Unit Tests', () => {
 
     test('should handle RPC errors', async () => {
       const error = new Error('RPC method failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(serverService.getServerInfo()).rejects.toThrow('RPC method failed');
       await expect(serverService.getStatus()).rejects.toThrow('RPC method failed');

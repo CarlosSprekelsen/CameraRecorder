@@ -17,8 +17,7 @@
  */
 
 import { ExternalStreamService } from '../../../src/services/external/ExternalStreamService';
-import { APIClient } from '../../../src/services/abstraction/APIClient';
-import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
+import { IAPIClient } from '../../../src/services/abstraction/IAPIClient';
 import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { 
   ExternalStreamDiscoveryResult, 
@@ -29,10 +28,9 @@ import {
 } from '../../../src/types/api';
 import { MockDataFactory } from '../../utils/mocks';
 
-// Use centralized mocks - eliminates duplication
-const mockWebSocketService = MockDataFactory.createMockWebSocketService();
+// Use centralized mocks - aligned with refactored architecture
+const mockAPIClient = MockDataFactory.createMockAPIClient();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
-const mockAPIClient = new APIClient(mockWebSocketService, mockLoggerService);
 
 // Use real ExternalStreamService with APIClient
 
@@ -63,14 +61,14 @@ describe('ExternalStreamService Unit Tests', () => {
         errors: []
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await externalStreamService.discoverExternalStreams();
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('discover_external_streams request', {});
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('discover_external_streams', {});
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('discover_external_streams', {});
       expect(result).toEqual(expectedResult);
     });
 
@@ -112,21 +110,21 @@ describe('ExternalStreamService Unit Tests', () => {
         errors: []
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await externalStreamService.discoverExternalStreams(options);
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('discover_external_streams request', options);
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('discover_external_streams', options);
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('discover_external_streams', options);
       expect(result).toEqual(expectedResult);
     });
 
     test('Should handle errors correctly', async () => {
       // Arrange
       const error = new Error('Discovery failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert
       await expect(externalStreamService.discoverExternalStreams()).rejects.toThrow(error);
@@ -148,14 +146,14 @@ describe('ExternalStreamService Unit Tests', () => {
         timestamp: '2025-01-15T14:30:00Z'
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await externalStreamService.addExternalStream(streamUrl, streamName, streamType);
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('add_external_stream request', { streamUrl, streamName, streamType });
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('add_external_stream', { streamUrl, streamName, streamType });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('add_external_stream', { streamUrl, streamName, streamType });
       expect(result).toEqual(expectedResult);
     });
 
@@ -171,14 +169,14 @@ describe('ExternalStreamService Unit Tests', () => {
         timestamp: '2025-01-15T14:30:00Z'
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await externalStreamService.addExternalStream(streamUrl, streamName);
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('add_external_stream request', { streamUrl, streamName, streamType: undefined });
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('add_external_stream', { streamUrl, streamName, streamType: undefined });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('add_external_stream', { streamUrl, streamName, streamType: undefined });
       expect(result).toEqual(expectedResult);
     });
 
@@ -187,7 +185,7 @@ describe('ExternalStreamService Unit Tests', () => {
       const streamUrl = 'rtsp://192.168.42.15:5554/subject';
       const streamName = 'Test_UAV';
       const error = new Error('Add external stream failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert
       await expect(externalStreamService.addExternalStream(streamUrl, streamName)).rejects.toThrow(error);
@@ -205,14 +203,14 @@ describe('ExternalStreamService Unit Tests', () => {
         timestamp: '2025-01-15T14:30:00Z'
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await externalStreamService.removeExternalStream(streamUrl);
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('remove_external_stream request', { streamUrl });
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('remove_external_stream', { streamUrl });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('remove_external_stream', { streamUrl });
       expect(result).toEqual(expectedResult);
     });
 
@@ -220,7 +218,7 @@ describe('ExternalStreamService Unit Tests', () => {
       // Arrange
       const streamUrl = 'rtsp://192.168.42.15:5554/subject';
       const error = new Error('Remove external stream failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert
       await expect(externalStreamService.removeExternalStream(streamUrl)).rejects.toThrow(error);
@@ -258,21 +256,21 @@ describe('ExternalStreamService Unit Tests', () => {
         timestamp: '2025-01-15T14:30:00Z'
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await externalStreamService.getExternalStreams();
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('get_external_streams request');
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('get_external_streams');
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_external_streams');
       expect(result).toEqual(expectedResult);
     });
 
     test('Should handle errors correctly', async () => {
       // Arrange
       const error = new Error('Get external streams failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert
       await expect(externalStreamService.getExternalStreams()).rejects.toThrow(error);
@@ -291,14 +289,14 @@ describe('ExternalStreamService Unit Tests', () => {
         timestamp: '2025-01-15T14:30:00Z'
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await externalStreamService.setDiscoveryInterval(scanInterval);
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('set_discovery_interval request', { scanInterval });
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('set_discovery_interval', { scanInterval });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('set_discovery_interval', { scanInterval });
       expect(result).toEqual(expectedResult);
     });
 
@@ -306,7 +304,7 @@ describe('ExternalStreamService Unit Tests', () => {
       // Arrange
       const scanInterval = 300;
       const error = new Error('Set discovery interval failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert
       await expect(externalStreamService.setDiscoveryInterval(scanInterval)).rejects.toThrow(error);

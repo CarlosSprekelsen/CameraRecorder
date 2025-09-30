@@ -32,6 +32,7 @@ export interface RecordingState {
 
 export interface RecordingActions {
   setRecordingService: (service: RecordingService) => void;
+  setError: (error: string | null) => void;
   takeSnapshot: (device: string, filename?: string) => Promise<void>;
   startRecording: (device: string, duration?: number, format?: string) => Promise<void>;
   stopRecording: (device: string) => Promise<void>;
@@ -62,6 +63,8 @@ export const useRecordingStore = create<RecordingState & RecordingActions>()(
           setRecordingService: (recordingService: RecordingService) => {
             service = recordingService;
           },
+
+          setError: (error: string | null) => set({ error }),
 
           takeSnapshot: async (device: string, filename?: string) => {
             if (!service) throw new Error('Recording service not initialized');

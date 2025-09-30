@@ -28,7 +28,7 @@ export class AuthService {
   }
 
   async authenticate(token: string): Promise<AuthenticateResult> {
-    if (!this.apiClient.isConnected) {
+    if (!this.apiClient.isConnected()) {
       throw new Error('WebSocket not connected');
     }
 

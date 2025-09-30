@@ -23,9 +23,8 @@ import { MockDataFactory } from '../../utils/mocks';
 import { APIResponseValidator } from '../../utils/validators';
 import { useRecordingStore } from '../../../src/stores/recording/recordingStore';
 
-// Use centralized mocks - eliminates duplication
+// Use centralized mocks - aligned with refactored architecture
 const mockRecordingService = MockDataFactory.createMockRecordingService();
-const mockWebSocketService = MockDataFactory.createMockWebSocketService();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
 
 jest.mock('../../../src/services/recording/RecordingService', () => ({
@@ -34,9 +33,6 @@ jest.mock('../../../src/services/recording/RecordingService', () => ({
 
 describe('Recording Store', () => {
   beforeEach(() => {
-    // Reset the store to initial state
-    useRecordingStore.getState().reset();
-    
     // Reset all mocks
     jest.clearAllMocks();
     
@@ -44,6 +40,12 @@ describe('Recording Store', () => {
     (mockRecordingService.takeSnapshot as jest.Mock).mockResolvedValue(MockDataFactory.getSnapshotResult());
     (mockRecordingService.startRecording as jest.Mock).mockResolvedValue(MockDataFactory.getRecordingStartResult());
     (mockRecordingService.stopRecording as jest.Mock).mockResolvedValue(MockDataFactory.getRecordingStopResult());
+    
+    // Reset the store to initial state
+    useRecordingStore.getState().reset();
+    
+    // Set up service injection after reset
+    useRecordingStore.getState().setRecordingService(mockRecordingService as any);
   });
 
   afterEach(() => {
@@ -58,6 +60,15 @@ describe('Recording Store', () => {
       expect(state.history).toEqual([]);
       expect(state.loading).toBe(false);
       expect(state.error).toBe(null);
+    });
+
+    test('should set recording service correctly', () => {
+      const { setRecordingService } = useRecordingStore.getState();
+      
+      setRecordingService(mockRecordingService as any);
+      // Service is set in closure, so we can't directly test it
+      // But we can test that the method doesn't throw
+      expect(() => setRecordingService(mockRecordingService as any)).not.toThrow();
     });
 
     test('should handle recording status updates', () => {
@@ -100,27 +111,24 @@ describe('Recording Store', () => {
 
   describe('REQ-006: Recording Lifecycle', () => {
     test('should take snapshot successfully', async () => {
-      const { takeSnapshot, setService } = useRecordingStore.getState();
+      const { takeSnapshot } = useRecordingStore.getState();
       
-      setService(mockRecordingService as any);
       await takeSnapshot('camera0', 'test.jpg');
       
       expect(mockRecordingService.takeSnapshot).toHaveBeenCalledWith('camera0', 'test.jpg');
     });
 
     test('should start recording successfully', async () => {
-      const { startRecording, setService } = useRecordingStore.getState();
+      const { startRecording } = useRecordingStore.getState();
       
-      setService(mockRecordingService as any);
       await startRecording('camera0', 60, 'mp4');
       
       expect(mockRecordingService.startRecording).toHaveBeenCalledWith('camera0', 60, 'mp4');
     });
 
     test('should stop recording successfully', async () => {
-      const { stopRecording, setService } = useRecordingStore.getState();
+      const { stopRecording } = useRecordingStore.getState();
       
-      setService(mockRecordingService as any);
       await stopRecording('camera0');
       
       expect(mockRecordingService.stopRecording).toHaveBeenCalledWith('camera0');
@@ -129,9 +137,9 @@ describe('Recording Store', () => {
 
   describe('REQ-002: State Transitions', () => {
     test('should transition from loading to success state', async () => {
-      const { startRecording, setService } = useRecordingStore.getState();
+      const { startRecording, setRecordingService } = useRecordingStore.getState();
       
-      setService(mockRecordingService as any);
+      setRecordingService(mockRecordingService as any);
       
       const promise = startRecording('camera0');
       
@@ -148,10 +156,10 @@ describe('Recording Store', () => {
     });
 
     test('should transition from loading to error state', async () => {
-      const { startRecording, setService } = useRecordingStore.getState();
+      const { startRecording, setRecordingService } = useRecordingStore.getState();
       
       (mockRecordingService.startRecording as jest.Mock).mockRejectedValue(new Error('Network error'));
-      setService(mockRecordingService as any);
+      setRecordingService(mockRecordingService as any);
       
       await startRecording('camera0');
       
@@ -166,7 +174,7 @@ describe('Recording Store', () => {
       const { startRecording } = useRecordingStore.getState();
       
       // Don't set the service - ensure it's null
-      useRecordingStore.getState().setService(null as any);
+      useRecordingStore.getState().setRecordingService(null as any);
       
       startRecording('camera0');
       
@@ -176,10 +184,10 @@ describe('Recording Store', () => {
     });
 
     test('should handle API errors gracefully', async () => {
-      const { startRecording, setService } = useRecordingStore.getState();
+      const { startRecording, setRecordingService } = useRecordingStore.getState();
       
       (mockRecordingService.startRecording as jest.Mock).mockRejectedValue(new Error('API Error'));
-      setService(mockRecordingService as any);
+      setRecordingService(mockRecordingService as any);
       
       await startRecording('camera0');
       
@@ -189,10 +197,10 @@ describe('Recording Store', () => {
     });
 
     test('should handle non-Error exceptions', async () => {
-      const { startRecording, setService } = useRecordingStore.getState();
+      const { startRecording, setRecordingService } = useRecordingStore.getState();
       
       (mockRecordingService.startRecording as jest.Mock).mockRejectedValue('String error');
-      setService(mockRecordingService as any);
+      setRecordingService(mockRecordingService as any);
       
       await startRecording('camera0');
       
@@ -204,9 +212,9 @@ describe('Recording Store', () => {
 
   describe('REQ-004: API Integration', () => {
     test('should call takeSnapshot and handle response', async () => {
-      const { takeSnapshot, setService } = useRecordingStore.getState();
+      const { takeSnapshot, setRecordingService } = useRecordingStore.getState();
       
-      setService(mockRecordingService as any);
+      setRecordingService(mockRecordingService as any);
       await takeSnapshot('camera0');
       
       expect(mockRecordingService.takeSnapshot).toHaveBeenCalledTimes(1);
@@ -214,18 +222,18 @@ describe('Recording Store', () => {
     });
 
     test('should call startRecording with parameters', async () => {
-      const { startRecording, setService } = useRecordingStore.getState();
+      const { startRecording, setRecordingService } = useRecordingStore.getState();
       
-      setService(mockRecordingService as any);
+      setRecordingService(mockRecordingService as any);
       await startRecording('camera0', 120, 'fmp4');
       
       expect(mockRecordingService.startRecording).toHaveBeenCalledWith('camera0', 120, 'fmp4');
     });
 
     test('should call stopRecording and handle response', async () => {
-      const { stopRecording, setService } = useRecordingStore.getState();
+      const { stopRecording, setRecordingService } = useRecordingStore.getState();
       
-      setService(mockRecordingService as any);
+      setRecordingService(mockRecordingService as any);
       await stopRecording('camera0');
       
       expect(mockRecordingService.stopRecording).toHaveBeenCalledWith('camera0');
@@ -234,10 +242,10 @@ describe('Recording Store', () => {
 
   describe('REQ-005: Side Effects', () => {
     test('should reset store to initial state', () => {
-      const { reset, setService } = useRecordingStore.getState();
+      const { reset, setRecordingService } = useRecordingStore.getState();
       
       // Modify state
-      setService(mockRecordingService as any);
+      setRecordingService(mockRecordingService as any);
       useRecordingStore.setState({
         activeRecordings: { camera0: { device: 'camera0', status: 'RECORDING' } },
         history: [{ device: 'camera0', status: 'STOPPED' }],
@@ -285,9 +293,9 @@ describe('Recording Store', () => {
 
   describe('API Compliance Validation', () => {
     test('should validate snapshot response against RPC spec', async () => {
-      const { takeSnapshot, setService } = useRecordingStore.getState();
+      const { takeSnapshot, setRecordingService } = useRecordingStore.getState();
       
-      setService(mockRecordingService as any);
+      setRecordingService(mockRecordingService as any);
       await takeSnapshot('camera0');
       
       // The mock should return a valid snapshot result
@@ -295,9 +303,9 @@ describe('Recording Store', () => {
     });
 
     test('should validate recording start response against RPC spec', async () => {
-      const { startRecording, setService } = useRecordingStore.getState();
+      const { startRecording, setRecordingService } = useRecordingStore.getState();
       
-      setService(mockRecordingService as any);
+      setRecordingService(mockRecordingService as any);
       await startRecording('camera0');
       
       // The mock should return a valid recording start result
@@ -305,9 +313,9 @@ describe('Recording Store', () => {
     });
 
     test('should validate recording stop response against RPC spec', async () => {
-      const { stopRecording, setService } = useRecordingStore.getState();
+      const { stopRecording, setRecordingService } = useRecordingStore.getState();
       
-      setService(mockRecordingService as any);
+      setRecordingService(mockRecordingService as any);
       await stopRecording('camera0');
       
       // The mock should return a valid recording stop result

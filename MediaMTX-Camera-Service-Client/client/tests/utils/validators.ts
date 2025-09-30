@@ -524,6 +524,7 @@ export class APIResponseValidator {
 
   /**
    * Validate Authentication Result - matches official RPC spec exactly
+   * ALIGNED WITH REFACTORED AuthenticateResult type
    */
   static validateAuthenticateResult(result: unknown): result is AuthenticateResult {
     if (typeof result !== 'object' || result === null) return false;

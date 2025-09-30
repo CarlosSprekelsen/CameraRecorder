@@ -16,28 +16,26 @@
  * API Documentation Reference: mediamtx_camera_service_openrpc.json
  */
 
-import { NotificationService } from '../../../src/services/notifications/NotificationService';
-import { APIClient } from '../../../src/services/abstraction/APIClient';
-import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
+import { RealTimeNotificationHandler } from '../../../src/services/notifications/RealTimeNotificationHandler';
+import { IAPIClient } from '../../../src/services/abstraction/IAPIClient';
 import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { EventBus } from '../../../src/services/events/EventBus';
 import { JsonRpcNotification } from '../../../src/types/api';
 import { MockDataFactory } from '../../utils/mocks';
 
-// Use centralized mocks - eliminates duplication
-const mockWebSocketService = MockDataFactory.createMockWebSocketService();
+// Use centralized mocks - aligned with refactored architecture
+const mockAPIClient = MockDataFactory.createMockAPIClient();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
-const mockAPIClient = new APIClient(mockWebSocketService, mockLoggerService);
 const mockEventBus = MockDataFactory.createMockEventBus();
 
-describe('NotificationService Unit Tests', () => {
-  let notificationService: NotificationService;
+describe('RealTimeNotificationHandler Unit Tests', () => {
+  let notificationService: RealTimeNotificationHandler;
   let mockHandler: jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
     mockHandler = MockDataFactory.createMockEventHandler();
-    notificationService = new NotificationService(mockAPIClient, mockLoggerService, mockEventBus);
+    notificationService = new RealTimeNotificationHandler(mockAPIClient, mockLoggerService, mockEventBus);
   });
 
   describe('REQ-NOTIF-001: Notification subscription management', () => {

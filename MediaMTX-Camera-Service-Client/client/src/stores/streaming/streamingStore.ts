@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { StreamingService } from '../../services/streaming/StreamingService';
-import { StreamStartResult, StreamStopResult, StreamStatusResult } from '../../types/api';
+import { StreamStatusResult } from '../../types/api';
 import { logger } from '../../services/logger/LoggerService';
 
 export interface StreamingState {

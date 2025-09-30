@@ -15,15 +15,13 @@
  */
 
 import { RecordingService } from '../../../src/services/recording/RecordingService';
-import { APIClient } from '../../../src/services/abstraction/APIClient';
-import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
+import { IAPIClient } from '../../../src/services/abstraction/IAPIClient';
 import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { MockDataFactory } from '../../utils/mocks';
 
-// Use centralized mocks - eliminates duplication
-const mockWebSocketService = MockDataFactory.createMockWebSocketService();
+// Use centralized mocks - aligned with refactored architecture
+const mockAPIClient = MockDataFactory.createMockAPIClient();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
-const mockAPIClient = new APIClient(mockWebSocketService, mockLoggerService);
 
 describe('RecordingService Unit Tests', () => {
   let recordingService: RecordingService;
@@ -49,11 +47,11 @@ describe('RecordingService Unit Tests', () => {
       timestamp: new Date().toISOString()
     };
 
-    mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+    (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
     const result = await recordingService.takeSnapshot(device, filename);
 
-    expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('take_snapshot', { device, filename });
+    expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('take_snapshot', { device, filename });
     expect(mockLoggerService.info).toHaveBeenCalledWith('take_snapshot request', { device, filename });
     expect(result).toEqual(expectedResult);
   });
@@ -62,7 +60,7 @@ describe('RecordingService Unit Tests', () => {
     const device = 'camera0';
     const error = new Error('WebSocket connection failed');
 
-    mockWebSocketService.sendRPC.mockRejectedValue(error);
+    (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
     await expect(recordingService.takeSnapshot(device)).rejects.toThrow('WebSocket connection failed');
     expect(mockLoggerService.error).toHaveBeenCalledWith('take_snapshot failed', error);
@@ -78,11 +76,11 @@ describe('RecordingService Unit Tests', () => {
       start_time: new Date().toISOString()
     };
 
-    mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+    (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
     const result = await recordingService.startRecording(device, duration, format);
 
-    expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('start_recording', { device, duration, format });
+    expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('start_recording', { device, duration, format });
     expect(mockLoggerService.info).toHaveBeenCalledWith('start_recording request', { device, duration, format });
     expect(result).toEqual(expectedResult);
   });
@@ -91,7 +89,7 @@ describe('RecordingService Unit Tests', () => {
     const device = 'camera0';
     const error = new Error('Recording failed');
 
-    mockWebSocketService.sendRPC.mockRejectedValue(error);
+    (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
     await expect(recordingService.startRecording(device)).rejects.toThrow('Recording failed');
     expect(mockLoggerService.error).toHaveBeenCalledWith('start_recording failed', error);
@@ -105,11 +103,11 @@ describe('RecordingService Unit Tests', () => {
       end_time: new Date().toISOString()
     };
 
-    mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+    (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
     const result = await recordingService.stopRecording(device);
 
-    expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('stop_recording', { device });
+    expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('stop_recording', { device });
     expect(mockLoggerService.info).toHaveBeenCalledWith('stop_recording request', { device });
     expect(result).toEqual(expectedResult);
   });
@@ -118,7 +116,7 @@ describe('RecordingService Unit Tests', () => {
     const device = 'camera0';
     const error = new Error('Stop recording failed');
 
-    mockWebSocketService.sendRPC.mockRejectedValue(error);
+    (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
     await expect(recordingService.stopRecording(device)).rejects.toThrow('Stop recording failed');
     expect(mockLoggerService.error).toHaveBeenCalledWith('stop_recording failed', error);

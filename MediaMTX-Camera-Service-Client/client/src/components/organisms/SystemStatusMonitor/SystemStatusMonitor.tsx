@@ -139,17 +139,17 @@ export const SystemStatusMonitor: React.FC<SystemStatusMonitorProps> = ({ classN
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Readiness:</span>
-                  <Badge variant={systemReadiness?.status === 'ready' ? 'success' : systemReadiness?.status === 'partial' ? 'warning' : systemReadiness?.status === 'starting' ? 'info' : 'error'}>
+                  <Badge color={systemReadiness?.status === 'ready' ? 'success' : systemReadiness?.status === 'partial' ? 'warning' : systemReadiness?.status === 'starting' ? 'info' : 'error'}>
                     {systemReadiness?.status || 'UNKNOWN'}
                   </Badge>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Cameras:</span>
-                  <Badge variant="info">{systemReadiness?.available_cameras?.length || 0}</Badge>
+                  <Badge color="info">{systemReadiness?.available_cameras?.length || 0}</Badge>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Discovery:</span>
-                  <Badge variant={systemReadiness?.discovery_active ? 'warning' : 'success'}>
+                  <Badge color={systemReadiness?.discovery_active ? 'warning' : 'success'}>
                     {systemReadiness?.discovery_active ? 'Active' : 'Complete'}
                   </Badge>
                 </div>
@@ -168,7 +168,7 @@ export const SystemStatusMonitor: React.FC<SystemStatusMonitorProps> = ({ classN
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Storage Info:</span>
-                  <Badge variant="info">Available</Badge>
+                  <Badge color="info">Available</Badge>
                 </div>
               </div>
             </div>
@@ -185,7 +185,7 @@ export const SystemStatusMonitor: React.FC<SystemStatusMonitorProps> = ({ classN
               <div className="space-y-2">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Ping Status:</span>
-                  <Badge variant={
+                  <Badge color={
                     pingStatus === 'success' ? 'success' : 
                     pingStatus === 'failed' ? 'error' : 
                     pingStatus === 'checking' ? 'info' : 'default'
@@ -225,7 +225,7 @@ export const SystemStatusMonitor: React.FC<SystemStatusMonitorProps> = ({ classN
               </div>
               <div className="flex flex-wrap gap-2">
                 {systemReadiness.available_cameras.map((camera, index) => (
-                  <Badge key={index} variant="success" className="text-xs">
+                  <Badge key={index} color="success" className="text-xs">
                     {camera}
                   </Badge>
                 ))}

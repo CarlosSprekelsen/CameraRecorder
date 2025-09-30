@@ -40,8 +40,8 @@ describe('FileStore Coverage Tests', () => {
       // Set up the service
       setFileService(mockFileService as any);
       
-      // Mock service to throw error
-      mockFileService.listRecordings.mockRejectedValue(new Error('Service error'));
+      // Mock service to throw error - using existing pattern
+      (mockFileService.listRecordings as jest.Mock).mockRejectedValue(new Error('Service error'));
       
       // Start the action
       await loadRecordings();
@@ -58,8 +58,8 @@ describe('FileStore Coverage Tests', () => {
       // Set up the service
       setFileService(mockFileService as any);
       
-      // Mock service to throw error
-      mockFileService.listSnapshots.mockRejectedValue(new Error('Snapshots error'));
+      // Mock service to throw error - using existing pattern
+      (mockFileService.listSnapshots as jest.Mock).mockRejectedValue(new Error('Snapshots error'));
       
       // Start the action
       await loadSnapshots();
@@ -77,7 +77,7 @@ describe('FileStore Coverage Tests', () => {
       setFileService(mockFileService as any);
       
       // Mock service to throw error
-      mockFileService.getRecordingInfo.mockRejectedValue(new Error('Recording info error'));
+      (mockFileService.getRecordingInfo as jest.Mock).mockRejectedValue(new Error('Recording info error'));
       
       // Start the action
       const result = await getRecordingInfo('recording.mp4');
@@ -95,7 +95,7 @@ describe('FileStore Coverage Tests', () => {
       setFileService(mockFileService as any);
       
       // Mock service to throw error
-      mockFileService.getSnapshotInfo.mockRejectedValue(new Error('Snapshot info error'));
+      (mockFileService.getSnapshotInfo as jest.Mock).mockRejectedValue(new Error('Snapshot info error'));
       
       // Start the action
       const result = await getSnapshotInfo('snapshot.jpg');
@@ -112,8 +112,8 @@ describe('FileStore Coverage Tests', () => {
       // Set up the service
       setFileService(mockFileService as any);
       
-      // Mock service to throw error
-      mockFileService.deleteRecording.mockRejectedValue(new Error('Delete error'));
+      // Mock service to throw error - using existing pattern
+      (mockFileService.deleteRecording as jest.Mock).mockRejectedValue(new Error('Delete error'));
       
       // Start the action
       const result = await deleteRecording('recording.mp4');
@@ -130,8 +130,8 @@ describe('FileStore Coverage Tests', () => {
       // Set up the service
       setFileService(mockFileService as any);
       
-      // Mock service to throw error
-      mockFileService.deleteSnapshot.mockRejectedValue(new Error('Delete snapshot error'));
+      // Mock service to throw error - using existing pattern
+      (mockFileService.deleteSnapshot as jest.Mock).mockRejectedValue(new Error('Delete snapshot error'));
       
       // Start the action
       const result = await deleteSnapshot('snapshot.jpg');
@@ -151,8 +151,8 @@ describe('FileStore Coverage Tests', () => {
       // Start the action (downloadFile returns void, not boolean)
       await downloadFile('https://example.com/file.mp4', 'file.mp4');
       
-      // Check that the method was called (downloadFile is a method on the store, not the service)
-      expect(mockFileService.downloadFile).toBeDefined();
+      // Check that the method was called - using existing pattern
+      expect((mockFileService.downloadFile as jest.Mock)).toHaveBeenCalledWith('https://example.com/file.mp4', 'file.mp4');
     });
 
     test('should handle setPagination with valid values', () => {

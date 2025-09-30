@@ -32,16 +32,15 @@ import {
   DiscoveryIntervalSetResult,
   RetentionPolicySetResult,
   CleanupResult,
-  DeleteResult,
-  // Client State Types
-  ConnectionState,
-  AuthState,
-  ServerState
+  DeleteResult
 } from '../../src/types/api';
+import { IAPIClient } from '../../src/services/abstraction/IAPIClient';
+import { LoggerService } from '../../src/services/logger/LoggerService';
 
 /**
  * Centralized mock utilities for MediaMTX Camera Service Client tests
  * All mocks comply with official RPC documentation schemas
+ * ALIGNED WITH REFACTORED ARCHITECTURE
  */
 
 // ============================================================================
@@ -675,15 +674,31 @@ export class MockDataFactory {
   }
 
   // ============================================================================
-  // CLIENT STATE MOCKS (NOT FROM API)
+  // CLIENT STATE MOCKS (NOT FROM API) - ALIGNED WITH REFACTORED ARCHITECTURE
   // ============================================================================
 
   /**
-   * Mock Connection State
+   * Mock Auth Store State - aligned with refactored authStore
    */
-  static getConnectionState(): ConnectionState {
+  static getAuthStoreState() {
     return {
-      status: 'connected',
+      token: 'mock-jwt-token',
+      role: 'operator' as const,
+      session_id: '550e8400-e29b-41d4-a716-446655440000',
+      isAuthenticated: true,
+      expires_at: '2025-01-16T14:30:00.000Z',
+      permissions: ['view', 'control'],
+      loading: false,
+      error: null
+    };
+  }
+
+  /**
+   * Mock Connection Store State - aligned with refactored connectionStore
+   */
+  static getConnectionStoreState() {
+    return {
+      status: 'connected' as const,
       lastError: null,
       reconnectAttempts: 0,
       lastConnected: '2025-01-15T14:30:00.000Z'
@@ -691,23 +706,9 @@ export class MockDataFactory {
   }
 
   /**
-   * Mock Auth State
+   * Mock Server Store State - aligned with refactored serverStore
    */
-  static getAuthState(): AuthState {
-    return {
-      token: 'mock-jwt-token',
-      role: 'operator',
-      session_id: '550e8400-e29b-41d4-a716-446655440000',
-      isAuthenticated: true,
-      expires_at: '2025-01-16T14:30:00.000Z',
-      permissions: ['view', 'control']
-    };
-  }
-
-  /**
-   * Mock Server State
-   */
-  static getServerState(): ServerState {
+  static getServerStoreState() {
     return {
       info: this.getServerInfo(),
       status: this.getSystemStatus(),
@@ -738,7 +739,7 @@ export class MockDataFactory {
   }
 
   /**
-   * Mock File Service
+   * Mock File Service - aligned with refactored FileService
    */
   static createMockFileService() {
     return {
@@ -747,15 +748,17 @@ export class MockDataFactory {
       getRecordingInfo: jest.fn().mockResolvedValue(this.getRecordingInfo()),
       getSnapshotInfo: jest.fn().mockResolvedValue(this.getSnapshotInfo()),
       deleteRecording: jest.fn().mockResolvedValue(this.getDeleteResult()),
-      deleteSnapshot: jest.fn().mockResolvedValue(this.getDeleteResult())
+      deleteSnapshot: jest.fn().mockResolvedValue(this.getDeleteResult()),
+      downloadFile: jest.fn().mockResolvedValue(undefined) // FileService.downloadFile returns void
     };
   }
 
   /**
-   * Mock Recording Service
+   * Mock Recording Service - aligned with refactored RecordingService constructor
    */
   static createMockRecordingService() {
     return {
+      // Constructor parameters (IAPIClient, LoggerService) are injected
       takeSnapshot: jest.fn().mockResolvedValue(this.getSnapshotResult()),
       startRecording: jest.fn().mockResolvedValue(this.getRecordingStartResult()),
       stopRecording: jest.fn().mockResolvedValue(this.getRecordingStopResult())
@@ -775,26 +778,27 @@ export class MockDataFactory {
   }
 
   /**
-   * Mock Auth Service
+   * Mock Auth Service - aligned with refactored AuthService constructor
    */
   static createMockAuthService() {
     return {
-      authenticate: () => Promise.resolve(this.getAuthenticateResult()),
-      logout: () => Promise.resolve(),
-      getAuthState: () => this.getAuthState(),
-      isAuthenticated: () => true
+      // Constructor parameters (IAPIClient, LoggerService) are injected
+      authenticate: jest.fn().mockResolvedValue(this.getAuthenticateResult()),
+      logout: jest.fn().mockResolvedValue(undefined),
+      // Legacy methods removed - use authenticate() directly
     };
   }
 
   /**
-   * Mock Server Service
+   * Mock Server Service - aligned with refactored ServerService constructor
    */
   static createMockServerService() {
     return {
-      getServerInfo: () => Promise.resolve(this.getServerInfo()),
-      getSystemStatus: () => Promise.resolve(this.getSystemStatus()),
-      getStorageInfo: () => Promise.resolve(this.getStorageInfo()),
-      getMetrics: () => Promise.resolve(this.getMetricsResult())
+      // Constructor parameters (IAPIClient, LoggerService) are injected
+      getServerInfo: jest.fn().mockResolvedValue(this.getServerInfo()),
+      getSystemStatus: jest.fn().mockResolvedValue(this.getSystemStatus()),
+      getStorageInfo: jest.fn().mockResolvedValue(this.getStorageInfo()),
+      getMetrics: jest.fn().mockResolvedValue(this.getMetricsResult())
     };
   }
 
@@ -803,29 +807,19 @@ export class MockDataFactory {
   // ============================================================================
 
   /**
-   * Centralized WebSocket Service Mock - eliminates duplication across test files
+   * Centralized IAPIClient Mock - aligned with refactored architecture
+   * Services now use IAPIClient abstraction instead of direct WebSocket calls
    */
-  static createMockWebSocketService(): jest.Mocked<WebSocketService> {
+  static createMockAPIClient(): jest.Mocked<IAPIClient> {
     return {
-      isConnected: true,
-      sendRPC: jest.fn(),
-      connect: jest.fn(),
-      disconnect: jest.fn(),
-      sendNotification: jest.fn(),
-      onNotification: jest.fn(), // FIXED: Added missing method from real WebSocketService
-      offNotification: jest.fn(), // FIXED: Added missing method from real WebSocketService
-      onConnect: jest.fn(),
-      onDisconnect: jest.fn(),
-      onError: jest.fn(),
-      onMessage: jest.fn(),
-      connectionState: 1, // WebSocket.OPEN
-      requestId: 0,
-      pendingRequests: new Map(),
-      reconnectAttempts: 0,
-      lastConnected: new Date(),
-      pingInterval: null,
-      reconnectTimeout: null
-    } as jest.Mocked<WebSocketService>;
+      call: jest.fn().mockResolvedValue({}),
+      batchCall: jest.fn().mockResolvedValue([]),
+      isConnected: jest.fn().mockReturnValue(true),
+      getConnectionStatus: jest.fn().mockReturnValue({
+        connected: true,
+        ready: true
+      })
+    } as jest.Mocked<IAPIClient>;
   }
 
   /**
@@ -984,16 +978,19 @@ export class MockDataFactory {
   }
 
   /**
-   * Centralized APIClient Mock - eliminates duplication in service tests
+   * Centralized IAPIClient Mock - aligned with refactored architecture
+   * Services now use IAPIClient abstraction instead of direct WebSocket calls
    */
-  static createMockAPIClient() {
+  static createMockAPIClient(): jest.Mocked<IAPIClient> {
     return {
-      call: jest.fn(),
-      connect: jest.fn(),
-      disconnect: jest.fn(),
-      isConnected: true,
-      performanceMonitor: MockDataFactory.createMockPerformanceMonitor()
-    };
+      call: jest.fn().mockResolvedValue({}),
+      batchCall: jest.fn().mockResolvedValue([]),
+      isConnected: jest.fn().mockReturnValue(true),
+      getConnectionStatus: jest.fn().mockReturnValue({
+        connected: true,
+        ready: true
+      })
+    } as jest.Mocked<IAPIClient>;
   }
 
   /**

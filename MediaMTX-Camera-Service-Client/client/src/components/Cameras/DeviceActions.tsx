@@ -7,7 +7,6 @@ import { Menu, MenuItem, ListItemIcon, ListItemText } from '../atoms/Menu/Menu';
 import { Snackbar } from '../atoms/Snackbar/Snackbar';
 import TimedRecordDialog from './TimedRecordDialog';
 import { useRecordingStore } from '../../stores/recording/recordingStore';
-import { useStreamingStore } from '../../stores/streaming/streamingStore';
 // ARCHITECTURE FIX: Removed serviceFactory import - components must use stores only
 import PermissionGate from '../Security/PermissionGate';
 

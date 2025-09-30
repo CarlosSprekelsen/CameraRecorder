@@ -17,16 +17,14 @@
  */
 
 import { FileService } from '../../../src/services/file/FileService';
-import { APIClient } from '../../../src/services/abstraction/APIClient';
-import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
+import { IAPIClient } from '../../../src/services/abstraction/IAPIClient';
 import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { MockDataFactory } from '../../utils/mocks';
 import { APIResponseValidator } from '../../utils/validators';
 
-// Use centralized mocks - eliminates duplication
-const mockWebSocketService = MockDataFactory.createMockWebSocketService();
+// Use centralized mocks - aligned with refactored architecture
+const mockAPIClient = MockDataFactory.createMockAPIClient();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
-const mockAPIClient = new APIClient(mockWebSocketService, mockLoggerService);
 const mockDocument = MockDataFactory.createMockDocument();
 
 // Mock global document object - use manual assignment to avoid redefinition errors
@@ -69,11 +67,11 @@ describe('FileService Unit Tests', () => {
       const offset = 0;
       const expectedResult = MockDataFactory.getFileListResult();
       
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       const result = await fileService.listRecordings(limit, offset);
 
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('list_recordings', { limit, offset });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('list_recordings', { limit, offset });
       expect(mockLoggerService.info).toHaveBeenCalledWith(`Listing recordings: limit=${limit}, offset=${offset}`);
       expect(mockLoggerService.info).toHaveBeenCalledWith(`Found ${expectedResult.files.length} recordings`);
       expect(result).toEqual(expectedResult);
@@ -86,11 +84,11 @@ describe('FileService Unit Tests', () => {
       const offset = 10;
       const expectedResult = MockDataFactory.getFileListResult();
       
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       const result = await fileService.listSnapshots(limit, offset);
 
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('list_snapshots', { limit, offset });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('list_snapshots', { limit, offset });
       expect(mockLoggerService.info).toHaveBeenCalledWith(`Listing snapshots: limit=${limit}, offset=${offset}`);
       expect(mockLoggerService.info).toHaveBeenCalledWith(`Found ${expectedResult.files.length} snapshots`);
       expect(result).toEqual(expectedResult);
@@ -98,7 +96,7 @@ describe('FileService Unit Tests', () => {
 
     test('should handle empty file lists', async () => {
       const emptyResult = { files: [], total: 0, limit: 10, offset: 0 };
-      mockWebSocketService.sendRPC.mockResolvedValue(emptyResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(emptyResult);
 
       const result = await fileService.listRecordings(10, 0);
 
@@ -108,7 +106,7 @@ describe('FileService Unit Tests', () => {
 
     test('should handle listing errors', async () => {
       const error = new Error('Failed to list files');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(fileService.listRecordings(10, 0)).rejects.toThrow('Failed to list files');
       expect(mockLoggerService.error).toHaveBeenCalledWith('Failed to list recordings', error);
@@ -119,7 +117,7 @@ describe('FileService Unit Tests', () => {
       const offset = 0;
       const result = MockDataFactory.getFileListResult();
       
-      mockWebSocketService.sendRPC.mockResolvedValue(result);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(result);
 
       await fileService.listRecordings(limit, offset);
 
@@ -138,11 +136,11 @@ describe('FileService Unit Tests', () => {
         duration: 60
       };
       
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedInfo);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedInfo);
 
       const result = await fileService.getRecordingInfo(filename);
 
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('get_recording_info', { filename });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_recording_info', { filename });
       expect(mockLoggerService.info).toHaveBeenCalledWith(`Getting recording info for: ${filename}`);
       expect(mockLoggerService.info).toHaveBeenCalledWith(`Recording info retrieved for ${filename}`);
       expect(result).toEqual(expectedInfo);
@@ -157,11 +155,11 @@ describe('FileService Unit Tests', () => {
         download_url: `https://localhost/downloads/${filename}`
       };
       
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedInfo);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedInfo);
 
       const result = await fileService.getSnapshotInfo(filename);
 
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('get_snapshot_info', { filename });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_snapshot_info', { filename });
       expect(mockLoggerService.info).toHaveBeenCalledWith(`Getting snapshot info for: ${filename}`);
       expect(mockLoggerService.info).toHaveBeenCalledWith(`Snapshot info retrieved for ${filename}`);
       expect(result).toEqual(expectedInfo);
@@ -170,7 +168,7 @@ describe('FileService Unit Tests', () => {
     test('should handle file info errors', async () => {
       const filename = 'nonexistent.mp4';
       const error = new Error('File not found');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(fileService.getRecordingInfo(filename)).rejects.toThrow('File not found');
       expect(mockLoggerService.error).toHaveBeenCalledWith(
@@ -188,7 +186,7 @@ describe('FileService Unit Tests', () => {
         download_url: `https://localhost/downloads/${filename}`
       };
       
-      mockWebSocketService.sendRPC.mockResolvedValue(fileInfo);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(fileInfo);
 
       const result = await fileService.getRecordingInfo(filename);
 
@@ -201,11 +199,11 @@ describe('FileService Unit Tests', () => {
       const filename = 'recording_camera0_1234567890.mp4';
       const expectedResult = { success: true, message: 'Recording deleted successfully' };
       
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       const result = await fileService.deleteRecording(filename);
 
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('delete_recording', { filename });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('delete_recording', { filename });
       expect(mockLoggerService.info).toHaveBeenCalledWith(`Deleting recording: ${filename}`);
       expect(mockLoggerService.info).toHaveBeenCalledWith(`Recording deleted: ${filename}`);
       expect(result).toEqual(expectedResult);
@@ -215,11 +213,11 @@ describe('FileService Unit Tests', () => {
       const filename = 'snapshot_camera0_1234567890.jpg';
       const expectedResult = { success: true, message: 'Snapshot deleted successfully' };
       
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       const result = await fileService.deleteSnapshot(filename);
 
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('delete_snapshot', { filename });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('delete_snapshot', { filename });
       expect(mockLoggerService.info).toHaveBeenCalledWith(`Deleting snapshot: ${filename}`);
       expect(mockLoggerService.info).toHaveBeenCalledWith(`Snapshot deleted: ${filename}`);
       expect(result).toEqual(expectedResult);
@@ -228,7 +226,7 @@ describe('FileService Unit Tests', () => {
     test('should handle deletion errors', async () => {
       const filename = 'protected.mp4';
       const error = new Error('Permission denied');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(fileService.deleteRecording(filename)).rejects.toThrow('Permission denied');
       expect(mockLoggerService.error).toHaveBeenCalledWith(
@@ -241,7 +239,7 @@ describe('FileService Unit Tests', () => {
       const filename = 'nonexistent.mp4';
       const expectedResult = { success: false, message: 'File not found' };
       
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       const result = await fileService.deleteRecording(filename);
 
@@ -314,7 +312,7 @@ describe('FileService Unit Tests', () => {
   describe('REQ-FILE-005: Error handling and validation', () => {
     test('should handle WebSocket service errors', async () => {
       const error = new Error('WebSocket connection lost');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(fileService.listRecordings(10, 0)).rejects.toThrow('WebSocket connection lost');
       expect(mockLoggerService.error).toHaveBeenCalledWith('Failed to list recordings', error);
@@ -322,7 +320,7 @@ describe('FileService Unit Tests', () => {
 
     test('should log all operations with appropriate levels', async () => {
       const result = MockDataFactory.getFileListResult();
-      mockWebSocketService.sendRPC.mockResolvedValue(result);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(result);
 
       await fileService.listRecordings(10, 0);
 
@@ -333,7 +331,7 @@ describe('FileService Unit Tests', () => {
     test('should handle invalid file names', async () => {
       const invalidFilename = '';
       const error = new Error('Invalid filename');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(fileService.getRecordingInfo(invalidFilename)).rejects.toThrow('Invalid filename');
       expect(mockLoggerService.error).toHaveBeenCalledWith(
@@ -344,7 +342,7 @@ describe('FileService Unit Tests', () => {
 
     test('should handle network timeouts', async () => {
       const error = new Error('Request timeout');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(fileService.deleteRecording('test.mp4')).rejects.toThrow('Request timeout');
       expect(mockLoggerService.error).toHaveBeenCalledWith(
@@ -368,7 +366,7 @@ describe('FileService Unit Tests', () => {
           format
         };
         
-        mockWebSocketService.sendRPC.mockResolvedValue(fileInfo);
+        (mockAPIClient.call as jest.Mock).mockResolvedValue(fileInfo);
 
         const result = await fileService.getRecordingInfo(filename);
 
@@ -390,7 +388,7 @@ describe('FileService Unit Tests', () => {
           format
         };
         
-        mockWebSocketService.sendRPC.mockResolvedValue(fileInfo);
+        (mockAPIClient.call as jest.Mock).mockResolvedValue(fileInfo);
 
         const result = await fileService.getSnapshotInfo(filename);
 

@@ -3,7 +3,6 @@
 
 import { APIClient } from './abstraction/APIClient';
 import { IAPIClient } from './abstraction/IAPIClient';
-import { EventBus } from './events/EventBus';
 import { AuthService } from './auth/AuthService';
 import { ServerService } from './server/ServerService';
 import { DeviceService } from './device/DeviceService';
@@ -147,7 +146,6 @@ export class ServiceFactory {
 
   // Cleanup method for testing
   reset(): void {
-    this.wsService = null;
     this.authService = null;
     this.serverService = null;
     this.deviceService = null;

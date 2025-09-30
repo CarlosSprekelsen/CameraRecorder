@@ -5,17 +5,20 @@
  * without complex service dependencies
  */
 
+import { APIClient } from '../../src/services/abstraction/APIClient';
 import { WebSocketService } from '../../src/services/websocket/WebSocketService';
 import { LoggerService } from '../../src/services/logger/LoggerService';
 
 describe('Basic Integration Test: Server Connectivity', () => {
+  let apiClient: APIClient;
   let webSocketService: WebSocketService;
   let loggerService: LoggerService;
 
   beforeAll(async () => {
-    // Initialize services
+    // Initialize services with new architecture
     loggerService = LoggerService.getInstance();
     webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
+    apiClient = new APIClient(webSocketService, loggerService);
     
     // Connect to the server
     await webSocketService.connect();
@@ -35,8 +38,8 @@ describe('Basic Integration Test: Server Connectivity', () => {
 
   describe('REQ-BASIC-001: Server Connection', () => {
     test('should connect to real server', async () => {
-      expect(webSocketService.isConnected).toBe(true);
-      expect(webSocketService.connectionState).toBe(1); // WebSocket.OPEN
+      expect(apiClient.isConnected()).toBe(true);
+      expect(apiClient.getConnectionStatus().connected).toBe(true);
     });
 
     test('should maintain connection stability', async () => {
@@ -45,7 +48,8 @@ describe('Basic Integration Test: Server Connectivity', () => {
       await new Promise(resolve => setTimeout(resolve, 3000));
       const endTime = Date.now();
       
-      expect(webSocketService.isConnected).toBe(true);
+      expect(apiClient.isConnected()).toBe(true);
+      expect(apiClient.getConnectionStatus().connected).toBe(true);
       expect(endTime - startTime).toBeGreaterThan(2000);
     });
   });
@@ -53,7 +57,7 @@ describe('Basic Integration Test: Server Connectivity', () => {
   describe('REQ-BASIC-002: Performance Validation', () => {
     test('should meet connection performance targets', async () => {
       const startTime = Date.now();
-      const connected = webSocketService.isConnected;
+      const connected = apiClient.isConnected();
       const endTime = Date.now();
       
       expect(connected).toBe(true);
@@ -63,8 +67,10 @@ describe('Basic Integration Test: Server Connectivity', () => {
 
   describe('REQ-BASIC-003: Error Handling', () => {
     test('should handle connection state correctly', async () => {
-      expect(webSocketService.connectionState).toBeDefined();
-      expect(typeof webSocketService.connectionState).toBe('number');
+      const status = apiClient.getConnectionStatus();
+      expect(status.connected).toBeDefined();
+      expect(typeof status.connected).toBe('boolean');
+      expect(typeof status.ready).toBe('boolean');
     });
   });
 });

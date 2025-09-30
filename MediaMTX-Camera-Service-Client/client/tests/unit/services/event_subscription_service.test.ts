@@ -15,16 +15,14 @@
  */
 
 import { ServerService } from '../../../src/services/server/ServerService';
-import { APIClient } from '../../../src/services/abstraction/APIClient';
-import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
+import { IAPIClient } from '../../../src/services/abstraction/IAPIClient';
 import { LoggerService } from '../../../src/services/logger/LoggerService';
 import { SubscriptionResult, UnsubscriptionResult, SubscriptionStatsResult } from '../../../src/types/api';
 import { MockDataFactory } from '../../utils/mocks';
 
-// Use centralized mocks - eliminates duplication
-const mockWebSocketService = MockDataFactory.createMockWebSocketService();
+// Use centralized mocks - aligned with refactored architecture
+const mockAPIClient = MockDataFactory.createMockAPIClient();
 const mockLoggerService = MockDataFactory.createMockLoggerService();
-const mockAPIClient = new APIClient(mockWebSocketService, mockLoggerService);
 
 // Use real EventSubscriptionService with APIClient
 // Note: EventSubscriptionService is part of ServerService in the real implementation
@@ -47,14 +45,14 @@ describe('EventSubscriptionService Unit Tests', () => {
         filters: {}
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await eventSubscriptionService.subscribeEvents(topics);
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('subscribe_events request', { topics, filters: undefined });
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('subscribe_events', { topics, filters: undefined });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('subscribe_events', { topics, filters: undefined });
       expect(result).toEqual(expectedResult);
     });
 
@@ -68,14 +66,14 @@ describe('EventSubscriptionService Unit Tests', () => {
         filters: filters
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await eventSubscriptionService.subscribeEvents(topics, filters);
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('subscribe_events request', { topics, filters });
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('subscribe_events', { topics, filters });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('subscribe_events', { topics, filters });
       expect(result).toEqual(expectedResult);
     });
 
@@ -83,7 +81,7 @@ describe('EventSubscriptionService Unit Tests', () => {
       // Arrange
       const topics = ['camera.connected'];
       const error = new Error('Subscribe events failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert
       await expect(eventSubscriptionService.subscribeEvents(topics)).rejects.toThrow(error);
@@ -100,14 +98,14 @@ describe('EventSubscriptionService Unit Tests', () => {
         topics: topics
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await eventSubscriptionService.unsubscribeEvents(topics);
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('unsubscribe_events request', { topics });
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('unsubscribe_events', { topics });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('unsubscribe_events', { topics });
       expect(result).toEqual(expectedResult);
     });
 
@@ -118,14 +116,14 @@ describe('EventSubscriptionService Unit Tests', () => {
         topics: []
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await eventSubscriptionService.unsubscribeEvents();
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('unsubscribe_events request', { topics: undefined });
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('unsubscribe_events', { topics: undefined });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('unsubscribe_events', { topics: undefined });
       expect(result).toEqual(expectedResult);
     });
 
@@ -133,7 +131,7 @@ describe('EventSubscriptionService Unit Tests', () => {
       // Arrange
       const topics = ['camera.connected'];
       const error = new Error('Unsubscribe events failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert
       await expect(eventSubscriptionService.unsubscribeEvents(topics)).rejects.toThrow(error);
@@ -158,21 +156,21 @@ describe('EventSubscriptionService Unit Tests', () => {
         client_id: 'client_123'
       };
 
-      mockWebSocketService.sendRPC.mockResolvedValue(expectedResult);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
       const result = await eventSubscriptionService.getSubscriptionStats();
 
       // Assert
       expect(mockLoggerService.info).toHaveBeenCalledWith('get_subscription_stats request');
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledWith('get_subscription_stats');
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_subscription_stats');
       expect(result).toEqual(expectedResult);
     });
 
     test('Should handle errors correctly', async () => {
       // Arrange
       const error = new Error('Get subscription stats failed');
-      mockWebSocketService.sendRPC.mockRejectedValue(error);
+      (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       // Act & Assert
       await expect(eventSubscriptionService.getSubscriptionStats()).rejects.toThrow(error);
@@ -210,7 +208,7 @@ describe('EventSubscriptionService Unit Tests', () => {
         topics: topics
       };
 
-      mockWebSocketService.sendRPC
+      (mockAPIClient.call as jest.Mock)
         .mockResolvedValueOnce(subscribeResult)
         .mockResolvedValueOnce(statsResult)
         .mockResolvedValueOnce(unsubscribeResult);
@@ -224,7 +222,7 @@ describe('EventSubscriptionService Unit Tests', () => {
       expect(subscribe).toEqual(subscribeResult);
       expect(stats).toEqual(statsResult);
       expect(unsubscribe).toEqual(unsubscribeResult);
-      expect(mockWebSocketService.sendRPC).toHaveBeenCalledTimes(3);
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledTimes(3);
     });
   });
 });
