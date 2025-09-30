@@ -1,14 +1,9 @@
 import React from 'react';
-import {
-  Box,
-  Pagination as MuiPagination,
-  Typography,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  SelectChangeEvent,
-} from '@mui/material';
+import { Box } from '../../atoms/Box/Box';
+import { Pagination } from '../../atoms/Pagination/Pagination';
+import { Typography } from '../../atoms/Typography/Typography';
+import { Select } from '../../atoms/Select/Select';
+import { FormControl, InputLabel } from '../../atoms/FormControl/FormControl';
 
 interface PaginationProps {
   pagination: {
@@ -35,10 +30,9 @@ const Pagination: React.FC<PaginationProps> = ({ pagination, onPageChange, onLim
     onPageChange(page);
   };
 
-  const handleLimitChange = (event: SelectChangeEvent<number>) => {
-    const newLimit = typeof event.target.value === 'number' ? event.target.value : parseInt(event.target.value, 10);
+  const handleLimitChange = (value: number) => {
     if (onLimitChange) {
-      onLimitChange(newLimit);
+      onLimitChange(value);
     }
   };
 
