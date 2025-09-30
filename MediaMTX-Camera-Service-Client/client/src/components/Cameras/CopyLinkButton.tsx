@@ -5,21 +5,11 @@
  */
 
 import React, { useState } from 'react';
-import {
-  IconButton,
-  Menu,
-  MenuItem,
-  ListItemIcon,
-  ListItemText,
-  Snackbar,
-  Alert,
-  Tooltip,
-} from '@mui/material';
-import {
-  Link as LinkIcon,
-  ContentCopy as CopyIcon,
-  OpenInNew as OpenIcon,
-} from '@mui/icons-material';
+import { Button } from '../atoms/Button/Button';
+import { Icon } from '../atoms/Icon/Icon';
+import { Alert } from '../atoms/Alert/Alert';
+import { Menu, MenuItem, ListItemIcon, ListItemText } from '../atoms/Menu/Menu';
+import { Snackbar } from '../atoms/Snackbar/Snackbar';
 // ARCHITECTURE FIX: Removed direct service import - use store hooks instead
 
 interface CopyLinkButtonProps {
@@ -85,44 +75,34 @@ const CopyLinkButton: React.FC<CopyLinkButtonProps> = ({ device, streams }) => {
 
   return (
     <>
-      <Tooltip title="Copy stream links">
-        <IconButton onClick={handleClick} size="small" color="primary">
-          <LinkIcon />
-        </IconButton>
-      </Tooltip>
+      <Button onClick={handleClick} size="small" variant="primary" title="Copy stream links">
+        <Icon name="settings" size={16} />
+      </Button>
 
       <Menu
         anchorEl={anchorEl}
         open={open}
         onClose={handleClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'left',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'left',
-        }}
       >
         <MenuItem onClick={() => copyToClipboard(streams.rtsp, 'RTSP URL')}>
           <ListItemIcon>
-            <CopyIcon fontSize="small" />
+            <Icon name="settings" size={16} />
           </ListItemIcon>
-          <ListItemText primary="Copy RTSP URL" secondary={streams.rtsp} />
+          <ListItemText>Copy RTSP URL - {streams.rtsp}</ListItemText>
         </MenuItem>
 
         <MenuItem onClick={() => copyToClipboard(streams.hls, 'HLS URL')}>
           <ListItemIcon>
-            <CopyIcon fontSize="small" />
+            <Icon name="settings" size={16} />
           </ListItemIcon>
-          <ListItemText primary="Copy HLS URL" secondary={streams.hls} />
+          <ListItemText>Copy HLS URL - {streams.hls}</ListItemText>
         </MenuItem>
 
         <MenuItem onClick={() => openInNewTab(streams.hls, 'HLS stream')}>
           <ListItemIcon>
-            <OpenIcon fontSize="small" />
+            <Icon name="settings" size={16} />
           </ListItemIcon>
-          <ListItemText primary="Open HLS in new tab" secondary="View stream in browser" />
+          <ListItemText>Open HLS in new tab - View stream in browser</ListItemText>
         </MenuItem>
       </Menu>
 
@@ -130,9 +110,8 @@ const CopyLinkButton: React.FC<CopyLinkButtonProps> = ({ device, streams }) => {
         open={snackbarOpen}
         autoHideDuration={3000}
         onClose={handleSnackbarClose}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert onClose={handleSnackbarClose} severity={snackbarSeverity} sx={{ width: '100%' }}>
+        <Alert variant={snackbarSeverity} className="w-full">
           {snackbarMessage}
         </Alert>
       </Snackbar>
