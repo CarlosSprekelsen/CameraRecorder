@@ -190,7 +190,7 @@ const AboutPage: React.FC = () => {
             <Card>
               <div className="p-4">
                 <div className="flex items-center mb-4">
-                  <StorageIcon className="mr-2 text-blue-600" />
+                  <Icon name="storage" size={20} color="#2563eb" className="mr-2" />
                   <h2 className="text-xl font-semibold">Storage Information</h2>
                 </div>
 

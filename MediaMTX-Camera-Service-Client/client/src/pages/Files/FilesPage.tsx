@@ -1,5 +1,9 @@
 import React, { useEffect } from 'react';
-import { Box, Typography, Container, Alert, CircularProgress } from '@mui/material';
+import { Box } from '../../components/atoms/Box/Box';
+import { Typography } from '../../components/atoms/Typography/Typography';
+import { Container } from '../../components/atoms/Container/Container';
+import { Alert } from '../../components/atoms/Alert/Alert';
+import { CircularProgress } from '../../components/atoms/CircularProgress/CircularProgress';
 import { useFileStore } from '../../stores/file/fileStore';
 // ARCHITECTURE FIX: Removed serviceFactory import - components must use stores only
 import { logger } from '../../services/logger/LoggerService';
