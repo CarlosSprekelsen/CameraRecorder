@@ -51,14 +51,21 @@ const globalStyles = `
 const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:8002/ws';
 
 function App(): React.JSX.Element {
+  // ARCHITECTURE FIX: Store hooks must be called at top level
+  const {
+    status: connectionStatus,
+    setStatus: setConnectionStatus,
+    setError: setConnectionError,
+  } = useConnectionStore();
+  const { isAuthenticated } = useAuthStore();
+  const { loadAllServerData } = useServerStore();
+  
   // ARCHITECTURE FIX: Services created via dependency injection in stores
   const [isInitialized, setIsInitialized] = useState(false);
 
   // Initialize performance monitoring and keyboard shortcuts
   usePerformanceMonitor();
   useKeyboardShortcuts();
-
-  // ARCHITECTURE FIX: Service injection removed - services are managed by ServiceFactory
 
   // ARCHITECTURE FIX: Initialize all services and inject into stores
   useEffect(() => {
@@ -100,16 +107,6 @@ function App(): React.JSX.Element {
       }
     }
   }, [isInitialized, setConnectionStatus, setConnectionError]);
-
-  const {
-    status: connectionStatus,
-    setStatus: setConnectionStatus,
-    setError: setConnectionError,
-  } = useConnectionStore();
-  const { isAuthenticated } = useAuthStore();
-  const { loadAllServerData } = useServerStore();
-  
-  // ARCHITECTURE FIX: Store hooks moved after service injection useEffect
 
   // ARCHITECTURE FIX: WebSocket handlers managed by connection store
 
