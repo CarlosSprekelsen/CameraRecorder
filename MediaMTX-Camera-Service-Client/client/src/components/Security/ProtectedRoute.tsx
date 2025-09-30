@@ -1,6 +1,8 @@
 import React from 'react';
 import { Navigate } from 'react-router-dom';
-import { Box, Typography, Alert } from '@mui/material';
+import { Box } from '../atoms/Box/Box';
+import { Typography } from '../atoms/Typography/Typography';
+import { Alert } from '../atoms/Alert/Alert';
 import { usePermissions } from '../../hooks/usePermissions';
 
 interface ProtectedRouteProps {

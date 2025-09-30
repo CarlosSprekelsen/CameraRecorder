@@ -24,8 +24,6 @@ export interface StreamingActions {
   setError: (error: string | null) => void;
   updateStreamStatus: (device: string, status: StreamStatusResult) => void;
   
-  // Real-time updates
-  handleStreamStatusUpdate: (device: string, status: StreamStatusResult) => void;
   
   // Reset
   reset: () => void;
@@ -117,13 +115,6 @@ export const useStreamingStore = create<StreamingState & StreamingActions>()(
           }));
         },
 
-        // Real-time updates
-        handleStreamStatusUpdate: (device: string, status: StreamStatusResult) => {
-          set((state) => ({
-            activeStreams: { ...state.activeStreams, [device]: status },
-            lastUpdated: new Date().toISOString(),
-          }));
-        },
 
         // Reset
         reset: () => set(initialState),

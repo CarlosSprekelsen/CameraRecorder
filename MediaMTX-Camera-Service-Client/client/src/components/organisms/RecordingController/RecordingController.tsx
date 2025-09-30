@@ -8,7 +8,7 @@
 import React, { useState } from 'react';
 import { Button } from '../../atoms/Button/Button';
 import { Alert } from '../../atoms/Alert/Alert';
-import { PlayArrow, Stop } from '@mui/icons-material';
+import { Icon } from '../../atoms/Icon/Icon';
 import { useRecordingStore } from '../../../stores/recording/recordingStore';
 import { logger } from '../../../services/logger/LoggerService';
 // ARCHITECTURE FIX: Logger is infrastructure - components can import it directly
@@ -80,7 +80,7 @@ export const RecordingController: React.FC<RecordingControllerProps> = ({
             loading={loading}
             className="min-w-[140px] flex items-center gap-2"
           >
-            <PlayArrow className="h-4 w-4" />
+            <Icon name="play" size={16} />
             Start Recording
           </Button>
         ) : (
@@ -91,7 +91,7 @@ export const RecordingController: React.FC<RecordingControllerProps> = ({
             loading={loading}
             className="min-w-[140px] flex items-center gap-2"
           >
-            <Stop className="h-4 w-4" />
+            <Icon name="stop" size={16} />
             Stop Recording
           </Button>
         )}

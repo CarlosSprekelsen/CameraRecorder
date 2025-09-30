@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { DeviceService } from '../../services/device/DeviceService';
-import { Camera, StreamsListResult } from '../../types/api';
+import { Camera } from '../../types/api';
 
 // ARCHITECTURE FIX: Use official API types from types/ directory
 // Removed duplicate type definitions - using authoritative types/api.ts
@@ -28,7 +28,6 @@ export interface DeviceActions {
 
   // Real-time updates
   handleCameraStatusUpdate: (camera: Camera) => void;
-  handleStreamUpdate: (stream: StreamsListResult) => void;
 
   // Service injection
   setDeviceService: (service: DeviceService) => void;
@@ -142,13 +141,6 @@ export const useDeviceStore = create<DeviceState & DeviceActions>()(
           }));
         },
 
-        handleStreamUpdate: (stream: StreamsListResult) => {
-          set((state) => ({
-            streams: state.streams
-              .map((s) => (s.name === stream.name ? stream : s))
-              .concat(state.streams.find((s) => s.name === stream.name) ? [] : [stream]),
-          }));
-        },
 
         // Reset
         reset: () => set(initialState),

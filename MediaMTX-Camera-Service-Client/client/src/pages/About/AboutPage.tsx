@@ -8,11 +8,7 @@ import React from 'react';
 import { Grid } from '../../components/atoms/Grid/Grid';
 import { Card } from '../../components/atoms/Card/Card';
 import { Alert } from '../../components/atoms/Alert/Alert';
-import {
-  Info as InfoIcon,
-  Storage as StorageIcon,
-  MonitorHeart as HealthIcon,
-} from '@mui/icons-material';
+import { Icon } from '../../components/atoms/Icon/Icon';
 import { useServerStore } from '../../stores/server/serverStore';
 
 const AboutPage: React.FC = () => {
@@ -50,7 +46,7 @@ const AboutPage: React.FC = () => {
           <Card>
             <div className="p-4">
               <div className="flex items-center mb-4">
-                <InfoIcon className="mr-2 text-blue-600" />
+                <Icon name="info" size={20} color="#2563eb" className="mr-2" />
                 <h2 className="text-xl font-semibold">Server Details</h2>
               </div>
 
@@ -119,7 +115,7 @@ const AboutPage: React.FC = () => {
           <Card>
             <div className="p-4">
               <div className="flex items-center mb-4">
-                <HealthIcon className="mr-2 text-green-600" />
+                <Icon name="health" size={20} color="#16a34a" className="mr-2" />
                 <h2 className="text-xl font-semibold">System Status</h2>
               </div>
 

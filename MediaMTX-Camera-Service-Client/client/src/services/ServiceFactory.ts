@@ -5,7 +5,6 @@ import { APIClient } from './abstraction/APIClient';
 import { EventBus } from './events/EventBus';
 import { AuthService } from './auth/AuthService';
 import { ServerService } from './server/ServerService';
-import { NotificationService } from './notifications/NotificationService';
 import { DeviceService } from './device/DeviceService';
 import { RecordingService } from './recording/RecordingService';
 import { FileService } from './file/FileService';
@@ -18,7 +17,6 @@ export class ServiceFactory {
   private apiClient: APIClient | null = null;
   private authService: AuthService | null = null;
   private serverService: ServerService | null = null;
-  private notificationService: NotificationService | null = null;
   private deviceService: DeviceService | null = null;
   private recordingService: RecordingService | null = null;
   private fileService: FileService | null = null;
@@ -58,13 +56,6 @@ export class ServiceFactory {
     return this.serverService;
   }
 
-  createNotificationService(apiClient: APIClient, eventBus: EventBus): NotificationService {
-    if (!this.notificationService) {
-      this.notificationService = new NotificationService(apiClient, logger, eventBus);
-      logger.info('Notification service created');
-    }
-    return this.notificationService;
-  }
 
   createDeviceService(apiClient: APIClient): DeviceService {
     if (!this.deviceService) {
@@ -115,9 +106,6 @@ export class ServiceFactory {
     return this.serverService;
   }
 
-  getNotificationService(): NotificationService | null {
-    return this.notificationService;
-  }
 
   getDeviceService(): DeviceService | null {
     return this.deviceService;
@@ -144,7 +132,6 @@ export class ServiceFactory {
     this.wsService = null;
     this.authService = null;
     this.serverService = null;
-    this.notificationService = null;
     this.deviceService = null;
     this.recordingService = null;
     this.fileService = null;
