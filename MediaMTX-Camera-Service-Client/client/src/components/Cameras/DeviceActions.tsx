@@ -1,17 +1,10 @@
 import React, { useState } from 'react';
-import { IconButton, Menu, MenuItem, ListItemIcon, ListItemText, Divider } from '@mui/material';
-import {
-  MoreVert as MoreIcon,
-  CameraAlt as SnapshotIcon,
-  Videocam as RecordIcon,
-  Stop as StopIcon,
-  AccessTime as TimedIcon,
-  Settings as SettingsIcon,
-  PlayArrow as StreamIcon,
-  Pause as PauseIcon,
-} from '@mui/icons-material';
-// ARCHITECTURE FIX: Removed direct service import - use store hooks instead
-import { Snackbar, Alert } from '@mui/material';
+import { Button } from '../atoms/Button/Button';
+import { Icon } from '../atoms/Icon/Icon';
+import { Alert } from '../atoms/Alert/Alert';
+import { Divider } from '../atoms/Divider/Divider';
+import { Menu, MenuItem, ListItemIcon, ListItemText } from '../atoms/Menu/Menu';
+import { Snackbar } from '../atoms/Snackbar/Snackbar';
 import TimedRecordDialog from './TimedRecordDialog';
 import { useRecordingStore } from '../../stores/recording/recordingStore';
 import { useStreamingStore } from '../../stores/streaming/streamingStore';
@@ -95,29 +88,21 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({ device }) => {
 
   return (
     <>
-      <IconButton onClick={handleClick} size="small" color="primary">
-        <MoreIcon />
-      </IconButton>
+      <Button onClick={handleClick} size="small" variant="secondary">
+        <Icon name="settings" size={16} />
+      </Button>
 
       <Menu
         anchorEl={anchorEl}
         open={open}
         onClose={handleClose}
-        anchorOrigin={{
-          vertical: 'bottom',
-          horizontal: 'right',
-        }}
-        transformOrigin={{
-          vertical: 'top',
-          horizontal: 'right',
-        }}
       >
         <PermissionGate requirePermission="controlCameras">
           <MenuItem onClick={handleSnapshot}>
             <ListItemIcon>
-              <SnapshotIcon fontSize="small" />
+              <Icon name="settings" size={16} />
             </ListItemIcon>
-            <ListItemText primary="Take Snapshot" />
+            <ListItemText>Take Snapshot</ListItemText>
           </MenuItem>
         </PermissionGate>
 
@@ -126,9 +111,9 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({ device }) => {
         <PermissionGate requirePermission="controlCameras">
           <MenuItem onClick={handleStartRecording}>
             <ListItemIcon>
-              <RecordIcon fontSize="small" />
+              <Icon name="settings" size={16} />
             </ListItemIcon>
-            <ListItemText primary="Start Recording" />
+            <ListItemText>Start Recording</ListItemText>
           </MenuItem>
 
           <MenuItem
@@ -138,16 +123,16 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({ device }) => {
             }}
           >
             <ListItemIcon>
-              <TimedIcon fontSize="small" />
+              <Icon name="settings" size={16} />
             </ListItemIcon>
-            <ListItemText primary="Timed Recording" />
+            <ListItemText>Timed Recording</ListItemText>
           </MenuItem>
 
           <MenuItem onClick={handleStopRecording}>
             <ListItemIcon>
-              <StopIcon fontSize="small" />
+              <Icon name="settings" size={16} />
             </ListItemIcon>
-            <ListItemText primary="Stop Recording" />
+            <ListItemText>Stop Recording</ListItemText>
           </MenuItem>
         </PermissionGate>
 
@@ -155,9 +140,9 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({ device }) => {
 
         <MenuItem onClick={handleSettings}>
           <ListItemIcon>
-            <SettingsIcon fontSize="small" />
+            <Icon name="settings" size={16} />
           </ListItemIcon>
-          <ListItemText primary="Device Settings" />
+          <ListItemText>Device Settings</ListItemText>
         </MenuItem>
       </Menu>
 
@@ -171,9 +156,8 @@ const DeviceActions: React.FC<DeviceActionsProps> = ({ device }) => {
         open={snack.open}
         autoHideDuration={2500}
         onClose={() => setSnack({ ...snack, open: false })}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert severity={snack.sev} sx={{ width: '100%' }}>
+        <Alert variant={snack.sev} className="w-full">
           {snack.msg}
         </Alert>
       </Snackbar>

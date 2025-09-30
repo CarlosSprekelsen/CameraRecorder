@@ -79,11 +79,26 @@ export const useRecordingStore = create<RecordingState & RecordingActions>()(
             if (!service) throw new Error('Recording service not initialized');
             set({ loading: true, error: null });
             try {
-              await service.startRecording(device, duration, format);
-              // Update state based on result
-              set({ loading: false });
+              const result = await service.startRecording(device, duration, format);
+              // Store recording session information from server response
+              set((state) => ({
+                activeRecordings: {
+                  ...state.activeRecordings,
+                  [device]: {
+                    device: result.device,
+                    session_id: `${result.device}_${Date.now()}`, // Generate session ID since server doesn't provide one
+                    filename: result.filename,
+                    status: 'RECORDING' as const,
+                    startTime: result.start_time,
+                    duration,
+                    format: result.format
+                  }
+                },
+                loading: false
+              }));
             } catch (error) {
               set({ loading: false, error: error instanceof Error ? error.message : 'Unknown error' });
+              throw error;
             }
           },
 
@@ -91,11 +106,28 @@ export const useRecordingStore = create<RecordingState & RecordingActions>()(
             if (!service) throw new Error('Recording service not initialized');
             set({ loading: true, error: null });
             try {
-              await service.stopRecording(device);
-              // Update state based on result
-              set({ loading: false });
+              const result = await service.stopRecording(device);
+              // Remove from active recordings and add to history
+              set((state) => {
+                const { [device]: stoppedRecording, ...remainingActive } = state.activeRecordings;
+                return {
+                  activeRecordings: remainingActive,
+                  history: [
+                    {
+                      filename: result.filename,
+                      file_size: result.file_size,
+                      duration: result.duration,
+                      created_time: result.end_time,
+                      download_url: '' // Will be populated when file is listed
+                    },
+                    ...state.history
+                  ],
+                  loading: false
+                };
+              });
             } catch (error) {
               set({ loading: false, error: error instanceof Error ? error.message : 'Unknown error' });
+              throw error;
             }
           },
 

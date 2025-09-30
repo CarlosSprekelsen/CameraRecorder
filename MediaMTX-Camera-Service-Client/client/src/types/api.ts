@@ -74,23 +74,25 @@ export interface SnapshotResult {
   file_path: string;
 }
 
-// Recording Start Result from official spec - FIXED: Use API spec values
+// Recording Start Result from official spec - FIXED: Use actual server response
 export interface RecordingStartResult {
   device: DeviceId;
-  status: 'SUCCESS' | 'FAILED';  // FIXED: API spec uses SUCCESS/FAILED for operations
-  filename?: string;
-  file_path?: string;
-  duration?: number;
-  format?: string;
+  filename: string;
+  status: 'RECORDING';  // FIXED: Server returns 'RECORDING' status
+  start_time: IsoTimestamp;
+  format: string;
 }
 
-// Recording Stop Result from official spec - FIXED: Use API spec values
+// Recording Stop Result from official spec - FIXED: Use actual server response
 export interface RecordingStopResult {
   device: DeviceId;
-  status: 'SUCCESS' | 'FAILED';  // FIXED: API spec uses SUCCESS/FAILED for operations
-  filename?: string;
-  file_path?: string;
-  duration?: number;
+  filename: string;
+  status: 'STOPPED';
+  start_time: IsoTimestamp;
+  end_time: IsoTimestamp;
+  duration: number;
+  file_size: number;
+  format: string;
 }
 
 // Camera Capabilities Result from official spec
