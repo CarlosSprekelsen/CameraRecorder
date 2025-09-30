@@ -5,26 +5,13 @@
  */
 
 import React from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Chip,
-  Box,
-  Typography,
-  Button,
-} from '@mui/material';
-import {
-  Refresh as RefreshIcon,
-  Videocam as CameraIcon,
-  CheckCircle as ConnectedIcon,
-  Error as ErrorIcon,
-  Cancel as DisconnectedIcon,
-} from '@mui/icons-material';
+import { Box } from '../atoms/Box/Box';
+import { Typography } from '../atoms/Typography/Typography';
+import { Button } from '../atoms/Button/Button';
+import { Card } from '../atoms/Card/Card';
+import { Chip } from '../atoms/Chip/Chip';
+import { Icon } from '../atoms/Icon/Icon';
+import { Table, TableContainer, TableHead, TableBody, TableRow, TableCell } from '../atoms/Table/Table';
 import { Camera, StreamsListResult } from '../../types/api';
 import DeviceActions from './DeviceActions';
 import CopyLinkButton from './CopyLinkButton';
@@ -139,12 +126,13 @@ const CameraTable: React.FC<CameraTableProps> = ({ cameras, streams, onRefresh }
     <Box>
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
         <Typography variant="h6">Connected Devices ({cameras.length})</Typography>
-        <Button variant="outlined" startIcon={<RefreshIcon />} onClick={onRefresh} size="small">
+        <Button variant="secondary" onClick={onRefresh} size="small">
+          <Icon name="settings" size={16} className="mr-2" />
           Refresh
         </Button>
       </Box>
 
-      <TableContainer component={Paper}>
+      <TableContainer>
         <Table>
           <TableHead>
             <TableRow>
