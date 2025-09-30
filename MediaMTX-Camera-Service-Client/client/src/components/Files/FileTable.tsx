@@ -151,7 +151,7 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="200px">
+      <Box className="flex justify-center items-center min-h-[200px]">
         <CircularProgress />
       </Box>
     );
@@ -159,11 +159,11 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
 
   if (files.length === 0) {
     return (
-      <Paper elevation={1} sx={{ p: 3, textAlign: 'center' }}>
-        <Typography variant="h6" color="textSecondary">
+      <Paper className="p-6 text-center">
+        <Typography variant="h6" color="secondary">
           No {fileType} found.
         </Typography>
-        <Typography variant="body2" color="textSecondary">
+        <Typography variant="body2" color="secondary">
           {fileType === 'recordings'
             ? 'Start recording to see files here.'
             : 'Take snapshots to see files here.'}
@@ -174,15 +174,15 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
 
   return (
     <>
-      <TableContainer component={Paper}>
+      <TableContainer>
         <Table>
           <TableHead>
             <TableRow>
-              <TableCell padding="checkbox">
+              <TableCell>
                 <Checkbox
                   indeterminate={isIndeterminate}
                   checked={isAllSelected}
-                  onChange={(e) => handleSelectAll(e.target.checked)}
+                  onChange={handleSelectAll}
                 />
               </TableCell>
               <TableCell>Filename</TableCell>
@@ -194,7 +194,7 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
           <TableBody>
             {files.map((file) => (
               <TableRow key={file.filename} hover>
-                <TableCell padding="checkbox">
+                <TableCell>
                   <Checkbox
                     checked={selectedFiles.includes(file.filename)}
                     onChange={() => toggleFileSelection(file.filename)}
@@ -202,7 +202,7 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
                 </TableCell>
                 <TableCell>
                   <Box>
-                    <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>
+                    <Typography variant="body2" className="truncate max-w-[200px]">
                       {file.filename}
                     </Typography>
                   </Box>
@@ -214,7 +214,7 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
                   <Typography variant="body2">{formatDate(file.modified_time)}</Typography>
                 </TableCell>
                 <TableCell align="center">
-                  <Box display="flex" gap={1} justifyContent="center">
+                  <Box className="flex gap-1 justify-center">
                     <PermissionGate requirePermission="manageFiles">
                       <Tooltip title="Download">
                         <IconButton
@@ -232,7 +232,7 @@ const FileTable: React.FC<FileTableProps> = ({ files, fileType, loading }) => {
                         <IconButton
                           size="small"
                           onClick={() => handleDeleteClick(file.filename)}
-                          color="error"
+                          color="default"
                         >
                           <Icon name="delete" size={16} />
                         </IconButton>

@@ -33,21 +33,20 @@ const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     <Dialog open={open} onClose={onCancel} maxWidth="sm" fullWidth>
       <DialogTitle>{title}</DialogTitle>
       <DialogContent>
-        <Alert severity={severity} sx={{ mb: 2 }}>
+        <Alert severity={severity} className="mb-2">
           {message}
         </Alert>
-        <Typography variant="body2" color="text.secondary">
+        <Typography variant="body2" color="secondary">
           This action cannot be undone. Please make sure you want to proceed.
         </Typography>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onCancel} color="inherit">
+        <Button onClick={onCancel} variant="secondary">
           {cancelText}
         </Button>
         <Button
           onClick={onConfirm}
-          color={severity === 'error' ? 'error' : 'primary'}
-          variant="contained"
+          variant={severity === 'error' ? 'danger' : 'primary'}
         >
           {confirmText}
         </Button>

@@ -24,8 +24,6 @@ const TimedRecordDialog: React.FC<TimedRecordDialogProps> = ({ open, onCancel, o
           onChange={(value) => setDuration(Number(value))}
           fullWidth
           className="mb-4"
-          min={1}
-          max={86400}
         />
         <TextField
           label="Format"
@@ -33,16 +31,16 @@ const TimedRecordDialog: React.FC<TimedRecordDialogProps> = ({ open, onCancel, o
           onChange={(value) => setFormat(value)}
           fullWidth
           className="mb-4"
-          options={[
-            { value: 'fmp4', label: 'fMP4 (default)' },
-            { value: 'mp4', label: 'MP4' },
-            { value: 'mkv', label: 'MKV' }
-          ]}
-        />
+          select
+        >
+          <option value="fmp4">fMP4 (default)</option>
+          <option value="mp4">MP4</option>
+          <option value="mkv">MKV</option>
+        </TextField>
       </DialogContent>
       <DialogActions>
         <Button onClick={onCancel}>Cancel</Button>
-        <Button onClick={() => onStart(duration, format)} variant="contained">
+        <Button onClick={() => onStart(duration, format)} variant="primary">
           Start
         </Button>
       </DialogActions>
