@@ -5,6 +5,8 @@
  * Separates streaming concerns from discovery concerns
  */
 
+import { StreamStartResult, StreamStopResult, StreamStatusResult } from '../../types/api';
+
 export interface IStreaming {
   /**
    * Start streaming for a specific camera device
@@ -23,26 +25,4 @@ export interface IStreaming {
    * Implements get_stream_status RPC method
    */
   getStreamStatus(device: string): Promise<StreamStatusResult>;
-}
-
-export interface StreamStartResult {
-  device: string;
-  status: 'STARTING' | 'ACTIVE' | 'ERROR';
-  stream_url?: string;
-  message?: string;
-}
-
-export interface StreamStopResult {
-  device: string;
-  status: 'STOPPED' | 'ERROR';
-  message?: string;
-}
-
-export interface StreamStatusResult {
-  device: string;
-  status: 'ACTIVE' | 'INACTIVE' | 'ERROR';
-  stream_url?: string;
-  viewers?: number;
-  uptime?: number;
-  message?: string;
 }

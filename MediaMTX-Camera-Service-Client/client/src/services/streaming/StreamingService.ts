@@ -7,7 +7,8 @@
 
 import { APIClient } from '../abstraction/APIClient';
 import { LoggerService } from '../logger/LoggerService';
-import { IStreaming, StreamStartResult, StreamStopResult, StreamStatusResult } from '../interfaces/IStreaming';
+import { IStreaming } from '../interfaces/IStreaming';
+import { StreamStartResult, StreamStopResult, StreamStatusResult } from '../../types/api';
 import { validateCameraDeviceId } from '../../utils/validation';
 
 export class StreamingService implements IStreaming {

@@ -107,15 +107,16 @@ const CameraTable: React.FC<CameraTableProps> = ({ cameras, streams, onRefresh }
 
   if (cameras.length === 0) {
     return (
-      <Box textAlign="center" py={4}>
-        <CameraIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-        <Typography variant="h6" color="text.secondary" gutterBottom>
+      <Box className="text-center py-4">
+        <Icon name="settings" size={64} color="#6b7280" className="mb-2" />
+        <Typography variant="h6" color="secondary" className="mb-4">
           No cameras found
         </Typography>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+        <Typography variant="body2" color="secondary" className="mb-2">
           Make sure cameras are connected and the service is running.
         </Typography>
-        <Button variant="outlined" startIcon={<RefreshIcon />} onClick={onRefresh}>
+        <Button variant="secondary" onClick={onRefresh}>
+          <Icon name="settings" size={16} className="mr-2" />
           Refresh
         </Button>
       </Box>
@@ -153,13 +154,13 @@ const CameraTable: React.FC<CameraTableProps> = ({ cameras, streams, onRefresh }
               return (
                 <TableRow key={camera.device}>
                   <TableCell>
-                    <Box display="flex" alignItems="center">
+                    <Box className="flex items-center">
                       {getStatusIcon(camera.status)}
-                      <Box ml={1}>
-                        <Typography variant="body2" fontWeight="medium">
+                      <Box className="ml-1">
+                        <Typography variant="body2" className="font-medium">
                           {camera.name}
                         </Typography>
-                        <Typography variant="caption" color="text.secondary">
+                        <Typography variant="caption" color="secondary">
                           {camera.device}
                         </Typography>
                       </Box>
@@ -190,10 +191,10 @@ const CameraTable: React.FC<CameraTableProps> = ({ cameras, streams, onRefresh }
                         label={streamStatus.active ? 'Active' : 'Inactive'}
                         color={streamStatus.active ? 'success' : 'default'}
                         size="small"
-                        sx={{ mb: 0.5 }}
+                        className="mb-0.5"
                       />
                       {streamStatus.active && (
-                        <Typography variant="caption" display="block" color="text.secondary">
+                        <Typography variant="caption" className="block" color="secondary">
                           {streamStatus.readers} readers • {formatBytes(streamStatus.bytesSent)}{' '}
                           sent
                         </Typography>
@@ -209,7 +210,7 @@ const CameraTable: React.FC<CameraTableProps> = ({ cameras, streams, onRefresh }
                   </TableCell>
 
                   <TableCell>
-                    <Box display="flex" gap={1}>
+                    <Box className="flex gap-1">
                       {camera.streams && (
                         <CopyLinkButton device={camera.device} streams={camera.streams} />
                       )}
