@@ -395,7 +395,7 @@ describe('FileService Unit Tests', () => {
       expect(result.download_url).toBe('/files/snapshots/snapshot_2025-01-15_14-30-00.jpg');
       
       // Validate API compliance
-      expect(APIResponseValidator.validateSnapshotInfo(result)).toBe(true);
+      expect(APIResponseValidator.validateSnapshotInfoResult(result)).toBe(true);
     });
   });
 });

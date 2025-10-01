@@ -64,7 +64,7 @@ class RealFunctionalityTester {
     
     // CRITICAL: Authenticate before any operations (Architecture Compliance)
     const token = AuthHelper.generateTestToken('admin');
-    const authResult = await this.apiClient.authenticate(token);
+    const authResult = await this.webSocketService.sendRPC('authenticate', { auth_token: token });
     if (!authResult.authenticated) {
       throw new Error('Failed to authenticate with server');
     }

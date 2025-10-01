@@ -99,13 +99,23 @@ export const renderWithProviders = (
           // Set initial state
           deviceStore.setLoading(initialStoreState.deviceStore.loading || false);
           deviceStore.setError(initialStoreState.deviceStore.error || null);
-          // Note: cameras will be loaded by the component via getCameraList() call
+          
+          // Pre-populate cameras if provided
+          if (initialStoreState.deviceStore.cameras) {
+            deviceStore.cameras = initialStoreState.deviceStore.cameras;
+          }
         }
         
         // Initialize recording store if needed
         if (initialStoreState?.recordingStore) {
           const { useRecordingStore } = require('../../src/stores/recording/recordingStore');
+          const { MockDataFactory } = require('./mocks');
           const recordingStore = useRecordingStore.getState();
+          
+          // Inject mock service
+          const mockRecordingService = MockDataFactory.createMockRecordingService();
+          recordingStore.setRecordingService(mockRecordingService);
+          
           if (initialStoreState.recordingStore.activeRecordings) {
             recordingStore.activeRecordings = initialStoreState.recordingStore.activeRecordings;
           }
@@ -114,7 +124,13 @@ export const renderWithProviders = (
         // Initialize file store if needed
         if (initialStoreState?.fileStore) {
           const { useFileStore } = require('../../src/stores/file/fileStore');
+          const { MockDataFactory } = require('./mocks');
           const fileStore = useFileStore.getState();
+          
+          // Inject mock service
+          const mockFileService = MockDataFactory.createMockFileService();
+          fileStore.setFileService(mockFileService);
+          
           if (initialStoreState.fileStore.files) {
             fileStore.files = initialStoreState.fileStore.files;
           }
@@ -123,7 +139,13 @@ export const renderWithProviders = (
         // Initialize server store if needed
         if (initialStoreState?.serverStore) {
           const { useServerStore } = require('../../src/stores/server/serverStore');
+          const { MockDataFactory } = require('./mocks');
           const serverStore = useServerStore.getState();
+          
+          // Inject mock service
+          const mockServerService = MockDataFactory.createMockServerService();
+          serverStore.setServerService(mockServerService);
+          
           if (initialStoreState.serverStore.serverInfo) {
             serverStore.serverInfo = initialStoreState.serverStore.serverInfo;
           }

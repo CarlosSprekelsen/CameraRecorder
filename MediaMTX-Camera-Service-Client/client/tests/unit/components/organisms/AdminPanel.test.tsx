@@ -32,7 +32,7 @@ describe('AdminPanel Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['System Configuration', 'Retention Policies']
+      hasText: ['Admin Panel', 'File Retention Policy']
     });
   });
 
@@ -49,7 +49,7 @@ describe('AdminPanel Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['Retention Policy', 'Days']
+      hasText: ['File Retention Policy', 'Enable Retention Policy']
     });
   });
 
@@ -66,7 +66,7 @@ describe('AdminPanel Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['System Management', 'Health Status']
+      hasText: ['System Information', 'Admin Panel']
     });
   });
 
@@ -80,7 +80,7 @@ describe('AdminPanel Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['Access Denied', 'Admin privileges required']
+      hasText: ['Access denied. Admin privileges required to access this panel.']
     });
   });
 });

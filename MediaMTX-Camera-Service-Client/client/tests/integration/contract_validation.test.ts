@@ -88,7 +88,21 @@ class ContractValidator {
     }
 
     try {
-      new URL(url);
+      const urlObj = new URL(url);
+      
+      // Validate protocol - only rtsp, http, https are allowed per JSON-RPC documentation
+      const validProtocols = ['rtsp:', 'http:', 'https:'];
+      if (!validProtocols.includes(urlObj.protocol)) {
+        this.errors.push(`Invalid protocol: ${fieldName} (${url}) - only rtsp, http, https allowed`);
+        return;
+      }
+      
+      // Validate hostname - must have a hostname
+      if (!urlObj.hostname || urlObj.hostname.trim() === '') {
+        this.errors.push(`Missing hostname: ${fieldName} (${url})`);
+        return;
+      }
+      
     } catch {
       this.errors.push(`Invalid URL format: ${fieldName} (${url})`);
     }
@@ -138,7 +152,7 @@ describe('API Contract Validation Suite', () => {
     
     // CRITICAL: Authenticate before any operations
     const token = AuthHelper.generateTestToken('admin');
-    const authResult = await apiClient.authenticate(token);
+    const authResult = await webSocketService.sendRPC('authenticate', { auth_token: token });
     if (!authResult.authenticated) {
       throw new Error('Failed to authenticate with server');
     }
@@ -231,7 +245,7 @@ describe('API Contract Validation Suite', () => {
       
       try {
         // Test with invalid token to validate error contract
-        await apiClient.authenticate('invalid_token');
+        await webSocketService.sendRPC('authenticate', { auth_token: 'invalid_token' });
         validator.addWarning('Expected authentication failure but got success');
       } catch (error: any) {
         validator.validateField(error.code, 'error.code', 'number');
@@ -248,7 +262,7 @@ describe('API Contract Validation Suite', () => {
       
       try {
         const token = AuthHelper.generateTestToken('admin');
-        const result = await apiClient.authenticate(token);
+        const result = await webSocketService.sendRPC('authenticate', { auth_token: token });
         
         // Validate successful authentication response
         validator.validateField(result.authenticated, 'authenticated', 'boolean');

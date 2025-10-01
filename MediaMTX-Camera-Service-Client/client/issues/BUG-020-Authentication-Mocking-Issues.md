@@ -35,11 +35,14 @@ The test helper `component-test-helper.ts` is not properly mocking authenticatio
 ## Priority
 **HIGH** - Blocks multiple page component tests from passing
 
+## Status
+**OPEN** - Initial fix attempt failed. Test helper creates mock objects but doesn't inject them into real Zustand stores. Components still use real stores without mocked authentication state.
+
 ## Assignee
 **Authentication/Authorization Team**
 
 ## Files to Fix
-- `tests/utils/component-test-helper.ts` - Add authentication mocking
+- `tests/utils/component-test-helper.ts` - Fix authentication mocking to inject into real stores
 - `tests/unit/components/pages/CameraPage.test.tsx`
 - `tests/unit/components/pages/FilesPage.test.tsx` 
 - `tests/unit/components/pages/AboutPage.test.tsx`

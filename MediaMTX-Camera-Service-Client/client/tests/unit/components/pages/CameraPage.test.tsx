@@ -41,7 +41,7 @@ describe('CameraPage Component', () => {
     });
   });
 
-  test('REQ-CAMERAPAGE-002: CameraPage displays camera list', () => {
+  test('REQ-CAMERAPAGE-002: CameraPage displays camera list', async () => {
     const component = renderWithProviders(
       <CameraPage />,
       { 
@@ -57,6 +57,9 @@ describe('CameraPage Component', () => {
         }
       }
     );
+    
+    // Wait for the component to finish loading
+    await component.findByText('Test Camera 0');
     
     assertComponentBehavior(component, {
       hasText: ['Test Camera 0', 'Test Camera 1']
@@ -83,7 +86,7 @@ describe('CameraPage Component', () => {
     });
   });
 
-  test('REQ-CAMERAPAGE-004: CameraPage shows error states', () => {
+  test('REQ-CAMERAPAGE-004: CameraPage shows error states', async () => {
     const component = renderWithProviders(
       <CameraPage />,
       { 
@@ -98,12 +101,15 @@ describe('CameraPage Component', () => {
       }
     );
     
+    // Wait for the component to finish loading and show error
+    await component.findByText('Failed to load cameras');
+    
     assertComponentBehavior(component, {
-      hasText: ['Failed to load cameras']
+      hasText: ['Failed to load cameras', 'Camera Devices']
     });
   });
 
-  test('REQ-CAMERAPAGE-005: CameraPage displays recording status', () => {
+  test('REQ-CAMERAPAGE-005: CameraPage displays recording status', async () => {
     const component = renderWithProviders(
       <CameraPage />,
       { 
@@ -120,12 +126,15 @@ describe('CameraPage Component', () => {
       }
     );
     
+    // Wait for the component to finish loading
+    await component.findByText('Test Camera 0');
+    
     assertComponentBehavior(component, {
       hasText: ['Test Camera 0']
     });
   });
 
-  test('REQ-CAMERAPAGE-006: CameraPage handles real-time updates', () => {
+  test('REQ-CAMERAPAGE-006: CameraPage handles real-time updates', async () => {
     const component = renderWithProviders(
       <CameraPage />,
       { 
@@ -133,14 +142,18 @@ describe('CameraPage Component', () => {
         initialStoreState: {
           deviceStore: { 
             cameras: [{ device: 'camera0', status: 'CONNECTED' }],
-            lastUpdated: '2025-01-25T10:00:00Z'
+            lastUpdated: '2025-01-25T10:00:00Z',
+            loading: false
           }
         }
       }
     );
     
+    // Wait for the component to finish loading
+    await component.findByText('Test Camera 0');
+    
     assertComponentBehavior(component, {
-      hasText: ['Last updated']
+      hasText: ['Last updated:']
     });
   });
 });

@@ -31,11 +31,14 @@ The `component-test-helper.ts` is not properly injecting mock services into stor
 ## Priority
 **HIGH** - Blocks multiple component tests from passing
 
+## Status
+**OPEN** - Initial fix attempt failed. Test helper creates mock objects but doesn't inject them into real Zustand stores. Components still use real stores without mocked services.
+
 ## Assignee
 **Service Architecture Team**
 
 ## Files to Fix
-- `tests/utils/component-test-helper.ts` - Improve service injection
+- `tests/utils/component-test-helper.ts` - Fix service initialization to inject into real stores
 - `tests/utils/mocks.ts` - Ensure all services are properly mocked
 - `tests/unit/components/pages/FilesPage.test.tsx`
 - `tests/unit/components/pages/AboutPage.test.tsx`

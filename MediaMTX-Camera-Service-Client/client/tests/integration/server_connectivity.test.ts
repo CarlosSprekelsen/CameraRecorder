@@ -43,7 +43,7 @@ describe('Integration Tests: Server Connectivity', () => {
     
     // CRITICAL: Authenticate before any operations
     const token = AuthHelper.generateTestToken('admin');
-    const authResult = await apiClient.authenticate(token);
+    const authResult = await webSocketService.sendRPC('authenticate', { auth_token: token });
     if (!authResult.authenticated) {
       throw new Error('Failed to authenticate with server');
     }

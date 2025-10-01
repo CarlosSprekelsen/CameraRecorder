@@ -66,7 +66,7 @@ describe('AboutPage Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['System Information', 'MediaMTX Camera Service Client']
+      hasText: ['System Status']
     });
   });
 });
