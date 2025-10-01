@@ -802,6 +802,18 @@ export class MockDataFactory {
     };
   }
 
+  /**
+   * Mock Streaming Service - aligned with refactored StreamingService constructor
+   */
+  static createMockStreamingService() {
+    return {
+      // Constructor parameters (IAPIClient, LoggerService) are injected
+      startStreaming: jest.fn().mockResolvedValue(this.getStreamStartResult()),
+      stopStreaming: jest.fn().mockResolvedValue(this.getStreamStopResult()),
+      getStreamStatus: jest.fn().mockResolvedValue(this.getStreamStatusResult())
+    };
+  }
+
   // ============================================================================
   // CENTRALIZED MOCK UTILITIES (CRITICAL FIX - ELIMINATE DUPLICATIONS)
   // ============================================================================

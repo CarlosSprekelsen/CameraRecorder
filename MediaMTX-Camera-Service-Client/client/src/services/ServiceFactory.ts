@@ -144,13 +144,19 @@ export class ServiceFactory {
     return this.stateManager;
   }
 
+  getAPIClient(): IAPIClient | null {
+    return this.apiClient;
+  }
+
   // Cleanup method for testing
   reset(): void {
+    this.apiClient = null;
     this.authService = null;
     this.serverService = null;
     this.deviceService = null;
     this.recordingService = null;
     this.fileService = null;
+    this.streamingService = null;
     this.externalStreamService = null;
     this.stateManager = null;
     logger.info('Service factory reset');
