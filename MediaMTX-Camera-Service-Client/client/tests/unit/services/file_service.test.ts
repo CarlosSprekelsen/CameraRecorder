@@ -315,7 +315,8 @@ describe('FileService Unit Tests', () => {
       (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(fileService.listRecordings(10, 0)).rejects.toThrow('WebSocket connection lost');
-      expect(mockLoggerService.error).toHaveBeenCalledWith('Failed to list recordings', error);
+      // Architecture compliance: Method-based error logging
+      expect(mockLoggerService.error).toHaveBeenCalledWith('list_recordings failed', error);
     });
 
     test('should log all operations with appropriate levels', async () => {
@@ -324,8 +325,8 @@ describe('FileService Unit Tests', () => {
 
       await fileService.listRecordings(10, 0);
 
-      expect(mockLoggerService.info).toHaveBeenCalledWith('Listing recordings: limit=10, offset=0');
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Found ${result.files.length} recordings`);
+      // Architecture compliance: Method-based logging pattern
+      expect(mockLoggerService.info).toHaveBeenCalledWith('list_recordings request', { limit: 10, offset: 0 });
     });
 
     test('should handle invalid file names', async () => {
@@ -334,10 +335,8 @@ describe('FileService Unit Tests', () => {
       (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(fileService.getRecordingInfo(invalidFilename)).rejects.toThrow('Invalid filename');
-      expect(mockLoggerService.error).toHaveBeenCalledWith(
-        `Failed to get recording info for ${invalidFilename}`,
-        error
-      );
+      // Architecture compliance: Method-based error logging
+      expect(mockLoggerService.error).toHaveBeenCalledWith('get_recording_info failed', error);
     });
 
     test('should handle network timeouts', async () => {
@@ -345,10 +344,8 @@ describe('FileService Unit Tests', () => {
       (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(fileService.deleteRecording('test.mp4')).rejects.toThrow('Request timeout');
-      expect(mockLoggerService.error).toHaveBeenCalledWith(
-        'Failed to delete recording test.mp4',
-        error
-      );
+      // Architecture compliance: Method-based error logging
+      expect(mockLoggerService.error).toHaveBeenCalledWith('delete_recording failed', error);
     });
   });
 
