@@ -16,7 +16,7 @@
  */
 
 import { TestAPIClient } from './api-client';
-import { AuthHelper } from './auth-helper';
+import { AuthHelper, createAuthenticatedTestEnvironment } from './auth-helper';
 import { APIMocks } from './mocks';
 import { APIResponseValidator } from './validators';
 
@@ -101,37 +101,21 @@ export async function loadTestEnvironment(): Promise<TestEnvironment> {
     throw new Error('Test environment not properly configured');
   }
 
-  const apiClient = new TestAPIClient({
-    mockMode: process.env.TEST_MOCK_MODE === 'true',
-    serverUrl: process.env.TEST_WEBSOCKET_URL,
-    timeout: parseInt(process.env.TEST_TIMEOUT || '30000')
-  });
-
-  const authHelper = AuthHelper;
+  // Use the unified authentication approach
+  const authHelper = await createAuthenticatedTestEnvironment(
+    process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws'
+  );
+  const { apiClient } = authHelper.getAuthenticatedServices();
   const mocks = APIMocks;
 
-  // CRITICAL: Connect and authenticate for integration tests
-  if (!process.env.TEST_MOCK_MODE || process.env.TEST_MOCK_MODE === 'false') {
-    await apiClient.connect();
-    
-    // Get real JWT token from environment
-    const token = authHelper.generateTestToken('admin');
-    if (!token) {
-      throw new Error('No admin token available. Check test environment setup.');
-    }
-    
-    // Authenticate the client
-    const authResult = await apiClient.authenticate(token);
-    if (!authResult.authenticated) {
-      throw new Error('Failed to authenticate test client');
-    }
+  // CRITICAL: Authentication is handled by createAuthenticatedTestEnvironment()
 
     // Initialize camera IDs for dynamic discovery
     await CameraIdHelper.initialize(apiClient);
   }
 
   return {
-    apiClient,
+    apiClient: apiClient as any, // Type compatibility
     authHelper,
     mocks
   };

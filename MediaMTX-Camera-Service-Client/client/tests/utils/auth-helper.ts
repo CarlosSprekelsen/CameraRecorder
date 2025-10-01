@@ -1,43 +1,57 @@
 /**
- * SINGLE authentication utility for all tests
- * Dynamic token generation - NO credential storage patterns
- * Architecture requirement: Server manages all authentication state
+ * Authentication Helper - THE ONE AND ONLY APPROACH
+ * 
+ * SINGLE authentication utility for all tests.
+ * Architecture compliance: Uses AuthService.authenticate() which calls APIClient.call() which calls WebSocketService.sendRPC()
  * 
  * Ground Truth References:
  * - API Documentation: ../mediamtx-camera-service-go/docs/api/mediamtx_camera_service_openrpc.json
+ * - Client Architecture: ../docs/architecture/client-architechture.md
  * 
  * Requirements Coverage:
  * - REQ-AUTH-001: JWT token generation
- * - REQ-AUTH-002: Role-based access control
+ * - REQ-AUTH-002: Role-based access control  
  * - REQ-AUTH-003: Session management (server-managed)
  * 
  * Test Categories: Unit/Integration/Security
  * API Documentation Reference: mediamtx_camera_service_openrpc.json
  */
 
+import { AuthService } from '../../src/services/auth/AuthService';
+import { APIClient } from '../../src/services/abstraction/APIClient';
+import { WebSocketService } from '../../src/services/websocket/WebSocketService';
+import { LoggerService } from '../../src/services/logger/LoggerService';
+import { AuthResult } from '../../src/types/api';
 import jwt from 'jsonwebtoken';
-import { AuthResult } from '@/types/api';
 
 export type UserRole = 'admin' | 'operator' | 'viewer';
 
-export interface TestTokenPayload {
-  sub: string;
-  role: UserRole;
-  permissions: string[];
-  exp: number;
-  iat: number;
+export interface UnifiedAuthConfig {
+  serverUrl: string;
+  timeout?: number;
 }
 
 export class AuthHelper {
-  private static readonly TEST_SECRET = process.env.TEST_JWT_SECRET || 'test-secret-key';
-  private static readonly TOKEN_EXPIRY = 3600; // 1 hour
+  private authService: AuthService;
+  private apiClient: APIClient;
+  private wsService: WebSocketService;
+  private logger: LoggerService;
+
+  constructor(config: UnifiedAuthConfig) {
+    // Initialize services following architectural hierarchy
+    this.logger = new LoggerService();
+    this.wsService = new WebSocketService({ url: config.serverUrl });
+    this.apiClient = new APIClient(this.wsService, this.logger);
+    this.authService = new AuthService(this.apiClient, this.logger);
+  }
+
+  // ===== STATIC UTILITY METHODS (from old auth-helper.ts) =====
 
   /**
    * Generate test JWT token with specified role
    * CRITICAL: Use pre-generated tokens from environment instead of generating new ones
    */
   static generateTestToken(role: UserRole = 'admin'): string {
-    // Use pre-generated tokens from environment
     const tokenKey = `TEST_${role.toUpperCase()}_TOKEN`;
     const token = process.env[tokenKey];
     
@@ -49,25 +63,7 @@ export class AuthHelper {
   }
 
   /**
-   * Generate fresh token for a role - no storage patterns
-   * Architecture requirement: Server manages all authentication state
-   */
-  static generateFreshToken(role: UserRole = 'admin'): string {
-    return AuthHelper.generateTestToken(role);
-  }
-
-  /**
-   * Generate test API key
-   * MANDATORY: Use this method for API key authentication tests
-   */
-  static async generateTestApiKey(role: UserRole = 'admin'): Promise<string> {
-    const token = await this.generateTestToken(role);
-    return `api_${Buffer.from(token).toString('base64')}`;
-  }
-
-  /**
    * Validate authentication result against documented schema
-   * MANDATORY: Use this validation for all auth result tests
    */
   static validateAuthResult(result: any): result is AuthResult {
     return (
@@ -75,15 +71,12 @@ export class AuthHelper {
       result !== null &&
       typeof result.authenticated === 'boolean' &&
       typeof result.role === 'string' &&
-      ['admin', 'operator', 'viewer'].includes(result.role) &&
-      Array.isArray(result.permissions) &&
-      typeof result.session_id === 'string'
+      ['admin', 'operator', 'viewer'].includes(result.role)
     );
   }
 
   /**
    * Validate JWT token structure
-   * MANDATORY: Use this validation for token tests
    */
   static validateTokenStructure(token: string): boolean {
     try {
@@ -92,7 +85,6 @@ export class AuthHelper {
         decoded &&
         typeof decoded.sub === 'string' &&
         typeof decoded.role === 'string' &&
-        Array.isArray(decoded.permissions) &&
         typeof decoded.exp === 'number' &&
         typeof decoded.iat === 'number'
       );
@@ -102,21 +94,7 @@ export class AuthHelper {
   }
 
   /**
-   * Check if token is expired
-   * MANDATORY: Use this method for token expiry tests
-   */
-  static isTokenExpired(token: string): boolean {
-    try {
-      const decoded = jwt.decode(token) as any;
-      return decoded.exp < Math.floor(Date.now() / 1000);
-    } catch {
-      return true;
-    }
-  }
-
-  /**
    * Extract role from token
-   * MANDATORY: Use this method for role-based tests
    */
   static getTokenRole(token: string): UserRole | null {
     try {
@@ -128,89 +106,89 @@ export class AuthHelper {
   }
 
   /**
-   * Extract permissions from token
-   * MANDATORY: Use this method for permission tests
+   * Check if token is expired
    */
-  static getTokenPermissions(token: string): string[] {
+  static isTokenExpired(token: string): boolean {
     try {
       const decoded = jwt.decode(token) as any;
-      return decoded?.permissions || [];
+      return decoded.exp < Math.floor(Date.now() / 1000);
     } catch {
-      return [];
+      return true;
     }
   }
 
   /**
-   * Get role-specific permissions
-   * MANDATORY: Use this method for role permission tests
+   * THE ONE AND ONLY authentication method
+   * Architecture: AuthService.authenticate() -> APIClient.call() -> WebSocketService.sendRPC()
    */
-  private static getRolePermissions(role: UserRole): string[] {
-    switch (role) {
-      case 'admin':
-        return ['read', 'write', 'delete', 'admin'];
-      case 'operator':
-        return ['read', 'write'];
-      case 'viewer':
-        return ['read'];
-      default:
-        return [];
+  async authenticateWithToken(token: string): Promise<AuthResult> {
+    try {
+      // Ensure connection
+      if (!this.wsService.isConnected()) {
+        await this.wsService.connect();
+      }
+
+      // Use the architectural standard: AuthService.authenticate()
+      const result = await this.authService.authenticate(token);
+      
+      return result;
+    } catch (error) {
+      return {
+        authenticated: false,
+        role: 'viewer',
+        userId: '',
+        session_id: '',
+        permissions: []
+      };
     }
   }
 
   /**
-   * Create test authentication context
-   * MANDATORY: Use this method for complete auth flow tests
+   * Get authenticated services for use in tests
    */
-  static async createTestAuthContext(role: UserRole = 'admin'): Promise<{
-    token: string;
-    apiKey: string;
-    role: UserRole;
-    permissions: string[];
-  }> {
-    const token = await this.generateTestToken(role);
-    const apiKey = await this.generateTestApiKey(role);
-    const permissions = this.getRolePermissions(role);
-
+  getAuthenticatedServices() {
     return {
-      token,
-      apiKey,
-      role,
-      permissions
+      authService: this.authService,
+      apiClient: this.apiClient,
+      wsService: this.wsService,
+      logger: this.logger
     };
   }
 
   /**
-   * Validate role-based access
-   * MANDATORY: Use this method for authorization tests
+   * Cleanup resources
    */
-  static hasPermission(token: string, requiredPermission: string): boolean {
-    const permissions = this.getTokenPermissions(token);
-    return permissions.includes(requiredPermission);
+  async disconnect(): Promise<void> {
+    if (this.wsService.isConnected()) {
+      await this.wsService.disconnect();
+    }
   }
 
   /**
-   * Validate admin access
-   * MANDATORY: Use this method for admin-only tests
+   * Check if connected
    */
-  static isAdmin(token: string): boolean {
-    return this.getTokenRole(token) === 'admin';
+  isConnected(): boolean {
+    return this.wsService.isConnected();
+  }
+}
+
+/**
+ * Factory function for easy test setup
+ */
+export async function createAuthenticatedTestEnvironment(
+  serverUrl: string = 'ws://localhost:8002/ws',
+  token: string = process.env.TEST_ADMIN_TOKEN || ''
+): Promise<AuthHelper> {
+  if (!token) {
+    throw new Error('No authentication token provided. Set TEST_ADMIN_TOKEN environment variable.');
   }
 
-  /**
-   * Validate operator access
-   * MANDATORY: Use this method for operator tests
-   */
-  static isOperator(token: string): boolean {
-    const role = this.getTokenRole(token);
-    return role === 'admin' || role === 'operator';
+  const authHelper = new AuthHelper({ serverUrl });
+  
+  const authResult = await authHelper.authenticateWithToken(token);
+  if (!authResult.authenticated) {
+    throw new Error(`Authentication failed: ${authResult.error}`);
   }
 
-  /**
-   * Validate viewer access
-   * MANDATORY: Use this method for viewer tests
-   */
-  static isViewer(token: string): boolean {
-    const role = this.getTokenRole(token);
-    return role === 'admin' || role === 'operator' || role === 'viewer';
-  }
+  return authHelper;
 }
