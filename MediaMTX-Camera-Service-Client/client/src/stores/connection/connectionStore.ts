@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import { ConnectionState, ConnectionStatus } from '../../types/api';
-import { WebSocketService } from '../../services/websocket/WebSocketService';
+import { IAPIClient } from '../../services/abstraction/IAPIClient';
 
 interface ConnectionStore extends ConnectionState {
   // Service injection
-  setWebSocketService: (service: WebSocketService) => void;
+  setAPIClient: (client: IAPIClient) => void;
   
   // State setters
   setStatus: (status: ConnectionStatus) => void;
@@ -29,14 +29,14 @@ const initialState: ConnectionState = {
 };
 
 export const useConnectionStore = create<ConnectionStore>((set) => {
-  let wsService: WebSocketService | null = null;
+  let apiClient: IAPIClient | null = null;
 
   return {
     ...initialState,
 
     // Service injection
-    setWebSocketService: (service: WebSocketService) => {
-      wsService = service;
+    setAPIClient: (client: IAPIClient) => {
+      apiClient = client;
     },
 
     // State setters
@@ -62,10 +62,10 @@ export const useConnectionStore = create<ConnectionStore>((set) => {
 
     // Actions that call services
     connect: async () => {
-      if (!wsService) throw new Error('WebSocket service not initialized');
+      if (!apiClient) throw new Error('API client not initialized');
       set({ status: 'connecting', lastError: null });
       try {
-        await wsService.connect();
+        await apiClient.connect();
         set({ status: 'connected', lastConnected: new Date().toISOString() });
       } catch (error) {
         set({ 
@@ -76,21 +76,21 @@ export const useConnectionStore = create<ConnectionStore>((set) => {
     },
 
     disconnect: () => {
-      if (wsService) {
-        wsService.disconnect();
+      if (apiClient) {
+        apiClient.disconnect();
       }
       set({ status: 'disconnected' });
     },
 
     reconnect: async () => {
-      if (!wsService) throw new Error('WebSocket service not initialized');
+      if (!apiClient) throw new Error('API client not initialized');
       set((state) => ({ 
         ...state, 
         reconnectAttempts: state.reconnectAttempts + 1,
         status: 'connecting' 
       }));
       try {
-        await wsService.connect();
+        await apiClient.connect();
         set({ status: 'connected', lastConnected: new Date().toISOString() });
       } catch (error) {
         set({ 

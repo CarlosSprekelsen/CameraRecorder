@@ -1,4 +1,6 @@
 import { BaseService } from '../base/BaseService';
+import { IAPIClient } from '../abstraction/IAPIClient';
+import { LoggerService } from '../logger/LoggerService';
 import { 
   ExternalStreamDiscoveryResult, 
   ExternalStreamAddResult, 

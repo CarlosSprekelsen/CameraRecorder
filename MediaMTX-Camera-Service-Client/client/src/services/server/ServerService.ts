@@ -1,6 +1,8 @@
 import { ServerInfo, SystemStatus, SystemReadinessStatus, StorageInfo, MetricsResult, SubscriptionResult, UnsubscriptionResult, SubscriptionStatsResult } from '../../types/api';
 import { IStatus } from '../interfaces/ServiceInterfaces';
 import { BaseService } from '../base/BaseService';
+import { IAPIClient } from '../abstraction/IAPIClient';
+import { LoggerService } from '../logger/LoggerService';
 
 /**
  * System Metrics Interface

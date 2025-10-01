@@ -15,7 +15,6 @@ export interface ConnectionStatus {
 /**
  * API Client Interface
  * Architecture requirement: Section 5.3.1 - API Client Interface
- * ADR-007 requirement: "IAPIClient interface between business services and transport layer"
  */
 export interface IAPIClient {
   /**
@@ -29,20 +28,6 @@ export interface IAPIClient {
    * Architecture requirement: batchCall<T>(calls: Array<{method: string, params: Record<string, unknown>}>): Promise<T[]>
    */
   batchCall<T = any>(calls: Array<{method: RpcMethod, params: Record<string, unknown>}>): Promise<T[]>;
-
-  /**
-   * Connect to the server
-   * Architecture requirement: APIClient should handle connection management
-   * ADR-007 requirement: Services need connection management through abstraction layer
-   */
-  connect(): Promise<void>;
-
-  /**
-   * Disconnect from the server
-   * Architecture requirement: APIClient should handle connection management
-   * ADR-007 requirement: Services need connection management through abstraction layer
-   */
-  disconnect(): Promise<void>;
 
   /**
    * Check if client is connected

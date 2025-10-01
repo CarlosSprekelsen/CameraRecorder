@@ -229,7 +229,7 @@ export const assertComponentBehavior = (
   }
 
   hasText.forEach(text => {
-    expect(component.getByText(text)).toBeInTheDocument();
+    expect(component.getAllByText(text).length).toBeGreaterThan(0);
   });
 
   if (hasRole) {

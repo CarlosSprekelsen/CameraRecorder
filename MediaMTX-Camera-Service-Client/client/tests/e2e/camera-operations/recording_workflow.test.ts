@@ -19,9 +19,12 @@ import { TestAPIClient } from '../../utils/api-client';
 import { AuthHelper } from '../../utils/auth-helper';
 import { APIResponseValidator } from '../../utils/validators';
 import { loadTestEnvironment, waitFor, waitForCondition } from '../../utils/test-helpers';
+import { AuthService } from '../../../src/services/auth/AuthService';
+import { LoggerService } from '../../../src/services/logger/LoggerService';
 
 describe('Recording Workflow E2E Tests', () => {
   let apiClient: TestAPIClient;
+  let authService: AuthService;
   let authHelper: AuthHelper;
   let testEnv: any;
 
@@ -29,6 +32,9 @@ describe('Recording Workflow E2E Tests', () => {
     // Load test environment with real server connection
     testEnv = await loadTestEnvironment();
     apiClient = testEnv.apiClient;
+    
+    // Create AuthService following architectural pattern
+    authService = new AuthService(apiClient, LoggerService.getInstance());
     authHelper = testEnv.authHelper;
   });
 
@@ -40,7 +46,7 @@ describe('Recording Workflow E2E Tests', () => {
 
   test('REQ-E2E-001: Complete recording workflow - start, monitor, stop', async () => {
     const token = await authHelper.generateTestToken('admin');
-    await apiClient.authenticate(token);
+    await authHelper.authenticateWithToken(token);
     
     // Step 1: Get camera list and verify camera is available
     const cameraList = await apiClient.call('get_camera_list');
@@ -89,7 +95,7 @@ describe('Recording Workflow E2E Tests', () => {
 
   test('REQ-E2E-002: Snapshot capture workflow', async () => {
     const token = await authHelper.generateTestToken('admin');
-    await apiClient.authenticate(token);
+    await authService.authenticate(token);
     
     // Step 1: Get camera list
     const cameraList = await apiClient.call('get_camera_list');
@@ -119,7 +125,7 @@ describe('Recording Workflow E2E Tests', () => {
 
   test('REQ-E2E-003: File management workflow - list, download, delete', async () => {
     const token = await authHelper.generateTestToken('admin');
-    await apiClient.authenticate(token);
+    await authService.authenticate(token);
     
     // Step 1: List recordings
     const recordings = await apiClient.call('list_recordings', { limit: 50, offset: 0 });
@@ -148,7 +154,7 @@ describe('Recording Workflow E2E Tests', () => {
 
   test('REQ-E2E-004: System monitoring workflow', async () => {
     const token = await authHelper.generateTestToken('admin');
-    await apiClient.authenticate(token);
+    await authService.authenticate(token);
     
     // Step 1: Get system status
     const status = await apiClient.call('get_status');
@@ -178,7 +184,7 @@ describe('Recording Workflow E2E Tests', () => {
 
   test('REQ-E2E-005: Performance test - concurrent operations', async () => {
     const token = await authHelper.generateTestToken('admin');
-    await apiClient.authenticate(token);
+    await authService.authenticate(token);
     
     const startTime = Date.now();
     
@@ -207,7 +213,7 @@ describe('Recording Workflow E2E Tests', () => {
 
   test('REQ-E2E-006: Error recovery workflow', async () => {
     const token = await authHelper.generateTestToken('admin');
-    await apiClient.authenticate(token);
+    await authService.authenticate(token);
     
     // Step 1: Attempt operation with invalid device
     await expect(apiClient.call('get_camera_status', { device: 'invalid_device' })).rejects.toThrow();
@@ -224,21 +230,21 @@ describe('Recording Workflow E2E Tests', () => {
   test('REQ-E2E-007: Authentication workflow with different roles', async () => {
     // Test admin role
     const adminToken = await authHelper.generateTestToken('admin');
-    await apiClient.authenticate(adminToken);
+    await authService.authenticate(adminToken);
     
     const adminResult = await apiClient.call('get_camera_list');
     expect(APIResponseValidator.validateCameraListResult(adminResult)).toBe(true);
     
     // Test operator role
     const operatorToken = await authHelper.generateTestToken('operator');
-    await apiClient.authenticate(operatorToken);
+    await authService.authenticate(operatorToken);
     
     const operatorResult = await apiClient.call('get_camera_list');
     expect(APIResponseValidator.validateCameraListResult(operatorResult)).toBe(true);
     
     // Test viewer role
     const viewerToken = await authHelper.generateTestToken('viewer');
-    await apiClient.authenticate(viewerToken);
+    await authService.authenticate(viewerToken);
     
     const viewerResult = await apiClient.call('get_camera_list');
     expect(APIResponseValidator.validateCameraListResult(viewerResult)).toBe(true);

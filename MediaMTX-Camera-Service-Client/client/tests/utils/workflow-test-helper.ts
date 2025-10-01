@@ -22,6 +22,8 @@
 import { TestAPIClient } from './api-client';
 import { AuthHelper } from './auth-helper';
 import { APIResponseValidator } from './validators';
+import { AuthService } from '../../src/services/auth/AuthService';
+import { LoggerService } from '../../src/services/logger/LoggerService';
 
 export interface WorkflowStep {
   action: string;
@@ -59,7 +61,10 @@ export const executeUserWorkflow = async (
 
   // REUSE: AuthHelper for authentication
   const token = AuthHelper.generateTestToken(role);
-  await apiClient.authenticate(token);
+  
+  // Create AuthService following architectural pattern
+  const authService = new AuthService(apiClient, LoggerService.getInstance());
+  await authService.authenticate(token);
 
   let workflowSuccess = true;
 

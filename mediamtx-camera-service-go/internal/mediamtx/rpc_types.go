@@ -222,12 +222,13 @@ type DeleteSnapshotResponse struct {
 
 // GetStorageInfoResponse represents the response from get_storage_info method
 type GetStorageInfoResponse struct {
-	TotalSpace     int64   `json:"total_space"`     // Total storage space in bytes
-	UsedSpace      int64   `json:"used_space"`      // Used storage space in bytes
-	AvailableSpace int64   `json:"available_space"` // Available storage space in bytes
-	UsagePercent   float64 `json:"usage_percent"`   // Usage percentage
-	RecordingsSize int64   `json:"recordings_size"` // Size of recordings directory
-	SnapshotsSize  int64   `json:"snapshots_size"`  // Size of snapshots directory
+	TotalSpace       int64   `json:"total_space"`       // Total storage space in bytes
+	UsedSpace        int64   `json:"used_space"`        // Used storage space in bytes
+	AvailableSpace   int64   `json:"available_space"`   // Available storage space in bytes
+	UsagePercentage  float64 `json:"usage_percentage"`   // Usage percentage (0.0-100.0)
+	RecordingsSize   int64   `json:"recordings_size"`    // Size of recordings directory
+	SnapshotsSize    int64   `json:"snapshots_size"`     // Size of snapshots directory
+	LowSpaceWarning  bool    `json:"low_space_warning"`  // Whether low space warning is active
 }
 
 // CleanupOldFilesResponse represents the response from cleanup_old_files method

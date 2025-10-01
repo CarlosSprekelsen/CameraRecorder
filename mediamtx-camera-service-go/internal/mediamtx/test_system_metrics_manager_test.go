@@ -20,7 +20,11 @@ ARCHITECTURE NOTE: CPU calculation exists in Controller but not integrated with 
 package mediamtx
 
 import (
+	"context"
 	"testing"
+
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
 // TestNewSystemMetricsManager_ReqMTX004 tests system metrics manager creation
@@ -31,8 +35,58 @@ func TestNewSystemMetricsManager_ReqMTX004(t *testing.T) {
 
 // TestSystemMetricsManager_GetStorageInfoAPI_ReqMTX004 tests storage info API method
 func TestSystemMetricsManager_GetStorageInfoAPI_ReqMTX004(t *testing.T) {
-	// SystemMetricsManager is implemented - tests should be enabled
-	t.Skip("TODO: Enable tests - GetStorageInfoAPI is fully implemented")
+	// Create a minimal SystemMetricsManager for testing
+	config := &config.Config{
+		MediaMTX: config.MediaMTXConfig{
+			RecordingsPath: "/tmp",
+			SnapshotsPath:  "/tmp",
+		},
+	}
+
+	logger := logging.GetLogger("test")
+	sm := NewSystemMetricsManager(config, nil, nil, logger)
+
+	// Test GetStorageInfoAPI
+	result, err := sm.GetStorageInfoAPI(context.Background())
+	if err != nil {
+		t.Fatalf("GetStorageInfoAPI failed: %v", err)
+	}
+
+	// Validate all required fields are present and have correct types
+	if result.TotalSpace < 0 {
+		t.Errorf("TotalSpace should be >= 0, got %d", result.TotalSpace)
+	}
+	if result.UsedSpace < 0 {
+		t.Errorf("UsedSpace should be >= 0, got %d", result.UsedSpace)
+	}
+	if result.AvailableSpace < 0 {
+		t.Errorf("AvailableSpace should be >= 0, got %d", result.AvailableSpace)
+	}
+	if result.UsagePercentage < 0 || result.UsagePercentage > 100 {
+		t.Errorf("UsagePercentage should be 0-100, got %f", result.UsagePercentage)
+	}
+	if result.RecordingsSize < 0 {
+		t.Errorf("RecordingsSize should be >= 0, got %d", result.RecordingsSize)
+	}
+	if result.SnapshotsSize < 0 {
+		t.Errorf("SnapshotsSize should be >= 0, got %d", result.SnapshotsSize)
+	}
+
+	// Validate low space warning calculation
+	expectedLowSpaceWarning := result.UsagePercentage >= 85.0
+	if result.LowSpaceWarning != expectedLowSpaceWarning {
+		t.Errorf("LowSpaceWarning should be %t for %.2f%% usage, got %t",
+			expectedLowSpaceWarning, result.UsagePercentage, result.LowSpaceWarning)
+	}
+
+	t.Logf("Storage Info Test Results:")
+	t.Logf("  Total Space: %d bytes (%.2f GB)", result.TotalSpace, float64(result.TotalSpace)/(1024*1024*1024))
+	t.Logf("  Used Space: %d bytes (%.2f GB)", result.UsedSpace, float64(result.UsedSpace)/(1024*1024*1024))
+	t.Logf("  Available Space: %d bytes (%.2f GB)", result.AvailableSpace, float64(result.AvailableSpace)/(1024*1024*1024))
+	t.Logf("  Usage Percentage: %.2f%%", result.UsagePercentage)
+	t.Logf("  Low Space Warning: %t", result.LowSpaceWarning)
+	t.Logf("  Recordings Size: %d bytes", result.RecordingsSize)
+	t.Logf("  Snapshots Size: %d bytes", result.SnapshotsSize)
 }
 
 // TestSystemMetricsManager_GetSystemMetricsAPI_ReqMTX004 tests system metrics API method

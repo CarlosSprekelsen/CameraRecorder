@@ -86,7 +86,7 @@ function App(): React.JSX.Element {
         const serverService = serviceFactory.createServerService(apiClient);
         
         // Inject services into stores
-        useConnectionStore.getState().setWebSocketService(wsService);
+        useConnectionStore.getState().setAPIClient(apiClient);
         useAuthStore.getState().setAuthService(authService);
         useDeviceStore.getState().setDeviceService(deviceService);
         useRecordingStore.getState().setRecordingService(recordingService);

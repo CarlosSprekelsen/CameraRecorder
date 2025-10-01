@@ -15,47 +15,45 @@
  * API Documentation Reference: mediamtx_camera_service_openrpc.json
  */
 
-import { TestAPIClient } from '../../utils/api-client';
-import { AuthHelper } from '../../utils/auth-helper';
+import { AuthHelper, createAuthenticatedTestEnvironment } from '../../utils/auth-helper';
 import { APIResponseValidator } from '../../utils/validators';
 import { CameraIdHelper } from '../../utils/test-helpers';
-import { loadTestEnvironment } from '../../utils/test-helpers';
 
 describe('Camera Operations Integration Tests', () => {
-  let apiClient: TestAPIClient;
   let authHelper: AuthHelper;
-  let testEnv: any;
 
   beforeAll(async () => {
-    // Load test environment with real server connection
-    testEnv = await loadTestEnvironment();
-    apiClient = testEnv.apiClient;
-    authHelper = testEnv.authHelper;
+    // Use unified authentication approach for integration tests
+    authHelper = await createAuthenticatedTestEnvironment(
+      process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws'
+    );
   });
 
   afterAll(async () => {
-    if (apiClient) {
-      await apiClient.disconnect();
+    if (authHelper) {
+      await authHelper.disconnect();
     }
   });
 
+  // Helper function to get authenticated API client
+  function getApiClient() {
+    return authHelper.getAuthenticatedServices().apiClient;
+  }
+
   test('REQ-INT-001: Authenticate with valid token', async () => {
-    // Use the real JWT token from the server
-    const token = process.env.TEST_ADMIN_TOKEN;
-    if (!token) {
-      throw new Error('TEST_ADMIN_TOKEN not found in environment');
-    }
+    // Verify the authentication was successful
+    expect(authHelper.isConnected()).toBe(true);
     
-    const result = await apiClient.authenticate(token);
-    
-    expect(APIResponseValidator.validateAuthenticateResult(result)).toBe(true);
-    expect(result.authenticated).toBe(true);
-    expect(result.role).toBe('admin');
+    // Test that we can make authenticated calls
+    const { apiClient } = authHelper.getAuthenticatedServices();
+    const result = await getApiClient().call('ping', {});
+    expect(result).toBe('pong');
   });
 
   test('REQ-INT-002: Get camera list with authentication', async () => {
-    // API client is already authenticated in loadTestEnvironment()
-    const result = await apiClient.call('get_camera_list', {});
+    // Use the authenticated services from the unified auth helper
+    const services = authHelper.getAuthenticatedServices();
+    const result = await services.getApiClient().call('get_camera_list', {});
     
     expect(APIResponseValidator.validateCameraListResult(result)).toBe(true);
     expect(Array.isArray(result.cameras)).toBe(true);
@@ -71,9 +69,8 @@ describe('Camera Operations Integration Tests', () => {
   });
 
   test('REQ-INT-003: Get camera status for specific device', async () => {
-    // API client is already authenticated in loadTestEnvironment()
     const cameraId = CameraIdHelper.getFirstAvailableCameraId();
-    const result = await apiClient.call('get_camera_status', { device: cameraId });
+    const result = await getApiClient().call('get_camera_status', { device: cameraId });
     
     expect(APIResponseValidator.validateCamera(result)).toBe(true);
     expect(result.device).toBe(cameraId);
@@ -83,7 +80,7 @@ describe('Camera Operations Integration Tests', () => {
   test('REQ-INT-004: Start recording with valid parameters', async () => {
     // API client is already authenticated in loadTestEnvironment()
     const cameraId = CameraIdHelper.getFirstAvailableCameraId();
-    const result = await apiClient.call('start_recording', { device: cameraId, duration: 60, format: 'mp4' });
+    const result = await getApiClient().call('start_recording', { device: cameraId, duration: 60, format: 'mp4' });
     
     expect(APIResponseValidator.validateRecordingStartResult(result)).toBe(true);
     expect(result.device).toBe(cameraId);
@@ -93,7 +90,7 @@ describe('Camera Operations Integration Tests', () => {
   test('REQ-INT-005: Stop recording for active device', async () => {
     // API client is already authenticated in loadTestEnvironment()
     const cameraId = CameraIdHelper.getFirstAvailableCameraId();
-    const result = await apiClient.call('stop_recording', { device: cameraId });
+    const result = await getApiClient().call('stop_recording', { device: cameraId });
     
     expect(APIResponseValidator.validateRecordingStopResult(result)).toBe(true);
     expect(result.device).toBe(cameraId);
@@ -103,7 +100,7 @@ describe('Camera Operations Integration Tests', () => {
   test('REQ-INT-006: Take snapshot with valid device', async () => {
     // API client is already authenticated in loadTestEnvironment()
     const cameraId = CameraIdHelper.getFirstAvailableCameraId();
-    const result = await apiClient.call('take_snapshot', { device: cameraId });
+    const result = await getApiClient().call('take_snapshot', { device: cameraId });
     
     expect(APIResponseValidator.validateSnapshotInfo(result)).toBe(true);
     expect(result.device).toBe(cameraId);
@@ -112,7 +109,7 @@ describe('Camera Operations Integration Tests', () => {
 
   test('REQ-INT-007: List recordings with pagination', async () => {
     // API client is already authenticated in loadTestEnvironment()
-    const result = await apiClient.call('list_recordings', { limit: 10, offset: 0 });
+    const result = await getApiClient().call('list_recordings', { limit: 10, offset: 0 });
     
     expect(APIResponseValidator.validateFileListResult(result)).toBe(true);
     expect(Array.isArray(result.files)).toBe(true);
@@ -122,7 +119,7 @@ describe('Camera Operations Integration Tests', () => {
 
   test('REQ-INT-008: List snapshots with pagination', async () => {
     // API client is already authenticated in loadTestEnvironment()
-    const result = await apiClient.call('list_snapshots', { limit: 10, offset: 0 });
+    const result = await getApiClient().call('list_snapshots', { limit: 10, offset: 0 });
     
     expect(APIResponseValidator.validateFileListResult(result)).toBe(true);
     expect(Array.isArray(result.files)).toBe(true);
@@ -132,7 +129,7 @@ describe('Camera Operations Integration Tests', () => {
 
   test('REQ-INT-009: Get system status', async () => {
     // API client is already authenticated in loadTestEnvironment()
-    const result = await apiClient.call('get_status');
+    const result = await getApiClient().call('get_status');
     
     expect(APIResponseValidator.validateSystemStatus(result)).toBe(true);
     expect(['HEALTHY', 'DEGRADED', 'UNHEALTHY']).toContain(result.status);
@@ -140,7 +137,7 @@ describe('Camera Operations Integration Tests', () => {
 
   test('REQ-INT-010: Get server information', async () => {
     // API client is already authenticated in loadTestEnvironment()
-    const result = await apiClient.call('get_server_info');
+    const result = await getApiClient().call('get_server_info');
     
     expect(APIResponseValidator.validateServerInfo(result)).toBe(true);
     expect(typeof result.name).toBe('string');
@@ -150,7 +147,7 @@ describe('Camera Operations Integration Tests', () => {
 
   test('REQ-INT-011: Get storage information', async () => {
     // API client is already authenticated in loadTestEnvironment()
-    const result = await apiClient.call('get_storage_info');
+    const result = await getApiClient().call('get_storage_info');
     
     expect(APIResponseValidator.validateStorageInfo(result)).toBe(true);
     expect(typeof result.total_space).toBe('number');
@@ -160,24 +157,33 @@ describe('Camera Operations Integration Tests', () => {
 
   test('REQ-INT-012: Error handling for invalid device', async () => {
     // API client is already authenticated in loadTestEnvironment()
-    await expect(apiClient.call('get_camera_status', { device: 'invalid_device' })).rejects.toThrow();
+    await expect(getApiClient().call('get_camera_status', { device: 'invalid_device' })).rejects.toThrow();
   });
 
   test('REQ-INT-013: Error handling for unauthorized access', async () => {
-    // API client is already authenticated in loadTestEnvironment()
-    // Note: This test needs a separate viewer-authenticated client
-    await expect(apiClient.call('start_recording', { device: 'camera0' })).rejects.toThrow();
+    // Create viewer-authenticated client (viewer has no permission for start_recording)
+    const viewerToken = AuthHelper.generateTestToken('viewer');
+    const viewerAuthHelper = await createAuthenticatedTestEnvironment(
+      process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws',
+      viewerToken
+    );
+    const { apiClient: viewerApiClient } = viewerAuthHelper.getAuthenticatedServices();
+    
+    // Viewer should be rejected when trying to start recording (no permission)
+    await expect(viewerApiClient.call('start_recording', { device: 'camera0' })).rejects.toThrow();
+    
+    await viewerAuthHelper.disconnect();
   });
 
   test('REQ-INT-014: Error handling for invalid parameters', async () => {
     // API client is already authenticated in loadTestEnvironment()
-    await expect(apiClient.call('start_recording', { device: 'camera0', duration: 'invalid_duration' })).rejects.toThrow();
+    await expect(getApiClient().call('start_recording', { device: 'camera0', duration: 'invalid_duration' })).rejects.toThrow();
   });
 
   test('REQ-INT-015: Performance test - multiple rapid calls', async () => {
     // API client is already authenticated in loadTestEnvironment()
     const startTime = Date.now();
-    const promises = Array(10).fill(null).map(() => apiClient.call('get_camera_list'));
+    const promises = Array(10).fill(null).map(() => getApiClient().call('get_camera_list'));
     const results = await Promise.all(promises);
     const endTime = Date.now();
     

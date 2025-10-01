@@ -2,6 +2,8 @@ import { BaseService } from '../base/BaseService';
 import { Camera, StreamsListResult, CameraListResult, CameraStatusResult, StreamUrlResult, CameraCapabilitiesResult, StreamStatusResult, StreamStartResult, StreamStopResult } from '../../types/api';
 import { IDiscovery } from '../interfaces/ServiceInterfaces';
 import { validateCameraDeviceId } from '../../utils/validation';
+import { IAPIClient } from '../abstraction/IAPIClient';
+import { LoggerService } from '../logger/LoggerService';
 
 /**
  * Device Service - Camera discovery and stream management

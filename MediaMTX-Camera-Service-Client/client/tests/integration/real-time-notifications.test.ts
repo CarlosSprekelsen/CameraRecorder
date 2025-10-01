@@ -15,16 +15,22 @@
 
 import { TestAPIClient } from '../utils/api-client';
 import { AuthHelper } from '../utils/auth-helper';
+import { AuthService } from '../../src/services/auth/AuthService';
+import { LoggerService } from '../../src/services/logger/LoggerService';
 
 describe('Real-Time Notification Tests', () => {
   let apiClient: TestAPIClient;
+  let authService: AuthService;
 
   beforeEach(async () => {
     apiClient = new TestAPIClient({ mockMode: false });
     await apiClient.connect();
     
+    // Create AuthService following architectural pattern
+    authService = new AuthService(apiClient, LoggerService.getInstance());
+    
     const token = AuthHelper.generateTestToken('admin');
-    await apiClient.authenticate(token);
+    await authService.authenticate(token);
   });
 
   afterEach(async () => {

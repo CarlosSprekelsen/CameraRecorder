@@ -35,7 +35,7 @@ describe('AdminPage Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['Admin Panel', 'System Configuration']
+      hasText: ['Admin Panel', 'File Retention Policy']
     });
   });
 
@@ -75,7 +75,7 @@ describe('AdminPage Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['System Configuration', 'Storage']
+      hasText: ['File Retention Policy', 'Admin Panel']
     });
   });
 
@@ -93,7 +93,7 @@ describe('AdminPage Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['System Management', 'Retention Policy']
+      hasText: ['File Retention Policy', 'Admin Panel']
     });
   });
 
@@ -111,7 +111,7 @@ describe('AdminPage Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['Access Denied', 'Admin privileges required']
+      hasText: ['Access Denied', 'Admin privileges required to access this page.']
     });
   });
 });

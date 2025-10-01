@@ -1,6 +1,8 @@
 import { BaseService } from '../base/BaseService';
 import { IFileCatalog, IFileActions } from '../interfaces/ServiceInterfaces';
 import { FileListResult, RecordingInfo, SnapshotInfo, DeleteResult, RetentionPolicySetResult, CleanupResult } from '../../types/api';
+import { IAPIClient } from '../abstraction/IAPIClient';
+import { LoggerService } from '../logger/LoggerService';
 
 /**
  * File Service - File management and operations

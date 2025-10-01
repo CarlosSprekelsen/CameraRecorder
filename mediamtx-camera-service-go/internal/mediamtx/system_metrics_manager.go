@@ -185,20 +185,25 @@ func (sm *SystemMetricsManager) GetStorageInfoAPI(ctx context.Context) (*GetStor
 		}
 	}
 
+	// Calculate low space warning (warning at 85% usage)
+	lowSpaceWarning := usagePercent >= 85.0
+
 	// Build API-ready response
 	response := &GetStorageInfoResponse{
-		TotalSpace:     totalSpace,
-		UsedSpace:      usedSpace,
-		AvailableSpace: availableSpace,
-		UsagePercent:   usagePercent,
-		RecordingsSize: recordingsSize,
-		SnapshotsSize:  snapshotsSize,
+		TotalSpace:      totalSpace,
+		UsedSpace:       usedSpace,
+		AvailableSpace:  availableSpace,
+		UsagePercentage: usagePercent,
+		RecordingsSize:  recordingsSize,
+		SnapshotsSize:   snapshotsSize,
+		LowSpaceWarning: lowSpaceWarning,
 	}
 
 	sm.logger.WithFields(logging.Fields{
 		"total_space_gb":     float64(totalSpace) / (1024 * 1024 * 1024),
 		"used_space_gb":      float64(usedSpace) / (1024 * 1024 * 1024),
-		"usage_percent":      usagePercent,
+		"usage_percentage":   usagePercent,
+		"low_space_warning":  lowSpaceWarning,
 		"recordings_size_mb": float64(recordingsSize) / (1024 * 1024),
 		"snapshots_size_mb":  float64(snapshotsSize) / (1024 * 1024),
 	}).Debug("Storage information collected successfully")
