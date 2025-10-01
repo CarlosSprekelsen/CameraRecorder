@@ -20,13 +20,17 @@ import { loadTestEnvironment } from './utils/test-helpers';
 // Load test environment variables
 require('dotenv').config({ path: '.test_env' });
 
-// Validate test environment
-if (!process.env.TEST_WEBSOCKET_URL) {
-  throw new Error('TEST_WEBSOCKET_URL environment variable is required for integration tests');
-}
+// Construct WebSocket URL from existing environment variables
+const TEST_WEBSOCKET_URL = `ws://${process.env.CAMERA_SERVICE_HOST}:${process.env.CAMERA_SERVICE_PORT}${process.env.CAMERA_SERVICE_WS_PATH}`;
+const TEST_JWT_SECRET = 'test-secret'; // Use consistent secret for test environment
 
-if (!process.env.TEST_JWT_SECRET) {
-  throw new Error('TEST_JWT_SECRET environment variable is required for integration tests');
+// Set the constructed variables for use by tests
+process.env.TEST_WEBSOCKET_URL = TEST_WEBSOCKET_URL;
+process.env.TEST_JWT_SECRET = TEST_JWT_SECRET;
+
+// Validate test environment
+if (!process.env.CAMERA_SERVICE_HOST || !process.env.CAMERA_SERVICE_PORT || !process.env.CAMERA_SERVICE_WS_PATH) {
+  throw new Error('CAMERA_SERVICE_HOST, CAMERA_SERVICE_PORT, and CAMERA_SERVICE_WS_PATH environment variables are required for integration tests');
 }
 
 // Set test environment variables

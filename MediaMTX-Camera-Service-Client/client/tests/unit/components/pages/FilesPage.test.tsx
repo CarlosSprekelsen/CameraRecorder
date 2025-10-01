@@ -18,9 +18,10 @@
 import React from 'react';
 import FilesPage from '../../../../src/pages/Files/FilesPage';
 import { renderWithProviders, assertComponentBehavior } from '../../../utils/component-test-helper';
+import { waitFor } from '@testing-library/react';
 
 describe('FilesPage Component', () => {
-  test('REQ-FILESPAGE-001: FilesPage renders file management interface', () => {
+  test('REQ-FILESPAGE-001: FilesPage renders file management interface', async () => {
     const component = renderWithProviders(
       <FilesPage />,
       { 
@@ -35,6 +36,11 @@ describe('FilesPage Component', () => {
         }
       }
     );
+    
+    // Wait for the async loadRecordings/loadSnapshots to complete
+    await waitFor(() => {
+      expect(component.getByText('Files')).toBeInTheDocument();
+    });
     
     assertComponentBehavior(component, {
       hasText: ['Files', 'Recordings', 'Snapshots']

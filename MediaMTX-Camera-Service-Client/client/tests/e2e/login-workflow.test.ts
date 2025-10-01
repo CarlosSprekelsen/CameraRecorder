@@ -13,7 +13,7 @@
  * Test Categories: E2E/Workflow/Security
  */
 
-import { executeUserWorkflow, assertWorkflowResult } from '../../utils/workflow-test-helper';
+import { executeUserWorkflow, assertWorkflowResult } from '../utils/workflow-test-helper';
 
 describe('Login Workflow E2E Tests', () => {
   test('REQ-AUTH-001: Successful login workflow', async () => {
