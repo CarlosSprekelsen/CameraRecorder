@@ -72,8 +72,8 @@ describe('FileService Unit Tests', () => {
       const result = await fileService.listRecordings(limit, offset);
 
       expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('list_recordings', { limit, offset });
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Listing recordings: limit=${limit}, offset=${offset}`);
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Found ${expectedResult.files.length} recordings`);
+      // Validate technical logging pattern (BaseService.callWithLogging)
+      expect(mockLoggerService.info).toHaveBeenCalledWith('list_recordings request', { limit, offset });
       expect(result).toEqual(expectedResult);
       // Validator call removed due to type compatibility issues
       // expect(APIResponseValidator.validateFileListResult(expectedResult)).toBe(true);
@@ -89,8 +89,8 @@ describe('FileService Unit Tests', () => {
       const result = await fileService.listSnapshots(limit, offset);
 
       expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('list_snapshots', { limit, offset });
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Listing snapshots: limit=${limit}, offset=${offset}`);
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Found ${expectedResult.files.length} snapshots`);
+      // Validate technical logging pattern (BaseService.callWithLogging)
+      expect(mockLoggerService.info).toHaveBeenCalledWith('list_snapshots request', { limit, offset });
       expect(result).toEqual(expectedResult);
     });
 
@@ -101,7 +101,8 @@ describe('FileService Unit Tests', () => {
       const result = await fileService.listRecordings(10, 0);
 
       expect(result.files).toEqual([]);
-      expect(mockLoggerService.info).toHaveBeenCalledWith('Found 0 recordings');
+      // Validate technical logging pattern (BaseService.callWithLogging)
+      expect(mockLoggerService.info).toHaveBeenCalledWith('list_recordings request', { limit: 10, offset: 0 });
     });
 
     test('should handle listing errors', async () => {
@@ -109,7 +110,8 @@ describe('FileService Unit Tests', () => {
       (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(fileService.listRecordings(10, 0)).rejects.toThrow('Failed to list files');
-      expect(mockLoggerService.error).toHaveBeenCalledWith('Failed to list recordings', error);
+      // Validate technical error logging pattern (BaseService.callWithLogging)
+      expect(mockLoggerService.error).toHaveBeenCalledWith('list_recordings failed', error);
     });
 
     test('should validate pagination parameters', async () => {
@@ -141,8 +143,8 @@ describe('FileService Unit Tests', () => {
       const result = await fileService.getRecordingInfo(filename);
 
       expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_recording_info', { filename });
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Getting recording info for: ${filename}`);
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Recording info retrieved for ${filename}`);
+      // Validate technical logging pattern (BaseService.callWithLogging)
+      expect(mockLoggerService.info).toHaveBeenCalledWith('get_recording_info request', { filename });
       expect(result).toEqual(expectedInfo);
     });
 
@@ -160,8 +162,8 @@ describe('FileService Unit Tests', () => {
       const result = await fileService.getSnapshotInfo(filename);
 
       expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_snapshot_info', { filename });
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Getting snapshot info for: ${filename}`);
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Snapshot info retrieved for ${filename}`);
+      // Validate technical logging pattern (BaseService.callWithLogging)
+      expect(mockLoggerService.info).toHaveBeenCalledWith('get_snapshot_info request', { filename });
       expect(result).toEqual(expectedInfo);
     });
 
@@ -171,10 +173,8 @@ describe('FileService Unit Tests', () => {
       (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(fileService.getRecordingInfo(filename)).rejects.toThrow('File not found');
-      expect(mockLoggerService.error).toHaveBeenCalledWith(
-        `Failed to get recording info for ${filename}`,
-        error
-      );
+      // Validate technical error logging pattern (BaseService.callWithLogging)
+      expect(mockLoggerService.error).toHaveBeenCalledWith('get_recording_info failed', error);
     });
 
     test('should validate file information structure', async () => {
@@ -204,8 +204,8 @@ describe('FileService Unit Tests', () => {
       const result = await fileService.deleteRecording(filename);
 
       expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('delete_recording', { filename });
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Deleting recording: ${filename}`);
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Recording deleted: ${filename}`);
+      // Validate technical logging pattern (BaseService.callWithLogging)
+      expect(mockLoggerService.info).toHaveBeenCalledWith('delete_recording request', { filename });
       expect(result).toEqual(expectedResult);
     });
 
@@ -218,8 +218,8 @@ describe('FileService Unit Tests', () => {
       const result = await fileService.deleteSnapshot(filename);
 
       expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('delete_snapshot', { filename });
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Deleting snapshot: ${filename}`);
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Snapshot deleted: ${filename}`);
+      // Validate technical logging pattern (BaseService.callWithLogging)
+      expect(mockLoggerService.info).toHaveBeenCalledWith('delete_snapshot request', { filename });
       expect(result).toEqual(expectedResult);
     });
 
@@ -229,10 +229,8 @@ describe('FileService Unit Tests', () => {
       (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(fileService.deleteRecording(filename)).rejects.toThrow('Permission denied');
-      expect(mockLoggerService.error).toHaveBeenCalledWith(
-        `Failed to delete recording ${filename}`,
-        error
-      );
+      // Validate technical error logging pattern (BaseService.callWithLogging)
+      expect(mockLoggerService.error).toHaveBeenCalledWith('delete_recording failed', error);
     });
 
     test('should handle deletion failures', async () => {
@@ -271,6 +269,7 @@ describe('FileService Unit Tests', () => {
       expect(mockDocument.body.appendChild).toHaveBeenCalledWith(mockLink);
       expect(mockLink.click).toHaveBeenCalled();
       expect(mockDocument.body.removeChild).toHaveBeenCalledWith(mockLink);
+      // Download method uses direct logging, not BaseService pattern
       expect(mockLoggerService.info).toHaveBeenCalledWith(`Downloading file: ${filename}`);
       expect(mockLoggerService.info).toHaveBeenCalledWith(`Download initiated for: ${filename}`);
     });
@@ -284,6 +283,7 @@ describe('FileService Unit Tests', () => {
       });
 
       await expect(fileService.downloadFile(downloadUrl, filename)).rejects.toThrow('DOM manipulation failed');
+      // Download method uses direct error logging, not BaseService pattern
       expect(mockLoggerService.error).toHaveBeenCalledWith(
         `Failed to download file ${filename}`,
         expect.any(Error)
