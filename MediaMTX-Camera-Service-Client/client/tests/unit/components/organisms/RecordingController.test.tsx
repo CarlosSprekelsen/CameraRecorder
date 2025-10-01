@@ -74,19 +74,25 @@ describe('RecordingController Component', () => {
 
   test('REQ-RECORDING-004: RecordingController displays recording status', () => {
     const component = renderWithProviders(
-      <RecordingController />,
+      <RecordingController device="camera0" />,
       { 
         withStores: true,
         initialStoreState: {
           recordingStore: { 
-            activeRecordings: { 'camera0': { id: 'rec1', status: 'recording' } }
+            activeRecordings: { 
+              'camera0': { 
+                device: 'camera0',
+                status: 'RECORDING',
+                startTime: '2025-01-15T14:30:00Z'
+              } 
+            }
           }
         }
       }
     );
     
     assertComponentBehavior(component, {
-      hasText: ['Recording Active', 'camera0']
+      hasText: ['Status: RECORDING', 'camera0']
     });
   });
 });

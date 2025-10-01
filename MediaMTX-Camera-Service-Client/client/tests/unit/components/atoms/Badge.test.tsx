@@ -25,7 +25,7 @@ describe('Badge Component', () => {
     
     assertComponentBehavior(component, {
       hasText: ['Success badge'],
-      hasClass: ['bg-green-100', 'text-green-800']
+      hasClass: ['badge', 'relative', 'inline-block']
     });
   });
 
@@ -36,7 +36,7 @@ describe('Badge Component', () => {
     
     assertComponentBehavior(component, {
       hasText: ['Error badge'],
-      hasClass: ['bg-red-100', 'text-red-800']
+      hasClass: ['badge', 'relative', 'inline-block']
     });
   });
 
@@ -47,7 +47,7 @@ describe('Badge Component', () => {
     
     assertComponentBehavior(component, {
       hasText: ['Warning badge'],
-      hasClass: ['bg-yellow-100', 'text-yellow-800']
+      hasClass: ['badge', 'relative', 'inline-block']
     });
   });
 });

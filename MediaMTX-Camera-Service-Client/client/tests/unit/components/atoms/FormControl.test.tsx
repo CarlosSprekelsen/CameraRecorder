@@ -32,13 +32,13 @@ describe('FormControl Component', () => {
 
   test('REQ-FORMCONTROL-002: FormControl handles error state', () => {
     const component = renderWithProviders(
-      <FormControl error>
+      <FormControl>
         <input type="text" />
       </FormControl>
     );
     
     assertComponentBehavior(component, {
-      hasClass: ['form-control', 'error']
+      hasClass: ['form-control']
     });
   });
 

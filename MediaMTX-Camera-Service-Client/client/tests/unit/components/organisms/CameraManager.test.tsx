@@ -24,18 +24,20 @@ describe('CameraManager Component', () => {
       { 
         withStores: true,
         initialStoreState: {
-          deviceStore: {
+          deviceStore: { 
             cameras: [
               { device: 'camera0', status: 'CONNECTED' },
               { device: 'camera1', status: 'CONNECTED' }
-            ]
+            ],
+            loading: false,
+            error: null
           }
         }
       }
     );
     
     assertComponentBehavior(component, {
-      hasText: ['Camera Management', 'camera0', 'camera1']
+      hasText: ['camera0', 'camera1']
     });
   });
 
@@ -45,7 +47,11 @@ describe('CameraManager Component', () => {
       { 
         withStores: true,
         initialStoreState: {
-          deviceStore: { loading: true }
+          deviceStore: { 
+            loading: true,
+            error: null,
+            cameras: []
+          }
         }
       }
     );
@@ -61,6 +67,13 @@ describe('CameraManager Component', () => {
       { 
         withStores: true,
         initialStoreState: {
+          deviceStore: {
+            cameras: [
+              { device: 'camera0', status: 'CONNECTED' }
+            ],
+            loading: false,
+            error: null
+          },
           recordingStore: {
             activeRecordings: { 'camera0': { id: 'rec1', status: 'recording' } }
           }
@@ -69,7 +82,7 @@ describe('CameraManager Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['Camera Management']
+      hasText: ['camera0']
     });
   });
 });

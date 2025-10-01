@@ -24,7 +24,7 @@ describe('Divider Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasClass: ['border-gray-200']
+      hasClass: ['border-gray-300', 'w-full', 'border-t']
     });
   });
 
@@ -34,7 +34,7 @@ describe('Divider Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasClass: ['custom-divider', 'border-gray-200']
+      hasClass: ['custom-divider', 'border-gray-300', 'w-full', 'border-t']
     });
   });
 
@@ -44,7 +44,7 @@ describe('Divider Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasClass: ['border-gray-200', 'border-l']
+      hasClass: ['border-gray-300', 'h-full', 'border-l']
     });
   });
 });
