@@ -363,6 +363,15 @@ export class WebSocketService {
           handler.handleSystemHealthUpdate(notification.params);
         });
         break;
+      case 'mediamtx.stream':
+      case 'mediamtx.path':
+      case 'mediamtx.stream_started':
+      case 'mediamtx.stream_stopped':
+        import('../notifications/RealTimeNotificationHandler').then(({ RealTimeNotificationHandler }) => {
+          const handler = new RealTimeNotificationHandler();
+          handler.handleStreamUpdate(notification.params as any);
+        });
+        break;
       default:
         console.log('Unhandled notification method:', notification.method);
     }

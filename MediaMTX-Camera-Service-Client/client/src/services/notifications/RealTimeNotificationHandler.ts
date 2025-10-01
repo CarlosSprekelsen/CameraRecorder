@@ -8,7 +8,7 @@
 import { useDeviceStore } from '../../stores/device/deviceStore';
 import { useRecordingStore } from '../../stores/recording/recordingStore';
 import { useServerStore } from '../../stores/server/serverStore';
-import { Camera, SystemStatus, SystemReadinessStatus } from '../../types/api';
+import { Camera, SystemStatus, SystemReadinessStatus, StreamsListResult } from '../../types/api';
 import { RecordingSessionInfo } from '../../stores/recording/recordingStore';
 
 export class RealTimeNotificationHandler {
@@ -50,6 +50,23 @@ export class RealTimeNotificationHandler {
     }
     // Accept both SystemStatus and SystemReadinessStatus
     return params as SystemStatus | SystemReadinessStatus;
+  }
+
+  /**
+   * Validate stream update notification
+   * Leverage existing StreamsListResult interface for type safety
+   */
+  private validateStreamUpdate(params: any): StreamsListResult {
+    if (!params || typeof params.name !== 'string') {
+      throw new Error('Invalid stream update: missing name');
+    }
+    if (typeof params.ready !== 'boolean') {
+      throw new Error('Invalid stream update: ready must be boolean');
+    }
+    if (typeof params.readers !== 'number') {
+      throw new Error('Invalid stream update: readers must be number');
+    }
+    return params as StreamsListResult;
   }
 
   /**
@@ -114,6 +131,28 @@ export class RealTimeNotificationHandler {
       // Leverage existing store error handling pattern
       useServerStore.getState().setError(
         error instanceof Error ? error.message : 'Failed to process system health update'
+      );
+    }
+  }
+
+  /**
+   * Handle stream update notifications
+   * Architecture requirement: Route notifications to appropriate store handlers
+   */
+  handleStreamUpdate(stream: any): void {
+    console.log('RealTimeNotificationHandler: Processing stream update', stream);
+    
+    try {
+      // Validate notification parameters using existing StreamsListResult interface
+      const validatedStream = this.validateStreamUpdate(stream);
+      
+      // Route to device store handler
+      useDeviceStore.getState().handleStreamUpdate(validatedStream);
+    } catch (error) {
+      console.error('Error processing stream update:', error);
+      // Leverage existing store error handling pattern
+      useDeviceStore.getState().setError(
+        error instanceof Error ? error.message : 'Failed to process stream update'
       );
     }
   }

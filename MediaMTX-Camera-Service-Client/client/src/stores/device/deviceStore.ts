@@ -28,6 +28,7 @@ export interface DeviceActions {
 
   // Real-time updates
   handleCameraStatusUpdate: (camera: Camera) => void;
+  handleStreamUpdate: (stream: StreamsListResult) => void;
 
   // Service injection
   setDeviceService: (service: DeviceService) => void;
@@ -151,6 +152,14 @@ export const useDeviceStore = create<DeviceState & DeviceActions>()(
             cameras: state.cameras
               .map((c) => (c.device === camera.device ? camera : c))
               .concat(state.cameras.find((c) => c.device === camera.device) ? [] : [camera]),
+          }));
+        },
+
+        handleStreamUpdate: (stream: StreamsListResult) => {
+          set((state) => ({
+            streams: state.streams
+              .map((s) => (s.name === stream.name ? stream : s))
+              .concat(state.streams.find((s) => s.name === stream.name) ? [] : [stream]),
           }));
         },
 
