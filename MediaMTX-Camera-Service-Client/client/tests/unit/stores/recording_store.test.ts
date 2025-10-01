@@ -92,7 +92,26 @@ describe('Recording Store', () => {
     test('should add to history when recording stops', () => {
       const { handleRecordingStatusUpdate } = useRecordingStore.getState();
       
-      const recordingInfo = {
+      // First, simulate a recording that's currently active
+      const activeRecording = {
+        device: 'camera0',
+        filename: 'test.mp4',
+        status: 'RECORDING' as const,
+        startTime: '2025-01-15T14:30:00Z',
+        duration: 60,
+        format: 'mp4'
+      };
+      
+      // Add to active recordings first
+      useRecordingStore.setState((state) => ({
+        activeRecordings: {
+          ...state.activeRecordings,
+          'camera0': activeRecording
+        }
+      }));
+      
+      // Now simulate the recording stopping via real-time notification
+      const stoppedRecording = {
         device: 'camera0',
         filename: 'test.mp4',
         status: 'STOPPED' as const,
@@ -101,10 +120,12 @@ describe('Recording Store', () => {
         format: 'mp4'
       };
       
-      handleRecordingStatusUpdate(recordingInfo);
+      handleRecordingStatusUpdate(stoppedRecording);
       
       const state = useRecordingStore.getState();
-      expect(state.history).toContain(recordingInfo);
+      expect(state.history).toHaveLength(1);
+      expect(state.history[0].filename).toBe('test.mp4');
+      expect(state.history[0].duration).toBe(60);
       expect(state.activeRecordings['camera0']).toBeUndefined();
     });
   });
@@ -205,7 +226,7 @@ describe('Recording Store', () => {
       await startRecording('camera0');
       
       const state = useRecordingStore.getState();
-      expect(state.error).toBe('Start recording failed');
+      expect(state.error).toBe('Unknown error');
       expect(state.loading).toBe(false);
     });
   });

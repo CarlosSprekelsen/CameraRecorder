@@ -153,13 +153,31 @@ export const useRecordingStore = create<RecordingState & RecordingActions>()(
           handleRecordingStatusUpdate: (info: RecordingSessionInfo) => {
             set((state) => {
               const nextActive = { ...state.activeRecordings };
+              const nextHistory = [...state.history];
+              
               if (info.status === 'RECORDING' || info.status === 'STARTING') {
                 nextActive[info.device] = info;
               } else if (info.status === 'STOPPED' || info.status === 'ERROR') {
+                // Remove from active recordings
+                const stoppedRecording = nextActive[info.device];
                 delete nextActive[info.device];
+                
+                // Add to history if recording was active (UX fix: prevent data loss)
+                if (stoppedRecording) {
+                  nextHistory.unshift({
+                    filename: stoppedRecording.filename,
+                    file_size: 0, // Will be updated when file is listed
+                    duration: stoppedRecording.duration,
+                    created_time: new Date().toISOString(),
+                    download_url: '' // Will be populated when file is listed
+                  });
+                }
               }
-              // Don't add session info to file history - that's for completed recordings
-              return { activeRecordings: nextActive };
+              
+              return { 
+                activeRecordings: nextActive,
+                history: nextHistory
+              };
             });
           },
 
