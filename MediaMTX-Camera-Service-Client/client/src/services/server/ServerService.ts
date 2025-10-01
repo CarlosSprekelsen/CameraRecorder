@@ -68,6 +68,9 @@ export class ServerService implements IStatus {
   }
 
   async getServerInfo(): Promise<ServerInfo> {
+    if (!this.apiClient.isConnected()) {
+      throw new Error('WebSocket not connected');
+    }
     return this.apiClient.call<ServerInfo>('get_server_info');
   }
 

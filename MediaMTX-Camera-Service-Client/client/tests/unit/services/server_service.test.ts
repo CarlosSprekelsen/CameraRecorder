@@ -48,7 +48,7 @@ describe('ServerService Unit Tests', () => {
     });
 
     test('should throw error when WebSocket not connected', async () => {
-      mockWebSocketService.isConnected = false;
+      mockAPIClient.isConnected = jest.fn().mockReturnValue(false);
 
       await expect(serverService.getServerInfo()).rejects.toThrow('WebSocket not connected');
     });
@@ -90,7 +90,7 @@ describe('ServerService Unit Tests', () => {
     });
 
     test('should throw error when WebSocket not connected', async () => {
-      mockWebSocketService.isConnected = false;
+      mockAPIClient.isConnected = jest.fn().mockReturnValue(false);
 
       await expect(serverService.getStatus()).rejects.toThrow('WebSocket not connected');
     });
