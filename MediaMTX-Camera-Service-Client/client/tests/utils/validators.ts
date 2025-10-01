@@ -166,12 +166,12 @@ export class APIResponseValidator {
     // Empty streams object is valid (no active streams)
     if (Object.keys(obj).length === 0) return true;
     
-    // If streams object has content, validate the structure
+    // If streams object has content, validate the structure using existing validateStreamUrl method
     return (
       typeof obj.rtsp === 'string' &&
       typeof obj.hls === 'string' &&
-      obj.rtsp.startsWith('rtsp://') &&
-      obj.hls.startsWith('http://')
+      this.validateStreamUrl(obj.rtsp) &&
+      this.validateStreamUrl(obj.hls)
     );
   }
 
