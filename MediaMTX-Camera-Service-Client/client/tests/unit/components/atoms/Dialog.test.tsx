@@ -53,7 +53,7 @@ describe('Dialog Component', () => {
     
     assertComponentBehavior(component, {
       hasText: ['Modal content'],
-      hasClass: ['bg-white', 'rounded-lg']
+      hasClass: ['dialog', 'fixed', 'inset-0']
     });
   });
 });

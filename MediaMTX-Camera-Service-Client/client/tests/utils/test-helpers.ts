@@ -110,7 +110,8 @@ export async function loadTestEnvironment(): Promise<TestEnvironment> {
 
   // CRITICAL: Authentication is handled by createAuthenticatedTestEnvironment()
 
-    // Initialize camera IDs for dynamic discovery
+  // Initialize camera IDs for dynamic discovery
+  if (!process.env.TEST_MOCK_MODE || process.env.TEST_MOCK_MODE === 'false') {
     await CameraIdHelper.initialize(apiClient);
   }
 

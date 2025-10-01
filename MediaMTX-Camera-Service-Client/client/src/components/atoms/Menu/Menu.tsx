@@ -32,10 +32,19 @@ export const Menu: React.FC<MenuProps> = ({
 
   return (
     <div
-      className={`menu fixed bg-white border border-gray-200 rounded-md shadow-lg z-50 min-w-48 ${className}`}
+      className={`menu fixed bg-white border border-gray-200 rounded-md shadow-lg z-50 min-w-48 open ${className}`}
       style={{ top: position.top, left: position.left }}
       {...props}
     >
+      <button
+        className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-full p-1"
+        onClick={onClose}
+        aria-label="Close menu"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
       {children}
     </div>
   );

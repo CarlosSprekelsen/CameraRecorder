@@ -20,7 +20,9 @@ module.exports = {
   testEnvironment: 'node',
   setupFilesAfterEnv: ['<rootDir>/../setup.integration.ts'],
   testMatch: [
+    '<rootDir>/../integration/**/*.test.{js,ts,tsx}',
     '<rootDir>/../integration/**/test_*.{js,ts,tsx}',
+    '<rootDir>/../e2e/**/*.test.{js,ts,tsx}',
     '<rootDir>/../e2e/**/test_*.{js,ts,tsx}'
   ],
   transform: {

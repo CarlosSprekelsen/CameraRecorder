@@ -120,15 +120,14 @@ export class AuthHelper {
   /**
    * THE ONE AND ONLY authentication method
    * Architecture: AuthService.authenticate() -> APIClient.call() -> WebSocketService.sendRPC()
+   * 
+   * CRITICAL: Do NOT bypass APIClient by directly managing WebSocket connections
+   * Let APIClient handle all connection management according to architecture
    */
   async authenticateWithToken(token: string): Promise<AuthResult> {
     try {
-      // Ensure connection
-      if (!this.wsService.isConnected()) {
-        await this.wsService.connect();
-      }
-
       // Use the architectural standard: AuthService.authenticate()
+      // APIClient will handle connection management internally
       const result = await this.authService.authenticate(token);
       
       return result;
@@ -138,7 +137,8 @@ export class AuthHelper {
         role: 'viewer',
         userId: '',
         session_id: '',
-        permissions: []
+        permissions: [],
+        error: error instanceof Error ? error.message : 'Unknown authentication error'
       };
     }
   }
@@ -159,7 +159,7 @@ export class AuthHelper {
    * Cleanup resources
    */
   async disconnect(): Promise<void> {
-    if (this.wsService.isConnected()) {
+    if (this.wsService.isConnected) {
       await this.wsService.disconnect();
     }
   }
@@ -168,7 +168,7 @@ export class AuthHelper {
    * Check if connected
    */
   isConnected(): boolean {
-    return this.wsService.isConnected();
+    return this.wsService.isConnected;
   }
 }
 

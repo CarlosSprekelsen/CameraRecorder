@@ -25,7 +25,7 @@ describe('Snackbar Component', () => {
     
     assertComponentBehavior(component, {
       hasText: ['Notification message'],
-      hasClass: ['snackbar', 'open']
+      hasClass: ['snackbar', 'fixed', 'bottom-4']
     });
   });
 

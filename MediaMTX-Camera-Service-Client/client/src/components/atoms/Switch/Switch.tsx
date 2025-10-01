@@ -49,6 +49,7 @@ export const Switch: React.FC<SwitchProps> = ({
     <label className={`relative inline-flex items-center cursor-pointer ${disabled ? 'cursor-not-allowed' : ''} ${className}`}>
       <input
         type="checkbox"
+        role="switch"
         checked={checked}
         onChange={handleChange}
         disabled={disabled}
