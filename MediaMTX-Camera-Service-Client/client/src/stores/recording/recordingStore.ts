@@ -67,7 +67,12 @@ export const useRecordingStore = create<RecordingState & RecordingActions>()(
           setError: (error: string | null) => set({ error }),
 
           takeSnapshot: async (device: string, filename?: string) => {
-            if (!service) throw new Error('Recording service not initialized');
+            // Synchronous guard - graceful error handling per ADR-002
+            if (!service) {
+              set({ error: 'Recording service not initialized', loading: false });
+              return;
+            }
+
             set({ loading: true, error: null });
             try {
               await service.takeSnapshot(device, filename);
@@ -75,11 +80,17 @@ export const useRecordingStore = create<RecordingState & RecordingActions>()(
               set({ loading: false });
             } catch (error) {
               set({ loading: false, error: error instanceof Error ? error.message : 'Unknown error' });
+              // No re-throw - graceful degradation per ADR-002
             }
           },
 
           startRecording: async (device: string, duration?: number, format?: string) => {
-            if (!service) throw new Error('Recording service not initialized');
+            // Synchronous guard - graceful error handling per ADR-002
+            if (!service) {
+              set({ error: 'Recording service not initialized', loading: false });
+              return;
+            }
+
             set({ loading: true, error: null });
             try {
               const result = await service.startRecording(device, duration, format);
@@ -101,12 +112,17 @@ export const useRecordingStore = create<RecordingState & RecordingActions>()(
               }));
             } catch (error) {
               set({ loading: false, error: error instanceof Error ? error.message : 'Unknown error' });
-              throw error;
+              // No re-throw - graceful degradation per ADR-002
             }
           },
 
           stopRecording: async (device: string) => {
-            if (!service) throw new Error('Recording service not initialized');
+            // Synchronous guard - graceful error handling per ADR-002
+            if (!service) {
+              set({ error: 'Recording service not initialized', loading: false });
+              return;
+            }
+
             set({ loading: true, error: null });
             try {
               const result = await service.stopRecording(device);
@@ -130,7 +146,7 @@ export const useRecordingStore = create<RecordingState & RecordingActions>()(
               });
             } catch (error) {
               set({ loading: false, error: error instanceof Error ? error.message : 'Unknown error' });
-              throw error;
+              // No re-throw - graceful degradation per ADR-002
             }
           },
 

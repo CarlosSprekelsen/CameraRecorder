@@ -59,7 +59,11 @@ export const useDeviceStore = create<DeviceState & DeviceActions>()(
 
         // Discovery methods (I.Discovery interface)
         getCameraList: async () => {
-          if (!deviceService) throw new Error('Device service not initialized');
+          // Synchronous guard - graceful error handling per ADR-002
+          if (!deviceService) {
+            set({ error: 'Device service not initialized', loading: false });
+            return;
+          }
 
           set({ loading: true, error: null });
           try {
@@ -75,24 +79,33 @@ export const useDeviceStore = create<DeviceState & DeviceActions>()(
               loading: false,
               error: error instanceof Error ? error.message : 'Failed to get camera list',
             });
-            throw error;
+            // No re-throw - graceful degradation per ADR-002
           }
         },
 
         getStreamUrl: async (device: string) => {
-          if (!deviceService) throw new Error('Device service not initialized');
+          // Synchronous guard - graceful error handling per ADR-002
+          if (!deviceService) {
+            set({ error: 'Device service not initialized' });
+            return null;
+          }
 
           try {
             const streamUrl = await deviceService.getStreamUrl(device);
             return streamUrl;
           } catch (error) {
             set({ error: error instanceof Error ? error.message : 'Failed to get stream URL' });
-            throw error;
+            // No re-throw - graceful degradation per ADR-002
+            return null;
           }
         },
 
         getStreams: async () => {
-          if (!deviceService) throw new Error('Device service not initialized');
+          // Synchronous guard - graceful error handling per ADR-002
+          if (!deviceService) {
+            set({ error: 'Device service not initialized', loading: false });
+            return;
+          }
 
           set({ loading: true, error: null });
           try {
@@ -108,7 +121,7 @@ export const useDeviceStore = create<DeviceState & DeviceActions>()(
               loading: false,
               error: error instanceof Error ? error.message : 'Failed to get streams',
             });
-            throw error;
+            // No re-throw - graceful degradation per ADR-002
           }
         },
 

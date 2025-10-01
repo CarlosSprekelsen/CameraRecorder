@@ -70,7 +70,12 @@ export const useServerStore = create<ServerStore>((set) => {
 
     // Actions that call services
     loadServerInfo: async () => {
-      if (!serverService) throw new Error('Server service not initialized');
+      // Synchronous guard - graceful error handling per ADR-002
+      if (!serverService) {
+        set({ error: 'Server service not initialized', loading: false });
+        return;
+      }
+
       set({ loading: true, error: null });
       try {
         const info = await serverService.getServerInfo();
@@ -80,12 +85,17 @@ export const useServerStore = create<ServerStore>((set) => {
           loading: false, 
           error: error instanceof Error ? error.message : 'Failed to load server info' 
         });
-        throw error;
+        // No re-throw - graceful degradation per ADR-002
       }
     },
 
     loadSystemStatus: async () => {
-      if (!serverService) throw new Error('Server service not initialized');
+      // Synchronous guard - graceful error handling per ADR-002
+      if (!serverService) {
+        set({ error: 'Server service not initialized', loading: false });
+        return;
+      }
+
       set({ loading: true, error: null });
       try {
         const status = await serverService.getStatus();
@@ -95,11 +105,17 @@ export const useServerStore = create<ServerStore>((set) => {
           loading: false, 
           error: error instanceof Error ? error.message : 'Failed to load system status' 
         });
+        // No re-throw - graceful degradation per ADR-002
       }
     },
 
     loadSystemReadiness: async () => {
-      if (!serverService) throw new Error('Server service not initialized');
+      // Synchronous guard - graceful error handling per ADR-002
+      if (!serverService) {
+        set({ error: 'Server service not initialized', loading: false });
+        return;
+      }
+
       set({ loading: true, error: null });
       try {
         const systemReadiness = await serverService.getSystemStatus();
@@ -109,11 +125,17 @@ export const useServerStore = create<ServerStore>((set) => {
           loading: false, 
           error: error instanceof Error ? error.message : 'Failed to load system readiness' 
         });
+        // No re-throw - graceful degradation per ADR-002
       }
     },
 
     loadStorageInfo: async () => {
-      if (!serverService) throw new Error('Server service not initialized');
+      // Synchronous guard - graceful error handling per ADR-002
+      if (!serverService) {
+        set({ error: 'Server service not initialized', loading: false });
+        return;
+      }
+
       set({ loading: true, error: null });
       try {
         const storage = await serverService.getStorageInfo();
@@ -123,12 +145,17 @@ export const useServerStore = create<ServerStore>((set) => {
           loading: false, 
           error: error instanceof Error ? error.message : 'Failed to load storage info' 
         });
-        throw error;
+        // No re-throw - graceful degradation per ADR-002
       }
     },
 
     loadAllServerData: async () => {
-      if (!serverService) throw new Error('Server service not initialized');
+      // Synchronous guard - graceful error handling per ADR-002
+      if (!serverService) {
+        set({ error: 'Server service not initialized', loading: false });
+        return;
+      }
+
       set({ loading: true, error: null });
       try {
         const [info, status, storage] = await Promise.all([
@@ -142,12 +169,17 @@ export const useServerStore = create<ServerStore>((set) => {
           loading: false, 
           error: error instanceof Error ? error.message : 'Failed to load server data' 
         });
-        throw error;
+        // No re-throw - graceful degradation per ADR-002
       }
     },
 
     ping: async () => {
-      if (!serverService) throw new Error('Server service not initialized');
+      // Synchronous guard - graceful error handling per ADR-002
+      if (!serverService) {
+        set({ error: 'Server service not initialized', loading: false });
+        return undefined;
+      }
+
       set({ loading: true, error: null });
       try {
         const result = await serverService.ping();
@@ -158,7 +190,8 @@ export const useServerStore = create<ServerStore>((set) => {
           loading: false, 
           error: error instanceof Error ? error.message : 'Failed to ping server' 
         });
-        throw error;
+        // No re-throw - graceful degradation per ADR-002
+        return undefined;
       }
     },
 

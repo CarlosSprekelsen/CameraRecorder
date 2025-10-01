@@ -101,7 +101,12 @@ export const useFileStore = create<FileState & FileActions>()(
           },
 
           loadRecordings: async (limit = 20, offset = 0) => {
-            if (!fileService) throw new Error('File service not initialized');
+            // Synchronous guard - graceful error handling per ADR-002
+            if (!fileService) {
+              set({ error: 'File service not initialized', loading: false });
+              return;
+            }
+
             set({ loading: true, error: null });
             try {
               const response = await fileService.listRecordings(limit, offset);
@@ -119,12 +124,17 @@ export const useFileStore = create<FileState & FileActions>()(
                 loading: false,
                 error: error instanceof Error ? error.message : 'Failed to load recordings',
               });
-              throw error;
+              // No re-throw - graceful degradation per ADR-002
             }
           },
 
           loadSnapshots: async (limit = 20, offset = 0) => {
-            if (!fileService) throw new Error('File service not initialized');
+            // Synchronous guard - graceful error handling per ADR-002
+            if (!fileService) {
+              set({ error: 'File service not initialized', loading: false });
+              return;
+            }
+
             set({ loading: true, error: null });
             try {
               const response = await fileService.listSnapshots(limit, offset);
@@ -142,7 +152,7 @@ export const useFileStore = create<FileState & FileActions>()(
                 loading: false,
                 error: error instanceof Error ? error.message : 'Failed to load snapshots',
               });
-              throw error;
+              // No re-throw - graceful degradation per ADR-002
             }
           },
 
@@ -183,7 +193,12 @@ export const useFileStore = create<FileState & FileActions>()(
           },
 
           deleteRecording: async (filename: string) => {
-            if (!fileService) throw new Error('File service not initialized');
+            // Synchronous guard - graceful error handling per ADR-002
+            if (!fileService) {
+              set({ error: 'File service not initialized', loading: false });
+              return false;
+            }
+
             set({ loading: true, error: null });
             try {
               const response = await fileService.deleteRecording(filename);
@@ -202,12 +217,18 @@ export const useFileStore = create<FileState & FileActions>()(
                 loading: false,
                 error: error instanceof Error ? error.message : 'Delete failed',
               });
-              throw error;
+              // No re-throw - graceful degradation per ADR-002
+              return false;
             }
           },
 
           deleteSnapshot: async (filename: string) => {
-            if (!fileService) throw new Error('File service not initialized');
+            // Synchronous guard - graceful error handling per ADR-002
+            if (!fileService) {
+              set({ error: 'File service not initialized', loading: false });
+              return false;
+            }
+
             set({ loading: true, error: null });
             try {
               const response = await fileService.deleteSnapshot(filename);
@@ -226,7 +247,8 @@ export const useFileStore = create<FileState & FileActions>()(
                 loading: false,
                 error: error instanceof Error ? error.message : 'Delete failed',
               });
-              throw error;
+              // No re-throw - graceful degradation per ADR-002
+              return false;
             }
           },
 
@@ -270,7 +292,12 @@ export const useFileStore = create<FileState & FileActions>()(
           },
 
           setRetentionPolicy: async (policyType: 'age' | 'size' | 'manual', enabled: boolean, maxAgeDays?: number, maxSizeGb?: number) => {
-            if (!fileService) throw new Error('File service not initialized');
+            // Synchronous guard - graceful error handling per ADR-002
+            if (!fileService) {
+              set({ error: 'File service not initialized', loading: false });
+              return undefined;
+            }
+
             set({ loading: true, error: null });
             try {
               const response = await fileService.setRetentionPolicy(policyType, enabled, maxAgeDays, maxSizeGb);
@@ -281,12 +308,18 @@ export const useFileStore = create<FileState & FileActions>()(
                 loading: false,
                 error: error instanceof Error ? error.message : 'Failed to set retention policy',
               });
-              throw error;
+              // No re-throw - graceful degradation per ADR-002
+              return undefined;
             }
           },
 
           cleanupOldFiles: async () => {
-            if (!fileService) throw new Error('File service not initialized');
+            // Synchronous guard - graceful error handling per ADR-002
+            if (!fileService) {
+              set({ error: 'File service not initialized', loading: false });
+              return undefined;
+            }
+
             set({ loading: true, error: null });
             try {
               const response = await fileService.cleanupOldFiles();
@@ -297,7 +330,8 @@ export const useFileStore = create<FileState & FileActions>()(
                 loading: false,
                 error: error instanceof Error ? error.message : 'Failed to cleanup old files',
               });
-              throw error;
+              // No re-throw - graceful degradation per ADR-002
+              return undefined;
             }
           },
 

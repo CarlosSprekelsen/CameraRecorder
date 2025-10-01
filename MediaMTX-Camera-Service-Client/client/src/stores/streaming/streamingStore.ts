@@ -52,7 +52,11 @@ export const useStreamingStore = create<StreamingState & StreamingActions>()(
 
         // Streaming operations
         startStreaming: async (device: string) => {
-          if (!streamingService) throw new Error('Streaming service not initialized');
+          // Synchronous guard - graceful error handling per ADR-002
+          if (!streamingService) {
+            set({ error: 'Streaming service not initialized', loading: false });
+            return;
+          }
 
           set({ loading: true, error: null });
           try {
@@ -64,12 +68,16 @@ export const useStreamingStore = create<StreamingState & StreamingActions>()(
               loading: false,
               error: error instanceof Error ? error.message : 'Failed to start streaming',
             });
-            throw error;
+            // No re-throw - graceful degradation per ADR-002
           }
         },
 
         stopStreaming: async (device: string) => {
-          if (!streamingService) throw new Error('Streaming service not initialized');
+          // Synchronous guard - graceful error handling per ADR-002
+          if (!streamingService) {
+            set({ error: 'Streaming service not initialized', loading: false });
+            return;
+          }
 
           set({ loading: true, error: null });
           try {
@@ -81,12 +89,16 @@ export const useStreamingStore = create<StreamingState & StreamingActions>()(
               loading: false,
               error: error instanceof Error ? error.message : 'Failed to stop streaming',
             });
-            throw error;
+            // No re-throw - graceful degradation per ADR-002
           }
         },
 
         getStreamStatus: async (device: string) => {
-          if (!streamingService) throw new Error('Streaming service not initialized');
+          // Synchronous guard - graceful error handling per ADR-002
+          if (!streamingService) {
+            set({ error: 'Streaming service not initialized', loading: false });
+            return;
+          }
 
           set({ loading: true, error: null });
           try {
@@ -101,7 +113,7 @@ export const useStreamingStore = create<StreamingState & StreamingActions>()(
               loading: false,
               error: error instanceof Error ? error.message : 'Failed to get stream status',
             });
-            throw error;
+            // No re-throw - graceful degradation per ADR-002
           }
         },
 

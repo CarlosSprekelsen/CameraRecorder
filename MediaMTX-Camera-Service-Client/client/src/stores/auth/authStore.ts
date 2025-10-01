@@ -119,7 +119,12 @@ export const useAuthStore = create<AuthStoreState & AuthActions>()(
     },
 
     authenticate: async (token: string) => {
-      if (!authService) throw new Error('Auth service not initialized');
+      // Synchronous guard - graceful error handling per ADR-002
+      if (!authService) {
+        set({ error: 'Auth service not initialized', loading: false });
+        return undefined;
+      }
+
       set({ loading: true, error: null });
       try {
         const result = await authService.authenticate(token);
@@ -127,7 +132,8 @@ export const useAuthStore = create<AuthStoreState & AuthActions>()(
         return result;
       } catch (error) {
         set({ loading: false, error: error instanceof Error ? error.message : 'Authentication failed' });
-        throw error;
+        // No re-throw - graceful degradation per ADR-002
+        return undefined;
       }
     },
 
