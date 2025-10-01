@@ -121,13 +121,17 @@ export class AuthHelper {
    * THE ONE AND ONLY authentication method
    * Architecture: AuthService.authenticate() -> APIClient.call() -> WebSocketService.sendRPC()
    * 
-   * CRITICAL: Do NOT bypass APIClient by directly managing WebSocket connections
-   * Let APIClient handle all connection management according to architecture
+   * CRITICAL: Use APIClient.connect() for connection management per ADR-007
+   * Do NOT bypass APIClient by directly managing WebSocket connections
    */
   async authenticateWithToken(token: string): Promise<AuthResult> {
     try {
+      // Use APIClient.connect() for connection management per ADR-007
+      if (!this.apiClient.isConnected()) {
+        await this.apiClient.connect();
+      }
+
       // Use the architectural standard: AuthService.authenticate()
-      // APIClient will handle connection management internally
       const result = await this.authService.authenticate(token);
       
       return result;
@@ -157,18 +161,20 @@ export class AuthHelper {
 
   /**
    * Cleanup resources
+   * Architecture: Use APIClient.disconnect() per ADR-007
    */
   async disconnect(): Promise<void> {
-    if (this.wsService.isConnected) {
-      await this.wsService.disconnect();
+    if (this.apiClient.isConnected()) {
+      await this.apiClient.disconnect();
     }
   }
 
   /**
    * Check if connected
+   * Architecture: Use APIClient.isConnected() per ADR-007
    */
   isConnected(): boolean {
-    return this.wsService.isConnected;
+    return this.apiClient.isConnected();
   }
 }
 

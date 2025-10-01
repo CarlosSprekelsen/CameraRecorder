@@ -74,6 +74,26 @@ export class APIClient implements IAPIClient {
   }
 
   /**
+   * Connect to the server
+   * Architecture requirement: APIClient should handle connection management
+   */
+  async connect(): Promise<void> {
+    if (!this.wsService.isConnected) {
+      await this.wsService.connect();
+    }
+  }
+
+  /**
+   * Disconnect from the server
+   * Architecture requirement: APIClient should handle connection management
+   */
+  async disconnect(): Promise<void> {
+    if (this.wsService.isConnected) {
+      this.wsService.disconnect();
+    }
+  }
+
+  /**
    * Check if client is connected
    * Architecture requirement: Connection state management
    */
