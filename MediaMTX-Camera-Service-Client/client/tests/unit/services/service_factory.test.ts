@@ -1,5 +1,5 @@
 /**
- * ServiceFactory unit tests
+ * ServiceFactory unit tests - DRY Refactored
  * 
  * Ground Truth References:
  * - Client Architecture: ../docs/architecture/client-architechture.md
@@ -17,307 +17,157 @@
  */
 
 import { ServiceFactory } from '../../../src/services/ServiceFactory';
-import { WebSocketService } from '../../../src/services/websocket/WebSocketService';
-import { AuthService } from '../../../src/services/auth/AuthService';
-import { ServerService } from '../../../src/services/server/ServerService';
-import { RealTimeNotificationHandler } from '../../../src/services/notifications/RealTimeNotificationHandler';
-import { DeviceService } from '../../../src/services/device/DeviceService';
-import { RecordingService } from '../../../src/services/recording/RecordingService';
-import { FileService } from '../../../src/services/file/FileService';
+import { ServiceFactoryTestHelper, TestConstants } from '../../utils/service-factory-test-helper';
 
-// Use centralized mocks - eliminates duplication
-import { MockDataFactory } from '../../utils/mocks';
+// Setup common mocks using DRY utilities
+ServiceFactoryTestHelper.setupCommonMocks();
 
-// Mock all services using centralized approach - return constructor functions
-jest.mock('../../../src/services/websocket/WebSocketService', () => ({
-  WebSocketService: jest.fn().mockImplementation(() => MockDataFactory.createMockWebSocketService())
-}));
-jest.mock('../../../src/services/auth/AuthService', () => ({
-  AuthService: jest.fn().mockImplementation(() => MockDataFactory.createMockAuthService())
-}));
-jest.mock('../../../src/services/server/ServerService', () => ({
-  ServerService: jest.fn().mockImplementation(() => MockDataFactory.createMockServerService())
-}));
-jest.mock('../../../src/services/notifications/RealTimeNotificationHandler', () => ({
-  RealTimeNotificationHandler: jest.fn().mockImplementation(() => MockDataFactory.createMockEventHandler())
-}));
-jest.mock('../../../src/services/device/DeviceService', () => ({
-  DeviceService: jest.fn().mockImplementation(() => MockDataFactory.createMockDeviceService())
-}));
-jest.mock('../../../src/services/recording/RecordingService', () => ({
-  RecordingService: jest.fn().mockImplementation(() => MockDataFactory.createMockRecordingService())
-}));
-jest.mock('../../../src/services/file/FileService', () => ({
-  FileService: jest.fn().mockImplementation(() => MockDataFactory.createMockFileService())
-}));
-jest.mock('../../../src/services/logger/LoggerService', () => ({
-  logger: {
-    info: jest.fn(),
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn()
-  }
-}));
-
-describe('ServiceFactory Unit Tests', () => {
+describe('ServiceFactory Unit Tests - DRY Refactored', () => {
   let factory: ServiceFactory;
+  let mockAPIClient: any;
 
   beforeEach(() => {
-    // Reset factory instance for each test
-    factory = ServiceFactory.getInstance();
-    factory.reset();
+    factory = ServiceFactoryTestHelper.createFreshFactory();
+    mockAPIClient = ServiceFactoryTestHelper.createMockAPIClient();
   });
 
   describe('REQ-FACTORY-001: Singleton pattern implementation', () => {
     test('Should return same instance on multiple calls', () => {
-      // Act
-      const instance1 = ServiceFactory.getInstance();
-      const instance2 = ServiceFactory.getInstance();
-
-      // Assert
-      expect(instance1).toBe(instance2);
-      expect(instance1).toBeInstanceOf(ServiceFactory);
+      ServiceFactoryTestHelper.validateSingletonPattern();
     });
 
     test('Should maintain state across multiple getInstance calls', () => {
       // Arrange
-      const url = 'ws://localhost:8002/ws';
-      const wsService = factory.createWebSocketService(url);
+      const apiClient = factory.createAPIClient(ServiceFactoryTestHelper.createMockWebSocketService());
 
       // Act
       const newFactory = ServiceFactory.getInstance();
-      const retrievedWsService = newFactory.getWebSocketService();
+      const retrievedAPIClient = newFactory.getAPIClient();
 
       // Assert
-      expect(retrievedWsService).toBe(wsService);
+      expect(retrievedAPIClient).toBe(apiClient);
     });
   });
 
   describe('REQ-FACTORY-002: Service creation and caching', () => {
-    test('Should create WebSocket service on first call', () => {
-      // Arrange
-      const url = 'ws://localhost:8002/ws';
-
+    test('Should create API client on first call', () => {
       // Act
-      const wsService = factory.createWebSocketService(url);
+      const apiClient = factory.createAPIClient(ServiceFactoryTestHelper.createMockWebSocketService());
 
       // Assert
-      expect(wsService).toBeDefined();
-      expect(WebSocketService).toHaveBeenCalledWith({ url });
+      expect(apiClient).toBeDefined();
+      expect(factory.getAPIClient()).toBe(apiClient);
     });
 
-    test('Should return cached WebSocket service on subsequent calls', () => {
+    test('Should return cached API client on subsequent calls', () => {
       // Arrange
-      const url = 'ws://localhost:8002/ws';
-      const firstService = factory.createWebSocketService(url);
+      const mockWsService = ServiceFactoryTestHelper.createMockWebSocketService();
+      const firstClient = factory.createAPIClient(mockWsService);
 
       // Act
-      const secondService = factory.createWebSocketService(url);
+      const secondClient = factory.createAPIClient(mockWsService);
 
       // Assert
-      expect(secondService).toBe(firstService);
-      expect(WebSocketService).toHaveBeenCalledTimes(1);
+      expect(secondClient).toBe(firstClient);
     });
 
-    test('Should create AuthService with WebSocket dependency', () => {
-      // Arrange
-      const url = 'ws://localhost:8002/ws';
-      const wsService = factory.createWebSocketService(url);
+    // Parameterized tests for all services
+    describe.each(TestConstants.SERVICE_CONFIGS)(
+      'Service creation for $serviceName',
+      (config) => {
+        test(`Should create ${config.serviceName} with API client dependency`, () => {
+          // Act
+          const createdService = (factory as any)[config.createMethod](mockAPIClient);
 
-      // Act
-      const authService = factory.createAuthService(wsService);
+          // Assert
+          ServiceFactoryTestHelper.validateServiceCreation(factory, config, mockAPIClient, createdService);
+        });
 
-      // Assert
-      expect(authService).toBeDefined();
-      expect(AuthService).toHaveBeenCalledWith(wsService);
-    });
+        test(`Should return cached ${config.serviceName} on subsequent calls`, () => {
+          // Arrange
+          const firstService = (factory as any)[config.createMethod](mockAPIClient);
 
-    test('Should create ServerService with WebSocket dependency', () => {
-      // Arrange
-      const url = 'ws://localhost:8002/ws';
-      const wsService = factory.createWebSocketService(url);
+          // Act
+          const secondService = (factory as any)[config.createMethod](mockAPIClient);
 
-      // Act
-      const serverService = factory.createServerService(wsService);
-
-      // Assert
-      expect(serverService).toBeDefined();
-      expect(ServerService).toHaveBeenCalledWith(wsService);
-    });
-
-    test('Should create NotificationService with WebSocket dependency', () => {
-      // Arrange
-      const url = 'ws://localhost:8002/ws';
-      const wsService = factory.createWebSocketService(url);
-
-      // Act
-      const notificationService = factory.createNotificationService(wsService);
-
-      // Assert
-      expect(notificationService).toBeDefined();
-      expect(NotificationService).toHaveBeenCalledWith(wsService);
-    });
-
-    test('Should create DeviceService with WebSocket and logger dependencies', () => {
-      // Arrange
-      const url = 'ws://localhost:8002/ws';
-      const wsService = factory.createWebSocketService(url);
-
-      // Act
-      const deviceService = factory.createDeviceService(wsService);
-
-      // Assert
-      expect(deviceService).toBeDefined();
-      expect(DeviceService).toHaveBeenCalledWith(wsService, expect.any(Object));
-    });
-
-    test('Should create RecordingService with WebSocket and logger dependencies', () => {
-      // Arrange
-      const url = 'ws://localhost:8002/ws';
-      const wsService = factory.createWebSocketService(url);
-
-      // Act
-      const recordingService = factory.createRecordingService(wsService);
-
-      // Assert
-      expect(recordingService).toBeDefined();
-      expect(RecordingService).toHaveBeenCalledWith(wsService, expect.any(Object));
-    });
-
-    test('Should create FileService with WebSocket and logger dependencies', () => {
-      // Arrange
-      const url = 'ws://localhost:8002/ws';
-      const wsService = factory.createWebSocketService(url);
-
-      // Act
-      const fileService = factory.createFileService(wsService);
-
-      // Assert
-      expect(fileService).toBeDefined();
-      expect(FileService).toHaveBeenCalledWith(wsService, expect.any(Object));
-    });
+          // Assert
+          ServiceFactoryTestHelper.validateServiceCaching(factory, config, mockAPIClient);
+          expect(secondService).toBe(firstService);
+        });
+      }
+    );
   });
 
   describe('REQ-FACTORY-003: Service retrieval', () => {
     test('Should return null for uncreated services', () => {
       // Assert
-      expect(factory.getWebSocketService()).toBeNull();
-      expect(factory.getAuthService()).toBeNull();
-      expect(factory.getServerService()).toBeNull();
-      expect(factory.getNotificationService()).toBeNull();
-      expect(factory.getDeviceService()).toBeNull();
-      expect(factory.getRecordingService()).toBeNull();
-      expect(factory.getFileService()).toBeNull();
+      ServiceFactoryTestHelper.validateFactoryReset(factory, TestConstants.SERVICE_CONFIGS);
+      expect(factory.getAPIClient()).toBeNull();
     });
 
     test('Should return created services', () => {
       // Arrange
-      const url = 'ws://localhost:8002/ws';
-      const wsService = factory.createWebSocketService(url);
-      const authService = factory.createAuthService(wsService);
-      const serverService = factory.createServerService(wsService);
-      const notificationService = factory.createNotificationService(wsService);
-      const deviceService = factory.createDeviceService(wsService);
-      const recordingService = factory.createRecordingService(wsService);
-      const fileService = factory.createFileService(wsService);
+      const apiClient = factory.createAPIClient(ServiceFactoryTestHelper.createMockWebSocketService());
+      const createdServices = TestConstants.SERVICE_CONFIGS.map(config => {
+        const service = (factory as any)[config.createMethod](apiClient);
+        return { config, service };
+      });
 
       // Act & Assert
-      expect(factory.getWebSocketService()).toBe(wsService);
-      expect(factory.getAuthService()).toBe(authService);
-      expect(factory.getServerService()).toBe(serverService);
-      expect(factory.getNotificationService()).toBe(notificationService);
-      expect(factory.getDeviceService()).toBe(deviceService);
-      expect(factory.getRecordingService()).toBe(recordingService);
-      expect(factory.getFileService()).toBe(fileService);
+      createdServices.forEach(({ config, service }) => {
+        ServiceFactoryTestHelper.validateServiceRetrieval(factory, config, service);
+      });
+      expect(factory.getAPIClient()).toBe(apiClient);
     });
   });
 
   describe('REQ-FACTORY-004: Factory reset functionality', () => {
     test('Should reset all services to null', () => {
       // Arrange
-      const url = 'ws://localhost:8002/ws';
-      const wsService = factory.createWebSocketService(url);
-      factory.createAuthService(wsService);
-      factory.createServerService(wsService);
-      factory.createNotificationService(wsService);
-      factory.createDeviceService(wsService);
-      factory.createRecordingService(wsService);
-      factory.createFileService(wsService);
+      const apiClient = factory.createAPIClient(ServiceFactoryTestHelper.createMockWebSocketService());
+      TestConstants.SERVICE_CONFIGS.forEach(config => {
+        (factory as any)[config.createMethod](apiClient);
+      });
 
       // Act
       factory.reset();
 
       // Assert
-      expect(factory.getWebSocketService()).toBeNull();
-      expect(factory.getAuthService()).toBeNull();
-      expect(factory.getServerService()).toBeNull();
-      expect(factory.getNotificationService()).toBeNull();
-      expect(factory.getDeviceService()).toBeNull();
-      expect(factory.getRecordingService()).toBeNull();
-      expect(factory.getFileService()).toBeNull();
+      ServiceFactoryTestHelper.validateFactoryReset(factory, TestConstants.SERVICE_CONFIGS);
+      expect(factory.getAPIClient()).toBeNull();
     });
 
     test('Should allow recreation of services after reset', () => {
       // Arrange
-      const url = 'ws://localhost:8002/ws';
-      factory.createWebSocketService(url);
+      const apiClient = factory.createAPIClient(ServiceFactoryTestHelper.createMockWebSocketService());
       factory.reset();
 
       // Act
-      const newWsService = factory.createWebSocketService(url);
+      const newAPIClient = factory.createAPIClient(ServiceFactoryTestHelper.createMockWebSocketService());
 
       // Assert
-      expect(newWsService).toBeDefined();
-      expect(factory.getWebSocketService()).toBe(newWsService);
+      expect(newAPIClient).toBeDefined();
+      expect(factory.getAPIClient()).toBe(newAPIClient);
     });
   });
 
   describe('REQ-FACTORY-005: Dependency injection', () => {
-    test('Should inject WebSocket service into all dependent services', () => {
-      // Arrange
-      const url = 'ws://localhost:8002/ws';
-      const wsService = factory.createWebSocketService(url);
-
+    test('Should inject API client into all dependent services', () => {
       // Act
-      factory.createAuthService(wsService);
-      factory.createServerService(wsService);
-      factory.createNotificationService(wsService);
-      factory.createDeviceService(wsService);
-      factory.createRecordingService(wsService);
-      factory.createFileService(wsService);
+      TestConstants.SERVICE_CONFIGS.forEach(config => {
+        (factory as any)[config.createMethod](mockAPIClient);
+      });
 
       // Assert
-      expect(AuthService).toHaveBeenCalledWith(wsService);
-      expect(ServerService).toHaveBeenCalledWith(wsService);
-      expect(NotificationService).toHaveBeenCalledWith(wsService);
-      expect(DeviceService).toHaveBeenCalledWith(wsService, expect.any(Object));
-      expect(RecordingService).toHaveBeenCalledWith(wsService, expect.any(Object));
-      expect(FileService).toHaveBeenCalledWith(wsService, expect.any(Object));
-    });
-
-    test('Should inject logger into services that require it', () => {
-      // Arrange
-      const url = 'ws://localhost:8002/ws';
-      const wsService = factory.createWebSocketService(url);
-
-      // Act
-      factory.createDeviceService(wsService);
-      factory.createRecordingService(wsService);
-      factory.createFileService(wsService);
-
-      // Assert
-      expect(DeviceService).toHaveBeenCalledWith(wsService, expect.any(Object));
-      expect(RecordingService).toHaveBeenCalledWith(wsService, expect.any(Object));
-      expect(FileService).toHaveBeenCalledWith(wsService, expect.any(Object));
+      ServiceFactoryTestHelper.validateDependencyInjection(factory, TestConstants.SERVICE_CONFIGS, mockAPIClient);
     });
   });
 
   describe('REQ-FACTORY-006: Service lifecycle management', () => {
     test('Should maintain service instances across multiple factory calls', () => {
       // Arrange
-      const url = 'ws://localhost:8002/ws';
-      const wsService = factory.createWebSocketService(url);
-      const authService = factory.createAuthService(wsService);
+      const apiClient = factory.createAPIClient(ServiceFactoryTestHelper.createMockWebSocketService());
+      const authService = factory.createAuthService(apiClient);
 
       // Act
       const newFactory = ServiceFactory.getInstance();
@@ -329,18 +179,17 @@ describe('ServiceFactory Unit Tests', () => {
 
     test('Should handle service creation with different WebSocket instances', () => {
       // Arrange
-      const url1 = 'ws://localhost:8002/ws';
-      const url2 = 'ws://localhost:8003/ws';
+      const wsService1 = ServiceFactoryTestHelper.createMockWebSocketService();
+      const wsService2 = ServiceFactoryTestHelper.createMockWebSocketService();
 
       // Act
-      const wsService1 = factory.createWebSocketService(url1);
+      const apiClient1 = factory.createAPIClient(wsService1);
       factory.reset();
-      const wsService2 = factory.createWebSocketService(url2);
+      const apiClient2 = factory.createAPIClient(wsService2);
 
       // Assert
-      expect(wsService1).not.toBe(wsService2);
-      expect(WebSocketService).toHaveBeenCalledWith({ url: url1 });
-      expect(WebSocketService).toHaveBeenCalledWith({ url: url2 });
+      expect(apiClient1).not.toBe(apiClient2);
+      expect(factory.getAPIClient()).toBe(apiClient2);
     });
   });
 });
