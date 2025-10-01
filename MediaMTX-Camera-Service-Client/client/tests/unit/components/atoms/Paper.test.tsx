@@ -25,7 +25,7 @@ describe('Paper Component', () => {
     
     assertComponentBehavior(component, {
       hasText: ['Paper content'],
-      hasClass: ['bg-white', 'shadow', 'rounded']
+      hasClass: ['bg-white', 'shadow-sm', 'rounded']
     });
   });
 

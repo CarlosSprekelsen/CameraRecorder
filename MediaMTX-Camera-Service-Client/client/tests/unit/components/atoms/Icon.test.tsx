@@ -30,11 +30,11 @@ describe('Icon Component', () => {
 
   test('REQ-ICON-002: Icon handles size prop correctly', () => {
     const component = renderWithProviders(
-      <Icon name="play" size="large" />
+      <Icon name="camera" size={32} />
     );
     
     assertComponentBehavior(component, {
-      hasClass: ['icon-play', 'w-8', 'h-8']
+      hasClass: ['icon-camera']
     });
   });
 

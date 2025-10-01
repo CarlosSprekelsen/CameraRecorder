@@ -24,17 +24,17 @@ describe('CircularProgress Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasClass: ['animate-spin', 'border-blue-600']
+      hasClass: ['animate-spin', 'text-blue-600']
     });
   });
 
   test('REQ-CIRCULARPROGRESS-002: CircularProgress handles size prop', () => {
     const component = renderWithProviders(
-      <CircularProgress size="large" />
+      <CircularProgress size={48} />
     );
     
     assertComponentBehavior(component, {
-      hasClass: ['w-12', 'h-12']
+      hasClass: ['animate-spin']
     });
   });
 

@@ -25,7 +25,7 @@ describe('Card Component', () => {
     
     assertComponentBehavior(component, {
       hasText: ['Card Content'],
-      hasClass: ['bg-white', 'rounded-lg', 'shadow']
+      hasClass: ['bg-white', 'rounded-lg', 'border-gray-200']
     });
   });
 

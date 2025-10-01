@@ -25,7 +25,7 @@ describe('Container Component', () => {
     
     assertComponentBehavior(component, {
       hasText: ['Container content'],
-      hasClass: ['max-w-6xl']
+      hasClass: ['max-w-4xl']
     });
   });
 

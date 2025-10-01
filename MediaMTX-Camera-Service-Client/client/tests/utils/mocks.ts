@@ -729,7 +729,7 @@ export class MockDataFactory {
    */
   static createMockDeviceService() {
     return {
-      getCameraList: jest.fn().mockResolvedValue(this.getCameraListResult()),
+      getCameraList: jest.fn().mockResolvedValue(this.getCameraListResult().cameras),
       getCameraStatus: jest.fn().mockResolvedValue(this.getCameraStatusResult()),
       getCameraCapabilities: jest.fn().mockResolvedValue(this.getCameraCapabilitiesResult()),
       getStreamUrl: jest.fn().mockResolvedValue(this.getStreamUrlResult()),

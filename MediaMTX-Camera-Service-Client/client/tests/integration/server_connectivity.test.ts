@@ -3,8 +3,12 @@
  * 
  * Tests real server connectivity and basic functionality
  * Requires: Real MediaMTX server running
+ * 
+ * Architecture Compliance: Uses loadTestEnvironment() for consistent authentication
  */
 
+import { loadTestEnvironment, TestEnvironment } from '../utils/test-helpers';
+import { AuthHelper } from '../utils/auth-helper';
 import { WebSocketService } from '../../src/services/websocket/WebSocketService';
 import { APIClient } from '../../src/services/abstraction/APIClient';
 import { AuthService } from '../../src/services/auth/AuthService';
@@ -14,6 +18,7 @@ import { ServerService } from '../../src/services/server/ServerService';
 import { LoggerService } from '../../src/services/logger/LoggerService';
 
 describe('Integration Tests: Server Connectivity', () => {
+  let testEnv: TestEnvironment;
   let webSocketService: WebSocketService;
   let authService: AuthService;
   let deviceService: DeviceService;
@@ -22,17 +27,28 @@ describe('Integration Tests: Server Connectivity', () => {
   let loggerService: LoggerService;
 
   beforeAll(async () => {
-    // Initialize services with real server
+    // Load test environment with authentication (Architecture Compliance)
+    testEnv = await loadTestEnvironment();
+    
+    // Initialize services with authenticated connection
     loggerService = LoggerService.getInstance();
     webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
     
-    // Actually connect to the server
+    // Connect to server
     await webSocketService.connect();
     
     // Create APIClient for services
     const apiClient = new APIClient(webSocketService, loggerService);
     await new Promise(resolve => setTimeout(resolve, 1000));
     
+    // CRITICAL: Authenticate before any operations
+    const token = AuthHelper.generateTestToken('admin');
+    const authResult = await apiClient.authenticate(token);
+    if (!authResult.authenticated) {
+      throw new Error('Failed to authenticate with server');
+    }
+    
+    // Initialize services after authentication
     authService = new AuthService(apiClient, loggerService);
     deviceService = new DeviceService(apiClient, loggerService);
     fileService = new FileService(apiClient, loggerService);
@@ -64,15 +80,17 @@ describe('Integration Tests: Server Connectivity', () => {
 
   describe('REQ-INT-002: Authentication Flow', () => {
     test('should authenticate with real server', async () => {
-      const result = await authService.authenticate('test-token');
-      expect(result.authenticated).toBeDefined();
-      expect(typeof result.authenticated).toBe('boolean');
+      const token = AuthHelper.generateTestToken('admin');
+      const result = await authService.authenticate(token);
+      expect(result.authenticated).toBe(true);
+      expect(result.role).toBe('admin');
+      expect(typeof result.session_id).toBe('string');
     });
 
     test('should handle authentication errors', async () => {
       const result = await authService.authenticate('invalid-token');
-      expect(result.authenticated).toBeDefined();
-      expect(typeof result.authenticated).toBe('boolean');
+      expect(result.authenticated).toBe(false);
+      expect(result.role).toBeUndefined();
     });
   });
 

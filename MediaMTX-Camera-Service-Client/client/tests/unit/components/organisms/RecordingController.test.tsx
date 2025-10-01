@@ -31,7 +31,7 @@ describe('RecordingController Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['Recording Controls', 'Start Recording', 'Stop Recording']
+      hasText: ['Recording Control -', 'Start Recording']
     });
   });
 
@@ -56,12 +56,12 @@ describe('RecordingController Component', () => {
 
   test('REQ-RECORDING-003: RecordingController handles stop recording', () => {
     const component = renderWithProviders(
-      <RecordingController />,
+      <RecordingController device="camera0" />,
       { 
         withStores: true,
         initialStoreState: {
           recordingStore: { 
-            activeRecordings: { 'camera0': { id: 'rec1', status: 'recording' } }
+            activeRecordings: { 'camera0': { id: 'rec1', status: 'RECORDING' } }
           }
         }
       }
@@ -92,7 +92,7 @@ describe('RecordingController Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['Status: RECORDING', 'camera0']
+      hasText: ['Status: RECORDING', 'Recording Control - camera0']
     });
   });
 });

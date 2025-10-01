@@ -6,16 +6,24 @@
  * 
  * Based on Bug #005 resolution: camera_status_update and recording_status_update
  * are server-generated notifications, not client-callable methods.
+ * 
+ * Architecture Compliance: Uses loadTestEnvironment() for consistent authentication
  */
 
+import { loadTestEnvironment, TestEnvironment } from '../utils/test-helpers';
+import { AuthHelper } from '../utils/auth-helper';
 import { WebSocketService } from '../../src/services/websocket/WebSocketService';
 import { LoggerService } from '../../src/services/logger/LoggerService';
 
 describe('Integration Test: Notification Method Security', () => {
+  let testEnv: TestEnvironment;
   let webSocketService: WebSocketService;
   let loggerService: LoggerService;
 
   beforeAll(async () => {
+    // Load test environment with authentication (Architecture Compliance)
+    testEnv = await loadTestEnvironment();
+    
     loggerService = new LoggerService();
     webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
     await webSocketService.connect();
@@ -33,8 +41,8 @@ describe('Integration Test: Notification Method Security', () => {
     let adminToken: string;
 
     beforeAll(async () => {
-      // Use long-term admin token
-      adminToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoidGVzdF9hZG1pbiIsInJvbGUiOiJhZG1pbiIsImlhdCI6MTc1ODk3MjQwNSwiZXhwIjoxNzkwNTA4NDA1fQ.pJzYLcxIGGrNlJ_wRh6THWskqVlGMCS6Xx1R-ma4GuY';
+      // Use AuthHelper for consistent token management (Architecture Compliance)
+      adminToken = AuthHelper.generateTestToken('admin');
       
       // Authenticate first
       const authResponse = await webSocketService.sendRPC('authenticate', {

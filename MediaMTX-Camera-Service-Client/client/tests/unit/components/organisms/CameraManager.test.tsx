@@ -16,15 +16,25 @@
 import React from 'react';
 import { CameraManager } from '../../../../src/components/organisms/CameraManager/CameraManager';
 import { renderWithProviders, assertComponentBehavior } from '../../../utils/component-test-helper';
+import { MockDataFactory } from '../../../utils/mocks';
+
+// Mock services to prevent initialization errors
+jest.mock('../../../../src/services/device/DeviceService', () => ({
+  DeviceService: jest.fn().mockImplementation(() => MockDataFactory.createMockDeviceService())
+}));
+
+jest.mock('../../../../src/services/recording/RecordingService', () => ({
+  RecordingService: jest.fn().mockImplementation(() => MockDataFactory.createMockRecordingService())
+}));
 
 describe('CameraManager Component', () => {
-  test('REQ-CAM-001: CameraManager displays cameras from store', () => {
+  test('REQ-CAM-001: CameraManager displays cameras from store', async () => {
     const component = renderWithProviders(
       <CameraManager />,
-      { 
+      {
         withStores: true,
         initialStoreState: {
-          deviceStore: { 
+          deviceStore: {
             cameras: [
               { device: 'camera0', status: 'CONNECTED' },
               { device: 'camera1', status: 'CONNECTED' }
@@ -35,9 +45,12 @@ describe('CameraManager Component', () => {
         }
       }
     );
+
+    // Wait for the async getCameraList() call to complete
+    await component.findByText('Test Camera 0');
     
     assertComponentBehavior(component, {
-      hasText: ['camera0', 'camera1']
+      hasText: ['Test Camera 0', 'Test Camera 1']
     });
   });
 
@@ -61,7 +74,7 @@ describe('CameraManager Component', () => {
     });
   });
 
-  test('REQ-CAM-003: CameraManager handles recording actions', () => {
+  test('REQ-CAM-003: CameraManager handles recording actions', async () => {
     const component = renderWithProviders(
       <CameraManager />,
       { 
@@ -81,8 +94,11 @@ describe('CameraManager Component', () => {
       }
     );
     
+    // Wait for the async getCameraList() call to complete
+    await component.findByText('Test Camera 0');
+    
     assertComponentBehavior(component, {
-      hasText: ['camera0']
+      hasText: ['Test Camera 0']
     });
   });
 });

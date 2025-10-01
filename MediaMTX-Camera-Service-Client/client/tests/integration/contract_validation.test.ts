@@ -7,8 +7,11 @@
  * - Error response validation
  * - Field presence and format validation
  * - Performance contract validation
+ * 
+ * Architecture Compliance: Uses AuthHelper for consistent authentication
  */
 
+import { AuthHelper } from '../utils/auth-helper';
 import { WebSocketService } from '../../src/services/websocket/WebSocketService';
 import { APIClient } from '../../src/services/abstraction/APIClient';
 import { AuthService } from '../../src/services/auth/AuthService';
@@ -119,6 +122,7 @@ describe('API Contract Validation Suite', () => {
   let serverService: ServerService;
   let loggerService: LoggerService;
   let validator: ContractValidator;
+  let apiClient: APIClient;
 
   beforeAll(async () => {
     loggerService = new LoggerService();
@@ -129,10 +133,18 @@ describe('API Contract Validation Suite', () => {
     await webSocketService.connect();
     
     // Create APIClient for services
-    const apiClient = new APIClient(webSocketService, loggerService);
+    apiClient = new APIClient(webSocketService, loggerService);
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    authService = new AuthService(webSocketService, loggerService);
+    // CRITICAL: Authenticate before any operations
+    const token = AuthHelper.generateTestToken('admin');
+    const authResult = await apiClient.authenticate(token);
+    if (!authResult.authenticated) {
+      throw new Error('Failed to authenticate with server');
+    }
+    
+    // Initialize services after authentication
+    authService = new AuthService(apiClient, loggerService);
     deviceService = new DeviceService(apiClient, loggerService);
     fileService = new FileService(apiClient, loggerService);
     serverService = new ServerService(apiClient, loggerService);
@@ -219,7 +231,7 @@ describe('API Contract Validation Suite', () => {
       
       try {
         // Test with invalid token to validate error contract
-        await webSocketService.sendRPC('authenticate', { auth_token: 'invalid_token' });
+        await apiClient.authenticate('invalid_token');
         validator.addWarning('Expected authentication failure but got success');
       } catch (error: any) {
         validator.validateField(error.code, 'error.code', 'number');
@@ -228,6 +240,29 @@ describe('API Contract Validation Suite', () => {
         const result = validator.getResult();
         expect(result.passed).toBe(true);
         expect(result.performance.withinThreshold).toBe(true);
+      }
+    });
+
+    test('should validate valid authentication contract', async () => {
+      validator.startTimer();
+      
+      try {
+        const token = AuthHelper.generateTestToken('admin');
+        const result = await apiClient.authenticate(token);
+        
+        // Validate successful authentication response
+        validator.validateField(result.authenticated, 'authenticated', 'boolean');
+        validator.validateField(result.role, 'role', 'string');
+        validator.validateField(result.session_id, 'session_id', 'string');
+        
+        const validationResult = validator.getResult();
+        expect(validationResult.passed).toBe(true);
+        expect(result.authenticated).toBe(true);
+        expect(result.role).toBe('admin');
+      } catch (error: any) {
+        validator.addWarning(`Authentication failed: ${error.message}`);
+        const result = validator.getResult();
+        expect(result.passed).toBe(false);
       }
     });
   });

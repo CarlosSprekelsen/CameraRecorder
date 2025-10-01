@@ -1,25 +1,25 @@
 {
   "tokens": {
     "viewer": {
-      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTk1MDc3NzUsImlhdCI6MTc1OTI0ODU3NSwicm9sZSI6InZpZXdlciIsInVzZXJfaWQiOiJ0ZXN0X3ZpZXdlciJ9.eECNjH7XHi2e2EcPzejKNtmaEM4RbgPu1FXqm9Dt2Fw",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTk1OTY4NTYsImlhdCI6MTc1OTMzNzY1Niwicm9sZSI6InZpZXdlciIsInVzZXJfaWQiOiJ0ZXN0X3ZpZXdlciJ9.aNAxQaavMekA_UQffaisl9fnXxykWi6MOs1MJvlKIEM",
       "user_id": "test_viewer",
       "role": "viewer",
       "expires_in_hours": 72
     },
     "operator": {
-      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTk1MDc3NzYsImlhdCI6MTc1OTI0ODU3Niwicm9sZSI6Im9wZXJhdG9yIiwidXNlcl9pZCI6InRlc3Rfb3BlcmF0b3IifQ.H4frGKR1g0L7321BqKzVzm4ESe4IEyLEhNfTm9Nw9Xs",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTk1OTY4NTYsImlhdCI6MTc1OTMzNzY1Niwicm9sZSI6Im9wZXJhdG9yIiwidXNlcl9pZCI6InRlc3Rfb3BlcmF0b3IifQ.GJNlnDWrlPWobGjFuYjqvGPgIRoGZQMmJ-hog9mwkjU",
       "user_id": "test_operator",
       "role": "operator",
       "expires_in_hours": 72
     },
     "admin": {
-      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTk1MDc3NzYsImlhdCI6MTc1OTI0ODU3Niwicm9sZSI6ImFkbWluIiwidXNlcl9pZCI6InRlc3RfYWRtaW4ifQ.u-ZHu8oIKY9-2LBzxB7XYJ8fpEiJU-KncqWV7hYaVZc",
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3NTk1OTY4NTYsImlhdCI6MTc1OTMzNzY1Niwicm9sZSI6ImFkbWluIiwidXNlcl9pZCI6InRlc3RfYWRtaW4ifQ.0hzgRmPMi4FIxoXvbc68MsJHP7n4RL63EcVWzVsOyJI",
       "user_id": "test_admin",
       "role": "admin",
       "expires_in_hours": 72
     }
   },
-  "generated_at": "2025-09-30T20:09:36+04:00",
+  "generated_at": "2025-10-01T20:54:16+04:00",
   "jwt_secret": "",
   "algorithm": "HS256"
 }

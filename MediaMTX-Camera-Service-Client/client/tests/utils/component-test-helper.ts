@@ -24,6 +24,8 @@ import { ReactElement } from 'react';
 import { MockDataFactory } from './mocks';
 import { AuthHelper } from './auth-helper';
 
+// Service mocking will be handled by individual test files
+
 export interface ComponentTestConfig {
   withStores?: boolean;
   withAuth?: boolean;
@@ -68,8 +70,52 @@ export const renderWithProviders = (
   // Render with mocked providers
   return render(ui, {
     wrapper: ({ children }) => {
-      // Mock store providers would go here
-      // For now, return children directly
+      // Initialize stores with mocked services if needed
+      if (withStores && initialStoreState) {
+        // Initialize device store if needed
+        if (initialStoreState.deviceStore) {
+          const { useDeviceStore } = require('../../src/stores/device/deviceStore');
+          const { MockDataFactory } = require('./mocks');
+          const deviceStore = useDeviceStore.getState();
+          
+          // Inject mock service
+          const mockDeviceService = MockDataFactory.createMockDeviceService();
+          deviceStore.setDeviceService(mockDeviceService);
+          
+          // Set initial state
+          deviceStore.setLoading(initialStoreState.deviceStore.loading || false);
+          deviceStore.setError(initialStoreState.deviceStore.error || null);
+          // Note: cameras will be loaded by the component via getCameraList() call
+        }
+        
+        // Initialize recording store if needed
+        if (initialStoreState.recordingStore) {
+          const { useRecordingStore } = require('../../src/stores/recording/recordingStore');
+          const recordingStore = useRecordingStore.getState();
+          if (initialStoreState.recordingStore.activeRecordings) {
+            recordingStore.activeRecordings = initialStoreState.recordingStore.activeRecordings;
+          }
+        }
+        
+        // Initialize file store if needed
+        if (initialStoreState.fileStore) {
+          const { useFileStore } = require('../../src/stores/file/fileStore');
+          const fileStore = useFileStore.getState();
+          if (initialStoreState.fileStore.files) {
+            fileStore.files = initialStoreState.fileStore.files;
+          }
+        }
+        
+        // Initialize server store if needed
+        if (initialStoreState.serverStore) {
+          const { useServerStore } = require('../../src/stores/server/serverStore');
+          const serverStore = useServerStore.getState();
+          if (initialStoreState.serverStore.serverInfo) {
+            serverStore.serverInfo = initialStoreState.serverStore.serverInfo;
+          }
+        }
+      }
+      
       return children as ReactElement;
     }
   } as RenderOptions);
