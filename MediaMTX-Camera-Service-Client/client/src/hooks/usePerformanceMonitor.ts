@@ -115,8 +115,8 @@ export const usePerformanceMonitor = () => {
 
     // Track page load performance
     const trackPageLoad = () => {
-      if ('performance' in window) {
-        const navigation = performance.getEntriesByType(
+      if ('performance' in window && window.performance && typeof window.performance.getEntriesByType === 'function') {
+        const navigation = window.performance.getEntriesByType(
           'navigation',
         )[0] as PerformanceNavigationTiming;
         if (navigation) {

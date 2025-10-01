@@ -1,5 +1,4 @@
-import { IAPIClient } from '../abstraction/IAPIClient';
-import { LoggerService } from '../logger/LoggerService';
+import { BaseService } from '../base/BaseService';
 import { IFileCatalog, IFileActions } from '../interfaces/ServiceInterfaces';
 import { FileListResult, RecordingInfo, SnapshotInfo, DeleteResult, RetentionPolicySetResult, CleanupResult } from '../../types/api';
 
@@ -34,11 +33,14 @@ import { FileListResult, RecordingInfo, SnapshotInfo, DeleteResult, RetentionPol
  * @see {@link ../interfaces/ServiceInterfaces#IFileActions} IFileActions interface
  * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture
  */
-export class FileService implements IFileCatalog, IFileActions {
+export class FileService extends BaseService implements IFileCatalog, IFileActions {
   constructor(
-    private apiClient: IAPIClient,
-    private logger: LoggerService,
-  ) {}
+    apiClient: IAPIClient,
+    logger: LoggerService,
+  ) {
+    super(apiClient, logger);
+    this.logInitialization('FileService');
+  }
 
   /**
    * List recordings with pagination.
@@ -56,15 +58,7 @@ export class FileService implements IFileCatalog, IFileActions {
     }>;
     total: number;
   }> {
-    try {
-      this.logger.info(`Listing recordings: limit=${limit}, offset=${offset}`);
-      const response = await this.apiClient.call('list_recordings', { limit, offset }) as FileListResult;
-      this.logger.info(`Found ${response.files?.length || 0} recordings`);
-      return response;
-    } catch (error) {
-      this.logger.error(`Failed to list recordings`, error as Record<string, unknown>);
-      throw error;
-    }
+    return this.callWithLogging<FileListResult>('list_recordings', { limit, offset });
   }
 
   /**
@@ -83,15 +77,7 @@ export class FileService implements IFileCatalog, IFileActions {
     }>;
     total: number;
   }> {
-    try {
-      this.logger.info(`Listing snapshots: limit=${limit}, offset=${offset}`);
-      const response = await this.apiClient.call('list_snapshots', { limit, offset }) as FileListResult;
-      this.logger.info(`Found ${response.files?.length || 0} snapshots`);
-      return response;
-    } catch (error) {
-      this.logger.error(`Failed to list snapshots`, error as Record<string, unknown>);
-      throw error;
-    }
+    return this.callWithLogging<FileListResult>('list_snapshots', { limit, offset });
   }
 
   /**
@@ -107,22 +93,15 @@ export class FileService implements IFileCatalog, IFileActions {
     format?: string;
     device?: string;
   }> {
-    try {
-      this.logger.info(`Getting recording info for: ${filename}`);
-      const response = await this.apiClient.call('get_recording_info', { filename }) as RecordingInfo;
-      this.logger.info(`Recording info retrieved for ${filename}`);
-      // Return API response directly as per authoritative specification
-      return {
-        filename: response.filename,
-        file_size: response.file_size,
-        created_time: response.created_time,
-        download_url: response.download_url,
-        duration: response.duration
-      };
-    } catch (error) {
-      this.logger.error(`Failed to get recording info for ${filename}`, error as Record<string, unknown>);
-      throw error;
-    }
+    const response = await this.callWithLogging('get_recording_info', { filename }, `getRecordingInfo(${filename})`) as RecordingInfo;
+    // Return API response directly as per authoritative specification
+    return {
+      filename: response.filename,
+      file_size: response.file_size,
+      created_time: response.created_time,
+      download_url: response.download_url,
+      duration: response.duration
+    };
   }
 
   /**
@@ -137,21 +116,14 @@ export class FileService implements IFileCatalog, IFileActions {
     format?: string;
     device?: string;
   }> {
-    try {
-      this.logger.info(`Getting snapshot info for: ${filename}`);
-      const response = await this.apiClient.call('get_snapshot_info', { filename }) as SnapshotInfo;
-      this.logger.info(`Snapshot info retrieved for ${filename}`);
-      // Return API response directly as per authoritative specification
-      return {
-        filename: response.filename,
-        file_size: response.file_size,
-        created_time: response.created_time,
-        download_url: response.download_url
-      };
-    } catch (error) {
-      this.logger.error(`Failed to get snapshot info for ${filename}`, error as Record<string, unknown>);
-      throw error;
-    }
+    const response = await this.callWithLogging('get_snapshot_info', { filename }, `getSnapshotInfo(${filename})`) as SnapshotInfo;
+    // Return API response directly as per authoritative specification
+    return {
+      filename: response.filename,
+      file_size: response.file_size,
+      created_time: response.created_time,
+      download_url: response.download_url
+    };
   }
 
   /**
@@ -159,15 +131,7 @@ export class FileService implements IFileCatalog, IFileActions {
    * Implements delete_recording RPC method.
    */
   async deleteRecording(filename: string): Promise<DeleteResult> {
-    try {
-      this.logger.info(`Deleting recording: ${filename}`);
-      const response = await this.apiClient.call('delete_recording', { filename }) as DeleteResult;
-      this.logger.info(`Recording deleted: ${filename}`);
-      return response;
-    } catch (error) {
-      this.logger.error(`Failed to delete recording ${filename}`, error as Record<string, unknown>);
-      throw error;
-    }
+    return this.callWithLogging('delete_recording', { filename }, `deleteRecording(${filename})`) as Promise<DeleteResult>;
   }
 
   /**
@@ -175,15 +139,7 @@ export class FileService implements IFileCatalog, IFileActions {
    * Implements delete_snapshot RPC method.
    */
   async deleteSnapshot(filename: string): Promise<DeleteResult> {
-    try {
-      this.logger.info(`Deleting snapshot: ${filename}`);
-      const response = await this.apiClient.call('delete_snapshot', { filename }) as DeleteResult;
-      this.logger.info(`Snapshot deleted: ${filename}`);
-      return response;
-    } catch (error) {
-      this.logger.error(`Failed to delete snapshot ${filename}`, error as Record<string, unknown>);
-      throw error;
-    }
+    return this.callWithLogging('delete_snapshot', { filename }, `deleteSnapshot(${filename})`) as Promise<DeleteResult>;
   }
 
   /**
@@ -218,22 +174,14 @@ export class FileService implements IFileCatalog, IFileActions {
     maxAgeDays?: number,
     maxSizeGb?: number
   ): Promise<RetentionPolicySetResult> {
-    try {
-      this.logger.info('Setting retention policy', { policyType, enabled, maxAgeDays, maxSizeGb });
-      const params: Record<string, unknown> = {
-        policy_type: policyType,
-        enabled
-      };
-      if (maxAgeDays !== undefined) params.max_age_days = maxAgeDays;
-      if (maxSizeGb !== undefined) params.max_size_gb = maxSizeGb;
-      
-      const response = await this.apiClient.call('set_retention_policy', params) as RetentionPolicySetResult;
-      this.logger.info('Retention policy set successfully');
-      return response;
-    } catch (error) {
-      this.logger.error('Failed to set retention policy', error as Record<string, unknown>);
-      throw error;
-    }
+    const params: Record<string, unknown> = {
+      policy_type: policyType,
+      enabled
+    };
+    if (maxAgeDays !== undefined) params.max_age_days = maxAgeDays;
+    if (maxSizeGb !== undefined) params.max_size_gb = maxSizeGb;
+    
+    return this.callWithLogging('set_retention_policy', params, 'setRetentionPolicy') as Promise<RetentionPolicySetResult>;
   }
 
   /**
@@ -241,14 +189,6 @@ export class FileService implements IFileCatalog, IFileActions {
    * Implements cleanup_old_files RPC method.
    */
   async cleanupOldFiles(): Promise<CleanupResult> {
-    try {
-      this.logger.info('Cleaning up old files');
-      const response = await this.apiClient.call('cleanup_old_files') as CleanupResult;
-      this.logger.info(`Cleanup completed: ${response.files_deleted} files deleted`);
-      return response;
-    } catch (error) {
-      this.logger.error('Failed to cleanup old files', error as Record<string, unknown>);
-      throw error;
-    }
+    return this.callWithLogging('cleanup_old_files', {}, 'cleanupOldFiles') as Promise<CleanupResult>;
   }
 }

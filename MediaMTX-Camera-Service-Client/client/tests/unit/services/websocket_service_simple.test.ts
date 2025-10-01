@@ -35,8 +35,12 @@ describe('IAPIClient Interface Tests (WebSocket Abstraction)', () => {
       // Test initial state
       expect(apiClient.isConnected()).toBe(true);
 
-      // Mock state changes
+      // Mock state changes - synchronize both methods
       (apiClient.isConnected as jest.Mock).mockReturnValue(false);
+      (apiClient.getConnectionStatus as jest.Mock).mockReturnValue({
+        connected: false,
+        ready: false
+      });
       expect(apiClient.isConnected()).toBe(false);
       expect(apiClient.getConnectionStatus()).toEqual({
         connected: false,

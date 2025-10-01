@@ -1,8 +1,6 @@
-import { IAPIClient } from '../abstraction/IAPIClient';
-import { LoggerService } from '../logger/LoggerService';
-import { Camera, StreamsListResult } from '../../types/api';
+import { BaseService } from '../base/BaseService';
+import { Camera, StreamsListResult, CameraListResult, CameraStatusResult, StreamUrlResult, CameraCapabilitiesResult, StreamStatusResult, StreamStartResult, StreamStopResult } from '../../types/api';
 import { IDiscovery } from '../interfaces/ServiceInterfaces';
-import { CameraListResult, CameraStatusResult, StreamUrlResult, CameraCapabilitiesResult, StreamStatusResult, StreamStartResult, StreamStopResult } from '../../types/api';
 import { validateCameraDeviceId } from '../../utils/validation';
 
 /**
@@ -25,11 +23,14 @@ import { validateCameraDeviceId } from '../../utils/validation';
  * @see {@link ../interfaces/ServiceInterfaces#IDiscovery} IDiscovery interface
  * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture
  */
-export class DeviceService implements IDiscovery {
+export class DeviceService extends BaseService implements IDiscovery {
   constructor(
-    private apiClient: IAPIClient,
-    private logger: LoggerService,
-  ) {}
+    apiClient: IAPIClient,
+    logger: LoggerService,
+  ) {
+    super(apiClient, logger);
+    this.logInitialization('DeviceService');
+  }
 
 
   /**
@@ -37,30 +38,21 @@ export class DeviceService implements IDiscovery {
    * Implements get_camera_list RPC method
    */
   async getCameraList(): Promise<Camera[]> {
-    try {
-      this.logger.info('Getting camera list');
+    const response = await this.callWithLogging<CameraListResult>('get_camera_list', {});
 
-      const response = await this.apiClient.call<CameraListResult>('get_camera_list', {});
-
-      if (response.cameras && response.cameras.length > 0) {
-        this.logger.info(`Retrieved ${response.cameras.length} cameras`);
-        // Transform API cameras to store cameras with required fields
-        return response.cameras.map(apiCamera => ({
-          device: apiCamera.device,
-          status: apiCamera.status,
-          name: apiCamera.name || `Camera ${apiCamera.device}`,
-          resolution: apiCamera.resolution || 'Unknown',
-          fps: apiCamera.fps || 30,
-          streams: apiCamera.streams || { rtsp: '', hls: '' }
-        }));
-      }
-
-      this.logger.warn('No cameras found in response');
-      return [];
-    } catch (error) {
-      this.logger.error('Failed to get camera list', error as Record<string, unknown>);
-      throw error;
+    if (response.cameras && response.cameras.length > 0) {
+      // Transform API cameras to store cameras with required fields
+      return response.cameras.map(apiCamera => ({
+        device: apiCamera.device,
+        status: apiCamera.status,
+        name: apiCamera.name || `Camera ${apiCamera.device}`,
+        resolution: apiCamera.resolution || 'Unknown',
+        fps: apiCamera.fps || 30,
+        streams: apiCamera.streams || { rtsp: '', hls: '' }
+      }));
     }
+
+    return [];
   }
 
   /**
@@ -68,17 +60,7 @@ export class DeviceService implements IDiscovery {
    * Implements get_camera_status RPC method
    */
   async getCameraStatus(device: string): Promise<CameraStatusResult> {
-    try {
-      this.logger.info(`Getting camera status for device: ${device}`);
-
-      const response = await this.apiClient.call<CameraStatusResult>('get_camera_status', { device });
-
-      this.logger.info(`Retrieved camera status for ${device}:`, response as unknown as Record<string, unknown>);
-      return response;
-    } catch (error) {
-      this.logger.error(`Failed to get camera status for device: ${device}`, error as Record<string, unknown>);
-      throw error;
-    }
+    return this.callWithLogging('get_camera_status', { device }, `getCameraStatus(${device})`) as Promise<CameraStatusResult>;
   }
 
   /**
@@ -90,17 +72,8 @@ export class DeviceService implements IDiscovery {
       throw new Error(`Invalid device ID format: ${device}. Expected format: camera[0-9]+`);
     }
 
-    try {
-      this.logger.info(`Getting stream URL for device: ${device}`);
-
-      const response = await this.apiClient.call<StreamUrlResult>('get_stream_url', { device });
-
-      this.logger.info(`Retrieved stream URL for ${device}:`, response as unknown as Record<string, unknown>);
-      return response.stream_url || null;
-    } catch (error) {
-      this.logger.error(`Failed to get stream URL for device: ${device}`, error as Record<string, unknown>);
-      throw error;
-    }
+    const response = await this.callWithLogging('get_stream_url', { device }, `getStreamUrl(${device})`) as StreamUrlResult;
+    return response.stream_url || null;
   }
 
   /**
@@ -108,22 +81,13 @@ export class DeviceService implements IDiscovery {
    * Implements get_streams RPC method
    */
   async getStreams(): Promise<StreamsListResult[]> {
-    try {
-      this.logger.info('Getting active streams');
+    const response = await this.callWithLogging<StreamsListResult[]>('get_streams', {});
 
-      const response = await this.apiClient.call<StreamsListResult[]>('get_streams', {});
-
-      if (Array.isArray(response) && response.length > 0) {
-        this.logger.info(`Retrieved ${response.length} active streams`);
-        return response;
-      }
-
-      this.logger.warn('No streams found in response');
-      return [];
-    } catch (error) {
-      this.logger.error('Failed to get streams', error as Record<string, unknown>);
-      throw error;
+    if (Array.isArray(response) && response.length > 0) {
+      return response;
     }
+
+    return [];
   }
 
   /**
@@ -131,17 +95,7 @@ export class DeviceService implements IDiscovery {
    * Implements get_camera_capabilities RPC method
    */
   async getCameraCapabilities(device: string): Promise<CameraCapabilitiesResult> {
-    try {
-      this.logger.info(`Getting camera capabilities for device: ${device}`);
-
-      const response = await this.apiClient.call<CameraCapabilitiesResult>('get_camera_capabilities', { device });
-
-      this.logger.info(`Retrieved capabilities for ${device}:`, response as unknown as Record<string, unknown>);
-      return response;
-    } catch (error) {
-      this.logger.error(`Failed to get camera capabilities for device: ${device}`, error as Record<string, unknown>);
-      throw error;
-    }
+    return this.callWithLogging('get_camera_capabilities', { device }, `getCameraCapabilities(${device})`) as Promise<CameraCapabilitiesResult>;
   }
 
   // STREAMING METHODS MOVED TO StreamingService
@@ -153,18 +107,9 @@ export class DeviceService implements IDiscovery {
    * Implements subscribe_events RPC method
    */
   async subscribeToCameraEvents(): Promise<void> {
-    try {
-      this.logger.info('Subscribing to camera status updates');
-
-      await this.apiClient.call('subscribe_events', {
-        topics: ['camera_status_update'],
-      });
-
-      this.logger.info('Successfully subscribed to camera events');
-    } catch (error) {
-      this.logger.error('Failed to subscribe to camera events', error as Record<string, unknown>);
-      throw error;
-    }
+    await this.callWithLogging('subscribe_events', {
+      topics: ['camera_status_update'],
+    }, 'subscribeToCameraEvents');
   }
 
   /**
@@ -172,18 +117,9 @@ export class DeviceService implements IDiscovery {
    * Implements unsubscribe_events RPC method
    */
   async unsubscribeFromCameraEvents(): Promise<void> {
-    try {
-      this.logger.info('Unsubscribing from camera status updates');
-
-      await this.apiClient.call('unsubscribe_events', {
-        topics: ['camera_status_update'],
-      });
-
-      this.logger.info('Successfully unsubscribed from camera events');
-    } catch (error) {
-      this.logger.error('Failed to unsubscribe from camera events', error as Record<string, unknown>);
-      throw error;
-    }
+    await this.callWithLogging('unsubscribe_events', {
+      topics: ['camera_status_update'],
+    }, 'unsubscribeFromCameraEvents');
   }
 
 
@@ -192,17 +128,7 @@ export class DeviceService implements IDiscovery {
    * Implements get_stream_status RPC method
    */
   async getStreamStatus(device: string): Promise<StreamStatusResult> {
-    try {
-      this.logger.info(`Getting stream status for device: ${device}`);
-
-      const response = await this.apiClient.call<StreamStatusResult>('get_stream_status', { device });
-
-      this.logger.info(`Retrieved stream status for ${device}`);
-      return response;
-    } catch (error) {
-      this.logger.error(`Failed to get stream status for device: ${device}`, error as Record<string, unknown>);
-      throw error;
-    }
+    return this.callWithLogging('get_stream_status', { device }, `getStreamStatus(${device})`) as Promise<StreamStatusResult>;
   }
 
   /**
@@ -210,17 +136,7 @@ export class DeviceService implements IDiscovery {
    * Implements start_streaming RPC method
    */
   async startStreaming(device: string): Promise<StreamStartResult> {
-    try {
-      this.logger.info(`Starting streaming for device: ${device}`);
-
-      const response = await this.apiClient.call<StreamStartResult>('start_streaming', { device });
-
-      this.logger.info(`Started streaming for ${device}`);
-      return response;
-    } catch (error) {
-      this.logger.error(`Failed to start streaming for device: ${device}`, error as Record<string, unknown>);
-      throw error;
-    }
+    return this.callWithLogging('start_streaming', { device }, `startStreaming(${device})`) as Promise<StreamStartResult>;
   }
 
   /**
@@ -228,16 +144,6 @@ export class DeviceService implements IDiscovery {
    * Implements stop_streaming RPC method
    */
   async stopStreaming(device: string): Promise<StreamStopResult> {
-    try {
-      this.logger.info(`Stopping streaming for device: ${device}`);
-
-      const response = await this.apiClient.call<StreamStopResult>('stop_streaming', { device });
-
-      this.logger.info(`Stopped streaming for ${device}`);
-      return response;
-    } catch (error) {
-      this.logger.error(`Failed to stop streaming for device: ${device}`, error as Record<string, unknown>);
-      throw error;
-    }
+    return this.callWithLogging('stop_streaming', { device }, `stopStreaming(${device})`) as Promise<StreamStopResult>;
   }
 }

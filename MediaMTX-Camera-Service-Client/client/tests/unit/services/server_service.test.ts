@@ -42,7 +42,7 @@ describe('ServerService Unit Tests', () => {
 
       const result = await serverService.getServerInfo();
 
-      expect(mockAPIClient.call).toHaveBeenCalledWith('get_server_info');
+      expect(mockAPIClient.call).toHaveBeenCalledWith('get_server_info', {});
       expect(result).toEqual(expectedInfo);
       expect(APIResponseValidator.validateServerInfo(result)).toBe(true);
     });
@@ -84,7 +84,7 @@ describe('ServerService Unit Tests', () => {
 
       const result = await serverService.getStatus();
 
-      expect(mockAPIClient.call).toHaveBeenCalledWith('get_status');
+      expect(mockAPIClient.call).toHaveBeenCalledWith('get_status', {});
       expect(result).toEqual(expectedStatus);
       expect(APIResponseValidator.validateSystemStatus(result)).toBe(true);
     });
@@ -122,13 +122,13 @@ describe('ServerService Unit Tests', () => {
 
       const result = await serverService.getStorageInfo();
 
-      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_storage_info');
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_storage_info', {});
       expect(result).toEqual(expectedStorage);
       expect(APIResponseValidator.validateStorageInfo(result)).toBe(true);
     });
 
     test('should throw error when WebSocket not connected', async () => {
-      mockWebSocketService.isConnected = false;
+      mockAPIClient.isConnected = jest.fn().mockReturnValue(false);
 
       await expect(serverService.getStorageInfo()).rejects.toThrow('WebSocket not connected');
     });
@@ -163,13 +163,13 @@ describe('ServerService Unit Tests', () => {
 
       const result = await serverService.getMetrics();
 
-      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_metrics');
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_metrics', {});
       expect(result).toEqual(expectedMetrics);
       expect(APIResponseValidator.validateMetricsResult(result)).toBe(true);
     });
 
     test('should throw error when WebSocket not connected', async () => {
-      mockWebSocketService.isConnected = false;
+      mockAPIClient.isConnected = jest.fn().mockReturnValue(false);
 
       await expect(serverService.getMetrics()).rejects.toThrow('WebSocket not connected');
     });
@@ -284,12 +284,12 @@ describe('ServerService Unit Tests', () => {
 
       const result = await serverService.getSubscriptionStats();
 
-      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_subscription_stats');
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_subscription_stats', {});
       expect(result).toEqual(expectedStats);
     });
 
     test('should throw error when WebSocket not connected for subscriptions', async () => {
-      mockWebSocketService.isConnected = false;
+      mockAPIClient.isConnected = jest.fn().mockReturnValue(false);
 
       await expect(serverService.subscribeEvents(['test'])).rejects.toThrow('WebSocket not connected');
       await expect(serverService.unsubscribeEvents(['test'])).rejects.toThrow('WebSocket not connected');
@@ -313,12 +313,12 @@ describe('ServerService Unit Tests', () => {
 
       const result = await serverService.ping();
 
-      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('ping');
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('ping', {});
       expect(result).toBe(expectedPong);
     });
 
     test('should throw error when WebSocket not connected for ping', async () => {
-      mockWebSocketService.isConnected = false;
+      mockAPIClient.isConnected = jest.fn().mockReturnValue(false);
 
       await expect(serverService.ping()).rejects.toThrow('WebSocket not connected');
     });
@@ -333,7 +333,7 @@ describe('ServerService Unit Tests', () => {
 
   describe('Error handling', () => {
     test('should handle WebSocket connection loss', async () => {
-      mockWebSocketService.isConnected = false;
+      mockAPIClient.isConnected = jest.fn().mockReturnValue(false);
 
       await expect(serverService.getServerInfo()).rejects.toThrow('WebSocket not connected');
       await expect(serverService.getStatus()).rejects.toThrow('WebSocket not connected');

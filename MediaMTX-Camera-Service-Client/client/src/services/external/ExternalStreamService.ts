@@ -1,5 +1,4 @@
-import { IAPIClient } from '../abstraction/IAPIClient';
-import { LoggerService } from '../logger/LoggerService';
+import { BaseService } from '../base/BaseService';
 import { 
   ExternalStreamDiscoveryResult, 
   ExternalStreamAddResult, 
@@ -36,11 +35,14 @@ import {
  *
  * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture
  */
-export class ExternalStreamService {
+export class ExternalStreamService extends BaseService {
   constructor(
-    private apiClient: IAPIClient,
-    private logger: LoggerService,
-  ) {}
+    apiClient: IAPIClient,
+    logger: LoggerService,
+  ) {
+    super(apiClient, logger);
+    this.logInitialization('ExternalStreamService');
+  }
 
   /**
    * Discover external streams based on criteria
@@ -52,18 +54,7 @@ export class ExternalStreamService {
     force_rescan?: boolean;
     include_offline?: boolean;
   } = {}): Promise<ExternalStreamDiscoveryResult> {
-    try {
-      this.logger.info('Discovering external streams', params);
-      const response = await this.apiClient.call('discover_external_streams', params) as ExternalStreamDiscoveryResult;
-      const totalStreams = (response.discovered_streams?.length || 0) + 
-                           (response.skydio_streams?.length || 0) + 
-                           (response.generic_streams?.length || 0);
-      this.logger.info(`Discovered ${totalStreams} external streams`);
-      return response;
-    } catch (error) {
-      this.logger.error('Failed to discover external streams', error as Record<string, unknown>);
-      throw error;
-    }
+    return this.callWithLogging('discover_external_streams', params) as Promise<ExternalStreamDiscoveryResult>;
   }
 
   /**
@@ -75,15 +66,7 @@ export class ExternalStreamService {
     stream_name: string;
     stream_type?: string;
   }): Promise<ExternalStreamAddResult> {
-    try {
-      this.logger.info('Adding external stream', params);
-      const response = await this.apiClient.call('add_external_stream', params) as ExternalStreamAddResult;
-      this.logger.info(`External stream added: ${response.stream_name}`);
-      return response;
-    } catch (error) {
-      this.logger.error('Failed to add external stream', error as Record<string, unknown>);
-      throw error;
-    }
+    return this.callWithLogging('add_external_stream', params) as Promise<ExternalStreamAddResult>;
   }
 
   /**
@@ -91,15 +74,7 @@ export class ExternalStreamService {
    * Implements remove_external_stream RPC method
    */
   async removeExternalStream(streamUrl: string): Promise<ExternalStreamRemoveResult> {
-    try {
-      this.logger.info(`Removing external stream: ${streamUrl}`);
-      const response = await this.apiClient.call('remove_external_stream', { stream_url: streamUrl }) as ExternalStreamRemoveResult;
-      this.logger.info(`External stream removed: ${streamUrl}`);
-      return response;
-    } catch (error) {
-      this.logger.error(`Failed to remove external stream: ${streamUrl}`, error as Record<string, unknown>);
-      throw error;
-    }
+    return this.callWithLogging('remove_external_stream', { stream_url: streamUrl }) as Promise<ExternalStreamRemoveResult>;
   }
 
   /**
@@ -107,15 +82,7 @@ export class ExternalStreamService {
    * Implements get_external_streams RPC method
    */
   async getExternalStreams(): Promise<ExternalStreamsListResult> {
-    try {
-      this.logger.info('Getting external streams');
-      const response = await this.apiClient.call('get_external_streams', {}) as ExternalStreamsListResult;
-      this.logger.info(`Retrieved ${response.external_streams?.length || 0} external streams`);
-      return response;
-    } catch (error) {
-      this.logger.error('Failed to get external streams', error as Record<string, unknown>);
-      throw error;
-    }
+    return this.callWithLogging('get_external_streams', {}) as Promise<ExternalStreamsListResult>;
   }
 
   /**
@@ -123,14 +90,6 @@ export class ExternalStreamService {
    * Implements set_discovery_interval RPC method
    */
   async setDiscoveryInterval(scanInterval: number): Promise<DiscoveryIntervalSetResult> {
-    try {
-      this.logger.info(`Setting discovery interval: ${scanInterval} seconds`);
-      const response = await this.apiClient.call('set_discovery_interval', { scan_interval: scanInterval }) as DiscoveryIntervalSetResult;
-      this.logger.info(`Discovery interval set to ${response.scan_interval} seconds`);
-      return response;
-    } catch (error) {
-      this.logger.error(`Failed to set discovery interval: ${scanInterval}`, error as Record<string, unknown>);
-      throw error;
-    }
+    return this.callWithLogging('set_discovery_interval', { scan_interval: scanInterval }) as Promise<DiscoveryIntervalSetResult>;
   }
 }

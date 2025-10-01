@@ -1,5 +1,6 @@
-import { ServerInfo, SystemStatus, SystemReadinessStatus, StorageInfo, MetricsResult } from '../../types/api';
+import { ServerInfo, SystemStatus, SystemReadinessStatus, StorageInfo, MetricsResult, SubscriptionResult, UnsubscriptionResult, SubscriptionStatsResult } from '../../types/api';
 import { IStatus } from '../interfaces/ServiceInterfaces';
+import { BaseService } from '../base/BaseService';
 
 /**
  * System Metrics Interface
@@ -28,9 +29,6 @@ export interface SystemMetrics {
     total_viewers: number;
   };
 }
-import { IAPIClient } from '../abstraction/IAPIClient';
-import { LoggerService } from '../logger/LoggerService';
-import { SubscriptionResult, UnsubscriptionResult, SubscriptionStatsResult } from '../../types/api';
 
 /**
  * Server Service - System status and metrics management
@@ -59,52 +57,37 @@ import { SubscriptionResult, UnsubscriptionResult, SubscriptionStatsResult } fro
  * @see {@link ../interfaces/ServiceInterfaces#IStatus} IStatus interface
  * @see {@link ../../docs/architecture/client-architechture.md} Client Architecture
  */
-export class ServerService implements IStatus {
+export class ServerService extends BaseService implements IStatus {
   constructor(
-    private apiClient: IAPIClient,
-    private logger: LoggerService,
+    apiClient: IAPIClient,
+    logger: LoggerService,
   ) {
-    this.logger.info('ServerService initialized');
-  }
-
-  /**
-   * Validates WebSocket connection before making API calls
-   * @throws {Error} When WebSocket is not connected
-   */
-  private validateConnection(): void {
-    if (!this.apiClient.isConnected()) {
-      throw new Error('WebSocket not connected');
-    }
+    super(apiClient, logger);
+    this.logInitialization('ServerService');
   }
 
   async getServerInfo(): Promise<ServerInfo> {
-    this.validateConnection();
-    return this.apiClient.call<ServerInfo>('get_server_info');
+    return this.callWithValidation<ServerInfo>('get_server_info');
   }
 
   async getStatus(): Promise<SystemStatus> {
-    this.validateConnection();
-    return this.apiClient.call<SystemStatus>('get_status');
+    return this.callWithValidation<SystemStatus>('get_status');
   }
 
   async getSystemStatus(): Promise<SystemReadinessStatus> {
-    this.validateConnection();
-    return this.apiClient.call<SystemReadinessStatus>('get_system_status');
+    return this.callWithValidation<SystemReadinessStatus>('get_system_status');
   }
 
   async getStorageInfo(): Promise<StorageInfo> {
-    this.validateConnection();
-    return this.apiClient.call<StorageInfo>('get_storage_info');
+    return this.callWithValidation<StorageInfo>('get_storage_info');
   }
 
   async getMetrics(): Promise<MetricsResult> {
-    this.validateConnection();
-    return this.apiClient.call<MetricsResult>('get_metrics');
+    return this.callWithValidation<MetricsResult>('get_metrics');
   }
 
   async ping(): Promise<string> {
-    this.validateConnection();
-    return this.apiClient.call<string>('ping');
+    return this.callWithValidation<string>('ping');
   }
 
   // IStatus interface implementation
@@ -112,17 +95,14 @@ export class ServerService implements IStatus {
     topics: string[],
     filters?: Record<string, unknown>,
   ): Promise<SubscriptionResult> {
-    this.validateConnection();
-    return this.apiClient.call('subscribe_events', { topics, filters });
+    return this.callWithLogging('subscribe_events', { topics, filters });
   }
 
   async unsubscribeEvents(topics?: string[]): Promise<UnsubscriptionResult> {
-    this.validateConnection();
-    return this.apiClient.call('unsubscribe_events', { topics });
+    return this.callWithLogging('unsubscribe_events', { topics });
   }
 
   async getSubscriptionStats(): Promise<SubscriptionStatsResult> {
-    this.validateConnection();
-    return this.apiClient.call('get_subscription_stats');
+    return this.callWithLogging('get_subscription_stats', {});
   }
 }

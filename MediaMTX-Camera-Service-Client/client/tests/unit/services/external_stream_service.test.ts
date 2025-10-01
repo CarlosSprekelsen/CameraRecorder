@@ -149,11 +149,11 @@ describe('ExternalStreamService Unit Tests', () => {
       (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
-      const result = await externalStreamService.addExternalStream(streamUrl, streamName, streamType);
+      const result = await externalStreamService.addExternalStream({ stream_url: streamUrl, stream_name: streamName, stream_type: streamType });
 
       // Assert
-      expect(mockLoggerService.info).toHaveBeenCalledWith('add_external_stream request', { streamUrl, streamName, streamType });
-      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('add_external_stream', { streamUrl, streamName, streamType });
+      expect(mockLoggerService.info).toHaveBeenCalledWith('add_external_stream request', { stream_url: streamUrl, stream_name: streamName, stream_type: streamType });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('add_external_stream', { stream_url: streamUrl, stream_name: streamName, stream_type: streamType });
       expect(result).toEqual(expectedResult);
     });
 
@@ -172,11 +172,11 @@ describe('ExternalStreamService Unit Tests', () => {
       (mockAPIClient.call as jest.Mock).mockResolvedValue(expectedResult);
 
       // Act
-      const result = await externalStreamService.addExternalStream(streamUrl, streamName);
+      const result = await externalStreamService.addExternalStream({ stream_url: streamUrl, stream_name: streamName });
 
       // Assert
-      expect(mockLoggerService.info).toHaveBeenCalledWith('add_external_stream request', { streamUrl, streamName, streamType: undefined });
-      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('add_external_stream', { streamUrl, streamName, streamType: undefined });
+      expect(mockLoggerService.info).toHaveBeenCalledWith('add_external_stream request', { stream_url: streamUrl, stream_name: streamName });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('add_external_stream', { stream_url: streamUrl, stream_name: streamName });
       expect(result).toEqual(expectedResult);
     });
 
@@ -209,8 +209,8 @@ describe('ExternalStreamService Unit Tests', () => {
       const result = await externalStreamService.removeExternalStream(streamUrl);
 
       // Assert
-      expect(mockLoggerService.info).toHaveBeenCalledWith('remove_external_stream request', { streamUrl });
-      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('remove_external_stream', { streamUrl });
+      expect(mockLoggerService.info).toHaveBeenCalledWith('remove_external_stream request', { stream_url: streamUrl });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('remove_external_stream', { stream_url: streamUrl });
       expect(result).toEqual(expectedResult);
     });
 
@@ -262,8 +262,8 @@ describe('ExternalStreamService Unit Tests', () => {
       const result = await externalStreamService.getExternalStreams();
 
       // Assert
-      expect(mockLoggerService.info).toHaveBeenCalledWith('get_external_streams request');
-      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_external_streams');
+      expect(mockLoggerService.info).toHaveBeenCalledWith('get_external_streams request', {});
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_external_streams', {});
       expect(result).toEqual(expectedResult);
     });
 
@@ -295,8 +295,8 @@ describe('ExternalStreamService Unit Tests', () => {
       const result = await externalStreamService.setDiscoveryInterval(scanInterval);
 
       // Assert
-      expect(mockLoggerService.info).toHaveBeenCalledWith('set_discovery_interval request', { scanInterval });
-      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('set_discovery_interval', { scanInterval });
+      expect(mockLoggerService.info).toHaveBeenCalledWith('set_discovery_interval request', { scan_interval: scanInterval });
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('set_discovery_interval', { scan_interval: scanInterval });
       expect(result).toEqual(expectedResult);
     });
 
