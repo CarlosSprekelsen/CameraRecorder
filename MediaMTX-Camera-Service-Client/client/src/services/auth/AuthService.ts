@@ -39,6 +39,15 @@ export class AuthService {
     // Architecture requirement: "Download links are opaque; the client must not persist or display credentials"
     // Authentication state is managed by the server session, not client storage
 
+    // Architecture requirement: Auto-subscribe to events after successful authentication
+    if (result.authenticated) {
+      try {
+        this.apiClient.autoSubscribeToEvents();
+      } catch (error) {
+        this.logger.warn('Failed to auto-subscribe to events after authentication', error);
+      }
+    }
+
     return result;
   }
 

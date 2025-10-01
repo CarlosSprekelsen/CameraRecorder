@@ -354,15 +354,14 @@ func (em *EventManager) GetSubscriptionStats() map[string]interface{} {
 	defer em.mu.RUnlock()
 
 	stats := map[string]interface{}{
-		"total_clients":        totalClients,
-		"total_topics":         len(em.topicSubscriptions),
-		"active_subscriptions": activeSubscriptions,
-		"topic_distribution":   make(map[string]int),
+		"active_clients":      totalClients,
+		"total_subscriptions": activeSubscriptions,
+		"topic_counts":        make(map[string]int),
 	}
 
 	// Count topic distribution (still needs mutex for map iteration)
 	for topic, subscribers := range em.topicSubscriptions {
-		stats["topic_distribution"].(map[string]int)[string(topic)] = len(subscribers)
+		stats["topic_counts"].(map[string]int)[string(topic)] = len(subscribers)
 	}
 
 	return stats

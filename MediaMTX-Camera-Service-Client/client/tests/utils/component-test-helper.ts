@@ -71,9 +71,23 @@ export const renderWithProviders = (
   return render(ui, {
     wrapper: ({ children }) => {
       // Initialize stores with mocked services if needed
-      if (withStores && initialStoreState) {
+      if (withStores) {
+        // CRITICAL: Mock authentication state first
+        if (withAuth) {
+          const { useAuthStore } = require('../../src/stores/auth/authStore');
+          const authStore = useAuthStore.getState();
+          
+          // Set authenticated state for tests
+          authStore.setAuthenticated(true);
+          authStore.setRole('admin');
+          authStore.setPermissions(['read', 'write', 'delete', 'admin']);
+          authStore.setToken('test-token');
+          authStore.setSessionId('test-session');
+          authStore.setExpiresAt(new Date(Date.now() + 3600000).toISOString()); // 1 hour from now
+        }
+        
         // Initialize device store if needed
-        if (initialStoreState.deviceStore) {
+        if (initialStoreState?.deviceStore) {
           const { useDeviceStore } = require('../../src/stores/device/deviceStore');
           const { MockDataFactory } = require('./mocks');
           const deviceStore = useDeviceStore.getState();
@@ -89,7 +103,7 @@ export const renderWithProviders = (
         }
         
         // Initialize recording store if needed
-        if (initialStoreState.recordingStore) {
+        if (initialStoreState?.recordingStore) {
           const { useRecordingStore } = require('../../src/stores/recording/recordingStore');
           const recordingStore = useRecordingStore.getState();
           if (initialStoreState.recordingStore.activeRecordings) {
@@ -98,7 +112,7 @@ export const renderWithProviders = (
         }
         
         // Initialize file store if needed
-        if (initialStoreState.fileStore) {
+        if (initialStoreState?.fileStore) {
           const { useFileStore } = require('../../src/stores/file/fileStore');
           const fileStore = useFileStore.getState();
           if (initialStoreState.fileStore.files) {
@@ -107,7 +121,7 @@ export const renderWithProviders = (
         }
         
         // Initialize server store if needed
-        if (initialStoreState.serverStore) {
+        if (initialStoreState?.serverStore) {
           const { useServerStore } = require('../../src/stores/server/serverStore');
           const serverStore = useServerStore.getState();
           if (initialStoreState.serverStore.serverInfo) {

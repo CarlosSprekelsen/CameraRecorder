@@ -299,7 +299,7 @@ describe('Security Attack Vector Testing', () => {
           'XSS',
           xss,
           async () => {
-            return await securityTester.deviceService.takeSnapshot('camera0', xss);
+            return await securityTester.recordingService.takeSnapshot('camera0', xss);
           },
           'HIGH'
         );
@@ -323,7 +323,7 @@ describe('Security Attack Vector Testing', () => {
           'Command Injection',
           injection,
           async () => {
-            return await securityTester.deviceService.takeSnapshot(injection, 'test.jpg');
+            return await securityTester.recordingService.takeSnapshot(injection, 'test.jpg');
           },
           'CRITICAL'
         );
@@ -410,7 +410,7 @@ describe('Security Attack Vector Testing', () => {
           'Buffer Overflow',
           `${overflow.length} characters`,
           async () => {
-            return await securityTester.deviceService.takeSnapshot(overflow, 'test.jpg');
+            return await securityTester.recordingService.takeSnapshot(overflow, 'test.jpg');
           },
           'HIGH'
         );
@@ -426,7 +426,7 @@ describe('Security Attack Vector Testing', () => {
             'Memory Exhaustion',
             `Large request ${i}`,
             async () => {
-              return await securityTester.deviceService.takeSnapshot('camera0', 'A'.repeat(1000) + i + '.jpg');
+              return await securityTester.recordingService.takeSnapshot('camera0', 'A'.repeat(1000) + i + '.jpg');
             },
             'MEDIUM'
           )

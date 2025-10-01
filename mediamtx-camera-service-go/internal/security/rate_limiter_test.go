@@ -316,7 +316,7 @@ func TestEnhancedRateLimiter_GetGlobalStats(t *testing.T) {
 	// Get global stats
 	stats := limiter.GetGlobalStats()
 	assert.NotNil(t, stats)
-	assert.Contains(t, stats, "total_clients")
+	assert.Contains(t, stats, "active_clients")
 	assert.Contains(t, stats, "blocked_clients")
 	assert.Contains(t, stats, "configured_methods")
 }

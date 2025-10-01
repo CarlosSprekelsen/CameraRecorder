@@ -24,7 +24,7 @@ describe('AboutPage Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['About', 'MediaMTX Camera Service']
+      hasText: ['Server Information']
     });
   });
 
@@ -45,7 +45,7 @@ describe('AboutPage Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['Version 1.0.0', 'Build Date']
+      hasText: ['Version:', 'Build Date:']
     });
   });
 

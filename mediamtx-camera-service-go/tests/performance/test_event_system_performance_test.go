@@ -88,8 +88,8 @@ func TestEventSystemPerformance(t *testing.T) {
 
 		// Verify subscription statistics
 		stats := em.GetSubscriptionStats()
-		assert.Equal(t, clientCount, stats["total_clients"].(int), "Should have correct client count")
-		assert.Equal(t, clientCount, stats["active_subscriptions"].(int), "Should have correct subscription count")
+		assert.Equal(t, clientCount, stats["active_clients"].(int), "Should have correct client count")
+		assert.Equal(t, clientCount, stats["total_subscriptions"].(int), "Should have correct subscription count")
 	})
 
 	t.Run("concurrent_subscription_management", func(t *testing.T) {
@@ -140,7 +140,7 @@ func TestEventSystemPerformance(t *testing.T) {
 
 		// Verify final state
 		stats := em.GetSubscriptionStats()
-		assert.Equal(t, 0, stats["total_clients"].(int), "Should have no clients after cleanup")
+		assert.Equal(t, 0, stats["active_clients"].(int), "Should have no clients after cleanup")
 	})
 
 	t.Run("memory_usage_under_load", func(t *testing.T) {
@@ -193,7 +193,7 @@ func TestEventSystemPerformance(t *testing.T) {
 
 		// Verify subscription statistics
 		stats := em.GetSubscriptionStats()
-		assert.Equal(t, clientCount, stats["total_clients"].(int), "Should have correct client count")
+		assert.Equal(t, clientCount, stats["active_clients"].(int), "Should have correct client count")
 
 		// Performance assertion: should handle at least 200 events per second under load
 		assert.Greater(t, eventsPerSecond, 200.0, "Should handle at least 200 events per second under load")
@@ -259,7 +259,7 @@ func TestEventSystemPerformance(t *testing.T) {
 
 		// Verify filtering works correctly
 		stats := em.GetSubscriptionStats()
-		assert.Equal(t, clientCount, stats["total_clients"].(int), "Should have correct client count")
+		assert.Equal(t, clientCount, stats["active_clients"].(int), "Should have correct client count")
 	})
 
 	t.Run("event_handler_performance", func(t *testing.T) {

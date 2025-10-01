@@ -275,7 +275,7 @@ describe('Authenticated Functionality Tests', () => {
       await webSocketService.sendRPC('authenticate', { auth_token: TEST_OPERATOR_TOKEN });
       
       try {
-        const snapshot = await deviceService.takeSnapshot('camera0', 'test_snapshot.jpg');
+        const snapshot = await recordingService.takeSnapshot('camera0', 'test_snapshot.jpg');
         
         expect(snapshot).toBeDefined();
         expect(snapshot.filename).toBeDefined();
@@ -467,7 +467,7 @@ describe('Authenticated Functionality Tests', () => {
         
         // Viewer should NOT be able to control (this might fail)
         try {
-          await deviceService.takeSnapshot('camera0', 'test.jpg');
+          await recordingService.takeSnapshot('camera0', 'test.jpg');
           console.log('⚠️  Viewer was able to take snapshot (unexpected)');
         } catch (error: any) {
           console.log('✅ Viewer correctly blocked from taking snapshot:', error.message);
@@ -496,7 +496,7 @@ describe('Authenticated Functionality Tests', () => {
         
         // Operator should be able to control
         try {
-          await deviceService.takeSnapshot('camera0', 'test.jpg');
+          await recordingService.takeSnapshot('camera0', 'test.jpg');
           console.log('✅ Operator can take snapshot');
         } catch (error: any) {
           console.log('ℹ️  Operator snapshot (expected if no camera):', error.message);

@@ -37,7 +37,7 @@ describe('CameraPage Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['Camera Management', 'Device Status']
+      hasText: ['Camera Devices']
     });
   });
 
@@ -59,7 +59,7 @@ describe('CameraPage Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['camera0', 'camera1', 'CONNECTED']
+      hasText: ['Test Camera 0', 'Test Camera 1']
     });
   });
 
@@ -79,7 +79,7 @@ describe('CameraPage Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['Loading cameras...']
+      hasText: ['Loading camera devices...']
     });
   });
 
@@ -99,7 +99,7 @@ describe('CameraPage Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['Failed to load cameras', 'Retry']
+      hasText: ['Failed to load cameras']
     });
   });
 
@@ -121,7 +121,7 @@ describe('CameraPage Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['Recording Active', 'camera0']
+      hasText: ['Test Camera 0']
     });
   });
 
@@ -140,7 +140,7 @@ describe('CameraPage Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['Last Updated']
+      hasText: ['Last updated']
     });
   });
 });

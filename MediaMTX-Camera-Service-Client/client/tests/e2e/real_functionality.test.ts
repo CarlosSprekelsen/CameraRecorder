@@ -240,7 +240,7 @@ describe('Real Functionality E2E Tests', () => {
   describe('REQ-E2E-003: Snapshot Functionality', () => {
     test('should capture real snapshot', async () => {
       const result = await tester.testOperation('take_snapshot', async () => {
-        return await tester.deviceService.takeSnapshot('camera0', 'test_snapshot.jpg');
+        return await tester.recordingService.takeSnapshot('camera0', 'test_snapshot.jpg');
       });
 
       if (result.success && result.data) {
@@ -391,7 +391,7 @@ describe('Real Functionality E2E Tests', () => {
 
       for (const input of maliciousInputs) {
         const result = await tester.testOperation(`xss_${input.substring(0, 10)}`, async () => {
-          return await tester.deviceService.takeSnapshot('camera0', input);
+          return await tester.recordingService.takeSnapshot('camera0', input);
         });
 
         // Should fail gracefully
@@ -411,7 +411,7 @@ describe('Real Functionality E2E Tests', () => {
 
       for (const input of maliciousInputs) {
         const result = await tester.testOperation(`buffer_overflow_${input.length}`, async () => {
-          return await tester.deviceService.takeSnapshot(input, 'test.jpg');
+          return await tester.recordingService.takeSnapshot(input, 'test.jpg');
         });
 
         // Should fail gracefully
@@ -543,7 +543,7 @@ describe('Real Functionality E2E Tests', () => {
     test('should validate actual file content', async () => {
       // First, try to capture a snapshot
       const snapshotResult = await tester.testOperation('content_test_snapshot', async () => {
-        return await tester.deviceService.takeSnapshot('camera0', 'content_test.jpg');
+        return await tester.recordingService.takeSnapshot('camera0', 'content_test.jpg');
       });
 
       if (snapshotResult.success && snapshotResult.data) {

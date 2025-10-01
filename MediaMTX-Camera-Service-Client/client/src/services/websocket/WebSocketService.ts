@@ -102,8 +102,8 @@ export class WebSocketService {
           this.reconnectAttempts = 0;
           this.startPingInterval();
           
-          // Architecture requirement: Auto-subscribe to events on WebSocket connection
-          this.autoSubscribeToEvents();
+          // Architecture requirement: Auto-subscribe to events after authentication
+          // Note: autoSubscribeToEvents() will be called after successful authentication
           
           this.events.onConnect?.();
           resolve();
@@ -424,9 +424,9 @@ export class WebSocketService {
 
   /**
    * Auto-subscribe to events on WebSocket connection
-   * Architecture requirement: Auto-subscribe to events on WebSocket connection
+   * Architecture requirement: Auto-subscribe to events after successful authentication
    */
-  private autoSubscribeToEvents(): void {
+  autoSubscribeToEvents(): void {
     console.log('Auto-subscribing to real-time events');
     
     // Subscribe to camera status updates

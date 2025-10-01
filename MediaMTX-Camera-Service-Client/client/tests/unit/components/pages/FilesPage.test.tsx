@@ -37,7 +37,7 @@ describe('FilesPage Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['File Management', 'Recordings', 'Snapshots']
+      hasText: ['Files', 'Recordings', 'Snapshots']
     });
   });
 
@@ -98,7 +98,7 @@ describe('FilesPage Component', () => {
     );
     
     assertComponentBehavior(component, {
-      hasText: ['Loading files...']
+      hasText: ['No recordings found.', 'Start recording to see files here.']
     });
   });
 

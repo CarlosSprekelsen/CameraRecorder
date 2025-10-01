@@ -185,8 +185,8 @@ func TestEventSystemIntegration(t *testing.T) {
 		// Verify stats contain our subscription
 		stats := statsResponse.Result.(map[string]interface{})
 		globalStats := stats["global_stats"].(map[string]interface{})
-		totalClients := globalStats["total_clients"].(int)
-		assert.Greater(t, totalClients, 0, "Should have at least one client subscribed")
+		activeClients := globalStats["active_clients"].(int)
+		assert.Greater(t, activeClients, 0, "Should have at least one client subscribed")
 
 		// Test event delivery by triggering a camera status update
 		// This would normally happen through the camera monitor
@@ -299,8 +299,8 @@ func TestEventSystemIntegration(t *testing.T) {
 
 		// Verify subscription stats
 		stats := eventManager.GetSubscriptionStats()
-		assert.Equal(t, 1, stats["total_clients"].(int), "Should have one client")
-		assert.Equal(t, 1, stats["active_subscriptions"].(int), "Should have one active subscription")
+		assert.Equal(t, 1, stats["active_clients"].(int), "Should have one client")
+		assert.Equal(t, 1, stats["total_subscriptions"].(int), "Should have one active subscription")
 
 		// Cleanup
 		eventManager.RemoveClient(clientID)
@@ -373,8 +373,8 @@ func TestEventSystemErrorHandling(t *testing.T) {
 
 		// Verify only one subscription exists
 		stats := eventManager.GetSubscriptionStats()
-		assert.Equal(t, 1, stats["total_clients"].(int), "Should have only one client")
-		assert.Equal(t, 1, stats["active_subscriptions"].(int), "Should have only one active subscription")
+		assert.Equal(t, 1, stats["active_clients"].(int), "Should have only one client")
+		assert.Equal(t, 1, stats["total_subscriptions"].(int), "Should have only one active subscription")
 
 		// Cleanup
 		eventManager.RemoveClient(clientID)
@@ -395,14 +395,14 @@ func TestEventSystemErrorHandling(t *testing.T) {
 
 		// Verify initial state
 		stats := eventManager.GetSubscriptionStats()
-		assert.Equal(t, 3, stats["total_clients"].(int), "Should have three clients initially")
+		assert.Equal(t, 3, stats["active_clients"].(int), "Should have three clients initially")
 
 		// Remove one client
 		eventManager.RemoveClient(clientIDs[0])
 
 		// Verify state after removal
 		stats = eventManager.GetSubscriptionStats()
-		assert.Equal(t, 2, stats["total_clients"].(int), "Should have two clients after removal")
+		assert.Equal(t, 2, stats["active_clients"].(int), "Should have two clients after removal")
 
 		// Remove remaining clients
 		for i := 1; i < len(clientIDs); i++ {
@@ -411,6 +411,6 @@ func TestEventSystemErrorHandling(t *testing.T) {
 
 		// Verify final state
 		stats = eventManager.GetSubscriptionStats()
-		assert.Equal(t, 0, stats["total_clients"].(int), "Should have no clients after cleanup")
+		assert.Equal(t, 0, stats["active_clients"].(int), "Should have no clients after cleanup")
 	})
 }

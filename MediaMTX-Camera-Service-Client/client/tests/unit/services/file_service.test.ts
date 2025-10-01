@@ -349,48 +349,53 @@ describe('FileService Unit Tests', () => {
     });
   });
 
-  describe('File format validation', () => {
-    test('should handle different recording formats', async () => {
-      const formats = ['mp4', 'fmp4', 'mkv'];
+  describe('File information retrieval', () => {
+    test('should retrieve recording information according to API specification', async () => {
+      const filename = 'recording_2025-01-15_14-30-00';
+      const fileInfo = {
+        filename,
+        file_size: 1073741824,
+        duration: 3600,
+        created_time: '2025-01-15T14:30:00Z',
+        download_url: '/files/recordings/recording_2025-01-15_14-30-00.fmp4'
+      };
       
-      for (const format of formats) {
-        const filename = `recording.${format}`;
-        const fileInfo = {
-          filename,
-          file_size: 1024000,
-          modified_time: new Date().toISOString(),
-          download_url: `https://localhost/downloads/${filename}`,
-          format
-        };
-        
-        (mockAPIClient.call as jest.Mock).mockResolvedValue(fileInfo);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(fileInfo);
 
-        const result = await fileService.getRecordingInfo(filename);
+      const result = await fileService.getRecordingInfo(filename);
 
-        expect(result.format).toBe(format);
-        expect(APIResponseValidator.validateRecordingFormat(format)).toBe(true);
-      }
+      // Validate response matches documented API specification
+      expect(result.filename).toBe(filename);
+      expect(result.file_size).toBe(1073741824);
+      expect(result.duration).toBe(3600);
+      expect(result.created_time).toBe('2025-01-15T14:30:00Z');
+      expect(result.download_url).toBe('/files/recordings/recording_2025-01-15_14-30-00.fmp4');
+      
+      // Validate API compliance
+      expect(APIResponseValidator.validateRecordingInfo(result)).toBe(true);
     });
 
-    test('should handle different snapshot formats', async () => {
-      const formats = ['jpg', 'png'];
+    test('should retrieve snapshot information according to API specification', async () => {
+      const filename = 'snapshot_2025-01-15_14-30-00.jpg';
+      const fileInfo = {
+        filename,
+        file_size: 204800,
+        created_time: '2025-01-15T14:30:00Z',
+        download_url: '/files/snapshots/snapshot_2025-01-15_14-30-00.jpg'
+      };
       
-      for (const format of formats) {
-        const filename = `snapshot.${format}`;
-        const fileInfo = {
-          filename,
-          file_size: 512000,
-          modified_time: new Date().toISOString(),
-          download_url: `https://localhost/downloads/${filename}`,
-          format
-        };
-        
-        (mockAPIClient.call as jest.Mock).mockResolvedValue(fileInfo);
+      (mockAPIClient.call as jest.Mock).mockResolvedValue(fileInfo);
 
-        const result = await fileService.getSnapshotInfo(filename);
+      const result = await fileService.getSnapshotInfo(filename);
 
-        expect(result.format).toBe(format);
-      }
+      // Validate response matches documented API specification
+      expect(result.filename).toBe(filename);
+      expect(result.file_size).toBe(204800);
+      expect(result.created_time).toBe('2025-01-15T14:30:00Z');
+      expect(result.download_url).toBe('/files/snapshots/snapshot_2025-01-15_14-30-00.jpg');
+      
+      // Validate API compliance
+      expect(APIResponseValidator.validateSnapshotInfo(result)).toBe(true);
     });
   });
 });

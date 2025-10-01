@@ -343,7 +343,7 @@ func (erl *EnhancedRateLimiter) GetGlobalStats() map[string]interface{} {
 	defer erl.mutex.RUnlock()
 
 	return map[string]interface{}{
-		"total_clients":           len(erl.clientLimits),
+		"active_clients":          len(erl.clientLimits),
 		"blocked_clients":         len(erl.blockedClients),
 		"configured_methods":      len(erl.limits),
 		"max_requests_per_minute": erl.maxRequestsPerMinute,

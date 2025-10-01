@@ -91,4 +91,14 @@ export class APIClient implements IAPIClient {
       ready: this.wsService.isConnected
     };
   }
+
+  /**
+   * Auto-subscribe to events after authentication
+   * Architecture requirement: Auto-subscribe to events after successful authentication
+   */
+  autoSubscribeToEvents(): void {
+    if ('autoSubscribeToEvents' in this.wsService) {
+      (this.wsService as any).autoSubscribeToEvents();
+    }
+  }
 }

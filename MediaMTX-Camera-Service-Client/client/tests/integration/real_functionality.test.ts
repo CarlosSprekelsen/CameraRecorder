@@ -8,8 +8,11 @@
  * - Content validation (not just format)
  * - Security attack vectors
  * - Error handling under stress
+ * 
+ * Architecture Compliance: Uses AuthHelper for consistent authentication
  */
 
+import { AuthHelper } from '../utils/auth-helper';
 import { WebSocketService } from '../../src/services/websocket/WebSocketService';
 import { APIClient } from '../../src/services/abstraction/APIClient';
 import { AuthService } from '../../src/services/auth/AuthService';
@@ -58,6 +61,13 @@ class RealFunctionalityTester {
 
   async connect(): Promise<void> {
     await this.webSocketService.connect();
+    
+    // CRITICAL: Authenticate before any operations (Architecture Compliance)
+    const token = AuthHelper.generateTestToken('admin');
+    const authResult = await this.apiClient.authenticate(token);
+    if (!authResult.authenticated) {
+      throw new Error('Failed to authenticate with server');
+    }
     
     // FIXED: Register connection for proper cleanup
     // WebSocket registration no longer needed with IAPIClient abstraction
@@ -264,7 +274,7 @@ describe('Real Functionality E2E Tests', () => {
   describe('REQ-E2E-003: Snapshot Functionality', () => {
     test('should capture real snapshot', async () => {
       const result = await tester.testOperation('take_snapshot', async () => {
-        return await tester.deviceService.takeSnapshot('camera0', 'test_snapshot.jpg');
+        return await tester.recordingService.takeSnapshot('camera0', 'test_snapshot.jpg');
       });
 
       if (result.success && result.data) {
@@ -415,7 +425,7 @@ describe('Real Functionality E2E Tests', () => {
 
       for (const input of maliciousInputs) {
         const result = await tester.testOperation(`xss_${input.substring(0, 10)}`, async () => {
-          return await tester.deviceService.takeSnapshot('camera0', input);
+          return await tester.recordingService.takeSnapshot('camera0', input);
         });
 
         // Should fail gracefully
@@ -435,7 +445,7 @@ describe('Real Functionality E2E Tests', () => {
 
       for (const input of maliciousInputs) {
         const result = await tester.testOperation(`buffer_overflow_${input.length}`, async () => {
-          return await tester.deviceService.takeSnapshot(input, 'test.jpg');
+          return await tester.recordingService.takeSnapshot(input, 'test.jpg');
         });
 
         // Should fail gracefully
@@ -567,7 +577,7 @@ describe('Real Functionality E2E Tests', () => {
     test('should validate actual file content', async () => {
       // First, try to capture a snapshot
       const snapshotResult = await tester.testOperation('content_test_snapshot', async () => {
-        return await tester.deviceService.takeSnapshot('camera0', 'content_test.jpg');
+        return await tester.recordingService.takeSnapshot('camera0', 'content_test.jpg');
       });
 
       if (snapshotResult.success && snapshotResult.data) {
