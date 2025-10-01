@@ -14,24 +14,17 @@
     "test:unit:coverage": "npm run test:unit -- --coverage",
     "test:integration:coverage": "npm run test:integration -- --coverage",
     "test:coverage": "npm run test:unit:coverage && npm run test:integration:coverage",
-    
     "arch:check": "bash ./architecture-check.sh",
     "arch:lint": "eslint . --config .eslintrc.architecture.js",
     "arch:fix": "node ./scripts/fix-architecture.js",
-    
     "type:check": "tsc --noEmit",
     "type:strict": "tsc --noEmit --project tsconfig.strict.json",
-    
     "fix:services": "node ./scripts/fix-services-to-apiclient.js",
     "fix:imports": "node ./scripts/fix-import-violations.js",
-    
     "test:arch": "jest --testMatch='**/*.arch.test.ts'",
-    
     "precommit": "npm run arch:check && npm run type:strict && npm run arch:lint",
     "prepush": "npm run test:arch",
-    
     "clean:legacy": "node ./scripts/remove-legacy-code.js",
-    
     "report:arch": "madge --circular src/",
     "report:deps": "madge --depends src/components/ src/",
     "report:orphans": "madge --orphans src/"
@@ -56,6 +49,7 @@
     "@types/react-dom": "^18.2.15",
     "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^4.1.1",
+    "dotenv": "^17.2.3",
     "eslint": "^8.53.0",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.4",
@@ -80,7 +74,13 @@
         "skipAsyncImports": true
       }
     },
-    "fileExtensions": ["ts", "tsx"],
-    "excludeRegExp": [".*\\.test\\..*", ".*\\.spec\\..*"]
+    "fileExtensions": [
+      "ts",
+      "tsx"
+    ],
+    "excludeRegExp": [
+      ".*\\.test\\..*",
+      ".*\\.spec\\..*"
+    ]
   }
 }

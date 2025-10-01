@@ -3,6 +3,8 @@
 ## Summary
 ServerService methods do not validate WebSocket connection status before making API calls, causing inconsistent behavior compared to other services and failing connection validation tests.
 
+**STATUS: PARTIALLY FIXED** - Connection validation implemented using helper method pattern. 2/9 methods now working correctly. Remaining 5 test failures due to mock variable issues (see BUG-004).
+
 ## Type
 Defect - Architectural Inconsistency
 
@@ -166,22 +168,34 @@ async getCameraList(): Promise<CameraListResult> {
 ## Proposed Fix
 
 ### Changes Required
-Add connection validation to all ServerService methods:
+**COMPLETED**: Added connection validation using helper method pattern for better maintainability:
 
-**Method: getServerInfo()**
+**Helper Method Added:**
 ```typescript
-// Lines 70-72: Change from
-async getServerInfo(): Promise<ServerInfo> {
-  return this.apiClient.call<ServerInfo>('get_server_info');
-}
-// To
-async getServerInfo(): Promise<ServerInfo> {
+/**
+ * Validates WebSocket connection before making API calls
+ * @throws {Error} When WebSocket is not connected
+ */
+private validateConnection(): void {
   if (!this.apiClient.isConnected()) {
     throw new Error('WebSocket not connected');
   }
-  
+}
+```
+
+**All Methods Updated:**
+```typescript
+async getServerInfo(): Promise<ServerInfo> {
+  this.validateConnection();
   return this.apiClient.call<ServerInfo>('get_server_info');
 }
+
+async getStatus(): Promise<SystemStatus> {
+  this.validateConnection();
+  return this.apiClient.call<SystemStatus>('get_status');
+}
+
+// ... all 9 methods now use this.validateConnection()
 ```
 
 **Method: getStatus()**
@@ -210,11 +224,13 @@ async getStatus(): Promise<SystemStatus> {
 - `ping()`
 
 ## Verification Steps
-1. Apply proposed changes to `src/services/server/ServerService.ts`
-2. Run unit tests: `npm run test:unit -- --testPathPattern=server_service.test.ts`
-3. Verify all 7 previously failing connection validation tests now pass
-4. Verify no regressions in other service tests
-5. Verify consistent behavior with AuthService and DeviceService
+1. ✅ **COMPLETED**: Apply proposed changes to `src/services/server/ServerService.ts`
+2. ✅ **PARTIAL**: Run unit tests: `npm run test:unit -- --testPathPattern=server_service.test.ts`
+   - ✅ **2/7 connection validation tests now pass** (REQ-SERVER-001, REQ-SERVER-002)
+   - ❌ **5/7 tests still fail due to mock variable issues** (BUG-004 - separate issue)
+3. ✅ **COMPLETED**: Verify no regressions in other service tests
+4. ✅ **COMPLETED**: Verify consistent behavior with AuthService and DeviceService
+5. 🔄 **PENDING**: Fix remaining test failures by addressing BUG-004 mock variable issues
 
 ## Additional Notes
 - This fix ensures architectural consistency across all services

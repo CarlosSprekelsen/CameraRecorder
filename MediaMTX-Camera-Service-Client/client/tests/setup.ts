@@ -15,8 +15,13 @@
  * API Documentation Reference: mediamtx_camera_service_openrpc.json
  */
 
+import dotenv from 'dotenv';
+import path from 'path';
 import '@testing-library/jest-dom';
 import { configure } from '@testing-library/react';
+
+// Load test environment tokens from server-generated .test_env
+dotenv.config({ path: path.join(__dirname, '../.test_env') });
 
 // Configure testing library
 configure({

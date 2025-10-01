@@ -67,30 +67,43 @@ export class ServerService implements IStatus {
     this.logger.info('ServerService initialized');
   }
 
-  async getServerInfo(): Promise<ServerInfo> {
+  /**
+   * Validates WebSocket connection before making API calls
+   * @throws {Error} When WebSocket is not connected
+   */
+  private validateConnection(): void {
     if (!this.apiClient.isConnected()) {
       throw new Error('WebSocket not connected');
     }
+  }
+
+  async getServerInfo(): Promise<ServerInfo> {
+    this.validateConnection();
     return this.apiClient.call<ServerInfo>('get_server_info');
   }
 
   async getStatus(): Promise<SystemStatus> {
+    this.validateConnection();
     return this.apiClient.call<SystemStatus>('get_status');
   }
 
   async getSystemStatus(): Promise<SystemReadinessStatus> {
+    this.validateConnection();
     return this.apiClient.call<SystemReadinessStatus>('get_system_status');
   }
 
   async getStorageInfo(): Promise<StorageInfo> {
+    this.validateConnection();
     return this.apiClient.call<StorageInfo>('get_storage_info');
   }
 
   async getMetrics(): Promise<MetricsResult> {
+    this.validateConnection();
     return this.apiClient.call<MetricsResult>('get_metrics');
   }
 
   async ping(): Promise<string> {
+    this.validateConnection();
     return this.apiClient.call<string>('ping');
   }
 
@@ -99,14 +112,17 @@ export class ServerService implements IStatus {
     topics: string[],
     filters?: Record<string, unknown>,
   ): Promise<SubscriptionResult> {
+    this.validateConnection();
     return this.apiClient.call('subscribe_events', { topics, filters });
   }
 
   async unsubscribeEvents(topics?: string[]): Promise<UnsubscriptionResult> {
+    this.validateConnection();
     return this.apiClient.call('unsubscribe_events', { topics });
   }
 
   async getSubscriptionStats(): Promise<SubscriptionStatsResult> {
+    this.validateConnection();
     return this.apiClient.call('get_subscription_stats');
   }
 }
