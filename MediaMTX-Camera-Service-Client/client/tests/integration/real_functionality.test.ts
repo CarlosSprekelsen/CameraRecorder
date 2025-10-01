@@ -535,7 +535,7 @@ describe('Real Functionality E2E Tests', () => {
     test('should recover from connection drops', async () => {
       // Test normal operation
       const result1 = await tester.testOperation('before_disconnect', async () => {
-        return await tester.webSocketService.sendRPC('ping', {});
+        return await tester.apiClient.call('ping', {});
       });
 
       expect(result1.success).toBe(true);
@@ -545,7 +545,7 @@ describe('Real Functionality E2E Tests', () => {
       
       // Try operation (should fail)
       const result2 = await tester.testOperation('after_disconnect', async () => {
-        return await tester.webSocketService.sendRPC('ping', {});
+        return await tester.apiClient.call('ping', {});
       });
 
       expect(result2.success).toBe(false);
@@ -555,7 +555,7 @@ describe('Real Functionality E2E Tests', () => {
 
       // Test recovery
       const result3 = await tester.testOperation('after_reconnect', async () => {
-        return await tester.webSocketService.sendRPC('ping', {});
+        return await tester.apiClient.call('ping', {});
       });
 
       expect(result3.success).toBe(true);

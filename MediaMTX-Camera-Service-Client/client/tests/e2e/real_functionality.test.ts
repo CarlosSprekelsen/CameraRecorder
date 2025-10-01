@@ -34,6 +34,7 @@ interface RealTestResult {
 
 class RealFunctionalityTester {
   private webSocketService: WebSocketService;
+  private apiClient: APIClient;
   private authService: AuthService;
   private deviceService: DeviceService;
   private fileService: FileService;
@@ -46,12 +47,12 @@ class RealFunctionalityTester {
     this.webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
     
     // Create APIClient for services (architecture compliance)
-    const apiClient = new APIClient(this.webSocketService, this.loggerService);
+    this.apiClient = new APIClient(this.webSocketService, this.loggerService);
     
-    this.authService = new AuthService(apiClient, this.loggerService);
-    this.deviceService = new DeviceService(apiClient, this.loggerService);
-    this.fileService = new FileService(apiClient, this.loggerService);
-    this.recordingService = new RecordingService(apiClient, this.loggerService);
+    this.authService = new AuthService(this.apiClient, this.loggerService);
+    this.deviceService = new DeviceService(this.apiClient, this.loggerService);
+    this.fileService = new FileService(this.apiClient, this.loggerService);
+    this.recordingService = new RecordingService(this.apiClient, this.loggerService);
   }
 
   async connect(): Promise<void> {
@@ -433,7 +434,7 @@ describe('Real Functionality E2E Tests', () => {
       for (const request of maliciousRequests) {
         const result = await tester.testOperation(`invalid_jsonrpc_${JSON.stringify(request).substring(0, 20)}`, async () => {
           // Send malformed request directly
-          return await tester.webSocketService.sendRPC(request.method || 'ping', request.params);
+          return await tester.apiClient.call(request.method || 'ping', request.params);
         });
 
         // Should handle gracefully
@@ -451,7 +452,7 @@ describe('Real Functionality E2E Tests', () => {
       
       for (let i = 0; i < 50; i++) {
         requests.push(tester.testOperation(`rapid_request_${i}`, async () => {
-          return await tester.webSocketService.sendRPC('ping', {});
+          return await tester.apiClient.call('ping', {});
         }));
       }
 
@@ -468,7 +469,7 @@ describe('Real Functionality E2E Tests', () => {
 
       for (let i = 0; i < concurrentRequests; i++) {
         promises.push(tester.testOperation(`concurrent_request_${i}`, async () => {
-          return await tester.webSocketService.sendRPC('ping', {});
+          return await tester.apiClient.call('ping', {});
         }));
       }
 
@@ -490,7 +491,7 @@ describe('Real Functionality E2E Tests', () => {
       // Run operations for 30 seconds
       while (Date.now() - startTime < 30000) {
         const result = await tester.testOperation(`long_running_${operationCount}`, async () => {
-          return await tester.webSocketService.sendRPC('ping', {});
+          return await tester.apiClient.call('ping', {});
         });
 
         operationCount++;
@@ -510,7 +511,7 @@ describe('Real Functionality E2E Tests', () => {
     test('should recover from connection drops', async () => {
       // Test normal operation
       const result1 = await tester.testOperation('before_disconnect', async () => {
-        return await tester.webSocketService.sendRPC('ping', {});
+        return await tester.apiClient.call('ping', {});
       });
 
       expect(result1.success).toBe(true);
@@ -520,7 +521,7 @@ describe('Real Functionality E2E Tests', () => {
       
       // Try operation (should fail)
       const result2 = await tester.testOperation('after_disconnect', async () => {
-        return await tester.webSocketService.sendRPC('ping', {});
+        return await tester.apiClient.call('ping', {});
       });
 
       expect(result2.success).toBe(false);
@@ -530,7 +531,7 @@ describe('Real Functionality E2E Tests', () => {
 
       // Test recovery
       const result3 = await tester.testOperation('after_reconnect', async () => {
-        return await tester.webSocketService.sendRPC('ping', {});
+        return await tester.apiClient.call('ping', {});
       });
 
       expect(result3.success).toBe(true);

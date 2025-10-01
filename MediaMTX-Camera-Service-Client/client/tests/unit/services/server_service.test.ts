@@ -31,7 +31,7 @@ describe('ServerService Unit Tests', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockWebSocketService.isConnected = true;
+    (mockAPIClient.isConnected as jest.Mock).mockReturnValue(true);
     serverService = new ServerService(mockAPIClient, mockLoggerService);
   });
 

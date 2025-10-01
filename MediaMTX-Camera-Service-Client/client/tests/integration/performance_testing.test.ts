@@ -10,6 +10,7 @@
  */
 
 import { WebSocketService } from '../../src/services/websocket/WebSocketService';
+import { APIClient } from '../../src/services/abstraction/APIClient';
 import { LoggerService } from '../../src/services/logger/LoggerService';
 
 interface PerformanceMetrics {
@@ -97,12 +98,14 @@ class PerformanceMonitor {
 
 describe('Performance Testing Suite', () => {
   let webSocketService: WebSocketService;
+  let apiClient: APIClient;
   let loggerService: LoggerService;
   let monitor: PerformanceMonitor;
 
   beforeAll(async () => {
     loggerService = new LoggerService();
     webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
+    apiClient = new APIClient(webSocketService, loggerService);
     monitor = new PerformanceMonitor();
     
     await webSocketService.connect();
@@ -128,7 +131,7 @@ describe('Performance Testing Suite', () => {
         const startTime = Date.now();
         
         try {
-          await webSocketService.sendRPC('ping', {});
+          await apiClient.call('ping', {});
           const responseTime = Date.now() - startTime;
           monitor.recordMetric(responseTime);
         } catch (error) {
@@ -165,7 +168,7 @@ describe('Performance Testing Suite', () => {
         const requestStart = Date.now();
         
         try {
-          await webSocketService.sendRPC('ping', {});
+          await apiClient.call('ping', {});
           const responseTime = Date.now() - requestStart;
           monitor.recordMetric(responseTime);
         } catch (error) {
@@ -210,7 +213,7 @@ describe('Performance Testing Suite', () => {
         
         // Send burst of concurrent requests
         for (let i = 0; i < burstSize; i++) {
-          promises.push(webSocketService.sendRPC('ping', {}));
+          promises.push(apiClient.call('ping', {}));
         }
 
         const burstStart = Date.now();
@@ -268,7 +271,7 @@ describe('Performance Testing Suite', () => {
         const requestStart = Date.now();
         
         try {
-          await webSocketService.sendRPC('ping', {});
+          await apiClient.call('ping', {});
           const responseTime = Date.now() - requestStart;
           monitor.recordMetric(responseTime);
           
@@ -319,7 +322,7 @@ describe('Performance Testing Suite', () => {
         const requestStart = Date.now();
         
         try {
-          await webSocketService.sendRPC('ping', {});
+          await apiClient.call('ping', {});
           const responseTime = Date.now() - requestStart;
           monitor.recordMetric(responseTime);
           
@@ -376,7 +379,7 @@ describe('Performance Testing Suite', () => {
         // Send request that should fail
         const errorStart = Date.now();
         try {
-          await webSocketService.sendRPC(test.method as any, test.params);
+          await apiClient.call(test.method as any, test.params);
         } catch (error) {
           // Expected error
         }
@@ -385,7 +388,7 @@ describe('Performance Testing Suite', () => {
         // Immediately send a ping to test recovery
         const recoveryStart = Date.now();
         try {
-          await webSocketService.sendRPC('ping', {});
+          await apiClient.call('ping', {});
           const recoveryTime = Date.now() - recoveryStart;
           recoveryTimes.push(recoveryTime);
           

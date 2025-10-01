@@ -13,6 +13,7 @@ import { LoggerService } from '../../src/services/logger/LoggerService';
 
 describe('Integration Tests: Performance', () => {
   let webSocketService: WebSocketService;
+  let apiClient: APIClient;
   let fileService: FileService;
   let deviceService: DeviceService;
   let loggerService: LoggerService;
@@ -20,6 +21,10 @@ describe('Integration Tests: Performance', () => {
   beforeAll(async () => {
     loggerService = new LoggerService();
     webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
+    apiClient = new APIClient(webSocketService, loggerService);
+    
+    // Connect to the server
+    await webSocketService.connect();
     
     // Wait for connection
     await new Promise(resolve => setTimeout(resolve, 2000));
@@ -37,7 +42,7 @@ describe('Integration Tests: Performance', () => {
   describe('REQ-PERF-001: WebSocket Performance', () => {
     test('should meet connection latency targets', async () => {
       const startTime = Date.now();
-      const connected = webSocketService.isConnected;
+      const connected = apiClient.isConnected();
       const endTime = Date.now();
       
       expect(connected).toBe(true);
@@ -142,7 +147,7 @@ describe('Integration Tests: Performance', () => {
   describe('REQ-PERF-005: Network Resilience', () => {
     test('should handle network interruptions gracefully', async () => {
       // Test connection state during operations
-      const isConnected = webSocketService.isConnected;
+      const isConnected = apiClient.isConnected();
       expect(isConnected).toBe(true);
       
       // Perform operation
@@ -153,7 +158,7 @@ describe('Integration Tests: Performance', () => {
     test('should recover from temporary disconnections', async () => {
       // This test would require network simulation
       // For now, just test that we can detect connection state
-      expect(webSocketService.connectionState).toBeDefined();
+      expect(apiClient.getConnectionStatus()).toBeDefined();
     });
   });
 

@@ -11,6 +11,7 @@
  */
 
 import { WebSocketService } from '../../src/services/websocket/WebSocketService';
+import { APIClient } from '../../src/services/abstraction/APIClient';
 import { AuthService } from '../../src/services/auth/AuthService';
 import { DeviceService } from '../../src/services/device/DeviceService';
 import { FileService } from '../../src/services/file/FileService';
@@ -29,6 +30,7 @@ interface SecurityTestResult {
 
 class SecurityTester {
   private webSocketService: WebSocketService;
+  private apiClient: APIClient;
   private authService: AuthService;
   private deviceService: DeviceService;
   private fileService: FileService;
@@ -39,10 +41,14 @@ class SecurityTester {
   constructor() {
     this.loggerService = new LoggerService();
     this.webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
-    this.authService = new AuthService(this.webSocketService, this.loggerService);
-    this.deviceService = new DeviceService(this.webSocketService, this.loggerService);
-    this.fileService = new FileService(this.webSocketService, this.loggerService);
-    this.recordingService = new RecordingService(this.webSocketService, this.loggerService);
+    
+    // Create APIClient for services (architecture compliance)
+    this.apiClient = new APIClient(this.webSocketService, this.loggerService);
+    
+    this.authService = new AuthService(this.apiClient, this.loggerService);
+    this.deviceService = new DeviceService(this.apiClient, this.loggerService);
+    this.fileService = new FileService(this.apiClient, this.loggerService);
+    this.recordingService = new RecordingService(this.apiClient, this.loggerService);
   }
 
   async connect(): Promise<void> {

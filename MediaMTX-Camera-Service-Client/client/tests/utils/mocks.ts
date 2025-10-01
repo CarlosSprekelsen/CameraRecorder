@@ -926,6 +926,52 @@ export class MockDataFactory {
   }
 
   /**
+   * Centralized Device Store Mock - eliminates duplication in hook tests
+   */
+  static createMockDeviceStore(overrides: any = {}) {
+    return {
+      cameras: [],
+      isLoading: false,
+      error: null,
+      getCameraList: jest.fn(),
+      refreshCameras: jest.fn(),
+      setError: jest.fn(),
+      ...overrides
+    };
+  }
+
+  /**
+   * Centralized Recording Store Mock - eliminates duplication in hook tests
+   */
+  static createMockRecordingStore(overrides: any = {}) {
+    return {
+      isRecording: false,
+      isTakingSnapshot: false,
+      error: null,
+      startRecording: jest.fn(),
+      stopRecording: jest.fn(),
+      takeSnapshot: jest.fn(),
+      setError: jest.fn(),
+      ...overrides
+    };
+  }
+
+  /**
+   * Centralized File Store Mock - eliminates duplication in hook tests
+   */
+  static createMockFileStore(overrides: any = {}) {
+    return {
+      files: [],
+      isLoading: false,
+      error: null,
+      listFiles: jest.fn(),
+      deleteFile: jest.fn(),
+      setError: jest.fn(),
+      ...overrides
+    };
+  }
+
+  /**
    * Centralized Event Handler Mock - eliminates duplication in hook tests
    */
   static createMockEventHandler() {
