@@ -121,18 +121,34 @@ export const renderWithProviders = (
           }
         }
         
-        // Initialize file store if needed
+        // Initialize file store - always inject service for component tests
+        const { useFileStore } = require('../../src/stores/file/fileStore');
+        const { MockDataFactory } = require('./mocks');
+        const fileStore = useFileStore.getState();
+        
+        // Inject mock service
+        const mockFileService = MockDataFactory.createMockFileService();
+        fileStore.setFileService(mockFileService);
+        
+        // Set initial state if provided
         if (initialStoreState?.fileStore) {
-          const { useFileStore } = require('../../src/stores/file/fileStore');
-          const { MockDataFactory } = require('./mocks');
-          const fileStore = useFileStore.getState();
-          
-          // Inject mock service
-          const mockFileService = MockDataFactory.createMockFileService();
-          fileStore.setFileService(mockFileService);
-          
-          if (initialStoreState.fileStore.files) {
-            fileStore.files = initialStoreState.fileStore.files;
+          if (initialStoreState.fileStore.recordings) {
+            fileStore.recordings = initialStoreState.fileStore.recordings;
+          }
+          if (initialStoreState.fileStore.snapshots) {
+            fileStore.snapshots = initialStoreState.fileStore.snapshots;
+          }
+          if (initialStoreState.fileStore.loading !== undefined) {
+            fileStore.loading = initialStoreState.fileStore.loading;
+          }
+          if (initialStoreState.fileStore.error !== undefined) {
+            fileStore.error = initialStoreState.fileStore.error;
+          }
+          if (initialStoreState.fileStore.pagination) {
+            fileStore.pagination = initialStoreState.fileStore.pagination;
+          }
+          if (initialStoreState.fileStore.currentTab) {
+            fileStore.currentTab = initialStoreState.fileStore.currentTab;
           }
         }
         

@@ -28,14 +28,19 @@ Several atomic components have test expectations that don't match the actual CSS
 - Tests should expect the actual classes used in components
 - Accessibility attributes should be properly implemented
 
+## Status
+**PARTIALLY FIXED** - AppBar and TextField issues resolved. PermissionGate authentication mocking still needs work.
+
 ## Priority
 **MEDIUM** - Affects component styling and accessibility
 
 ## Assignee
 **UI/UX Team**
 
-## Files to Fix
-- `tests/unit/components/atoms/AppBar.test.tsx` - Update CSS expectations
-- `src/components/atoms/TextField/TextField.tsx` - Add accessibility attributes
-- `tests/unit/components/atoms/TextField.test.tsx` - Fix accessibility tests
-- `tests/unit/components/organisms/PermissionGate.test.tsx` - Fix rendering issues
+## Files Fixed
+- ✅ `tests/unit/components/atoms/AppBar.test.tsx` - Updated CSS expectations to match Tailwind classes
+- ✅ `src/components/atoms/TextField/TextField.tsx` - Added accessibility attributes (htmlFor/id)
+- ✅ `tests/unit/components/atoms/TextField.test.tsx` - Accessibility tests now pass
+
+## Files Still Need Fixing
+- ❌ `tests/unit/components/organisms/PermissionGate.test.tsx` - Authentication mocking not working properly

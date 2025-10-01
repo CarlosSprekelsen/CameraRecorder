@@ -25,7 +25,7 @@ describe('AppBar Component', () => {
     
     assertComponentBehavior(component, {
       hasText: ['Navigation header'],
-      hasClass: ['bg-blue-600', 'text-white']
+      hasClass: ['appbar', 'bg-white', 'shadow-sm', 'border-b', 'border-gray-200', 'z-40', 'fixed']
     });
   });
 
@@ -49,7 +49,7 @@ describe('AppBar Component', () => {
     
     assertComponentBehavior(component, {
       hasText: ['Custom header'],
-      hasClass: ['custom-appbar', 'bg-blue-600']
+      hasClass: ['custom-appbar', 'appbar', 'bg-white', 'shadow-sm', 'border-b', 'border-gray-200', 'z-40', 'fixed']
     });
   });
 });

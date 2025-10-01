@@ -56,15 +56,19 @@ export const TextField: React.FC<TextFieldProps> = ({
     }
   };
 
+  // Generate unique ID for accessibility
+  const fieldId = React.useId();
+
   return (
     <div className={`text-field ${fullWidth ? 'w-full' : ''}`}>
       {label && (
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor={fieldId} className="block text-sm font-medium text-gray-700 mb-1">
           {label}
         </label>
       )}
       {select ? (
         <select
+          id={fieldId}
           value={value}
           onChange={handleChange}
           disabled={disabled}
@@ -75,6 +79,7 @@ export const TextField: React.FC<TextFieldProps> = ({
         </select>
       ) : (
         <input
+          id={fieldId}
           type={type}
           value={value}
           onChange={handleChange}
