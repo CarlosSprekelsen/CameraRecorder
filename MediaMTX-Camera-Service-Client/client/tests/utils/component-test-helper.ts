@@ -77,10 +77,14 @@ export const renderWithProviders = (
           const { useAuthStore } = require('../../src/stores/auth/authStore');
           const authStore = useAuthStore.getState();
           
+          // Determine role from withPermissions parameter
+          const role = withPermissions.includes('admin') ? 'admin' : 
+                      withPermissions.includes('operator') ? 'operator' : 'viewer';
+          
           // Set authenticated state for tests
           authStore.setAuthenticated(true);
-          authStore.setRole('admin');
-          authStore.setPermissions(['read', 'write', 'delete', 'admin']);
+          authStore.setRole(role);
+          authStore.setPermissions(withPermissions);
           authStore.setToken('test-token');
           authStore.setSessionId('test-session');
           authStore.setExpiresAt(new Date(Date.now() + 3600000).toISOString()); // 1 hour from now
