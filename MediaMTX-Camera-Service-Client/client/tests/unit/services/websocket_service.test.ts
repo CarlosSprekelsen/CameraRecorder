@@ -86,8 +86,8 @@ describe('IAPIClient Interface Tests', () => {
 
       const result = await apiClient.call(method);
 
-      // Method signature requires Record<string, unknown> = {}, not undefined
-      expect(apiClient.call).toHaveBeenCalledWith(method, {});
+      // Method called without parameters - default value {} is used internally
+      expect(apiClient.call).toHaveBeenCalledWith(method);
       expect(result).toEqual(expectedResult);
     });
 
