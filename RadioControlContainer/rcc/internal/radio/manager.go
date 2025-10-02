@@ -53,7 +53,7 @@ func NewManager() *Manager {
 
 // LoadCapabilities loads capabilities from an adapter on startup.
 // Source: Architecture §5.6 & ICD §15
-func (m *Manager) LoadCapabilities(radioID string, radioAdapter adapter.IRadioAdapter) error {
+func (m *Manager) LoadCapabilities(radioID string, radioAdapter adapter.IRadioAdapter, timeout time.Duration) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -61,7 +61,7 @@ func (m *Manager) LoadCapabilities(radioID string, radioAdapter adapter.IRadioAd
 	m.adapters[radioID] = radioAdapter
 
 	// Load capabilities from adapter
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	capabilities, err := radioAdapter.SupportedFrequencyProfiles(ctx)
@@ -239,7 +239,7 @@ func (m *Manager) RemoveRadio(radioID string) error {
 
 // RefreshCapabilities refreshes capabilities for a radio.
 // Source: Architecture §5.6 & ICD §15
-func (m *Manager) RefreshCapabilities(radioID string) error {
+func (m *Manager) RefreshCapabilities(radioID string, timeout time.Duration) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -254,7 +254,7 @@ func (m *Manager) RefreshCapabilities(radioID string) error {
 	}
 
 	// Load updated capabilities
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	capabilities, err := radioAdapter.SupportedFrequencyProfiles(ctx)

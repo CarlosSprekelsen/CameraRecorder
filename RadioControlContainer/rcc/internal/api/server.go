@@ -20,13 +20,19 @@ import (
 type Server struct {
 	httpServer   *http.Server
 	telemetryHub *telemetry.Hub
+	readTimeout  time.Duration
+	writeTimeout time.Duration
+	idleTimeout  time.Duration
 	// TODO: Add command orchestrator, radio manager, etc.
 }
 
 // NewServer creates a new API server.
-func NewServer(telemetryHub *telemetry.Hub) *Server {
+func NewServer(telemetryHub *telemetry.Hub, readTimeout, writeTimeout, idleTimeout time.Duration) *Server {
 	return &Server{
 		telemetryHub: telemetryHub,
+		readTimeout:  readTimeout,
+		writeTimeout: writeTimeout,
+		idleTimeout:  idleTimeout,
 	}
 }
 
@@ -41,9 +47,9 @@ func (s *Server) Start(addr string) error {
 	s.httpServer = &http.Server{
 		Addr:         addr,
 		Handler:      mux,
-		ReadTimeout:  30 * time.Second,
-		WriteTimeout: 30 * time.Second,
-		IdleTimeout:  120 * time.Second,
+		ReadTimeout:  s.readTimeout,
+		WriteTimeout: s.writeTimeout,
+		IdleTimeout:  s.idleTimeout,
 	}
 
 	// Start server
