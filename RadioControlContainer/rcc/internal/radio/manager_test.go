@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+    "time"
 
 	"github.com/radio-control/rcc/internal/adapter"
 )
@@ -83,7 +84,7 @@ func TestLoadCapabilities(t *testing.T) {
 	mockAdapter := &MockAdapter{}
 	
 	// Test successful capability loading
-	err := manager.LoadCapabilities("radio-01", mockAdapter)
+    err := manager.LoadCapabilities("radio-01", mockAdapter, 2*time.Second)
 	if err != nil {
 		t.Fatalf("LoadCapabilities() failed: %v", err)
 	}
@@ -132,7 +133,7 @@ func TestLoadCapabilitiesWithError(t *testing.T) {
 	}
 	
 	// Test capability loading with error
-	err := manager.LoadCapabilities("radio-01", mockAdapter)
+    err := manager.LoadCapabilities("radio-01", mockAdapter, 2*time.Second)
 	if err == nil {
 		t.Error("Expected error, got nil")
 	}
@@ -148,14 +149,14 @@ func TestSetActive(t *testing.T) {
 	mockAdapter := &MockAdapter{}
 	
 	// Load a radio first
-	err := manager.LoadCapabilities("radio-01", mockAdapter)
+    err := manager.LoadCapabilities("radio-01", mockAdapter, 2*time.Second)
 	if err != nil {
 		t.Fatalf("LoadCapabilities() failed: %v", err)
 	}
 	
 	// Load another radio
 	mockAdapter2 := &MockAdapter{}
-	err = manager.LoadCapabilities("radio-02", mockAdapter2)
+    err = manager.LoadCapabilities("radio-02", mockAdapter2, 2*time.Second)
 	if err != nil {
 		t.Fatalf("LoadCapabilities() failed: %v", err)
 	}
@@ -188,7 +189,7 @@ func TestGetActive(t *testing.T) {
 	
 	// Load a radio and test
 	mockAdapter := &MockAdapter{}
-	err := manager.LoadCapabilities("radio-01", mockAdapter)
+    err := manager.LoadCapabilities("radio-01", mockAdapter, 2*time.Second)
 	if err != nil {
 		t.Fatalf("LoadCapabilities() failed: %v", err)
 	}
@@ -210,7 +211,7 @@ func TestGetActiveRadio(t *testing.T) {
 	
 	// Load a radio and test
 	mockAdapter := &MockAdapter{}
-	err := manager.LoadCapabilities("radio-01", mockAdapter)
+    err := manager.LoadCapabilities("radio-01", mockAdapter, 2*time.Second)
 	if err != nil {
 		t.Fatalf("LoadCapabilities() failed: %v", err)
 	}
@@ -242,7 +243,7 @@ func TestGetActiveAdapter(t *testing.T) {
 	
 	// Load a radio and test
 	mockAdapter := &MockAdapter{}
-	err = manager.LoadCapabilities("radio-01", mockAdapter)
+    err = manager.LoadCapabilities("radio-01", mockAdapter, 2*time.Second)
 	if err != nil {
 		t.Fatalf("LoadCapabilities() failed: %v", err)
 	}
@@ -343,7 +344,7 @@ func TestUpdateState(t *testing.T) {
 	mockAdapter := &MockAdapter{}
 	
 	// Load a radio
-	err := manager.LoadCapabilities("radio-01", mockAdapter)
+    err := manager.LoadCapabilities("radio-01", mockAdapter, 2*time.Second)
 	if err != nil {
 		t.Fatalf("LoadCapabilities() failed: %v", err)
 	}
@@ -483,7 +484,7 @@ func TestMultipleRadios(t *testing.T) {
 	}
 	
 	mockAdapter2 := &MockAdapter{}
-	err = manager.LoadCapabilities("radio-02", mockAdapter2)
+    err = manager.LoadCapabilities("radio-02", mockAdapter2, 2*time.Second)
 	if err != nil {
 		t.Fatalf("LoadCapabilities() failed: %v", err)
 	}
@@ -526,7 +527,7 @@ func TestConcurrentAccess(t *testing.T) {
 		go func(i int) {
 			mockAdapter := &MockAdapter{}
 			radioID := fmt.Sprintf("radio-%d", i)
-			manager.LoadCapabilities(radioID, mockAdapter)
+            manager.LoadCapabilities(radioID, mockAdapter, 2*time.Second)
 			done <- true
 		}(i)
 	}

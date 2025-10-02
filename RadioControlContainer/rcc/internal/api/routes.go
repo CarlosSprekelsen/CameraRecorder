@@ -163,8 +163,8 @@ func (s *Server) handleRadioByID(w http.ResponseWriter, r *http.Request) {
         return
     }
 
-    radio, ok := s.radioManager.GetRadio(radioID)
-    if !ok {
+    radio, err := s.radioManager.GetRadio(radioID)
+    if err != nil {
         WriteError(w, http.StatusNotFound, "NOT_FOUND", "Radio not found", nil)
         return
     }
@@ -330,8 +330,8 @@ func (s *Server) handleSetChannel(w http.ResponseWriter, r *http.Request, radioI
             WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Radio manager not available", nil)
             return
         }
-        radio, ok := s.radioManager.GetRadio(radioID)
-        if !ok {
+        radio, err := s.radioManager.GetRadio(radioID)
+        if err != nil {
             WriteError(w, http.StatusNotFound, "NOT_FOUND", "Radio not found", nil)
             return
         }

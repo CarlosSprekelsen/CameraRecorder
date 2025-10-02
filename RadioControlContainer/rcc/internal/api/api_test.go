@@ -7,6 +7,9 @@ import (
 	"strings"
 	"testing"
 
+    "time"
+    "github.com/radio-control/rcc/internal/command"
+    "github.com/radio-control/rcc/internal/radio"
 	"github.com/radio-control/rcc/internal/config"
 	"github.com/radio-control/rcc/internal/telemetry"
 )
@@ -16,7 +19,9 @@ func TestNewServer(t *testing.T) {
 	hub := telemetry.NewHub(cfg)
 	defer hub.Stop()
 
-	server := NewServer(hub)
+    rm := radio.NewManager()
+    orch := command.NewOrchestrator(hub, cfg)
+    server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
 
 	if server == nil {
 		t.Fatal("NewServer() returned nil")
@@ -32,7 +37,9 @@ func TestServerStartStop(t *testing.T) {
 	hub := telemetry.NewHub(cfg)
 	defer hub.Stop()
 
-	server := NewServer(hub)
+    rm := radio.NewManager()
+    orch := command.NewOrchestrator(hub, cfg)
+    server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
 
 	// Test server creation
 	if server.httpServer != nil {
@@ -50,7 +57,9 @@ func TestRegisterRoutes(t *testing.T) {
 	hub := telemetry.NewHub(cfg)
 	defer hub.Stop()
 
-	server := NewServer(hub)
+    rm := radio.NewManager()
+    orch := command.NewOrchestrator(hub, cfg)
+    server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
 	mux := http.NewServeMux()
 
 	// Register routes
@@ -207,7 +216,9 @@ func TestHandleCapabilities(t *testing.T) {
 	hub := telemetry.NewHub(cfg)
 	defer hub.Stop()
 
-	server := NewServer(hub)
+    rm := radio.NewManager()
+    orch := command.NewOrchestrator(hub, cfg)
+    server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
 
 	// Test GET /capabilities
 	req := httptest.NewRequest("GET", "/api/v1/capabilities", nil)
@@ -244,7 +255,9 @@ func TestHandleRadios(t *testing.T) {
 	hub := telemetry.NewHub(cfg)
 	defer hub.Stop()
 
-	server := NewServer(hub)
+    rm := radio.NewManager()
+    orch := command.NewOrchestrator(hub, cfg)
+    server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
 
 	// Test GET /radios
 	req := httptest.NewRequest("GET", "/api/v1/radios", nil)
@@ -271,7 +284,9 @@ func TestHandleSelectRadio(t *testing.T) {
 	hub := telemetry.NewHub(cfg)
 	defer hub.Stop()
 
-	server := NewServer(hub)
+    rm := radio.NewManager()
+    orch := command.NewOrchestrator(hub, cfg)
+    server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
 
 	// Test POST /radios/select
 	req := httptest.NewRequest("POST", "/api/v1/radios/select", strings.NewReader(`{"id":"radio-01"}`))
@@ -302,7 +317,9 @@ func TestHandleRadioByID(t *testing.T) {
 	hub := telemetry.NewHub(cfg)
 	defer hub.Stop()
 
-	server := NewServer(hub)
+    rm := radio.NewManager()
+    orch := command.NewOrchestrator(hub, cfg)
+    server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
 
 	// Test GET /radios/{id}
 	req := httptest.NewRequest("GET", "/api/v1/radios/radio-01", nil)
@@ -329,7 +346,9 @@ func TestHandleGetPower(t *testing.T) {
 	hub := telemetry.NewHub(cfg)
 	defer hub.Stop()
 
-	server := NewServer(hub)
+    rm := radio.NewManager()
+    orch := command.NewOrchestrator(hub, cfg)
+    server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
 
 	// Test GET /radios/{id}/power
 	req := httptest.NewRequest("GET", "/api/v1/radios/radio-01/power", nil)
@@ -356,7 +375,9 @@ func TestHandleSetPower(t *testing.T) {
 	hub := telemetry.NewHub(cfg)
 	defer hub.Stop()
 
-	server := NewServer(hub)
+    rm := radio.NewManager()
+    orch := command.NewOrchestrator(hub, cfg)
+    server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
 
 	// Test POST /radios/{id}/power with valid power
 	req := httptest.NewRequest("POST", "/api/v1/radios/radio-01/power",
@@ -400,7 +421,9 @@ func TestHandleGetChannel(t *testing.T) {
 	hub := telemetry.NewHub(cfg)
 	defer hub.Stop()
 
-	server := NewServer(hub)
+    rm := radio.NewManager()
+    orch := command.NewOrchestrator(hub, cfg)
+    server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
 
 	// Test GET /radios/{id}/channel
 	req := httptest.NewRequest("GET", "/api/v1/radios/radio-01/channel", nil)
@@ -427,7 +450,9 @@ func TestHandleSetChannel(t *testing.T) {
 	hub := telemetry.NewHub(cfg)
 	defer hub.Stop()
 
-	server := NewServer(hub)
+    rm := radio.NewManager()
+    orch := command.NewOrchestrator(hub, cfg)
+    server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
 
 	// Test POST /radios/{id}/channel with channel index
 	req := httptest.NewRequest("POST", "/api/v1/radios/radio-01/channel",
