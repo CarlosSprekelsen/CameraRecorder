@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
 )
 
 // RegisterRoutes registers all OpenAPI v1 endpoints.
@@ -64,14 +65,15 @@ func (s *Server) handleRadios(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Get actual radios from radio manager
-	// For now, return stub data
-	radios := map[string]interface{}{
-		"activeRadioId": "",
-		"items":         []interface{}{},
-	}
+    // Fetch radios from RadioManager
+    if s.radioManager == nil {
+        WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE",
+            "Radio manager not available", nil)
+        return
+    }
 
-	WriteSuccess(w, radios)
+    list := s.radioManager.List()
+    WriteSuccess(w, list)
 }
 
 // handleSelectRadio handles POST /radios/select
@@ -83,8 +85,35 @@ func (s *Server) handleSelectRadio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement radio selection logic
-	WriteNotImplemented(w, "POST /radios/select")
+    // Parse request
+    var req struct {
+        ID string `json:"id"`
+    }
+    if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ID == "" {
+        WriteError(w, http.StatusBadRequest, "INVALID_RANGE", "Missing or invalid id", nil)
+        return
+    }
+
+    // Validate radio exists and select via RadioManager
+    if s.radioManager == nil || s.orchestrator == nil {
+        WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Service not available", nil)
+        return
+    }
+
+    if err := s.radioManager.SetActive(req.ID); err != nil {
+        WriteError(w, http.StatusNotFound, "NOT_FOUND", "Radio not found", nil)
+        return
+    }
+
+    // Call orchestrator to confirm selection (ping adapter/state)
+    if err := s.orchestrator.SelectRadio(r.Context(), req.ID); err != nil {
+        status, body := ToAPIError(err)
+        w.WriteHeader(status)
+        w.Write(body)
+        return
+    }
+
+    WriteSuccess(w, map[string]string{"activeRadioId": req.ID})
 }
 
 // handleRadioEndpoints handles all radio-specific endpoints.
@@ -128,17 +157,19 @@ func (s *Server) handleRadioByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Get actual radio data from radio manager
-	// For now, return stub data
-	radio := map[string]interface{}{
-		"id":           radioID,
-		"model":        "Unknown",
-		"status":       "offline",
-		"capabilities": map[string]interface{}{},
-		"state":        map[string]interface{}{},
-	}
+    if s.radioManager == nil {
+        WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE",
+            "Radio manager not available", nil)
+        return
+    }
 
-	WriteSuccess(w, radio)
+    radio, ok := s.radioManager.GetRadio(radioID)
+    if !ok {
+        WriteError(w, http.StatusNotFound, "NOT_FOUND", "Radio not found", nil)
+        return
+    }
+
+    WriteSuccess(w, radio)
 }
 
 // handleRadioPower handles GET/POST /radios/{id}/power
@@ -166,13 +197,18 @@ func (s *Server) handleRadioPower(w http.ResponseWriter, r *http.Request) {
 // handleGetPower handles GET /radios/{id}/power
 // Source: OpenAPI v1 §3.5
 func (s *Server) handleGetPower(w http.ResponseWriter, r *http.Request, radioID string) {
-	// TODO: Get actual power from radio
-	// For now, return stub data
-	power := map[string]interface{}{
-		"powerDbm": 30,
-	}
-
-	WriteSuccess(w, power)
+    if s.orchestrator == nil {
+        WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Service not available", nil)
+        return
+    }
+    state, err := s.orchestrator.GetState(r.Context(), radioID)
+    if err != nil {
+        status, body := ToAPIError(err)
+        w.WriteHeader(status)
+        w.Write(body)
+        return
+    }
+    WriteSuccess(w, map[string]interface{}{"powerDbm": state.PowerDbm})
 }
 
 // handleSetPower handles POST /radios/{id}/power
@@ -196,8 +232,17 @@ func (s *Server) handleSetPower(w http.ResponseWriter, r *http.Request, radioID 
 		return
 	}
 
-	// TODO: Implement power setting logic
-	WriteNotImplemented(w, "POST /radios/{id}/power")
+    if s.orchestrator == nil {
+        WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Service not available", nil)
+        return
+    }
+    if err := s.orchestrator.SetPower(r.Context(), radioID, request.PowerDbm); err != nil {
+        status, body := ToAPIError(err)
+        w.WriteHeader(status)
+        w.Write(body)
+        return
+    }
+    WriteSuccess(w, map[string]interface{}{"powerDbm": request.PowerDbm})
 }
 
 // handleRadioChannel handles GET/POST /radios/{id}/channel
@@ -225,14 +270,19 @@ func (s *Server) handleRadioChannel(w http.ResponseWriter, r *http.Request) {
 // handleGetChannel handles GET /radios/{id}/channel
 // Source: OpenAPI v1 §3.7
 func (s *Server) handleGetChannel(w http.ResponseWriter, r *http.Request, radioID string) {
-	// TODO: Get actual channel from radio
-	// For now, return stub data
-	channel := map[string]interface{}{
-		"frequencyMhz": 2412.0,
-		"channelIndex": nil, // May be null if frequency not in derived channel set
-	}
-
-	WriteSuccess(w, channel)
+    if s.orchestrator == nil {
+        WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Service not available", nil)
+        return
+    }
+    state, err := s.orchestrator.GetState(r.Context(), radioID)
+    if err != nil {
+        status, body := ToAPIError(err)
+        w.WriteHeader(status)
+        w.Write(body)
+        return
+    }
+    // channelIndex may be null if not in derived set; we return frequency
+    WriteSuccess(w, map[string]interface{}{"frequencyMhz": state.FrequencyMhz, "channelIndex": nil})
 }
 
 // handleSetChannel handles POST /radios/{id}/channel
@@ -257,8 +307,57 @@ func (s *Server) handleSetChannel(w http.ResponseWriter, r *http.Request, radioI
 		return
 	}
 
-	// TODO: Implement channel setting logic
-	WriteNotImplemented(w, "POST /radios/{id}/channel")
+    if s.orchestrator == nil {
+        WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Service not available", nil)
+        return
+    }
+
+    // Frequency wins if both provided
+    if request.FrequencyMhz != nil {
+        if err := s.orchestrator.SetChannel(r.Context(), radioID, *request.FrequencyMhz); err != nil {
+            status, body := ToAPIError(err)
+            w.WriteHeader(status)
+            w.Write(body)
+            return
+        }
+        WriteSuccess(w, map[string]interface{}{"frequencyMhz": *request.FrequencyMhz, "channelIndex": request.ChannelIndex})
+        return
+    }
+
+    // If only index provided, translate via radioManager channels (if available)
+    if request.ChannelIndex != nil {
+        if s.radioManager == nil {
+            WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Radio manager not available", nil)
+            return
+        }
+        radio, ok := s.radioManager.GetRadio(radioID)
+        if !ok {
+            WriteError(w, http.StatusNotFound, "NOT_FOUND", "Radio not found", nil)
+            return
+        }
+        // Find frequency for index
+        var freq float64
+        found := false
+        for _, ch := range radio.Capabilities.Channels {
+            if ch.Index == *request.ChannelIndex {
+                freq = ch.FrequencyMhz
+                found = true
+                break
+            }
+        }
+        if !found {
+            WriteError(w, http.StatusBadRequest, "INVALID_RANGE", "Invalid channelIndex", nil)
+            return
+        }
+        if err := s.orchestrator.SetChannel(r.Context(), radioID, freq); err != nil {
+            status, body := ToAPIError(err)
+            w.WriteHeader(status)
+            w.Write(body)
+            return
+        }
+        WriteSuccess(w, map[string]interface{}{"frequencyMhz": freq, "channelIndex": *request.ChannelIndex})
+        return
+    }
 }
 
 // handleTelemetry handles GET /telemetry (SSE)
@@ -297,11 +396,15 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 
 	// TODO: Implement actual health checks
 	// For now, return basic health status
-	health := map[string]interface{}{
-		"status":    "ok",
-		"uptimeSec": 0, // TODO: Calculate actual uptime
-		"version":   "1.0.0",
-	}
+    uptime := 0.0
+    if !s.startTime.IsZero() {
+        uptime = time.Since(s.startTime).Seconds()
+    }
+    health := map[string]interface{}{
+        "status":    "ok",
+        "uptimeSec": uptime,
+        "version":   "1.0.0",
+    }
 
 	WriteSuccess(w, health)
 }

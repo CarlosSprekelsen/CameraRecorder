@@ -8,6 +8,7 @@ package adapter
 import (
 	"errors"
 	"fmt"
+	"strings"
 )
 
 // Normalized container errors per Architecture §8.5
@@ -62,17 +63,29 @@ func NormalizeVendorError(vendorErr error, vendorPayload interface{}) error {
 }
 
 func isRangeError(msg string) bool {
-	// Vendor "OUT_OF_RANGE", "INVALID_PARAMETER", etc.
-	// Add vendor-specific patterns as discovered
-	return false // TODO: Implement per vendor ICD
+	// Basic deterministic mapping by keyword; refined per vendor ICD later
+	m := strings.ToUpper(msg)
+	return strings.Contains(m, "OUT_OF_RANGE") ||
+		strings.Contains(m, "INVALID_PARAMETER") ||
+		strings.Contains(m, "INVALID_RANGE") ||
+		strings.Contains(m, "BAD_VALUE") ||
+		strings.Contains(m, "RANGE")
 }
 
 func isBusyError(msg string) bool {
-	// Vendor "BUSY", "RETRY", etc.
-	return false // TODO: Implement per vendor ICD
+	m := strings.ToUpper(msg)
+	return strings.Contains(m, "BUSY") ||
+		strings.Contains(m, "RETRY") ||
+		strings.Contains(m, "RATE_LIMIT") ||
+		strings.Contains(m, "TOO_MANY_REQUESTS") ||
+		strings.Contains(m, "BACKOFF")
 }
 
 func isUnavailableError(msg string) bool {
-	// Vendor "UNAVAILABLE", "REBOOTING", "SOFT_BOOT", etc.
-	return false // TODO: Implement per vendor ICD
+	m := strings.ToUpper(msg)
+	return strings.Contains(m, "UNAVAILABLE") ||
+		strings.Contains(m, "REBOOT") ||
+		strings.Contains(m, "SOFT_BOOT") ||
+		strings.Contains(m, "OFFLINE") ||
+		strings.Contains(m, "NOT_READY")
 }

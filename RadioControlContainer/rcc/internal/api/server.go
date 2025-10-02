@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/radio-control/rcc/internal/command"
+	"github.com/radio-control/rcc/internal/radio"
 	"github.com/radio-control/rcc/internal/telemetry"
 )
 
@@ -20,16 +22,21 @@ import (
 type Server struct {
 	httpServer   *http.Server
 	telemetryHub *telemetry.Hub
+	orchestrator *command.Orchestrator
+	radioManager *radio.Manager
+	startTime    time.Time
 	readTimeout  time.Duration
 	writeTimeout time.Duration
 	idleTimeout  time.Duration
-	// TODO: Add command orchestrator, radio manager, etc.
 }
 
 // NewServer creates a new API server.
-func NewServer(telemetryHub *telemetry.Hub, readTimeout, writeTimeout, idleTimeout time.Duration) *Server {
+func NewServer(telemetryHub *telemetry.Hub, orchestrator *command.Orchestrator, radioManager *radio.Manager, readTimeout, writeTimeout, idleTimeout time.Duration) *Server {
 	return &Server{
 		telemetryHub: telemetryHub,
+		orchestrator: orchestrator,
+		radioManager: radioManager,
+		startTime:    time.Now(),
 		readTimeout:  readTimeout,
 		writeTimeout: writeTimeout,
 		idleTimeout:  idleTimeout,

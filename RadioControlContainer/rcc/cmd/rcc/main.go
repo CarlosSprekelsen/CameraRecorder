@@ -13,6 +13,7 @@ import (
 
 	"github.com/radio-control/rcc/internal/api"
 	"github.com/radio-control/rcc/internal/audit"
+	"github.com/radio-control/rcc/internal/command"
 	"github.com/radio-control/rcc/internal/config"
 	"github.com/radio-control/rcc/internal/radio"
 	"github.com/radio-control/rcc/internal/telemetry"
@@ -60,15 +61,20 @@ func main() {
 	}
 	log.Println("Radio manager initialized")
 
-	// Step 5: Create API server with all components
+	// Step 5: Create command orchestrator
 	// Source: Architecture §6.1 Initialization
-	server := api.NewServer(telemetryHub)
+	orchestrator := command.NewOrchestrator(telemetryHub, cfg)
+	orchestrator.SetAuditLogger(auditLogger)
+
+	// Step 6: Create API server with all components
+	// Source: Architecture §6.1 Initialization
+	server := api.NewServer(telemetryHub, orchestrator, radioManager, 30*time.Second, 30*time.Second, 120*time.Second)
 	if server == nil {
 		log.Fatal("Failed to create API server")
 	}
 	log.Println("API server created")
 
-	// Step 6: Start HTTP server
+	// Step 7: Start HTTP server
 	// Source: Architecture §6.1 Initialization
 	addr := getServerAddress()
 	log.Printf("Starting HTTP server on %s", addr)
