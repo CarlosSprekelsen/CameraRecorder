@@ -162,7 +162,7 @@ class ApiGateway {
   +GET /telemetry()
   +GET /radios()
   +POST /radios/select(id)
-  +POST /radios/{id}/power(watts)
+  +POST /radios/{id}/power(dBm)
   +POST /radios/{id}/channel(idx)
 }
 class Auth {
@@ -175,7 +175,7 @@ class RadioManager {
   +discover(): void
 }
 class CommandOrchestrator {
-  +setPower(id, watts)
+  +setPower(id, dBm)
   +setChannel(id, idx)
   +selectRadio(id)
 }
@@ -193,7 +193,7 @@ class ConfigStore {
 
 interface IRadioAdapter {
   +connect(): bool
-  +setPower(watts): Ack
+  +setPower(dBm): Ack
   +setChannel(freq): Ack
   +getState(): RadioState
 }

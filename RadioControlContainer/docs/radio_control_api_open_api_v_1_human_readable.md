@@ -342,9 +342,9 @@ Liveness/readiness probe.
 
 ## 5. Validation Rules (Normative)
 - **Power**: 0–39 dBm (accuracy typically 10–39 dBm). Reject out‑of‑range with `INVALID_RANGE`.
-- **Channel/Frequency**: must be one of `channelsMhz` **or** within allowed ranges derived from the radio/region configuration.
+- **Channel/Frequency**: must be within the derived channel set (see Architecture §13) or within allowed ranges derived from the radio/region configuration. When both `channelIndex` and `frequencyMhz` are provided, frequency takes precedence.
 - **Idempotency**: Repeat submits of the same desired state return `200` and current state.
-- **Backoff Guidance**: On `BUSY`/`UNAVAILABLE`, exponential backoff starting at 500ms, jitter 250–750ms, max 5 retries.
+- **Backoff Guidance**: On `BUSY`/`UNAVAILABLE`, use backoff policies defined in **CB-TIMING v0.3**.
 
 ---
 

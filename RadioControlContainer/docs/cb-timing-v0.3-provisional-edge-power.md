@@ -156,6 +156,13 @@ This document defines the **single source of truth** for all timing, cadence, bu
 - **Telemetry events per second**: 10 per radio
 - **Concurrent SSE clients**: 5 per radio
 
+### 10.3 Log Rotation Parameters
+- **log_max_file_mb**: 10 MB (maximum size per log file)
+- **log_keep_files**: 5 files (number of rotated files to keep)
+- **log_rotation_trigger**: Size-based (rotate when max size reached)
+- **audit_log_retention_days**: 30 days (security event log retention)
+- **telemetry_buffer_hours**: 1 hour (real-time telemetry retention)
+
 ---
 
 ## 11. Validation Rules
@@ -234,8 +241,9 @@ Changes to this document require:
 | **Backoff Policies** | 8 | Standard + error-specific policies |
 | **Power Management** | 6 | CPU targets, duty cycles, probe budgets |
 | **Network** | 6 | Timeouts, pools, rate limits |
+| **Log Rotation** | 5 | File size, retention, rotation triggers |
 
-**Total Parameters**: 55 timing and cadence parameters
+**Total Parameters**: 60 timing, cadence, and logging parameters
 
 ---
 
