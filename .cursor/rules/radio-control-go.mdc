@@ -1,0 +1,243 @@
+---
+alwaysApply: true
+---
+
+# Radio Control Container - AI Rules
+
+## Ground Truth
+```
+RadioControlContainer/docs/radio_control_container_ieee_42010_arc_42_architecture_draft_v1.md
+RadioControlContainer/docs/cb-timing-v0.3-provisional-edge-power.md
+RadioControlContainer/docs/radio_control_api_open_api_v_1_human_readable.md
+RadioControlContainer/docs/radio_control_telemetry_human_readable_sse_v_1.md
+RadioControlContainer/docs/icd_tnn_↔_radio_logical_ieee_style_template_editable.md
+```
+
+## Tech Stack
+- Go 1.21+ stdlib only
+- `github.com/natefinch/lumberjack` for log rotation
+- Nothing else without approval
+
+## Before Any Code
+
+**1. Cite source:**
+```
+Source: [Doc] §[Section]
+Requirement: "[exact quote]"
+```
+
+**2. Check existence:**
+```bash
+grep -r "RadioManager" .
+grep -r "setPower" .
+```
+
+**3. Verify doc section exists:**
+Open file, CTRL+F for §number
+
+## Hard Constraints
+
+**FORBIDDEN:**
+- Timing literals: Use `cfg.Timing.[Parameter]` loaded from CB-TIMING
+- Custom error codes: Only `INVALID_RANGE`, `BUSY`, `UNAVAILABLE`, `INTERNAL` (Architecture §8.5)
+- Packages outside: `api/`, `auth/`, `radio/`, `command/`, `telemetry/`, `adapter/`, `audit/`, `config/` (Architecture §5)
+- Polling loops: Event-first + duty-cycled probes (Architecture §8.3a)
+- New dependencies without approval
+
+**REQUIRED:**
+- All timing values externalized to config
+- All errors normalized per Architecture §8.5
+- All components map to Architecture §5
+- Structured audit logs per Architecture §8.6 schema
+
+## When Uncertain
+
+**If doc is `[TBD]`:** STOP, report blocked
+**If docs conflict:** Check Consistency Matrix, report if unresolved
+**If section missing:** STOP, report gap
+**If want to add dependency:** STOP, request approval
+
+## Response Format
+
+Every code suggestion:
+```
+Source: [Doc §X]
+Quote: "[text]"
+Exists: [grep result | NONE]
+
+[code]
+
+Trace: [how this maps to requirement]
+```
+
+## Package Structure (Architecture §5)
+```
+api/        ApiGateway - HTTP endpoints
+auth/       Auth - token validation
+radio/      RadioManager - inventory, adapters
+command/    CommandOrchestrator - validation, routing
+telemetry/  TelemetryHub - SSE event multiplexing
+adapter/    IRadioAdapter + implementations
+audit/      AuditLogger - structured logs
+config/     ConfigStore - channels, timing, profiles
+```
+
+## Error Codes (Architecture §8.5)
+```
+ErrInvalidRange  → HTTP 400
+ErrBusy         → HTTP 503
+ErrUnavailable  → HTTP 503
+ErrInternal     → HTTP 500
+```
+
+Map vendor errors to these. Preserve diagnostic details.
+
+## Timing (CB-TIMING v0.3)
+All timing values loaded from config referencing CB-TIMING sections:
+- §3: Heartbeat (15s interval, ±2s jitter, 45s timeout)
+- §4: Probe cadences (Normal: 30s, Recovering: 5-15s, Offline: 10-300s)
+- §5: Command timeouts (setPower: 10s, setChannel: 30s, selectRadio: 5s, getState: 5s)
+- §6: Event buffering (50 events, 1h retention)
+
+## Audit Schema (Architecture §8.6)
+```go
+type AuditEntry struct {
+    Timestamp  time.Time
+    Actor      string
+    RadioID    string
+    Action     string
+    Result     string
+    LatencyMS  int64
+}
+```
+
+## Stop Conditions
+- Document doesn't exist
+- Section not found
+- [TBD] encountered
+- Unresolved doc conflict
+- Want to violate hard constraint
+
+Report blockage. Don't guess.
+
+## Meta-Rule
+If these rules block valid work, report the conflict. Rules serve code quality.# Radio Control Container - AI Rules
+
+## Ground Truth
+```
+RadioControlContainer/docs/radio_control_container_ieee_42010_arc_42_architecture_draft_v1.md
+RadioControlContainer/docs/cb-timing-v0.3-provisional-edge-power.md
+RadioControlContainer/docs/radio_control_api_open_api_v_1_human_readable.md
+RadioControlContainer/docs/radio_control_telemetry_human_readable_sse_v_1.md
+RadioControlContainer/docs/icd_tnn_↔_radio_logical_ieee_style_template_editable.md
+```
+
+## Tech Stack
+- Go 1.21+ stdlib only
+- `github.com/natefinch/lumberjack` for log rotation
+- Nothing else without approval
+
+## Before Any Code
+
+**1. Cite source:**
+```
+Source: [Doc] §[Section]
+Requirement: "[exact quote]"
+```
+
+**2. Check existence:**
+```bash
+grep -r "RadioManager" .
+grep -r "setPower" .
+```
+
+**3. Verify doc section exists:**
+Open file, CTRL+F for §number
+
+## Hard Constraints
+
+**FORBIDDEN:**
+- Timing literals: Use `cfg.Timing.[Parameter]` loaded from CB-TIMING
+- Custom error codes: Only `INVALID_RANGE`, `BUSY`, `UNAVAILABLE`, `INTERNAL` (Architecture §8.5)
+- Packages outside: `api/`, `auth/`, `radio/`, `command/`, `telemetry/`, `adapter/`, `audit/`, `config/` (Architecture §5)
+- Polling loops: Event-first + duty-cycled probes (Architecture §8.3a)
+- New dependencies without approval
+
+**REQUIRED:**
+- All timing values externalized to config
+- All errors normalized per Architecture §8.5
+- All components map to Architecture §5
+- Structured audit logs per Architecture §8.6 schema
+
+## When Uncertain
+
+**If doc is `[TBD]`:** STOP, report blocked
+**If docs conflict:** Check Consistency Matrix, report if unresolved
+**If section missing:** STOP, report gap
+**If want to add dependency:** STOP, request approval
+
+## Response Format
+
+Every code suggestion:
+```
+Source: [Doc §X]
+Quote: "[text]"
+Exists: [grep result | NONE]
+
+[code]
+
+Trace: [how this maps to requirement]
+```
+
+## Package Structure (Architecture §5)
+```
+api/        ApiGateway - HTTP endpoints
+auth/       Auth - token validation
+radio/      RadioManager - inventory, adapters
+command/    CommandOrchestrator - validation, routing
+telemetry/  TelemetryHub - SSE event multiplexing
+adapter/    IRadioAdapter + implementations
+audit/      AuditLogger - structured logs
+config/     ConfigStore - channels, timing, profiles
+```
+
+## Error Codes (Architecture §8.5)
+```
+ErrInvalidRange  → HTTP 400
+ErrBusy         → HTTP 503
+ErrUnavailable  → HTTP 503
+ErrInternal     → HTTP 500
+```
+
+Map vendor errors to these. Preserve diagnostic details.
+
+## Timing (CB-TIMING v0.3)
+All timing values loaded from config referencing CB-TIMING sections:
+- §3: Heartbeat (15s interval, ±2s jitter, 45s timeout)
+- §4: Probe cadences (Normal: 30s, Recovering: 5-15s, Offline: 10-300s)
+- §5: Command timeouts (setPower: 10s, setChannel: 30s, selectRadio: 5s, getState: 5s)
+- §6: Event buffering (50 events, 1h retention)
+
+## Audit Schema (Architecture §8.6)
+```go
+type AuditEntry struct {
+    Timestamp  time.Time
+    Actor      string
+    RadioID    string
+    Action     string
+    Result     string
+    LatencyMS  int64
+}
+```
+
+## Stop Conditions
+- Document doesn't exist
+- Section not found
+- [TBD] encountered
+- Unresolved doc conflict
+- Want to violate hard constraint
+
+Report blockage. Don't guess.
+
+## Meta-Rule
+If these rules block valid work, report the conflict. Rules serve code quality.
