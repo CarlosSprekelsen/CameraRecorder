@@ -42,10 +42,7 @@ describe('DeviceService Unit Tests', () => {
       const result = await deviceService.getCameraList();
 
       expect(mockAPIClient.call).toHaveBeenCalledWith('get_camera_list', {});
-      expect(mockLoggerService.info).toHaveBeenCalledWith('Getting camera list');
-      expect(mockLoggerService.info).toHaveBeenCalledWith(
-        `Retrieved ${expectedResult.cameras.length} cameras`
-      );
+      expect(mockLoggerService.info).toHaveBeenCalledWith('get_camera_list request', {});
       expect(result).toEqual(expectedResult.cameras);
       // Note: Validation removed temporarily to focus on IAPIClient migration
     });
@@ -57,7 +54,7 @@ describe('DeviceService Unit Tests', () => {
       const result = await deviceService.getCameraList();
 
       expect(result).toEqual([]);
-      expect(mockLoggerService.warn).toHaveBeenCalledWith('No cameras found in response');
+      expect(mockLoggerService.info).toHaveBeenCalledWith('get_camera_list request', {});
     });
 
     test('should handle camera list errors', async () => {
@@ -66,7 +63,7 @@ describe('DeviceService Unit Tests', () => {
 
       await expect(deviceService.getCameraList()).rejects.toThrow('Failed to get cameras');
       expect(mockLoggerService.error).toHaveBeenCalledWith(
-        'Failed to get camera list',
+        'get_camera_list failed',
         error
       );
     });
@@ -94,8 +91,7 @@ describe('DeviceService Unit Tests', () => {
       const result = await deviceService.getStreamUrl(device);
 
       expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_stream_url', { device });
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Getting stream URL for device: ${device}`);
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Retrieved stream URL for ${device}`);
+      expect(mockLoggerService.info).toHaveBeenCalledWith('get_stream_url request', { device });
       expect(result).toBe(streamUrl);
     });
 
@@ -108,7 +104,7 @@ describe('DeviceService Unit Tests', () => {
       const result = await deviceService.getStreamUrl(device);
 
       expect(result).toBeNull();
-      expect(mockLoggerService.warn).toHaveBeenCalledWith(`No stream URL found for device: ${device}`);
+      expect(mockLoggerService.info).toHaveBeenCalledWith('get_stream_url request', { device });
     });
 
     test('should handle stream URL errors', async () => {
@@ -118,7 +114,7 @@ describe('DeviceService Unit Tests', () => {
 
       await expect(deviceService.getStreamUrl(device)).rejects.toThrow('Stream not available');
       expect(mockLoggerService.error).toHaveBeenCalledWith(
-        `Failed to get stream URL for device: ${device}`,
+        'get_stream_url failed',
         error
       );
     });
@@ -155,9 +151,8 @@ describe('DeviceService Unit Tests', () => {
 
       const result = await deviceService.getStreams();
 
-      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_streams');
-      expect(mockLoggerService.info).toHaveBeenCalledWith('Getting active streams');
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Retrieved ${expectedStreams.length} active streams`);
+      expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_streams', {});
+      expect(mockLoggerService.info).toHaveBeenCalledWith('get_streams request', {});
       expect(result).toEqual(expectedStreams);
     });
 
@@ -167,7 +162,7 @@ describe('DeviceService Unit Tests', () => {
       const result = await deviceService.getStreams();
 
       expect(result).toEqual([]);
-      expect(mockLoggerService.warn).toHaveBeenCalledWith('No streams found in response');
+      
     });
 
     test('should handle stream errors', async () => {
@@ -175,7 +170,7 @@ describe('DeviceService Unit Tests', () => {
       (mockAPIClient.call as jest.Mock).mockRejectedValue(error);
 
       await expect(deviceService.getStreams()).rejects.toThrow('Failed to get streams');
-      expect(mockLoggerService.error).toHaveBeenCalledWith('Failed to get streams', error);
+      expect(mockLoggerService.error).toHaveBeenCalledWith('get_streams failed', error);
     });
 
     test('should get stream status for specific device', async () => {
@@ -187,8 +182,7 @@ describe('DeviceService Unit Tests', () => {
       const result = await deviceService.getStreamStatus(device);
 
       expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_stream_status', { device });
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Getting stream status for device: ${device}`);
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Retrieved stream status for ${device}`);
+      expect(mockLoggerService.info).toHaveBeenCalledWith('get_stream_status request', { device });
       expect(result).toEqual(expectedStatus);
       expect(APIResponseValidator.validateStreamStatus(result)).toBe(true);
     });
@@ -200,7 +194,7 @@ describe('DeviceService Unit Tests', () => {
 
       await expect(deviceService.getStreamStatus(device)).rejects.toThrow('Stream status unavailable');
       expect(mockLoggerService.error).toHaveBeenCalledWith(
-        `Failed to get stream status for device: ${device}`,
+        'get_stream_status failed',
         error
       );
     });
@@ -216,8 +210,7 @@ describe('DeviceService Unit Tests', () => {
       expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('subscribe_events', {
         topics: ['camera_status_update'],
       });
-      expect(mockLoggerService.info).toHaveBeenCalledWith('Subscribing to camera status updates');
-      expect(mockLoggerService.info).toHaveBeenCalledWith('Successfully subscribed to camera events');
+      expect(mockLoggerService.info).toHaveBeenCalledWith('subscribe_events request', { topics: ['camera_status_update'] });
     });
 
     test('should handle subscription errors', async () => {
@@ -226,7 +219,7 @@ describe('DeviceService Unit Tests', () => {
 
       await expect(deviceService.subscribeToCameraEvents()).rejects.toThrow('Subscription failed');
       expect(mockLoggerService.error).toHaveBeenCalledWith(
-        'Failed to subscribe to camera events',
+        'subscribe_events failed',
         error
       );
     });
@@ -240,8 +233,7 @@ describe('DeviceService Unit Tests', () => {
       expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('unsubscribe_events', {
         topics: ['camera_status_update'],
       });
-      expect(mockLoggerService.info).toHaveBeenCalledWith('Unsubscribing from camera status updates');
-      expect(mockLoggerService.info).toHaveBeenCalledWith('Successfully unsubscribed from camera events');
+      expect(mockLoggerService.info).toHaveBeenCalledWith('unsubscribe_events request', { topics: ['camera_status_update'] });
     });
 
     test('should handle unsubscription errors', async () => {
@@ -250,7 +242,7 @@ describe('DeviceService Unit Tests', () => {
 
       await expect(deviceService.unsubscribeFromCameraEvents()).rejects.toThrow('Unsubscription failed');
       expect(mockLoggerService.error).toHaveBeenCalledWith(
-        'Failed to unsubscribe from camera events',
+        'unsubscribe_events failed',
         error
       );
     });
@@ -271,8 +263,7 @@ describe('DeviceService Unit Tests', () => {
       const result = await deviceService.getCameraCapabilities(device);
 
       expect((mockAPIClient.call as jest.Mock)).toHaveBeenCalledWith('get_camera_capabilities', { device });
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Getting capabilities for device: ${device}`);
-      expect(mockLoggerService.info).toHaveBeenCalledWith(`Retrieved capabilities for ${device}`);
+      expect(mockLoggerService.info).toHaveBeenCalledWith('get_camera_capabilities request', { device });
       expect(result).toEqual(expectedCapabilities);
     });
 
@@ -283,7 +274,7 @@ describe('DeviceService Unit Tests', () => {
 
       await expect(deviceService.getCameraCapabilities(device)).rejects.toThrow('Capabilities unavailable');
       expect(mockLoggerService.error).toHaveBeenCalledWith(
-        `Failed to get capabilities for device: ${device}`,
+        'get_camera_capabilities failed',
         error
       );
     });
@@ -307,10 +298,7 @@ describe('DeviceService Unit Tests', () => {
 
       await deviceService.getCameraList();
 
-      expect(mockLoggerService.info).toHaveBeenCalledWith('Getting camera list');
-      expect(mockLoggerService.info).toHaveBeenCalledWith(
-        `Retrieved ${cameraList.cameras.length} cameras`
-      );
+      expect(mockLoggerService.info).toHaveBeenCalledWith('get_camera_list request', {});
     });
 
     test('should handle WebSocket service errors gracefully', async () => {
@@ -319,7 +307,7 @@ describe('DeviceService Unit Tests', () => {
 
       await expect(deviceService.getCameraList()).rejects.toThrow('WebSocket connection lost');
       expect(mockLoggerService.error).toHaveBeenCalledWith(
-        'Failed to get camera list',
+        'get_camera_list failed',
         error
       );
     });

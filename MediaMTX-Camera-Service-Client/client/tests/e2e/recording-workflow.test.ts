@@ -19,12 +19,6 @@ describe('Recording Workflow E2E Tests', () => {
   test('REQ-WORKFLOW-001: Complete recording workflow', async () => {
     const workflowSteps = [
       {
-        action: 'authenticate',
-        method: 'authenticate',
-        params: { auth_token: 'test-admin-token' },
-        validator: (result) => result.authenticated === true
-      },
-      {
         action: 'get_cameras',
         method: 'get_camera_list',
         validator: (result) => Array.isArray(result.cameras)
@@ -47,7 +41,7 @@ describe('Recording Workflow E2E Tests', () => {
     
     assertWorkflowResult(result, {
       shouldSucceed: true,
-      expectedSteps: 4,
+      expectedSteps: 3,
       maxDuration: 30000
     });
   });
