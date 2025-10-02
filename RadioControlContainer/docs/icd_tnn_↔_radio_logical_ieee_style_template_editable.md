@@ -133,7 +133,7 @@ rectangle "Digital Tactical Soldier System" as DTS {
     component "Radio Control App" as App
   }
   rectangle "Host Hub (Edge Computer)" as Hub {
-    component "**Radio Control Container**" as RCSvc <<highlight>>
+    component "**Radio Control Container (RCC)**" as RCC <<highlight>>
   }
 }
 component "Silvus MANET Radio
@@ -178,10 +178,10 @@ left to right direction
 skinparam componentStyle rectangle
 
 component "Radio Control App" as App
-component "Radio Control Container (RCSvc)" as RCSvc
+component "Radio Control Container (RCC)" as RCC
 component "Silvus Radio" as Radio
 
-rectangle "Exposed by RCSvc" as RCSvcIf {
+rectangle "Exposed by RCC" as RCCIf {
   [HTTP :8002 /device-commands]
   [HTTP :8003 /sse-telemetry]
 }
@@ -192,15 +192,15 @@ rectangle "Exposed by Silvus Radio" as RadioIf {
 }
 
 App --> [HTTP :8002 /device-commands] : consumes
-[HTTP :8002 /device-commands] --> RCSvc : exposed by
+[HTTP :8002 /device-commands] --> RCC : exposed by
 
-RCSvc --> [HTTP :8003 /sse-telemetry] : exposes
+RCC --> [HTTP :8003 /sse-telemetry] : exposes
 [HTTP :8003 /sse-telemetry] --> App : subscribes
 
-RCSvc --> [HTTP :80 /streamscape_api] : consumes
+RCC --> [HTTP :80 /streamscape_api] : consumes
 [HTTP :80 /streamscape_api] --> Radio : exposed by
 
-RCSvc --> [TCP :50000 JSON-RPC] : consumes
+RCC --> [TCP :50000 JSON-RPC] : consumes
 [TCP :50000 JSON-RPC] --> Radio : exposed by
 @enduml
 ```
@@ -714,19 +714,58 @@ Radio vendors may return errors in **textual** or **structured** formats. The sy
 
 ---
 
-## 11. Compliance & Verification (Placeholders)
+## 11. Compliance & Verification
 
-- **Test Cases**: **TBD**
-- **Conformance Matrix Link**: **TBD**
+### 11.1 Test Cases
+
+| Test ID | Requirement | ICD Method | Expected Result | Status |
+|---------|-------------|-----------|-----------------|--------|
+| ICD-001 | Set valid frequency | §6.1.1 `freq` | `result:[""]` | [PASS/FAIL] |
+| ICD-002 | Set out-of-range power | §6.1.3 `power_dBm` | `error` string | [PASS/FAIL] |
+| ICD-003 | Read frequency profiles | §6.1.2 `supported_frequency_profiles` | `result` array with objects | [PASS/FAIL] |
+| ICD-004 | Soft-boot recovery | §6.1.1 `freq` | Radio returns to online | [PASS/FAIL] |
+| ICD-005 | Local maintenance port | §5.4 TCP 50000 | Commands on TCP 50000 work | [PASS/FAIL] |
+| ICD-006 | Set valid power | §6.1.3 `power_dBm` | `result:[""]` | [PASS/FAIL] |
+| ICD-007 | Read current frequency | §6.1.1 `freq` | `result:["<mhz>"]` | [PASS/FAIL] |
+| ICD-008 | Read current power | §6.1.3 `power_dBm` | `result:["<dBm>"]` | [PASS/FAIL] |
+| ICD-009 | Set invalid frequency | §6.1.1 `freq` | `error` string | [PASS/FAIL] |
+| ICD-010 | JSON-RPC error handling | §8.1 | Both string and object errors handled | [PASS/FAIL] |
+
+### 11.2 Test Execution Requirements
+
+**Prerequisites:**
+- Radio connected via RNDIS/USB or Ethernet
+- Radio IP address accessible from test system
+- Test system configured with appropriate network access
+
+**Test Environment:**
+- Use `curl` commands as documented in §6.1.1–§6.1.3
+- Validate JSON-RPC v2.0 compliance
+- Test both HTTP (port 80) and local maintenance (TCP 50000) channels
+
+**Success Criteria:**
+- All test cases must return expected results
+- Error handling must match documented behavior
+- Soft-boot recovery must complete within documented timeframes
+
+### 11.3 Conformance Matrix
+
+| Requirement ID | Statement | Method (§) | Test (§) | Status |
+| -------------- | ---------- | ---------- | -------- | ------ |
+| R-CTRL-001 | DTS shall control radio frequency | 6.1.1 | ICD-001, ICD-004, ICD-007, ICD-009 | [TBD] |
+| R-CTRL-002 | DTS shall control radio power | 6.1.3 | ICD-002, ICD-006, ICD-008 | [TBD] |
+| R-MON-003 | DTS shall read current power | 6.1.3 | ICD-008 | [TBD] |
+| R-CAP-004 | DTS shall read frequency profiles | 6.1.2 | ICD-003 | [TBD] |
+| R-MAINT-005 | DTS shall support local maintenance | 5.4 | ICD-005 | [TBD] |
 
 ---
 
 ## 12. Manageability & Telemetry
 
-- **Command Path**: **App → RCSvc** on **:8002** for device commands. *(Container/Public API scope; not part of radio ICD)*
-- **Telemetry Path**: **RCSvc → App** via **SSE on :8003** for state changes. **Note**: SSE is **App↔Container design**, not a radio interface.
-- **Radio Polling**: RCSvc polls the **radio HTTP API** and **transforms** changes into SSE for the App. If SSE is unavailable, App may poll RCSvc. **Exact cadence**: *[TBD by performance testing]* (e.g., 1–5 s active; 10–30 s background).
-- **Soft‑boot Handling**: After `freq` set, RCSvc suppresses further radio calls until the radio’s HTTP endpoint recovers (retry/backoff). **Timeout/backoff values**: *[TBD lab]*.
+- **Command Path**: **App → RCC** on **:8002** for device commands. *(Container/Public API scope; not part of radio ICD)*
+- **Telemetry Path**: **RCC → App** via **SSE on :8003** for state changes. **Note**: SSE is **App↔Container design**, not a radio interface.
+- **Radio Polling**: RCC polls the **radio HTTP API** and **transforms** changes into SSE for the App. If SSE is unavailable, App may poll RCC. **Exact cadence**: *[TBD by performance testing]* (e.g., 1–5 s active; 10–30 s background).
+- **Soft‑boot Handling**: After `freq` set, RCC suppresses further radio calls until the radio's HTTP endpoint recovers (retry/backoff). **Timeout/backoff values**: *[TBD lab]*.
 
 ---
 
@@ -757,18 +796,20 @@ Radio vendors may return errors in **textual** or **structured** formats. The sy
 - **JSON‑RPC v2.0** — Standard JSON Remote Procedure Call protocol used by the radio API; requests carry `method`, optional `params` (array of strings), and `id`.
 - **Local Maintenance Channel** — JSON‑RPC service on TCP **50000** accessible **only via local interfaces** (Ethernet/USB); implements `zeroize`, `radio_reset`, `factory_reset`; **no auth**.
 - **Profile (Frequency Profile)** — Object describing allowed frequency ranges (`frequencies`), `bandwidth`, and `antenna_mask` supported by the board.
-- **RCSvc (Radio Control Container)** — The container service that mediates between the App and the radio, exposing **:8002** for device commands and **:8003** for SSE telemetry.
+- **RCC (Radio Control Container)** — The container service that mediates between the App and the radio, exposing **:8002** for device commands and **:8003** for SSE telemetry.
 - **Result/Params Encoding** — Radio returns values as **strings in JSON arrays**; set operations send **string‑encoded** values in `params` arrays; success returns `[""]`.
 - **Soft‑boot** — Temporary service interruption that occurs when applying certain settings, e.g., `freq`; suppress further calls until the radio endpoint recovers.
 - **Zeroize** — Operation that resets credentials/keys and erases settings; on v4.0.3.0, recreates `admin`, `basic`, `advanced` users with default password **"HelloWorld"**.
 
-## Annex B(2) — System Requirements Compliance Matrix (Extract)(2) — System Requirements Compliance Matrix (Extract – Placeholders)
+## Annex B(2) — System Requirements Compliance Matrix (Extract)
 
 | Requirement ID | Statement                         | Method (§) | Test (§) | Status |
 | -------------- | --------------------------------- | ---------- | -------- | ------ |
-| R‑CTRL‑001     | DTS shall control radio frequency | 6.1        | 11       | [TBD]  |
-| R‑CTRL‑002     | DTS shall control radio power     | 6.1        | 11       | [TBD]  |
-| R‑MON‑003      | DTS shall read current power      | 6.2        | 11       | [TBD]  |
+| R‑CTRL‑001     | DTS shall control radio frequency | 6.1.1      | ICD-001, ICD-004, ICD-007, ICD-009 | [TBD]  |
+| R‑CTRL‑002     | DTS shall control radio power     | 6.1.3      | ICD-002, ICD-006, ICD-008 | [TBD]  |
+| R‑MON‑003      | DTS shall read current power      | 6.1.3      | ICD-008  | [TBD]  |
+| R‑CAP‑004      | DTS shall read frequency profiles | 6.1.2      | ICD-003  | [TBD]  |
+| R‑MAINT‑005    | DTS shall support local maintenance | 5.4      | ICD-005  | [TBD]  |
 
 ## Annex C — UML Flows (Operational)
 
@@ -778,7 +819,7 @@ Radio vendors may return errors in **textual** or **structured** formats. The sy
 @startuml
 actor Soldier as User
 participant "Public API" as PublicAPI
-participant "Radio Control Container" as RCSvc
+participant "Radio Control Container (RCC)" as RCC
 participant "Silvus Radio" as Radio
 
 == Populate Channel Options ==
@@ -803,7 +844,7 @@ RCSvc --> PublicAPI : ack
 @startuml
 actor Soldier as User
 participant "Public API" as PublicAPI
-participant "Radio Control Container" as RCSvc
+participant "Radio Control Container (RCC)" as RCC
 participant "Silvus Radio" as Radio
 
 == Show Current Power ==

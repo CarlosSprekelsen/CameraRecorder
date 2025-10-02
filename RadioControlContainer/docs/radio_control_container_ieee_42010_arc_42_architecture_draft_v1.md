@@ -538,6 +538,26 @@ Mitigations: adapter stubs + contract tests; strict validation; proxy bypass on 
 - **Contract Freeze:** Command endpoints and event payload schemas are specified in **OpenAPI v1** (commands) and **AsyncAPI v1** (telemetry). Transport changes MUST NOT alter payload schemas.
 - See companion specs: *Radio Control API – OpenAPI v1* and *Radio Control Telemetry – AsyncAPI v1*.
 
+### ADR‑002 — Channel Index Base Selection
+
+**Status:** Accepted (2025-01-15)\
+**Decision:** Use **1-based indexing** for channel indices.\
+**Drivers:** Human-centric interface design, soldier usability, intuitive channel selection.\
+**Alternatives considered:** 0-based indexing (programmer-centric), mixed indexing.\
+**Consequences:** Soldiers refer to "channel 1" not "channel 0"; UI displays natural numbering; channel derivation maps 1→N to frequency lists; precedence rule applies when both frequency and index provided.
+
+**Rationale:** Field operators are human users who naturally think in 1-based terms. A soldier says "switch to channel 1" not "switch to channel 0". This decision prioritizes usability over programming convention.
+
+### ADR‑003 — Error Normalization Strategy
+
+**Status:** Accepted (2025-01-15)\
+**Decision:** Normalize vendor errors to container error codes via adapter layer.\
+**Drivers:** Adapter heterogeneity, cleaner client experience, consistent error handling across radio vendors.\
+**Alternatives considered:** Pass-through vendor errors, vendor-specific error handling, client-side normalization.\
+**Consequences:** Adapters must implement normalization logic; vendor errors preserved in diagnostic details; clients receive consistent error codes; error mapping must be maintained per vendor.
+
+**Rationale:** Different radio vendors return errors in different formats (string vs object, different codes). Normalization provides a consistent client experience while preserving diagnostic information for troubleshooting. This approach scales better than client-side error handling.
+
 ---
 
 ## 13. Channel Index → Frequency Mapping
@@ -595,6 +615,47 @@ CM -> CM : publish change event
 **Audit**: Minimal action logging without PII.
 
 **Hardening**: Non-functional controls (surface minimization, role scoping).
+
+### 14.1 Privacy Considerations
+
+**Non-PII Data** (safe to log and transmit):
+- Radio model, capabilities, status
+- Frequency, power settings (tactical parameters)
+- Command timestamps, error codes
+- System performance metrics
+- Radio connectivity status
+
+**Potentially Sensitive Data** (handle per deployment policy):
+- GPS coordinates (if used for radio positioning)
+- Radio serial numbers (if logged for asset tracking)
+- Operator identifiers (if beyond role name)
+- Network topology information
+- Mission-specific frequency assignments
+
+**Data Classification**:
+- **Public**: Radio capabilities, supported frequencies, power ranges
+- **Internal**: System status, error logs, performance metrics
+- **Confidential**: GPS coordinates, serial numbers, operator details
+- **Restricted**: Mission-specific configurations, cryptographic keys
+
+**Retention Policies**:
+- **Log files**: See **CB-TIMING v0.3** §11 for rotation policies
+- **Audit logs**: Minimal retention for security events only
+- **Telemetry data**: Real-time only, no persistent storage
+- **Configuration**: Encrypted storage with access controls
+
+**Privacy Controls**:
+- **Data minimization**: Collect only necessary operational data
+- **Purpose limitation**: Use data only for radio control functions
+- **Access controls**: Role-based access to sensitive data
+- **Encryption**: Sensitive data encrypted in transit and at rest
+- **Anonymization**: Remove identifying information where possible
+
+**Compliance Considerations**:
+- **Deployment-specific**: Privacy policies must align with operational requirements
+- **Data sovereignty**: Consider data residency requirements
+- **Retention limits**: Implement automatic data purging
+- **Audit trails**: Track access to sensitive data
 
 ---
 
