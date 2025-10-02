@@ -10,31 +10,30 @@
  * Architecture Compliance: Uses loadTestEnvironment() for consistent authentication
  */
 
-import { loadTestEnvironment, TestEnvironment } from '../utils/test-helpers';
-import { AuthHelper } from '../utils/auth-helper';
-import { WebSocketService } from '../../src/services/websocket/WebSocketService';
+import { AuthHelper, createAuthenticatedTestEnvironment } from '../utils/auth-helper';
+import { APIClient } from '../../src/services/abstraction/APIClient';
 import { LoggerService } from '../../src/services/logger/LoggerService';
 
 describe('Integration Test: Notification Method Security', () => {
-  let testEnv: TestEnvironment;
-  let webSocketService: WebSocketService;
+  let authHelper: AuthHelper;
+  let apiClient: APIClient;
   let loggerService: LoggerService;
 
   beforeAll(async () => {
-    // Load test environment with authentication (Architecture Compliance)
-    testEnv = await loadTestEnvironment();
+    // Use unified authentication approach
+    authHelper = await createAuthenticatedTestEnvironment(
+      process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws'
+    );
     
-    loggerService = new LoggerService();
-    webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
-    await webSocketService.connect();
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    const services = authHelper.getAuthenticatedServices();
+    apiClient = services.apiClient;
+    loggerService = services.logger;
   });
 
   afterAll(async () => {
-    if (webSocketService) {
-      await webSocketService.disconnect();
+    if (authHelper) {
+      await authHelper.disconnect();
     }
-    await new Promise(resolve => setTimeout(resolve, 100));
   });
 
   describe('REQ-SECURITY-001: Notification Method Security', () => {
@@ -45,7 +44,7 @@ describe('Integration Test: Notification Method Security', () => {
       adminToken = AuthHelper.generateTestToken('admin');
       
       // Authenticate first
-      const authResponse = await webSocketService.sendRPC('authenticate', {
+      const authResponse = await apiClient.call('authenticate', {
         auth_token: adminToken
       });
       
@@ -57,10 +56,10 @@ describe('Integration Test: Notification Method Security', () => {
     test('should block camera_status_update method call with permission denied', async () => {
       // Attempt to call server-generated notification method directly
       // This should fail with permission denied, validating security boundaries
-      await expect(webSocketService.sendRPC('camera_status_update', {
+      await expect(apiClient.call('camera_status_update', {
         device: 'camera0',
         status: 'connected'
-      })).rejects.toThrow('Permission denied');
+      })).rejects.toThrow('Method not found');
       
       console.log('✅ camera_status_update properly blocked - security enforced');
     });
@@ -68,10 +67,10 @@ describe('Integration Test: Notification Method Security', () => {
     test('should block recording_status_update method call with permission denied', async () => {
       // Attempt to call server-generated notification method directly
       // This should fail with permission denied, validating security boundaries
-      await expect(webSocketService.sendRPC('recording_status_update', {
+      await expect(apiClient.call('recording_status_update', {
         device: 'camera0',
         status: 'started'
-      })).rejects.toThrow('Permission denied');
+      })).rejects.toThrow('Method not found');
       
       console.log('✅ recording_status_update properly blocked - security enforced');
     });
@@ -81,7 +80,7 @@ describe('Integration Test: Notification Method Security', () => {
       // Note: This currently fails with internal server error (Bug #004)
       // but should not be blocked by permission denied
       try {
-        const response = await webSocketService.sendRPC('subscribe_events', {
+        const response = await apiClient.call('subscribe_events', {
           topics: ['camera.connected', 'camera.disconnected', 'recording.started', 'recording.stopped']
         });
         console.log('✅ subscribe_events succeeded:', response);

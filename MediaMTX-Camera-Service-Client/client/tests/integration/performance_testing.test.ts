@@ -9,7 +9,7 @@
  * - Throughput measurement
  */
 
-import { WebSocketService } from '../../src/services/websocket/WebSocketService';
+import { AuthHelper, createAuthenticatedTestEnvironment } from '../utils/auth-helper';
 import { APIClient } from '../../src/services/abstraction/APIClient';
 import { LoggerService } from '../../src/services/logger/LoggerService';
 
@@ -97,26 +97,27 @@ class PerformanceMonitor {
 }
 
 describe('Performance Testing Suite', () => {
-  let webSocketService: WebSocketService;
+  let authHelper: AuthHelper;
   let apiClient: APIClient;
   let loggerService: LoggerService;
   let monitor: PerformanceMonitor;
 
   beforeAll(async () => {
-    loggerService = new LoggerService();
-    webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
-    apiClient = new APIClient(webSocketService, loggerService);
-    monitor = new PerformanceMonitor();
+    // Use unified authentication approach
+    authHelper = await createAuthenticatedTestEnvironment(
+      process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws'
+    );
     
-    await webSocketService.connect();
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    const services = authHelper.getAuthenticatedServices();
+    apiClient = services.apiClient;
+    loggerService = services.logger;
+    monitor = new PerformanceMonitor();
   });
 
   afterAll(async () => {
-    if (webSocketService) {
-      await webSocketService.disconnect();
+    if (authHelper) {
+      await authHelper.disconnect();
     }
-    await new Promise(resolve => setTimeout(resolve, 100));
   });
 
   beforeEach(() => {

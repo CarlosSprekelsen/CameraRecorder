@@ -50,13 +50,7 @@ export class TestAPIClient implements IAPIClient {
    * MANDATORY: Use this method for all connection tests
    */
   async connect(): Promise<void> {
-    if (this.isMockMode) {
-      // Mock WebSocket for unit tests
-      this.ws = new MockWebSocket();
-      return Promise.resolve();
-    }
-    
-    // Real WebSocket for integration tests
+    // NO MOCKS in integration/E2E tests - always use real WebSocket!
     return this.connectReal();
   }
 

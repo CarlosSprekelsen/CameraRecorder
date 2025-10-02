@@ -4,25 +4,26 @@
  * Tests the basic ping functionality to validate server API alignment
  */
 
+import { AuthHelper, createAuthenticatedTestEnvironment } from '../utils/auth-helper';
 import { APIClient } from '../../src/services/abstraction/APIClient';
-import { WebSocketService } from '../../src/services/websocket/WebSocketService';
 import { LoggerService } from '../../src/services/logger/LoggerService';
 
 describe('Ping API Test', () => {
+  let authHelper: AuthHelper;
   let apiClient: APIClient;
-  let webSocketService: WebSocketService;
 
   beforeAll(async () => {
-    const loggerService = LoggerService.getInstance();
-    webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
-    apiClient = new APIClient(webSocketService, loggerService);
-    await webSocketService.connect();
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Use unified authentication approach
+    authHelper = await createAuthenticatedTestEnvironment(
+      process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws'
+    );
+    
+    apiClient = authHelper.getAuthenticatedServices().apiClient;
   });
 
   afterAll(async () => {
-    if (webSocketService) {
-      await webSocketService.disconnect();
+    if (authHelper) {
+      await authHelper.disconnect();
     }
     await new Promise(resolve => setTimeout(resolve, 100));
   });

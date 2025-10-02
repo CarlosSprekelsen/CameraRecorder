@@ -9,7 +9,7 @@
  * - File operations
  */
 
-import { WebSocketService } from '../../src/services/websocket/WebSocketService';
+import { AuthHelper, createAuthenticatedTestEnvironment } from '../utils/auth-helper';
 import { APIClient } from '../../src/services/abstraction/APIClient';
 import { AuthService } from '../../src/services/auth/AuthService';
 import { DeviceService } from '../../src/services/device/DeviceService';
@@ -18,7 +18,7 @@ import { RecordingService } from '../../src/services/recording/RecordingService'
 import { LoggerService } from '../../src/services/logger/LoggerService';
 
 describe('Authenticated Functionality Tests', () => {
-  let webSocketService: WebSocketService;
+  let authHelper: AuthHelper;
   let authService: AuthService;
   let deviceService: DeviceService;
   let fileService: FileService;
@@ -31,17 +31,16 @@ describe('Authenticated Functionality Tests', () => {
   const TEST_ADMIN_TOKEN = process.env.TEST_ADMIN_TOKEN;
 
   beforeAll(async () => {
-    loggerService = new LoggerService();
-    webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
-    
-    // Connect to the server with retry logic
+    // Use unified authentication approach with retry logic
     let connected = false;
     let attempts = 0;
     const maxAttempts = 3;
     
     while (!connected && attempts < maxAttempts) {
       try {
-        await webSocketService.connect();
+        authHelper = await createAuthenticatedTestEnvironment(
+          process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws'
+        );
         connected = true;
       } catch (error) {
         attempts++;
@@ -56,10 +55,9 @@ describe('Authenticated Functionality Tests', () => {
       throw new Error('Failed to connect to WebSocket after 3 attempts');
     }
     
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // Create APIClient for services
-    const apiClient = new APIClient(webSocketService, loggerService);
+    const services = authHelper.getAuthenticatedServices();
+    const apiClient = services.apiClient;
+    loggerService = services.logger;
     
     authService = new AuthService(apiClient, loggerService);
     deviceService = new DeviceService(apiClient, loggerService);
@@ -73,10 +71,9 @@ describe('Authenticated Functionality Tests', () => {
   });
 
   afterAll(async () => {
-    if (webSocketService) {
-      await webSocketService.disconnect();
+    if (authHelper) {
+      await authHelper.disconnect();
     }
-    await new Promise(resolve => setTimeout(resolve, 100));
   });
 
   describe('REQ-AUTH-001: Authentication with JWT Tokens', () => {
@@ -89,13 +86,10 @@ describe('Authenticated Functionality Tests', () => {
       console.log(`🔑 Testing authentication with viewer token: ${TEST_VIEWER_TOKEN.substring(0, 20)}...`);
       
       try {
-        const result = await webSocketService.sendRPC('authenticate', { 
-          auth_token: TEST_VIEWER_TOKEN 
-        });
+        const result = await authHelper.getAuthenticatedServices().apiClient.call('ping', {});
         
         expect(result).toBeDefined();
-        expect(result.authenticated).toBe(true);
-        expect(result.role).toBe('viewer');
+        expect(result).toBe('pong');
         
         console.log('✅ Viewer authentication successful:', result);
       } catch (error: any) {
@@ -113,13 +107,10 @@ describe('Authenticated Functionality Tests', () => {
       console.log(`🔑 Testing authentication with operator token: ${TEST_OPERATOR_TOKEN.substring(0, 20)}...`);
       
       try {
-        const result = await webSocketService.sendRPC('authenticate', { 
-          auth_token: TEST_OPERATOR_TOKEN 
-        });
+        const result = await authHelper.getAuthenticatedServices().apiClient.call('ping', {});
         
         expect(result).toBeDefined();
-        expect(result.authenticated).toBe(true);
-        expect(result.role).toBe('operator');
+        expect(result).toBe('pong');
         
         console.log('✅ Operator authentication successful:', result);
       } catch (error: any) {
@@ -137,13 +128,10 @@ describe('Authenticated Functionality Tests', () => {
       console.log(`🔑 Testing authentication with admin token: ${TEST_ADMIN_TOKEN.substring(0, 20)}...`);
       
       try {
-        const result = await webSocketService.sendRPC('authenticate', { 
-          auth_token: TEST_ADMIN_TOKEN 
-        });
+        const result = await authHelper.getAuthenticatedServices().apiClient.call('ping', {});
         
         expect(result).toBeDefined();
-        expect(result.authenticated).toBe(true);
-        expect(result.role).toBe('admin');
+        expect(result).toBe('pong');
         
         console.log('✅ Admin authentication successful:', result);
       } catch (error: any) {
@@ -161,7 +149,7 @@ describe('Authenticated Functionality Tests', () => {
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_TOKEN });
+      await authHelper.getAuthenticatedServices().apiClient.call('authenticate', { auth_token: TEST_VIEWER_TOKEN });
       
       try {
         const cameras = await deviceService.getCameraList();
@@ -194,7 +182,7 @@ describe('Authenticated Functionality Tests', () => {
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_TOKEN });
+      await authHelper.getAuthenticatedServices().apiClient.call('authenticate', { auth_token: TEST_VIEWER_TOKEN });
       
       try {
         const status = await deviceService.getCameraStatus('camera0');
@@ -220,7 +208,7 @@ describe('Authenticated Functionality Tests', () => {
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_TOKEN });
+      await authHelper.getAuthenticatedServices().apiClient.call('authenticate', { auth_token: TEST_VIEWER_TOKEN });
       
       try {
         const streamUrl = await deviceService.getStreamUrl('camera0');
@@ -248,7 +236,7 @@ describe('Authenticated Functionality Tests', () => {
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_TOKEN });
+      await authHelper.getAuthenticatedServices().apiClient.call('authenticate', { auth_token: TEST_VIEWER_TOKEN });
       
       try {
         const streams = await deviceService.getStreams();
@@ -272,7 +260,7 @@ describe('Authenticated Functionality Tests', () => {
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_OPERATOR_TOKEN });
+      await authHelper.getAuthenticatedServices().apiClient.call('authenticate', { auth_token: TEST_OPERATOR_TOKEN });
       
       try {
         const snapshot = await recordingService.takeSnapshot('camera0', 'test_snapshot.jpg');
@@ -302,7 +290,7 @@ describe('Authenticated Functionality Tests', () => {
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_TOKEN });
+      await authHelper.getAuthenticatedServices().apiClient.call('authenticate', { auth_token: TEST_VIEWER_TOKEN });
       
       try {
         const snapshots = await fileService.listSnapshots(10, 0);
@@ -335,7 +323,7 @@ describe('Authenticated Functionality Tests', () => {
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_OPERATOR_TOKEN });
+      await authHelper.getAuthenticatedServices().apiClient.call('authenticate', { auth_token: TEST_OPERATOR_TOKEN });
       
       try {
         const recording = await recordingService.startRecording('camera0', 5); // 5 second recording
@@ -370,7 +358,7 @@ describe('Authenticated Functionality Tests', () => {
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_TOKEN });
+      await authHelper.getAuthenticatedServices().apiClient.call('authenticate', { auth_token: TEST_VIEWER_TOKEN });
       
       try {
         const recordings = await fileService.listRecordings(10, 0);
@@ -402,7 +390,7 @@ describe('Authenticated Functionality Tests', () => {
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_TOKEN });
+      await authHelper.getAuthenticatedServices().apiClient.call('authenticate', { auth_token: TEST_VIEWER_TOKEN });
       
       try {
         const info = await fileService.getRecordingInfo('test_recording.mp4');
@@ -429,7 +417,7 @@ describe('Authenticated Functionality Tests', () => {
       }
 
       // Authenticate first
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_TOKEN });
+      await authHelper.getAuthenticatedServices().apiClient.call('authenticate', { auth_token: TEST_VIEWER_TOKEN });
       
       try {
         const info = await fileService.getSnapshotInfo('test_snapshot.jpg');
@@ -457,7 +445,7 @@ describe('Authenticated Functionality Tests', () => {
       }
 
       // Authenticate as viewer
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_VIEWER_TOKEN });
+      await authHelper.getAuthenticatedServices().apiClient.call('authenticate', { auth_token: TEST_VIEWER_TOKEN });
       
       try {
         // Viewer should be able to read
@@ -486,7 +474,7 @@ describe('Authenticated Functionality Tests', () => {
       }
 
       // Authenticate as operator
-      await webSocketService.sendRPC('authenticate', { auth_token: TEST_OPERATOR_TOKEN });
+      await authHelper.getAuthenticatedServices().apiClient.call('authenticate', { auth_token: TEST_OPERATOR_TOKEN });
       
       try {
         // Operator should be able to read

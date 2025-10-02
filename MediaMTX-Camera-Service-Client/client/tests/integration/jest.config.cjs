@@ -29,7 +29,7 @@ module.exports = {
     '<rootDir>/**/*.test.{js,ts,tsx}'
   ],
   
-  // Setup files
+  // Setup files - NO MOCKS for integration tests!
   setupFilesAfterEnv: ['<rootDir>/setup.ts'],
   
   // Integration-specific coverage settings

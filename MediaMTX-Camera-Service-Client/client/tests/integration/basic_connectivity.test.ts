@@ -6,34 +6,25 @@
  */
 
 import { APIClient } from '../../src/services/abstraction/APIClient';
-import { WebSocketService } from '../../src/services/websocket/WebSocketService';
-import { LoggerService } from '../../src/services/logger/LoggerService';
+import { AuthHelper, createAuthenticatedTestEnvironment } from '../utils/auth-helper';
 
 describe('Basic Integration Test: Server Connectivity', () => {
+  let authHelper: AuthHelper;
   let apiClient: APIClient;
-  let webSocketService: WebSocketService;
-  let loggerService: LoggerService;
 
   beforeAll(async () => {
-    // Initialize services with new architecture
-    loggerService = LoggerService.getInstance();
-    webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
-    apiClient = new APIClient(webSocketService, loggerService);
+    // Use unified authentication approach
+    authHelper = await createAuthenticatedTestEnvironment(
+      process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws'
+    );
     
-    // Connect to the server
-    await webSocketService.connect();
-    
-    // Wait for connection to be established
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    apiClient = authHelper.getAuthenticatedServices().apiClient;
   });
 
   afterAll(async () => {
-    if (webSocketService) {
-      await webSocketService.disconnect();
+    if (authHelper) {
+      await authHelper.disconnect();
     }
-    
-    // Give time for cleanup
-    await new Promise(resolve => setTimeout(resolve, 100));
   });
 
   describe('REQ-BASIC-001: Server Connection', () => {

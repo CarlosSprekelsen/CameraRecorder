@@ -7,19 +7,11 @@
 import { LoggerService } from '../../src/services/logger/LoggerService';
 // WebSocketCleanupManager removed - using IAPIClient abstraction
 
-// Import WebSocket for Node.js environment
+// Import REAL WebSocket for Node.js environment - NO MOCKS in integration tests!
 const WebSocket = require('ws');
 
-// Create a WebSocket mock with constants for Node.js environment
-class WebSocketMock extends WebSocket {
-  static OPEN = 1;
-  static CLOSED = 3;
-  static CONNECTING = 0;
-  static CLOSING = 2;
-}
-
-// Mock browser APIs for Node.js environment
-global.WebSocket = WebSocketMock;
+// Use REAL WebSocket for integration tests - NO MOCKS!
+global.WebSocket = WebSocket;
 
 // Mock sessionStorage for Node.js environment
 const sessionStorageMock = {

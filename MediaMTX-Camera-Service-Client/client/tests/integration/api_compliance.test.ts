@@ -5,7 +5,7 @@
  * Focus: Method validation, data structure compliance, error handling
  */
 
-import { WebSocketService } from '../../src/services/websocket/WebSocketService';
+import { AuthHelper, createAuthenticatedTestEnvironment } from '../utils/auth-helper';
 import { APIClient } from '../../src/services/abstraction/APIClient';
 import { AuthService } from '../../src/services/auth/AuthService';
 import { FileService } from '../../src/services/file/FileService';
@@ -14,7 +14,7 @@ import { ServerService } from '../../src/services/server/ServerService';
 import { LoggerService } from '../../src/services/logger/LoggerService';
 
 describe('Integration Tests: API Compliance', () => {
-  let webSocketService: WebSocketService;
+  let authHelper: AuthHelper;
   let authService: AuthService;
   let fileService: FileService;
   let deviceService: DeviceService;
@@ -22,17 +22,14 @@ describe('Integration Tests: API Compliance', () => {
   let loggerService: LoggerService;
 
   beforeAll(async () => {
-    loggerService = new LoggerService();
-    webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
+    // Use unified authentication approach
+    authHelper = await createAuthenticatedTestEnvironment(
+      process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws'
+    );
     
-    // Connect to the server
-    await webSocketService.connect();
-    
-    // Wait for connection to be established
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Create APIClient for services
-    const apiClient = new APIClient(webSocketService, loggerService);
+    const services = authHelper.getAuthenticatedServices();
+    const apiClient = services.apiClient;
+    loggerService = services.logger;
     
     authService = new AuthService(apiClient, loggerService);
     fileService = new FileService(apiClient, loggerService);
@@ -41,8 +38,8 @@ describe('Integration Tests: API Compliance', () => {
   });
 
   afterAll(async () => {
-    if (webSocketService) {
-      await webSocketService.disconnect();
+    if (authHelper) {
+      await authHelper.disconnect();
     }
   });
 

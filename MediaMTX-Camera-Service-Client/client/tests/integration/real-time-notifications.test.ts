@@ -13,28 +13,29 @@
  * Test Categories: Integration/Real-Time
  */
 
-import { TestAPIClient } from '../utils/api-client';
-import { AuthHelper } from '../utils/auth-helper';
+import { AuthHelper, createAuthenticatedTestEnvironment } from '../utils/auth-helper';
 import { AuthService } from '../../src/services/auth/AuthService';
-import { LoggerService } from '../../src/services/logger/LoggerService';
 
 describe('Real-Time Notification Tests', () => {
-  let apiClient: TestAPIClient;
+  let authHelper: AuthHelper;
+  let apiClient: any;
   let authService: AuthService;
 
   beforeEach(async () => {
-    apiClient = new TestAPIClient({ mockMode: false });
-    await apiClient.connect();
+    // Use unified authentication approach
+    authHelper = await createAuthenticatedTestEnvironment(
+      process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws'
+    );
     
-    // Create AuthService following architectural pattern
-    authService = new AuthService(apiClient, LoggerService.getInstance());
-    
-    const token = AuthHelper.generateTestToken('admin');
-    await authService.authenticate(token);
+    const services = authHelper.getAuthenticatedServices();
+    apiClient = services.apiClient;
+    authService = services.authService;
   });
 
   afterEach(async () => {
-    await apiClient.disconnect();
+    if (authHelper) {
+      await authHelper.disconnect();
+    }
   });
 
   test('REQ-NOTIFY-001: WebSocket notification subscription', async () => {

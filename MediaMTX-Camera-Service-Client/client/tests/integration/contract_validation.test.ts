@@ -11,8 +11,7 @@
  * Architecture Compliance: Uses AuthHelper for consistent authentication
  */
 
-import { AuthHelper } from '../utils/auth-helper';
-import { WebSocketService } from '../../src/services/websocket/WebSocketService';
+import { AuthHelper, createAuthenticatedTestEnvironment } from '../utils/auth-helper';
 import { APIClient } from '../../src/services/abstraction/APIClient';
 import { AuthService } from '../../src/services/auth/AuthService';
 import { DeviceService } from '../../src/services/device/DeviceService';
@@ -129,7 +128,7 @@ class ContractValidator {
 }
 
 describe('API Contract Validation Suite', () => {
-  let webSocketService: WebSocketService;
+  let authHelper: AuthHelper;
   let authService: AuthService;
   let deviceService: DeviceService;
   let fileService: FileService;
@@ -139,36 +138,28 @@ describe('API Contract Validation Suite', () => {
   let apiClient: APIClient;
 
   beforeAll(async () => {
-    loggerService = new LoggerService();
-    webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
-    validator = new ContractValidator();
+    // Use unified authentication approach
+    authHelper = await createAuthenticatedTestEnvironment('ws://localhost:8002/ws');
     
-    // Connect to the server
-    await webSocketService.connect();
+    // Extract services from authenticated helper
+    const services = authHelper.getAuthenticatedServices();
+    apiClient = services.apiClient;
+    loggerService = services.logger;
     
-    // Create APIClient for services
-    apiClient = new APIClient(webSocketService, loggerService);
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // CRITICAL: Authenticate before any operations
-    const token = AuthHelper.generateTestToken('admin');
-    const authResult = await webSocketService.sendRPC('authenticate', { auth_token: token });
-    if (!authResult.authenticated) {
-      throw new Error('Failed to authenticate with server');
-    }
-    
-    // Initialize services after authentication
+    // Initialize additional services using the authenticated API client
     authService = new AuthService(apiClient, loggerService);
     deviceService = new DeviceService(apiClient, loggerService);
     fileService = new FileService(apiClient, loggerService);
     serverService = new ServerService(apiClient, loggerService);
+    
+    // Initialize validator
+    validator = new ContractValidator();
   });
 
   afterAll(async () => {
-    if (webSocketService) {
-      await webSocketService.disconnect();
+    if (authHelper) {
+      await authHelper.disconnect();
     }
-    await new Promise(resolve => setTimeout(resolve, 100));
   });
 
   beforeEach(() => {
@@ -180,7 +171,7 @@ describe('API Contract Validation Suite', () => {
       validator.startTimer();
       
       try {
-        const response = await webSocketService.sendRPC('ping', {});
+        const response = await apiClient.call('ping', {});
         
         // Validate response structure
         expect(typeof response).toBe('string');
@@ -226,7 +217,7 @@ describe('API Contract Validation Suite', () => {
       validator.startTimer();
       
       try {
-        await webSocketService.sendRPC('nonexistent_method', {});
+        await apiClient.call('nonexistent_method', {});
         validator.addWarning('Expected method not found error but got success');
       } catch (error: any) {
         // Should get method not found error
@@ -245,7 +236,7 @@ describe('API Contract Validation Suite', () => {
       
       try {
         // Test with invalid token to validate error contract
-        await webSocketService.sendRPC('authenticate', { auth_token: 'invalid_token' });
+        await apiClient.call('authenticate', { auth_token: 'invalid_token' });
         validator.addWarning('Expected authentication failure but got success');
       } catch (error: any) {
         validator.validateField(error.code, 'error.code', 'number');
@@ -262,7 +253,7 @@ describe('API Contract Validation Suite', () => {
       
       try {
         const token = AuthHelper.generateTestToken('admin');
-        const result = await webSocketService.sendRPC('authenticate', { auth_token: token });
+        const result = await apiClient.call('authenticate', { auth_token: token });
         
         // Validate successful authentication response
         validator.validateField(result.authenticated, 'authenticated', 'boolean');
@@ -350,7 +341,7 @@ describe('API Contract Validation Suite', () => {
         validator.startTimer();
         
         try {
-          await webSocketService.sendRPC('ping', {});
+          await apiClient.call('ping', {});
           const performance = validator.getPerformance();
           responseTimes.push(performance.responseTime);
         } catch (error) {
@@ -409,7 +400,7 @@ describe('API Contract Validation Suite', () => {
 
       // Send multiple concurrent ping requests
       for (let i = 0; i < concurrentRequests; i++) {
-        promises.push(webSocketService.sendRPC('ping', {}));
+        promises.push(apiClient.call('ping', {}));
       }
 
       const startTime = Date.now();
@@ -443,7 +434,7 @@ describe('API Contract Validation Suite', () => {
         const requestStart = Date.now();
         
         try {
-          await webSocketService.sendRPC('ping', {});
+          await apiClient.call('ping', {});
           results.push({
             time: Date.now() - startTime,
             success: true,
