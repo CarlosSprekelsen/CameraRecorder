@@ -2,7 +2,9 @@ package telemetry
 
 import (
 	"context"
+	"fmt"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -119,8 +121,8 @@ func TestEventBuffer(t *testing.T) {
 
 	// Test GetEventsAfter
 	events := buffer.GetEventsAfter(2)
-	if len(events) != 3 { // Events 3, 4, 5 (0-based indexing)
-		t.Errorf("Expected 3 events after ID 2, got %d", len(events))
+	if len(events) != 5 { // Events 3, 4, 5, 6, 7 (all events with ID > 2)
+		t.Errorf("Expected 5 events after ID 2, got %d", len(events))
 	}
 }
 
@@ -297,5 +299,599 @@ func TestHubSubscribeBasic(t *testing.T) {
 
 	if clientCount != 0 {
 		t.Errorf("Expected 0 clients after timeout, got %d", clientCount)
+	}
+}
+
+// TestTelemetryContract_SubscribeReceiveHeartbeat tests that subscribing to telemetry
+// receives heartbeat events as expected.
+// Source: PRE-INT-05
+// Quote: "Subscribe → receive heartbeat"
+func TestTelemetryContract_SubscribeReceiveHeartbeat(t *testing.T) {
+	cfg := config.LoadCBTimingBaseline()
+	// Use shorter heartbeat interval for testing (50ms instead of 15s)
+	cfg.HeartbeatInterval = 50 * time.Millisecond
+	cfg.HeartbeatJitter = 5 * time.Millisecond
+
+	hub := NewHub(cfg)
+	defer hub.Stop()
+
+	// Create test request
+	req := httptest.NewRequest("GET", "/telemetry", nil)
+	req.Header.Set("Accept", "text/event-stream")
+
+	// Create test response recorder
+	w := httptest.NewRecorder()
+
+	// Subscribe with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	// Start subscription in goroutine
+	subscribeDone := make(chan error, 1)
+	go func() {
+		subscribeDone <- hub.Subscribe(ctx, w, req)
+	}()
+
+	// Wait for subscription to complete
+	select {
+	case err := <-subscribeDone:
+		if err != nil {
+			t.Fatalf("Subscribe() failed: %v", err)
+		}
+	case <-time.After(100 * time.Millisecond):
+		t.Fatal("Subscribe() timed out")
+	}
+
+	// Wait for heartbeat events
+	time.Sleep(200 * time.Millisecond)
+
+	// Parse SSE response
+	response := w.Body.String()
+
+	// Check for ready event
+	if !strings.Contains(response, "event: ready") {
+		t.Error("Expected ready event in response")
+	}
+
+	// Check for heartbeat events
+	heartbeatCount := strings.Count(response, "event: heartbeat")
+	if heartbeatCount < 1 {
+		t.Errorf("Expected at least 1 heartbeat event, got %d. Response: %s", heartbeatCount, response)
+	}
+
+	// Verify SSE format
+	lines := strings.Split(response, "\n")
+	hasEventType := false
+	hasData := false
+
+	for _, line := range lines {
+		if strings.HasPrefix(line, "event: ") {
+			hasEventType = true
+		}
+		if strings.HasPrefix(line, "data: ") {
+			hasData = true
+		}
+	}
+
+	if !hasEventType {
+		t.Error("Expected event type in SSE response")
+	}
+	if !hasData {
+		t.Error("Expected data in SSE response")
+	}
+}
+
+// TestTelemetryContract_PowerChannelChanges tests that power and channel changes
+// via orchestrator result in appropriate telemetry events.
+// Source: PRE-INT-05
+// Quote: "Perform power/channel via orchestrator → receive powerChanged/channelChanged"
+func TestTelemetryContract_PowerChannelChanges(t *testing.T) {
+	cfg := config.LoadCBTimingBaseline()
+	hub := NewHub(cfg)
+	defer hub.Stop()
+
+	// Create test request
+	req := httptest.NewRequest("GET", "/telemetry", nil)
+	req.Header.Set("Accept", "text/event-stream")
+
+	// Create test response recorder
+	w := httptest.NewRecorder()
+
+	// Subscribe
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	err := hub.Subscribe(ctx, w, req)
+	if err != nil {
+		t.Fatalf("Subscribe() failed: %v", err)
+	}
+
+	// Simulate power change via orchestrator
+	powerEvent := Event{
+		Type: "powerChanged",
+		Data: map[string]interface{}{
+			"radioId":   "radio-01",
+			"powerDbm":  25,
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+		},
+		Radio: "radio-01",
+	}
+
+	err = hub.PublishRadio("radio-01", powerEvent)
+	if err != nil {
+		t.Fatalf("PublishRadio() failed: %v", err)
+	}
+
+	// Simulate channel change via orchestrator
+	channelEvent := Event{
+		Type: "channelChanged",
+		Data: map[string]interface{}{
+			"radioId":      "radio-01",
+			"frequencyMhz": 2417.0,
+			"timestamp":    time.Now().UTC().Format(time.RFC3339),
+		},
+		Radio: "radio-01",
+	}
+
+	err = hub.PublishRadio("radio-01", channelEvent)
+	if err != nil {
+		t.Fatalf("PublishRadio() failed: %v", err)
+	}
+
+	// Wait for events to be processed
+	time.Sleep(50 * time.Millisecond)
+
+	// Parse SSE response
+	response := w.Body.String()
+
+	// Check for powerChanged event
+	if !strings.Contains(response, "event: powerChanged") {
+		t.Error("Expected powerChanged event in response")
+	}
+	if !strings.Contains(response, "powerDbm") {
+		t.Error("Expected powerDbm data in powerChanged event")
+	}
+
+	// Check for channelChanged event
+	if !strings.Contains(response, "event: channelChanged") {
+		t.Error("Expected channelChanged event in response")
+	}
+	if !strings.Contains(response, "frequencyMhz") {
+		t.Error("Expected frequencyMhz data in channelChanged event")
+	}
+
+	// Verify events were buffered for the radio
+	hub.mu.RLock()
+	buffer, exists := hub.buffers["radio-01"]
+	hub.mu.RUnlock()
+
+	if !exists {
+		t.Error("Expected radio buffer to exist")
+	}
+	if buffer.GetSize() != 2 {
+		t.Errorf("Expected 2 events in radio buffer, got %d", buffer.GetSize())
+	}
+}
+
+// TestTelemetryContract_DisconnectReconnectWithLastEventID tests that disconnecting
+// and reconnecting with Last-Event-ID header properly replays missed events.
+// Source: PRE-INT-05
+// Quote: "Disconnect/reconnect with Last-Event-ID → replay missed events up to buffer size"
+func TestTelemetryContract_DisconnectReconnectWithLastEventID(t *testing.T) {
+	cfg := config.LoadCBTimingBaseline()
+	hub := NewHub(cfg)
+	defer hub.Stop()
+
+	// First connection - receive some events
+	req1 := httptest.NewRequest("GET", "/telemetry", nil)
+	req1.Header.Set("Accept", "text/event-stream")
+
+	w1 := httptest.NewRecorder()
+	ctx1, cancel1 := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel1()
+
+	err := hub.Subscribe(ctx1, w1, req1)
+	if err != nil {
+		t.Fatalf("First Subscribe() failed: %v", err)
+	}
+
+	// Publish some events
+	for i := 1; i <= 5; i++ {
+		event := Event{
+			Type: "test",
+			Data: map[string]interface{}{
+				"index": i,
+			},
+			Radio: "radio-01",
+		}
+		hub.PublishRadio("radio-01", event)
+	}
+
+	// Wait for events to be processed
+	time.Sleep(50 * time.Millisecond)
+
+	// Disconnect first client
+	cancel1()
+
+	// Wait for client to be cleaned up
+	time.Sleep(50 * time.Millisecond)
+
+	// Publish more events while disconnected
+	for i := 6; i <= 10; i++ {
+		event := Event{
+			Type: "test",
+			Data: map[string]interface{}{
+				"index": i,
+			},
+			Radio: "radio-01",
+		}
+		hub.PublishRadio("radio-01", event)
+	}
+
+	// Reconnect with Last-Event-ID header (simulating client that last saw event ID 5)
+	req2 := httptest.NewRequest("GET", "/telemetry?radio=radio-01", nil)
+	req2.Header.Set("Accept", "text/event-stream")
+	req2.Header.Set("Last-Event-ID", "5") // Resume from event ID 5
+
+	w2 := httptest.NewRecorder()
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel2()
+
+	err = hub.Subscribe(ctx2, w2, req2)
+	if err != nil {
+		t.Fatalf("Second Subscribe() failed: %v", err)
+	}
+
+	// Wait for replay to complete
+	time.Sleep(50 * time.Millisecond)
+
+	// Parse reconnected client response
+	response := w2.Body.String()
+
+	// Should contain events with IDs > 5 (events 6-10)
+	// Check that replayed events are present
+	lines := strings.Split(response, "\n")
+	replayedEventCount := 0
+	for _, line := range lines {
+		if strings.HasPrefix(line, "id: ") {
+			// Extract event ID and check if it's > 5
+			var eventID int64
+			if _, err := fmt.Sscanf(line, "id: %d", &eventID); err == nil {
+				if eventID > 5 {
+					replayedEventCount++
+				}
+			}
+		}
+	}
+
+	if replayedEventCount == 0 {
+		t.Error("Expected replayed events with IDs > 5")
+	}
+
+	// Verify buffer contains all events
+	hub.mu.RLock()
+	buffer, exists := hub.buffers["radio-01"]
+	hub.mu.RUnlock()
+
+	if !exists {
+		t.Error("Expected radio buffer to exist")
+	}
+	if buffer.GetSize() != 10 {
+		t.Errorf("Expected 10 events in radio buffer, got %d", buffer.GetSize())
+	}
+}
+
+// TestTelemetryContract_MonotonicPerRadioIDs tests that event IDs are monotonic
+// per radio and that buffer bounds are respected.
+// Source: PRE-INT-05
+// Quote: "demonstrate monotonic per-radio IDs and buffer bounds"
+func TestTelemetryContract_MonotonicPerRadioIDs(t *testing.T) {
+	cfg := config.LoadCBTimingBaseline()
+	// Use small buffer size for testing
+	cfg.EventBufferSize = 3
+	hub := NewHub(cfg)
+	defer hub.Stop()
+
+	// Test monotonic IDs for radio-01
+	radio1Events := make([]Event, 5)
+	for i := 0; i < 5; i++ {
+		event := Event{
+			Type: "test",
+			Data: map[string]interface{}{
+				"index": i,
+			},
+			Radio: "radio-01",
+		}
+		radio1Events[i] = event
+		hub.PublishRadio("radio-01", event)
+	}
+
+	// Test monotonic IDs for radio-02
+	radio2Events := make([]Event, 3)
+	for i := 0; i < 3; i++ {
+		event := Event{
+			Type: "test",
+			Data: map[string]interface{}{
+				"index": i,
+			},
+			Radio: "radio-02",
+		}
+		radio2Events[i] = event
+		hub.PublishRadio("radio-02", event)
+	}
+
+	// Wait for events to be processed
+	time.Sleep(50 * time.Millisecond)
+
+	// Check radio-01 buffer (should maintain capacity of 3)
+	hub.mu.RLock()
+	buffer1, exists1 := hub.buffers["radio-01"]
+	hub.mu.RUnlock()
+
+	if !exists1 {
+		t.Error("Expected radio-01 buffer to exist")
+	}
+	if buffer1.GetSize() != 3 {
+		t.Errorf("Expected radio-01 buffer size 3, got %d", buffer1.GetSize())
+	}
+
+	// Check radio-02 buffer
+	hub.mu.RLock()
+	buffer2, exists2 := hub.buffers["radio-02"]
+	hub.mu.RUnlock()
+
+	if !exists2 {
+		t.Error("Expected radio-02 buffer to exist")
+	}
+	if buffer2.GetSize() != 3 {
+		t.Errorf("Expected radio-02 buffer size 3, got %d", buffer2.GetSize())
+	}
+
+	// Verify monotonic IDs within each radio buffer
+	events1 := buffer1.GetEventsAfter(0)
+	events2 := buffer2.GetEventsAfter(0)
+
+	// Check radio-01 monotonic IDs (should be events 3, 4, 5 due to buffer capacity)
+	if len(events1) != 3 {
+		t.Errorf("Expected 3 events in radio-01 buffer, got %d", len(events1))
+	}
+	for i, event := range events1 {
+		expectedID := int64(i + 3) // IDs 3, 4, 5
+		if event.ID != expectedID {
+			t.Errorf("Radio-01 event %d: expected ID %d, got %d", i, expectedID, event.ID)
+		}
+	}
+
+	// Check radio-02 monotonic IDs (should be events 1, 2, 3)
+	if len(events2) != 3 {
+		t.Errorf("Expected 3 events in radio-02 buffer, got %d", len(events2))
+	}
+	for i, event := range events2 {
+		expectedID := int64(i + 1) // IDs 1, 2, 3
+		if event.ID != expectedID {
+			t.Errorf("Radio-02 event %d: expected ID %d, got %d", i, expectedID, event.ID)
+		}
+	}
+
+	// Verify that radio IDs are independent
+	hub.mu.RLock()
+	radio1ID := hub.radioIDs["radio-01"]
+	radio2ID := hub.radioIDs["radio-02"]
+	hub.mu.RUnlock()
+
+	if radio1ID != 5 {
+		t.Errorf("Expected radio-01 next ID 5, got %d", radio1ID)
+	}
+	if radio2ID != 3 {
+		t.Errorf("Expected radio-02 next ID 3, got %d", radio2ID)
+	}
+}
+
+// TestTelemetryContract_BufferBounds tests that the event buffer respects
+// capacity bounds and maintains proper circular buffer behavior.
+// Source: PRE-INT-05
+// Quote: "buffer bounds"
+func TestTelemetryContract_BufferBounds(t *testing.T) {
+	cfg := config.LoadCBTimingBaseline()
+	// Use small buffer size for testing
+	cfg.EventBufferSize = 3
+	hub := NewHub(cfg)
+	defer hub.Stop()
+
+	// Fill buffer beyond capacity
+	for i := 1; i <= 5; i++ {
+		event := Event{
+			Type: "test",
+			Data: map[string]interface{}{
+				"index": i,
+			},
+			Radio: "radio-01",
+		}
+		hub.PublishRadio("radio-01", event)
+	}
+
+	// Wait for events to be processed
+	time.Sleep(50 * time.Millisecond)
+
+	// Check buffer size
+	hub.mu.RLock()
+	buffer, exists := hub.buffers["radio-01"]
+	hub.mu.RUnlock()
+
+	if !exists {
+		t.Error("Expected radio buffer to exist")
+	}
+	if buffer.GetSize() != 3 {
+		t.Errorf("Expected buffer size 3, got %d", buffer.GetSize())
+	}
+
+	// Verify that only the last 3 events are retained (events 3, 4, 5)
+	events := buffer.GetEventsAfter(0)
+	if len(events) != 3 {
+		t.Errorf("Expected 3 events in buffer, got %d", len(events))
+	}
+
+	// Check that events 1 and 2 were evicted, but 3, 4, 5 remain
+	expectedIDs := []int64{3, 4, 5}
+	for i, event := range events {
+		if event.ID != expectedIDs[i] {
+			t.Errorf("Event %d: expected ID %d, got %d", i, expectedIDs[i], event.ID)
+		}
+	}
+
+	// Test GetEventsAfter with partial replay
+	eventsAfter2 := buffer.GetEventsAfter(2)
+	if len(eventsAfter2) != 3 {
+		t.Errorf("Expected 3 events after ID 2, got %d", len(eventsAfter2))
+	}
+
+	// Should contain events 3, 4, and 5 (all events with ID > 2)
+	expectedAfter2 := []int64{3, 4, 5}
+	for i, event := range eventsAfter2 {
+		if event.ID != expectedAfter2[i] {
+			t.Errorf("Event after ID 2, index %d: expected ID %d, got %d", i, expectedAfter2[i], event.ID)
+		}
+	}
+}
+
+// TestTelemetryContract_NoSleepsGreaterThan100ms tests that no sleeps greater
+// than 100ms are used in the telemetry implementation.
+// Source: PRE-INT-05
+// Quote: "No sleeps > 100ms; use fake clock or tick injection if present"
+func TestTelemetryContract_NoSleepsGreaterThan100ms(t *testing.T) {
+	cfg := config.LoadCBTimingBaseline()
+	// Use very short intervals for testing
+	cfg.HeartbeatInterval = 10 * time.Millisecond
+	cfg.HeartbeatJitter = 1 * time.Millisecond
+
+	hub := NewHub(cfg)
+	defer hub.Stop()
+
+	// Create test request
+	req := httptest.NewRequest("GET", "/telemetry", nil)
+	req.Header.Set("Accept", "text/event-stream")
+
+	// Create test response recorder
+	w := httptest.NewRecorder()
+
+	// Subscribe with short timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+
+	start := time.Now()
+	err := hub.Subscribe(ctx, w, req)
+	duration := time.Since(start)
+
+	if err != nil {
+		t.Fatalf("Subscribe() failed: %v", err)
+	}
+
+	// Subscribe should complete quickly (no sleeps > 100ms)
+	if duration > 100*time.Millisecond {
+		t.Errorf("Subscribe() took %v, expected < 100ms", duration)
+	}
+
+	// Wait for a short period to allow heartbeat
+	time.Sleep(30 * time.Millisecond)
+
+	// Publish an event and measure time
+	start = time.Now()
+	event := Event{
+		Type: "test",
+		Data: map[string]interface{}{
+			"message": "test",
+		},
+		Radio: "radio-01",
+	}
+	err = hub.PublishRadio("radio-01", event)
+	duration = time.Since(start)
+
+	if err != nil {
+		t.Fatalf("PublishRadio() failed: %v", err)
+	}
+
+	// Publish should complete quickly (no sleeps > 100ms)
+	if duration > 100*time.Millisecond {
+		t.Errorf("PublishRadio() took %v, expected < 100ms", duration)
+	}
+}
+
+// TestTelemetryContract_SSEFormat tests that the SSE format is correct
+// and includes proper headers and event structure.
+func TestTelemetryContract_SSEFormat(t *testing.T) {
+	cfg := config.LoadCBTimingBaseline()
+	hub := NewHub(cfg)
+	defer hub.Stop()
+
+	// Create test request
+	req := httptest.NewRequest("GET", "/telemetry", nil)
+	req.Header.Set("Accept", "text/event-stream")
+
+	// Create test response recorder
+	w := httptest.NewRecorder()
+
+	// Subscribe
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+
+	err := hub.Subscribe(ctx, w, req)
+	if err != nil {
+		t.Fatalf("Subscribe() failed: %v", err)
+	}
+
+	// Publish an event
+	event := Event{
+		Type: "test",
+		Data: map[string]interface{}{
+			"message": "test event",
+			"value":   42,
+		},
+		Radio: "radio-01",
+	}
+	hub.PublishRadio("radio-01", event)
+
+	// Wait for event to be processed
+	time.Sleep(50 * time.Millisecond)
+
+	// Check SSE headers
+	if w.Header().Get("Content-Type") != "text/event-stream; charset=utf-8" {
+		t.Errorf("Expected Content-Type 'text/event-stream; charset=utf-8', got '%s'", w.Header().Get("Content-Type"))
+	}
+	if w.Header().Get("Cache-Control") != "no-cache" {
+		t.Errorf("Expected Cache-Control 'no-cache', got '%s'", w.Header().Get("Cache-Control"))
+	}
+	if w.Header().Get("Connection") != "keep-alive" {
+		t.Errorf("Expected Connection 'keep-alive', got '%s'", w.Header().Get("Connection"))
+	}
+
+	// Parse SSE response
+	response := w.Body.String()
+	lines := strings.Split(response, "\n")
+
+	// Check for SSE format
+	hasEventType := false
+	hasData := false
+	hasID := false
+
+	for _, line := range lines {
+		if strings.HasPrefix(line, "event: ") {
+			hasEventType = true
+		}
+		if strings.HasPrefix(line, "data: ") {
+			hasData = true
+		}
+		if strings.HasPrefix(line, "id: ") {
+			hasID = true
+		}
+	}
+
+	if !hasEventType {
+		t.Error("Expected event type in SSE response")
+	}
+	if !hasData {
+		t.Error("Expected data in SSE response")
+	}
+	if !hasID {
+		t.Error("Expected event ID in SSE response")
 	}
 }

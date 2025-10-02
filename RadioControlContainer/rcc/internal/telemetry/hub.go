@@ -108,6 +108,9 @@ func (h *Hub) Subscribe(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		}
 	}
 
+	// Extract radio ID from query parameter
+	radioID := r.URL.Query().Get("radio")
+
 	// Create client
 	client := &Client{
 		ID:      clientID,
@@ -116,6 +119,7 @@ func (h *Hub) Subscribe(ctx context.Context, w http.ResponseWriter, r *http.Requ
 		Context: clientCtx,
 		Cancel:  cancel,
 		LastID:  lastEventID,
+		Radio:   radioID,
 		Events:  make(chan Event, 100), // Buffer for client events
 	}
 
@@ -140,7 +144,7 @@ func (h *Hub) Subscribe(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	// Start heartbeat if this is the first client
 	h.mu.Lock()
-	if len(h.clients) == 0 {
+	if len(h.clients) == 1 {
 		h.startHeartbeat()
 	}
 	h.mu.Unlock()
@@ -154,23 +158,30 @@ func (h *Hub) Subscribe(ctx context.Context, w http.ResponseWriter, r *http.Requ
 // Publish publishes an event to all connected clients.
 // Source: Telemetry SSE v1 §2.2
 func (h *Hub) Publish(event Event) error {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
-	// Assign event ID if not set
+	// Assign event ID if not set (needs write lock)
 	if event.ID == 0 {
 		event.ID = h.getNextEventID(event.Radio)
 	}
 
-	// Buffer the event
+	// Buffer the event (needs write lock)
 	if event.Radio != "" {
 		h.bufferEvent(event)
 	}
 
-	// Send to all clients
+	// Send to all clients (needs read lock)
+	h.mu.RLock()
+	clients := make([]*Client, 0, len(h.clients))
 	for _, client := range h.clients {
+		clients = append(clients, client)
+	}
+	h.mu.RUnlock()
+
+	// Send to all clients without holding the lock
+	for _, client := range clients {
 		select {
 		case client.Events <- event:
+		case <-client.Context.Done():
+			// Client context cancelled, skip
 		default:
 			// Client buffer full, skip this event
 		}
@@ -252,7 +263,11 @@ func (h *Hub) sendEventToClient(client *Client, event Event) error {
 
 // handleClient manages a client connection and event delivery.
 func (h *Hub) handleClient(client *Client) {
-	defer h.unregisterClient(client.ID)
+	defer func() {
+		// Close the client's event channel when the handler exits
+		close(client.Events)
+		h.unregisterClient(client.ID)
+	}()
 
 	for {
 		select {
@@ -277,7 +292,8 @@ func (h *Hub) unregisterClient(clientID string) {
 
 	if client, exists := h.clients[clientID]; exists {
 		client.Cancel()
-		close(client.Events)
+		// Don't close the channel here to avoid race with heartbeat
+		// The channel will be closed when the client goroutine exits
 		delete(h.clients, clientID)
 
 		// Stop heartbeat if no clients remain

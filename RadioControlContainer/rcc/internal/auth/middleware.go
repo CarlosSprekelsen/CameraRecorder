@@ -11,11 +11,11 @@ package auth
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
-
-	"github.com/radio-control/rcc/internal/api"
+	"time"
 )
 
 // Claims represents the parsed token claims.
@@ -47,13 +47,19 @@ const (
 
 // Middleware handles authentication and authorization.
 type Middleware struct {
-	// TODO: Add real token verifier
-	// For now, we'll use a mock verifier
+	verifier *Verifier
 }
 
 // NewMiddleware creates a new auth middleware.
 func NewMiddleware() *Middleware {
 	return &Middleware{}
+}
+
+// NewMiddlewareWithVerifier creates a new auth middleware with a JWT verifier.
+func NewMiddlewareWithVerifier(verifier *Verifier) *Middleware {
+	return &Middleware{
+		verifier: verifier,
+	}
 }
 
 // RequireAuth creates middleware that requires authentication.
@@ -69,7 +75,7 @@ func (m *Middleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 		// Extract bearer token
 		token, err := m.extractBearerToken(r)
 		if err != nil {
-			api.WriteError(w, http.StatusUnauthorized, "UNAUTHORIZED", 
+			writeError(w, http.StatusUnauthorized, "UNAUTHORIZED",
 				"Authentication required", nil)
 			return
 		}
@@ -77,7 +83,7 @@ func (m *Middleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 		// Verify token and extract claims
 		claims, err := m.verifyToken(token)
 		if err != nil {
-			api.WriteError(w, http.StatusUnauthorized, "UNAUTHORIZED", 
+			writeError(w, http.StatusUnauthorized, "UNAUTHORIZED",
 				"Invalid token", nil)
 			return
 		}
@@ -95,14 +101,14 @@ func (m *Middleware) RequireScope(requiredScopes ...string) func(http.HandlerFun
 		return func(w http.ResponseWriter, r *http.Request) {
 			claims := m.getClaimsFromContext(r.Context())
 			if claims == nil {
-				api.WriteError(w, http.StatusUnauthorized, "UNAUTHORIZED", 
+				writeError(w, http.StatusUnauthorized, "UNAUTHORIZED",
 					"Authentication required", nil)
 				return
 			}
 
 			// Check if user has required scopes
 			if !m.hasRequiredScopes(claims, requiredScopes) {
-				api.WriteError(w, http.StatusForbidden, "FORBIDDEN", 
+				writeError(w, http.StatusForbidden, "FORBIDDEN",
 					"Insufficient permissions", nil)
 				return
 			}
@@ -119,14 +125,14 @@ func (m *Middleware) RequireRole(requiredRoles ...string) func(http.HandlerFunc)
 		return func(w http.ResponseWriter, r *http.Request) {
 			claims := m.getClaimsFromContext(r.Context())
 			if claims == nil {
-				api.WriteError(w, http.StatusUnauthorized, "UNAUTHORIZED", 
+				writeError(w, http.StatusUnauthorized, "UNAUTHORIZED",
 					"Authentication required", nil)
 				return
 			}
 
 			// Check if user has required roles
 			if !m.hasRequiredRoles(claims, requiredRoles) {
-				api.WriteError(w, http.StatusForbidden, "FORBIDDEN", 
+				writeError(w, http.StatusForbidden, "FORBIDDEN",
 					"Insufficient permissions", nil)
 				return
 			}
@@ -157,13 +163,14 @@ func (m *Middleware) extractBearerToken(r *http.Request) (string, error) {
 }
 
 // verifyToken verifies the token and returns claims.
-// TODO: Implement real token verification
-// For now, this is a mock implementation
 func (m *Middleware) verifyToken(token string) (*Claims, error) {
-	// Mock token verification
-	// In production, this would verify JWT signature, check expiration, etc.
-	
-	// Simple mock tokens for testing
+	// Use real verifier if available
+	if m.verifier != nil {
+		return m.verifier.VerifyToken(token)
+	}
+
+	// Fallback to mock implementation for backward compatibility
+	// This should only be used in tests
 	switch token {
 	case "viewer-token":
 		return &Claims{
@@ -180,7 +187,7 @@ func (m *Middleware) verifyToken(token string) (*Claims, error) {
 	case "invalid-token":
 		return nil, fmt.Errorf("token verification failed")
 	default:
-		// Default to viewer for unknown tokens
+		// Default to viewer for unknown tokens (test mode only)
 		return &Claims{
 			Subject: "user-unknown",
 			Roles:   []string{RoleViewer},
@@ -215,6 +222,11 @@ func (m *Middleware) hasRequiredScopes(claims *Claims, requiredScopes []string) 
 func (m *Middleware) hasRequiredRoles(claims *Claims, requiredRoles []string) bool {
 	if claims == nil {
 		return false
+	}
+
+	// If no roles are required, return true (no requirements)
+	if len(requiredRoles) == 0 {
+		return true
 	}
 
 	for _, required := range requiredRoles {
@@ -270,4 +282,28 @@ func (m *Middleware) CanControl(claims *Claims) bool {
 // CanAccessTelemetry checks if the user can access telemetry.
 func (m *Middleware) CanAccessTelemetry(claims *Claims) bool {
 	return m.hasRequiredScopes(claims, []string{ScopeTelemetry})
+}
+
+// writeError writes an error response in the API format.
+func writeError(w http.ResponseWriter, status int, code, message string, details interface{}) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+
+	response := map[string]interface{}{
+		"result":        "error",
+		"code":          code,
+		"message":       message,
+		"correlationId": generateCorrelationID(),
+	}
+
+	if details != nil {
+		response["details"] = details
+	}
+
+	json.NewEncoder(w).Encode(response)
+}
+
+// generateCorrelationID generates a simple correlation ID for request tracking.
+func generateCorrelationID() string {
+	return fmt.Sprintf("%d", time.Now().UnixNano())
 }

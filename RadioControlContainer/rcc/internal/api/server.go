@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/radio-control/rcc/internal/auth"
 	"github.com/radio-control/rcc/internal/command"
 	"github.com/radio-control/rcc/internal/radio"
 	"github.com/radio-control/rcc/internal/telemetry"
@@ -20,14 +21,15 @@ import (
 
 // Server represents the HTTP API server.
 type Server struct {
-	httpServer   *http.Server
-	telemetryHub *telemetry.Hub
-	orchestrator *command.Orchestrator
-	radioManager *radio.Manager
-	startTime    time.Time
-	readTimeout  time.Duration
-	writeTimeout time.Duration
-	idleTimeout  time.Duration
+	httpServer     *http.Server
+	telemetryHub   *telemetry.Hub
+	orchestrator   *command.Orchestrator
+	radioManager   *radio.Manager
+	authMiddleware *auth.Middleware
+	startTime      time.Time
+	readTimeout    time.Duration
+	writeTimeout   time.Duration
+	idleTimeout    time.Duration
 }
 
 // NewServer creates a new API server.
@@ -40,6 +42,20 @@ func NewServer(telemetryHub *telemetry.Hub, orchestrator *command.Orchestrator, 
 		readTimeout:  readTimeout,
 		writeTimeout: writeTimeout,
 		idleTimeout:  idleTimeout,
+	}
+}
+
+// NewServerWithAuth creates a new API server with authentication middleware.
+func NewServerWithAuth(telemetryHub *telemetry.Hub, orchestrator *command.Orchestrator, radioManager *radio.Manager, authMiddleware *auth.Middleware, readTimeout, writeTimeout, idleTimeout time.Duration) *Server {
+	return &Server{
+		telemetryHub:   telemetryHub,
+		orchestrator:   orchestrator,
+		radioManager:   radioManager,
+		authMiddleware: authMiddleware,
+		startTime:      time.Now(),
+		readTimeout:    readTimeout,
+		writeTimeout:   writeTimeout,
+		idleTimeout:    idleTimeout,
 	}
 }
 

@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/radio-control/rcc/internal/auth"
 )
 
 // RegisterRoutes registers all OpenAPI v1 endpoints.
@@ -20,21 +22,41 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	// API v1 base path
 	apiV1 := "/api/v1"
 
-	// Capabilities endpoint
-	mux.HandleFunc(apiV1+"/capabilities", s.handleCapabilities)
+	// Health endpoint (no auth required)
+	mux.HandleFunc(apiV1+"/health", s.handleHealth)
 
-	// Radios endpoints
-	mux.HandleFunc(apiV1+"/radios", s.handleRadios)
-	mux.HandleFunc(apiV1+"/radios/select", s.handleSelectRadio)
+	// If no auth middleware, register routes without protection
+	if s.authMiddleware == nil {
+		// Capabilities endpoint
+		mux.HandleFunc(apiV1+"/capabilities", s.handleCapabilities)
+
+		// Radios endpoints
+		mux.HandleFunc(apiV1+"/radios", s.handleRadios)
+		mux.HandleFunc(apiV1+"/radios/select", s.handleSelectRadio)
+
+		// Radio-specific endpoints (power, channel, individual radio)
+		mux.HandleFunc(apiV1+"/radios/", s.handleRadioEndpoints)
+
+		// Telemetry endpoint
+		mux.HandleFunc(apiV1+"/telemetry", s.handleTelemetry)
+		return
+	}
+
+	// Register routes with authentication and authorization
+	// Capabilities endpoint (viewer access)
+	mux.HandleFunc(apiV1+"/capabilities", s.authMiddleware.RequireAuth(s.authMiddleware.RequireScope(auth.ScopeRead)(s.handleCapabilities)))
+
+	// Radios endpoints (viewer access)
+	mux.HandleFunc(apiV1+"/radios", s.authMiddleware.RequireAuth(s.authMiddleware.RequireScope(auth.ScopeRead)(s.handleRadios)))
+
+	// Select radio endpoint (controller access)
+	mux.HandleFunc(apiV1+"/radios/select", s.authMiddleware.RequireAuth(s.authMiddleware.RequireScope(auth.ScopeControl)(s.handleSelectRadio)))
 
 	// Radio-specific endpoints (power, channel, individual radio)
 	mux.HandleFunc(apiV1+"/radios/", s.handleRadioEndpoints)
 
-	// Telemetry endpoint
-	mux.HandleFunc(apiV1+"/telemetry", s.handleTelemetry)
-
-	// Health endpoint
-	mux.HandleFunc(apiV1+"/health", s.handleHealth)
+	// Telemetry endpoint (viewer access)
+	mux.HandleFunc(apiV1+"/telemetry", s.authMiddleware.RequireAuth(s.authMiddleware.RequireScope(auth.ScopeTelemetry)(s.handleTelemetry)))
 }
 
 // handleCapabilities handles GET /capabilities
@@ -65,15 +87,15 @@ func (s *Server) handleRadios(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-    // Fetch radios from RadioManager
-    if s.radioManager == nil {
-        WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE",
-            "Radio manager not available", nil)
-        return
-    }
+	// Fetch radios from RadioManager
+	if s.radioManager == nil {
+		WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE",
+			"Radio manager not available", nil)
+		return
+	}
 
-    list := s.radioManager.List()
-    WriteSuccess(w, list)
+	list := s.radioManager.List()
+	WriteSuccess(w, list)
 }
 
 // handleSelectRadio handles POST /radios/select
@@ -85,35 +107,35 @@ func (s *Server) handleSelectRadio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-    // Parse request
-    var req struct {
-        ID string `json:"id"`
-    }
-    if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ID == "" {
-        WriteError(w, http.StatusBadRequest, "INVALID_RANGE", "Missing or invalid id", nil)
-        return
-    }
+	// Parse request
+	var req struct {
+		ID string `json:"id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ID == "" {
+		WriteError(w, http.StatusBadRequest, "INVALID_RANGE", "Missing or invalid id", nil)
+		return
+	}
 
-    // Validate radio exists and select via RadioManager
-    if s.radioManager == nil || s.orchestrator == nil {
-        WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Service not available", nil)
-        return
-    }
+	// Validate radio exists and select via RadioManager
+	if s.radioManager == nil || s.orchestrator == nil {
+		WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Service not available", nil)
+		return
+	}
 
-    if err := s.radioManager.SetActive(req.ID); err != nil {
-        WriteError(w, http.StatusNotFound, "NOT_FOUND", "Radio not found", nil)
-        return
-    }
+	if err := s.radioManager.SetActive(req.ID); err != nil {
+		WriteError(w, http.StatusNotFound, "NOT_FOUND", "Radio not found", nil)
+		return
+	}
 
-    // Call orchestrator to confirm selection (ping adapter/state)
-    if err := s.orchestrator.SelectRadio(r.Context(), req.ID); err != nil {
-        status, body := ToAPIError(err)
-        w.WriteHeader(status)
-        w.Write(body)
-        return
-    }
+	// Call orchestrator to confirm selection (ping adapter/state)
+	if err := s.orchestrator.SelectRadio(r.Context(), req.ID); err != nil {
+		status, body := ToAPIError(err)
+		w.WriteHeader(status)
+		w.Write(body)
+		return
+	}
 
-    WriteSuccess(w, map[string]string{"activeRadioId": req.ID})
+	WriteSuccess(w, map[string]string{"activeRadioId": req.ID})
 }
 
 // handleRadioEndpoints handles all radio-specific endpoints.
@@ -129,14 +151,43 @@ func (s *Server) handleRadioEndpoints(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Route based on path suffix
-	if strings.HasSuffix(path, "/power") {
-		s.handleRadioPower(w, r)
-	} else if strings.HasSuffix(path, "/channel") {
-		s.handleRadioChannel(w, r)
+	// Apply authentication and authorization based on endpoint type
+	if s.authMiddleware != nil {
+		// Route based on path suffix with appropriate auth
+		if strings.HasSuffix(path, "/power") {
+			if r.Method == http.MethodGet {
+				// GET power requires read scope
+				s.authMiddleware.RequireAuth(s.authMiddleware.RequireScope(auth.ScopeRead)(s.handleRadioPower))(w, r)
+			} else if r.Method == http.MethodPost {
+				// POST power requires control scope
+				s.authMiddleware.RequireAuth(s.authMiddleware.RequireScope(auth.ScopeControl)(s.handleRadioPower))(w, r)
+			} else {
+				s.handleRadioPower(w, r)
+			}
+		} else if strings.HasSuffix(path, "/channel") {
+			if r.Method == http.MethodGet {
+				// GET channel requires read scope
+				s.authMiddleware.RequireAuth(s.authMiddleware.RequireScope(auth.ScopeRead)(s.handleRadioChannel))(w, r)
+			} else if r.Method == http.MethodPost {
+				// POST channel requires control scope
+				s.authMiddleware.RequireAuth(s.authMiddleware.RequireScope(auth.ScopeControl)(s.handleRadioChannel))(w, r)
+			} else {
+				s.handleRadioChannel(w, r)
+			}
+		} else {
+			// Individual radio endpoint requires read scope
+			s.authMiddleware.RequireAuth(s.authMiddleware.RequireScope(auth.ScopeRead)(s.handleRadioByID))(w, r)
+		}
 	} else {
-		// Default to individual radio endpoint
-		s.handleRadioByID(w, r)
+		// No auth middleware, route directly
+		if strings.HasSuffix(path, "/power") {
+			s.handleRadioPower(w, r)
+		} else if strings.HasSuffix(path, "/channel") {
+			s.handleRadioChannel(w, r)
+		} else {
+			// Default to individual radio endpoint
+			s.handleRadioByID(w, r)
+		}
 	}
 }
 
@@ -157,19 +208,19 @@ func (s *Server) handleRadioByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-    if s.radioManager == nil {
-        WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE",
-            "Radio manager not available", nil)
-        return
-    }
+	if s.radioManager == nil {
+		WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE",
+			"Radio manager not available", nil)
+		return
+	}
 
-    radio, err := s.radioManager.GetRadio(radioID)
-    if err != nil {
-        WriteError(w, http.StatusNotFound, "NOT_FOUND", "Radio not found", nil)
-        return
-    }
+	radio, err := s.radioManager.GetRadio(radioID)
+	if err != nil {
+		WriteError(w, http.StatusNotFound, "NOT_FOUND", "Radio not found", nil)
+		return
+	}
 
-    WriteSuccess(w, radio)
+	WriteSuccess(w, radio)
 }
 
 // handleRadioPower handles GET/POST /radios/{id}/power
@@ -197,18 +248,18 @@ func (s *Server) handleRadioPower(w http.ResponseWriter, r *http.Request) {
 // handleGetPower handles GET /radios/{id}/power
 // Source: OpenAPI v1 §3.5
 func (s *Server) handleGetPower(w http.ResponseWriter, r *http.Request, radioID string) {
-    if s.orchestrator == nil {
-        WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Service not available", nil)
-        return
-    }
-    state, err := s.orchestrator.GetState(r.Context(), radioID)
-    if err != nil {
-        status, body := ToAPIError(err)
-        w.WriteHeader(status)
-        w.Write(body)
-        return
-    }
-    WriteSuccess(w, map[string]interface{}{"powerDbm": state.PowerDbm})
+	if s.orchestrator == nil {
+		WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Service not available", nil)
+		return
+	}
+	state, err := s.orchestrator.GetState(r.Context(), radioID)
+	if err != nil {
+		status, body := ToAPIError(err)
+		w.WriteHeader(status)
+		w.Write(body)
+		return
+	}
+	WriteSuccess(w, map[string]interface{}{"powerDbm": state.PowerDbm})
 }
 
 // handleSetPower handles POST /radios/{id}/power
@@ -232,17 +283,17 @@ func (s *Server) handleSetPower(w http.ResponseWriter, r *http.Request, radioID 
 		return
 	}
 
-    if s.orchestrator == nil {
-        WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Service not available", nil)
-        return
-    }
-    if err := s.orchestrator.SetPower(r.Context(), radioID, request.PowerDbm); err != nil {
-        status, body := ToAPIError(err)
-        w.WriteHeader(status)
-        w.Write(body)
-        return
-    }
-    WriteSuccess(w, map[string]interface{}{"powerDbm": request.PowerDbm})
+	if s.orchestrator == nil {
+		WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Service not available", nil)
+		return
+	}
+	if err := s.orchestrator.SetPower(r.Context(), radioID, request.PowerDbm); err != nil {
+		status, body := ToAPIError(err)
+		w.WriteHeader(status)
+		w.Write(body)
+		return
+	}
+	WriteSuccess(w, map[string]interface{}{"powerDbm": request.PowerDbm})
 }
 
 // handleRadioChannel handles GET/POST /radios/{id}/channel
@@ -270,19 +321,19 @@ func (s *Server) handleRadioChannel(w http.ResponseWriter, r *http.Request) {
 // handleGetChannel handles GET /radios/{id}/channel
 // Source: OpenAPI v1 §3.7
 func (s *Server) handleGetChannel(w http.ResponseWriter, r *http.Request, radioID string) {
-    if s.orchestrator == nil {
-        WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Service not available", nil)
-        return
-    }
-    state, err := s.orchestrator.GetState(r.Context(), radioID)
-    if err != nil {
-        status, body := ToAPIError(err)
-        w.WriteHeader(status)
-        w.Write(body)
-        return
-    }
-    // channelIndex may be null if not in derived set; we return frequency
-    WriteSuccess(w, map[string]interface{}{"frequencyMhz": state.FrequencyMhz, "channelIndex": nil})
+	if s.orchestrator == nil {
+		WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Service not available", nil)
+		return
+	}
+	state, err := s.orchestrator.GetState(r.Context(), radioID)
+	if err != nil {
+		status, body := ToAPIError(err)
+		w.WriteHeader(status)
+		w.Write(body)
+		return
+	}
+	// channelIndex may be null if not in derived set; we return frequency
+	WriteSuccess(w, map[string]interface{}{"frequencyMhz": state.FrequencyMhz, "channelIndex": nil})
 }
 
 // handleSetChannel handles POST /radios/{id}/channel
@@ -307,57 +358,34 @@ func (s *Server) handleSetChannel(w http.ResponseWriter, r *http.Request, radioI
 		return
 	}
 
-    if s.orchestrator == nil {
-        WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Service not available", nil)
-        return
-    }
+	if s.orchestrator == nil {
+		WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Service not available", nil)
+		return
+	}
 
-    // Frequency wins if both provided
-    if request.FrequencyMhz != nil {
-        if err := s.orchestrator.SetChannel(r.Context(), radioID, *request.FrequencyMhz); err != nil {
-            status, body := ToAPIError(err)
-            w.WriteHeader(status)
-            w.Write(body)
-            return
-        }
-        WriteSuccess(w, map[string]interface{}{"frequencyMhz": *request.FrequencyMhz, "channelIndex": request.ChannelIndex})
-        return
-    }
+	// Frequency wins if both provided
+	if request.FrequencyMhz != nil {
+		if err := s.orchestrator.SetChannel(r.Context(), radioID, *request.FrequencyMhz); err != nil {
+			status, body := ToAPIError(err)
+			w.WriteHeader(status)
+			w.Write(body)
+			return
+		}
+		WriteSuccess(w, map[string]interface{}{"frequencyMhz": *request.FrequencyMhz, "channelIndex": request.ChannelIndex})
+		return
+	}
 
-    // If only index provided, translate via radioManager channels (if available)
-    if request.ChannelIndex != nil {
-        if s.radioManager == nil {
-            WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Radio manager not available", nil)
-            return
-        }
-        radio, err := s.radioManager.GetRadio(radioID)
-        if err != nil {
-            WriteError(w, http.StatusNotFound, "NOT_FOUND", "Radio not found", nil)
-            return
-        }
-        // Find frequency for index
-        var freq float64
-        found := false
-        for _, ch := range radio.Capabilities.Channels {
-            if ch.Index == *request.ChannelIndex {
-                freq = ch.FrequencyMhz
-                found = true
-                break
-            }
-        }
-        if !found {
-            WriteError(w, http.StatusBadRequest, "INVALID_RANGE", "Invalid channelIndex", nil)
-            return
-        }
-        if err := s.orchestrator.SetChannel(r.Context(), radioID, freq); err != nil {
-            status, body := ToAPIError(err)
-            w.WriteHeader(status)
-            w.Write(body)
-            return
-        }
-        WriteSuccess(w, map[string]interface{}{"frequencyMhz": freq, "channelIndex": *request.ChannelIndex})
-        return
-    }
+	// If only index provided, use SetChannelByIndex method
+	if request.ChannelIndex != nil {
+		if err := s.orchestrator.SetChannelByIndex(r.Context(), radioID, *request.ChannelIndex, s.radioManager); err != nil {
+			status, body := ToAPIError(err)
+			w.WriteHeader(status)
+			w.Write(body)
+			return
+		}
+		WriteSuccess(w, map[string]interface{}{"frequencyMhz": nil, "channelIndex": *request.ChannelIndex})
+		return
+	}
 }
 
 // handleTelemetry handles GET /telemetry (SSE)
@@ -387,6 +415,8 @@ func (s *Server) handleTelemetry(w http.ResponseWriter, r *http.Request) {
 
 // handleHealth handles GET /health
 // Source: OpenAPI v1 §3.10
+// Source: PRE-INT-07
+// Quote: "/health returns uptimeSec>0, subsystems booleans reflect init"
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		WriteError(w, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED",
@@ -394,19 +424,58 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// TODO: Implement actual health checks
-	// For now, return basic health status
-    uptime := 0.0
-    if !s.startTime.IsZero() {
-        uptime = time.Since(s.startTime).Seconds()
-    }
-    health := map[string]interface{}{
-        "status":    "ok",
-        "uptimeSec": uptime,
-        "version":   "1.0.0",
-    }
+	// Calculate uptime
+	uptime := 0.0
+	if !s.startTime.IsZero() {
+		uptime = time.Since(s.startTime).Seconds()
+	}
 
-	WriteSuccess(w, health)
+	// Check subsystem health
+	subsystems := s.checkSubsystemHealth()
+
+	// Determine overall health status
+	overallStatus := "ok"
+	if !subsystems["telemetry"] || !subsystems["orchestrator"] || !subsystems["radioManager"] {
+		overallStatus = "degraded"
+	}
+
+	health := map[string]interface{}{
+		"status":     overallStatus,
+		"uptimeSec":  uptime,
+		"version":    "1.0.0",
+		"subsystems": subsystems,
+	}
+
+	// Return appropriate HTTP status based on health
+	if overallStatus == "ok" {
+		WriteSuccess(w, health)
+	} else {
+		// Return 503 Service Unavailable for degraded health
+		// Pass health data as details so it's available in the error response
+		WriteError(w, http.StatusServiceUnavailable, "SERVICE_DEGRADED",
+			"One or more subsystems are unavailable", health)
+	}
+}
+
+// checkSubsystemHealth checks the health of all subsystems.
+// Source: PRE-INT-07
+// Quote: "subsystems booleans reflect init"
+func (s *Server) checkSubsystemHealth() map[string]bool {
+	subsystems := make(map[string]bool)
+
+	// Check telemetry hub
+	subsystems["telemetry"] = s.telemetryHub != nil
+
+	// Check orchestrator
+	subsystems["orchestrator"] = s.orchestrator != nil
+
+	// Check radio manager
+	subsystems["radioManager"] = s.radioManager != nil
+
+	// Check auth middleware (optional, so always true if not required)
+	subsystems["auth"] = true // Auth is optional, so always considered healthy
+
+	return subsystems
 }
 
 // extractRadioID extracts the radio ID from a URL path.

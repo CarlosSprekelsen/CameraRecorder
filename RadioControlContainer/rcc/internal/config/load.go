@@ -38,6 +38,15 @@ func Load() (*TimingConfig, error) {
 		config = mergeTimingConfigs(config, fileConfig)
 	}
 
+	// Try to load Silvus band plan from silvus-band-plan.json if it exists
+	if _, err := os.Stat("silvus-band-plan.json"); err == nil {
+		bandPlan, err := loadSilvusBandPlanFromFile("silvus-band-plan.json")
+		if err != nil {
+			return nil, fmt.Errorf("failed to load silvus-band-plan.json: %w", err)
+		}
+		config.SilvusBandPlan = bandPlan
+	}
+
 	// Validate the final configuration
 	if err := ValidateTiming(config); err != nil {
 		return nil, fmt.Errorf("configuration validation failed: %w", err)
@@ -147,6 +156,14 @@ func applyEnvOverrides(config *TimingConfig) error {
 	if val := os.Getenv("RCC_TIMING_EVENT_BUFFER_RETENTION"); val != "" {
 		if duration, err := time.ParseDuration(val); err == nil {
 			config.EventBufferRetention = duration
+		}
+	}
+
+	// Load Silvus band plan from environment variable
+	if val := os.Getenv("RCC_SILVUS_BAND_PLAN"); val != "" {
+		bandPlan, err := loadSilvusBandPlanFromJSON(val)
+		if err == nil {
+			config.SilvusBandPlan = bandPlan
 		}
 	}
 
@@ -264,4 +281,32 @@ func GetEnvInt(key string, defaultValue int) int {
 		}
 	}
 	return defaultValue
+}
+
+// loadSilvusBandPlanFromJSON loads a Silvus band plan from JSON string.
+// Source: PRE-INT-09
+// Quote: "Load from JSON/env"
+func loadSilvusBandPlanFromJSON(jsonStr string) (*SilvusBandPlan, error) {
+	var bandPlan SilvusBandPlan
+	if err := json.Unmarshal([]byte(jsonStr), &bandPlan); err != nil {
+		return nil, fmt.Errorf("failed to parse Silvus band plan JSON: %w", err)
+	}
+	return &bandPlan, nil
+}
+
+// loadSilvusBandPlanFromFile loads a Silvus band plan from a JSON file.
+// Source: PRE-INT-09
+// Quote: "Load from JSON/env"
+func loadSilvusBandPlanFromFile(filename string) (*SilvusBandPlan, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var bandPlan SilvusBandPlan
+	if err := json.NewDecoder(file).Decode(&bandPlan); err != nil {
+		return nil, fmt.Errorf("failed to decode Silvus band plan from %s: %w", filename, err)
+	}
+	return &bandPlan, nil
 }

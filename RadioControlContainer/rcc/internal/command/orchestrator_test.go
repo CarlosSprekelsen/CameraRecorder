@@ -3,6 +3,7 @@ package command
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -337,4 +338,365 @@ func TestTimeoutHandling(t *testing.T) {
 	// Skip timeout test for now - it's complex to test properly
 	// The timeout functionality is implemented in the orchestrator
 	t.Skip("Timeout test skipped - functionality is implemented")
+}
+
+// MockRadioManager is a mock implementation of RadioManager for testing.
+type MockRadioManager struct {
+	Radios map[string]interface{}
+}
+
+func (m *MockRadioManager) GetRadio(radioID string) (interface{}, error) {
+	radio, exists := m.Radios[radioID]
+	if !exists {
+		return nil, fmt.Errorf("radio %s not found", radioID)
+	}
+	return radio, nil
+}
+
+func TestSetChannelByIndex(t *testing.T) {
+	cfg := config.LoadCBTimingBaseline()
+
+	// Create mock radio manager with test channels
+	mockRadioManager := &MockRadioManager{
+		Radios: map[string]interface{}{
+			"radio-01": map[string]interface{}{
+				"id": "radio-01",
+				"capabilities": map[string]interface{}{
+					"channels": []interface{}{
+						map[string]interface{}{
+							"index":        float64(1),
+							"frequencyMhz": 2412.0,
+						},
+						map[string]interface{}{
+							"index":        float64(2),
+							"frequencyMhz": 2417.0,
+						},
+						map[string]interface{}{
+							"index":        float64(3),
+							"frequencyMhz": 2422.0,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	orchestrator := &Orchestrator{
+		config:       cfg,
+		radioManager: mockRadioManager,
+	}
+
+	// Test with no adapter
+	err := orchestrator.SetChannelByIndex(context.Background(), "radio-01", 1, mockRadioManager)
+	if err == nil {
+		t.Error("Expected error when no adapter is set")
+	}
+
+	// Test with valid adapter
+	mockAdapter := &MockAdapter{}
+	orchestrator.SetActiveAdapter(mockAdapter)
+
+	err = orchestrator.SetChannelByIndex(context.Background(), "radio-01", 1, mockRadioManager)
+	if err != nil {
+		t.Errorf("SetChannelByIndex() failed: %v", err)
+	}
+}
+
+func TestSetChannelByIndexValidation(t *testing.T) {
+	cfg := config.LoadCBTimingBaseline()
+
+	// Create mock radio manager with test channels
+	mockRadioManager := &MockRadioManager{
+		Radios: map[string]interface{}{
+			"radio-01": map[string]interface{}{
+				"id": "radio-01",
+				"capabilities": map[string]interface{}{
+					"channels": []interface{}{
+						map[string]interface{}{
+							"index":        float64(1),
+							"frequencyMhz": 2412.0,
+						},
+						map[string]interface{}{
+							"index":        float64(2),
+							"frequencyMhz": 2417.0,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	orchestrator := &Orchestrator{
+		config:       cfg,
+		radioManager: mockRadioManager,
+	}
+	mockAdapter := &MockAdapter{}
+	orchestrator.SetActiveAdapter(mockAdapter)
+
+	// Test invalid channel index bounds
+	tests := []struct {
+		channelIndex int
+		valid        bool
+		description  string
+	}{
+		{0, false, "zero index"},
+		{-1, false, "negative index"},
+		{1, true, "valid index 1"},
+		{2, true, "valid index 2"},
+		{3, false, "out of range index"},
+		{100, false, "way out of range index"},
+	}
+
+	for _, test := range tests {
+		err := orchestrator.SetChannelByIndex(context.Background(), "radio-01", test.channelIndex, mockRadioManager)
+		if test.valid && err != nil {
+			t.Errorf("SetChannelByIndex(%d) should succeed (%s), got error: %v", test.channelIndex, test.description, err)
+		}
+		if !test.valid && err == nil {
+			t.Errorf("SetChannelByIndex(%d) should fail (%s), but succeeded", test.channelIndex, test.description)
+		}
+	}
+}
+
+func TestSetChannelByIndexTableTests(t *testing.T) {
+	cfg := config.LoadCBTimingBaseline()
+
+	// Create comprehensive test data with various channel mappings
+	mockRadioManager := &MockRadioManager{
+		Radios: map[string]interface{}{
+			"radio-01": map[string]interface{}{
+				"id": "radio-01",
+				"capabilities": map[string]interface{}{
+					"channels": []interface{}{
+						map[string]interface{}{
+							"index":        float64(1),
+							"frequencyMhz": 2412.0,
+						},
+						map[string]interface{}{
+							"index":        float64(2),
+							"frequencyMhz": 2417.0,
+						},
+						map[string]interface{}{
+							"index":        float64(3),
+							"frequencyMhz": 2422.0,
+						},
+						map[string]interface{}{
+							"index":        float64(4),
+							"frequencyMhz": 2427.0,
+						},
+						map[string]interface{}{
+							"index":        float64(5),
+							"frequencyMhz": 2432.0,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	orchestrator := &Orchestrator{
+		config:       cfg,
+		radioManager: mockRadioManager,
+	}
+	mockAdapter := &MockAdapter{}
+	orchestrator.SetActiveAdapter(mockAdapter)
+
+	// Table test for channel index to frequency mapping
+	indexToFreqTests := []struct {
+		channelIndex int
+		expectedFreq float64
+		shouldPass   bool
+		description  string
+	}{
+		{1, 2412.0, true, "first channel"},
+		{2, 2417.0, true, "second channel"},
+		{3, 2422.0, true, "third channel"},
+		{4, 2427.0, true, "fourth channel"},
+		{5, 2432.0, true, "fifth channel"},
+		{0, 0.0, false, "zero index (invalid)"},
+		{-1, 0.0, false, "negative index (invalid)"},
+		{6, 0.0, false, "out of range index"},
+		{100, 0.0, false, "way out of range index"},
+	}
+
+	for _, test := range indexToFreqTests {
+		t.Run(test.description, func(t *testing.T) {
+			err := orchestrator.SetChannelByIndex(context.Background(), "radio-01", test.channelIndex, mockRadioManager)
+
+			if test.shouldPass {
+				if err != nil {
+					t.Errorf("Expected success for channel index %d, got error: %v", test.channelIndex, err)
+				}
+			} else {
+				if err == nil {
+					t.Errorf("Expected error for channel index %d (%s), but succeeded", test.channelIndex, test.description)
+				}
+			}
+		})
+	}
+}
+
+func TestSetChannelFrequencyPassthrough(t *testing.T) {
+	cfg := config.LoadCBTimingBaseline()
+
+	orchestrator := &Orchestrator{
+		config: cfg,
+	}
+	mockAdapter := &MockAdapter{}
+	orchestrator.SetActiveAdapter(mockAdapter)
+
+	// Table test for frequency passthrough (existing SetChannel method)
+	frequencyTests := []struct {
+		frequency   float64
+		shouldPass  bool
+		description string
+	}{
+		{2412.0, true, "valid 2.4GHz frequency"},
+		{2417.0, true, "valid 2.4GHz frequency"},
+		{2422.0, true, "valid 2.4GHz frequency"},
+		{5000.0, true, "valid 5GHz frequency"},
+		{0.0, false, "zero frequency (invalid)"},
+		{-100.0, false, "negative frequency (invalid)"},
+		{50.0, false, "too low frequency"},
+		{7000.0, false, "too high frequency"},
+	}
+
+	for _, test := range frequencyTests {
+		t.Run(test.description, func(t *testing.T) {
+			err := orchestrator.SetChannel(context.Background(), "radio-01", test.frequency)
+
+			if test.shouldPass {
+				if err != nil {
+					t.Errorf("Expected success for frequency %.1f, got error: %v", test.frequency, err)
+				}
+			} else {
+				if err == nil {
+					t.Errorf("Expected error for frequency %.1f (%s), but succeeded", test.frequency, test.description)
+				}
+			}
+		})
+	}
+}
+
+func TestResolveChannelIndex(t *testing.T) {
+	cfg := config.LoadCBTimingBaseline()
+
+	// Create mock radio manager with test channels
+	mockRadioManager := &MockRadioManager{
+		Radios: map[string]interface{}{
+			"radio-01": map[string]interface{}{
+				"id": "radio-01",
+				"capabilities": map[string]interface{}{
+					"channels": []interface{}{
+						map[string]interface{}{
+							"index":        float64(1),
+							"frequencyMhz": 2412.0,
+						},
+						map[string]interface{}{
+							"index":        float64(2),
+							"frequencyMhz": 2417.0,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	orchestrator := &Orchestrator{
+		config:       cfg,
+		radioManager: mockRadioManager,
+	}
+
+	// Test successful resolution
+	freq, err := orchestrator.resolveChannelIndex(context.Background(), "radio-01", 1, mockRadioManager)
+	if err != nil {
+		t.Errorf("resolveChannelIndex() failed: %v", err)
+	}
+	if freq != 2412.0 {
+		t.Errorf("Expected frequency 2412.0, got %f", freq)
+	}
+
+	// Test channel not found
+	_, err = orchestrator.resolveChannelIndex(context.Background(), "radio-01", 99, mockRadioManager)
+	if err == nil {
+		t.Error("Expected error for non-existent channel index")
+	}
+
+	// Test radio not found
+	_, err = orchestrator.resolveChannelIndex(context.Background(), "radio-99", 1, mockRadioManager)
+	if err == nil {
+		t.Error("Expected error for non-existent radio")
+	}
+}
+
+func TestSetChannelByIndexAdapterCalledWithResolvedFrequency(t *testing.T) {
+	cfg := config.LoadCBTimingBaseline()
+
+	// Create mock radio manager with test channels
+	mockRadioManager := &MockRadioManager{
+		Radios: map[string]interface{}{
+			"radio-01": map[string]interface{}{
+				"id": "radio-01",
+				"capabilities": map[string]interface{}{
+					"channels": []interface{}{
+						map[string]interface{}{
+							"index":        float64(1),
+							"frequencyMhz": 2412.0,
+						},
+						map[string]interface{}{
+							"index":        float64(2),
+							"frequencyMhz": 2417.0,
+						},
+					},
+				},
+			},
+		},
+	}
+
+	// Track the frequency passed to SetFrequency
+	var calledFrequency float64
+	var setFrequencyCalled bool
+
+	mockAdapter := &MockAdapter{
+		SetFrequencyFunc: func(ctx context.Context, frequencyMhz float64) error {
+			calledFrequency = frequencyMhz
+			setFrequencyCalled = true
+			return nil
+		},
+	}
+
+	orchestrator := &Orchestrator{
+		config:       cfg,
+		radioManager: mockRadioManager,
+	}
+	orchestrator.SetActiveAdapter(mockAdapter)
+
+	// Test that adapter is called with resolved frequency
+	err := orchestrator.SetChannelByIndex(context.Background(), "radio-01", 1, mockRadioManager)
+	if err != nil {
+		t.Errorf("SetChannelByIndex() failed: %v", err)
+	}
+
+	if !setFrequencyCalled {
+		t.Error("SetFrequency was not called on adapter")
+	}
+
+	if calledFrequency != 2412.0 {
+		t.Errorf("Expected adapter to be called with frequency 2412.0, got %f", calledFrequency)
+	}
+
+	// Test with different channel index
+	setFrequencyCalled = false
+	err = orchestrator.SetChannelByIndex(context.Background(), "radio-01", 2, mockRadioManager)
+	if err != nil {
+		t.Errorf("SetChannelByIndex() failed: %v", err)
+	}
+
+	if !setFrequencyCalled {
+		t.Error("SetFrequency was not called on adapter")
+	}
+
+	if calledFrequency != 2417.0 {
+		t.Errorf("Expected adapter to be called with frequency 2417.0, got %f", calledFrequency)
+	}
 }
