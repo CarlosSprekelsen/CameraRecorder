@@ -5,7 +5,7 @@
  * Focus: Authentication, authorization, data validation, session management
  */
 
-import { WebSocketService } from '../../src/services/websocket/WebSocketService';
+import { AuthHelper, createAuthenticatedTestEnvironment } from '../utils/auth-helper';
 import { APIClient } from '../../src/services/abstraction/APIClient';
 import { AuthService } from '../../src/services/auth/AuthService';
 import { FileService } from '../../src/services/file/FileService';
@@ -13,53 +13,48 @@ import { DeviceService } from '../../src/services/device/DeviceService';
 import { LoggerService } from '../../src/services/logger/LoggerService';
 
 describe('Integration Tests: Security', () => {
-  let webSocketService: WebSocketService;
+  let authHelper: AuthHelper;
   let authService: AuthService;
   let fileService: FileService;
   let deviceService: DeviceService;
   let loggerService: LoggerService;
 
   beforeAll(async () => {
-    loggerService = new LoggerService();
-    webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
+    // Use unified authentication approach
+    authHelper = await createAuthenticatedTestEnvironment(
+      process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws'
+    );
     
-    // Wait for connection
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    const services = authHelper.getAuthenticatedServices();
+    const apiClient = services.apiClient;
+    loggerService = services.logger;
     
-    authService = new AuthService(webSocketService, loggerService);
+    authService = new AuthService(apiClient, loggerService);
     fileService = new FileService(apiClient, loggerService);
     deviceService = new DeviceService(apiClient, loggerService);
   });
 
   afterAll(async () => {
-    if (webSocketService) {
-      await webSocketService.disconnect();
+    if (authHelper) {
+      await authHelper.disconnect();
     }
   });
 
   describe('REQ-SEC-001: Authentication Security', () => {
     test('should reject invalid credentials', async () => {
-      const result = await authService.login('invalid', 'invalid');
-      expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
+      await expect(authService.authenticate('invalid_token')).rejects.toThrow();
     });
 
     test('should reject empty credentials', async () => {
-      const result = await authService.login('', '');
-      expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
+      await expect(authService.authenticate('')).rejects.toThrow();
     });
 
     test('should reject SQL injection attempts', async () => {
-      const result = await authService.login("admin'; DROP TABLE users; --", 'password');
-      expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
+      await expect(authService.authenticate("admin'; DROP TABLE users; --")).rejects.toThrow();
     });
 
     test('should reject XSS attempts', async () => {
-      const result = await authService.login('<script>alert("xss")</script>', 'password');
-      expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
+      await expect(authService.authenticate('<script>alert("xss")</script>')).rejects.toThrow();
     });
   });
 

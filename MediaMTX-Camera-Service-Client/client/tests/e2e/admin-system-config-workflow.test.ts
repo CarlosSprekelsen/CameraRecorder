@@ -15,7 +15,7 @@
  * Test Categories: E2E/Workflow/Security
  */
 
-import { executeUserWorkflow, assertWorkflowResult } from '../../utils/workflow-test-helper';
+import { executeUserWorkflow, assertWorkflowResult } from '../utils/workflow-test-helper';
 
 describe('Admin → System Configuration Workflow', () => {
   test('REQ-WORKFLOW-011: Admin system configuration workflow', async () => {

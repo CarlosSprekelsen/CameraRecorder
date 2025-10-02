@@ -15,7 +15,7 @@
  * Test Categories: E2E/Workflow
  */
 
-import { executeUserWorkflow, assertWorkflowResult } from '../../utils/workflow-test-helper';
+import { executeUserWorkflow, assertWorkflowResult } from '../utils/workflow-test-helper';
 
 describe('Login → Camera Management Workflow', () => {
   test('REQ-WORKFLOW-001: Complete login to camera management flow', async () => {

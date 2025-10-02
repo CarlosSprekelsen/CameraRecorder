@@ -19,8 +19,8 @@ import { TestAPIClient } from '../../utils/api-client';
 import { AuthHelper } from '../../utils/auth-helper';
 import { APIResponseValidator } from '../../utils/validators';
 import { loadTestEnvironment, waitFor, waitForCondition } from '../../utils/test-helpers';
-import { AuthService } from '../../../src/services/auth/AuthService';
-import { LoggerService } from '../../../src/services/logger/LoggerService';
+import { AuthService } from '../../src/services/auth/AuthService';
+import { LoggerService } from '../../src/services/logger/LoggerService';
 
 describe('Recording Workflow E2E Tests', () => {
   let apiClient: TestAPIClient;

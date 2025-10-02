@@ -15,7 +15,7 @@
  * Test Categories: E2E/Workflow
  */
 
-import { executeUserWorkflow, assertWorkflowResult } from '../../utils/workflow-test-helper';
+import { executeUserWorkflow, assertWorkflowResult } from '../utils/workflow-test-helper';
 
 describe('File Management → Delete Workflow', () => {
   test('REQ-WORKFLOW-016: Complete file management workflow', async () => {

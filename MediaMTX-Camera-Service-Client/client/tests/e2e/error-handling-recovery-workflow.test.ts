@@ -15,7 +15,7 @@
  * Test Categories: E2E/Workflow/ErrorHandling
  */
 
-import { executeUserWorkflow, assertWorkflowResult } from '../../utils/workflow-test-helper';
+import { executeUserWorkflow, assertWorkflowResult } from '../utils/workflow-test-helper';
 
 describe('Error Handling → Recovery Workflow', () => {
   test('REQ-WORKFLOW-021: Error handling and recovery workflow', async () => {

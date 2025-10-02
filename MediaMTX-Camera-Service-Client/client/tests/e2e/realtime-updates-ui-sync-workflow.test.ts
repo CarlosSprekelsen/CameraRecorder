@@ -15,7 +15,7 @@
  * Test Categories: E2E/Workflow/RealTime
  */
 
-import { executeUserWorkflow, assertWorkflowResult } from '../../utils/workflow-test-helper';
+import { executeUserWorkflow, assertWorkflowResult } from '../utils/workflow-test-helper';
 
 describe('Real-time Updates → UI Sync Workflow', () => {
   test('REQ-WORKFLOW-031: Real-time updates and UI synchronization', async () => {

@@ -15,7 +15,7 @@
  * Test Categories: E2E/Workflow/Security
  */
 
-import { executeUserWorkflow, assertWorkflowResult } from '../../utils/workflow-test-helper';
+import { executeUserWorkflow, assertWorkflowResult } from '../utils/workflow-test-helper';
 
 describe('Permission Denied → Redirect Workflow', () => {
   test('REQ-WORKFLOW-026: Permission denied and redirect workflow', async () => {

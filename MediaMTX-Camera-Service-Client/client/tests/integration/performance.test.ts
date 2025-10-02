@@ -5,37 +5,36 @@
  * Focus: WebSocket performance, file operations, concurrent users
  */
 
-import { WebSocketService } from '../../src/services/websocket/WebSocketService';
+import { AuthHelper, createAuthenticatedTestEnvironment } from '../utils/auth-helper';
 import { APIClient } from '../../src/services/abstraction/APIClient';
 import { FileService } from '../../src/services/file/FileService';
 import { DeviceService } from '../../src/services/device/DeviceService';
 import { LoggerService } from '../../src/services/logger/LoggerService';
 
 describe('Integration Tests: Performance', () => {
-  let webSocketService: WebSocketService;
+  let authHelper: AuthHelper;
   let apiClient: APIClient;
   let fileService: FileService;
   let deviceService: DeviceService;
   let loggerService: LoggerService;
 
   beforeAll(async () => {
-    loggerService = new LoggerService();
-    webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
-    apiClient = new APIClient(webSocketService, loggerService);
+    // Use unified authentication approach
+    authHelper = await createAuthenticatedTestEnvironment(
+      process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws'
+    );
     
-    // Connect to the server
-    await webSocketService.connect();
-    
-    // Wait for connection
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    const services = authHelper.getAuthenticatedServices();
+    apiClient = services.apiClient;
+    loggerService = services.logger;
     
     fileService = new FileService(apiClient, loggerService);
     deviceService = new DeviceService(apiClient, loggerService);
   });
 
   afterAll(async () => {
-    if (webSocketService) {
-      await webSocketService.disconnect();
+    if (authHelper) {
+      await authHelper.disconnect();
     }
   });
 

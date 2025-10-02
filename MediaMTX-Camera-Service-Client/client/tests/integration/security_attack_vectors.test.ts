@@ -10,7 +10,8 @@
  * - Information disclosure tests
  */
 
-import { WebSocketService } from '../../src/services/websocket/WebSocketService';
+import { AuthHelper, createAuthenticatedTestEnvironment } from '../utils/auth-helper';
+import { APIClient } from '../../src/services/abstraction/APIClient';
 import { AuthService } from '../../src/services/auth/AuthService';
 import { DeviceService } from '../../src/services/device/DeviceService';
 import { FileService } from '../../src/services/file/FileService';
@@ -28,7 +29,7 @@ interface SecurityTestResult {
 }
 
 class SecurityTester {
-  private webSocketService: WebSocketService;
+  private authHelper: AuthHelper;
   private authService: AuthService;
   private deviceService: DeviceService;
   private fileService: FileService;
@@ -36,23 +37,25 @@ class SecurityTester {
   private loggerService: LoggerService;
   private results: SecurityTestResult[] = [];
 
-  constructor() {
-    this.loggerService = new LoggerService();
-    this.webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
-    this.authService = new AuthService(this.webSocketService, this.loggerService);
-    this.deviceService = new DeviceService(this.webSocketService, this.loggerService);
-    this.fileService = new FileService(this.webSocketService, this.loggerService);
-    this.recordingService = new RecordingService(this.webSocketService, this.loggerService);
-  }
-
   async connect(): Promise<void> {
-    await this.webSocketService.connect();
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    // Use unified authentication approach
+    this.authHelper = await createAuthenticatedTestEnvironment(
+      process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws'
+    );
+    
+    const services = this.authHelper.getAuthenticatedServices();
+    const apiClient = services.apiClient;
+    this.loggerService = services.logger;
+    
+    this.authService = new AuthService(apiClient, this.loggerService);
+    this.deviceService = new DeviceService(apiClient, this.loggerService);
+    this.fileService = new FileService(apiClient, this.loggerService);
+    this.recordingService = new RecordingService(apiClient, this.loggerService);
   }
 
   async disconnect(): Promise<void> {
-    if (this.webSocketService) {
-      await this.webSocketService.disconnect();
+    if (this.authHelper) {
+      await this.authHelper.disconnect();
     }
   }
 

@@ -15,7 +15,7 @@
  * Test Categories: E2E/Workflow
  */
 
-import { executeUserWorkflow, assertWorkflowResult } from '../../utils/workflow-test-helper';
+import { executeUserWorkflow, assertWorkflowResult } from '../utils/workflow-test-helper';
 
 describe('Login → Recording → Download Workflow', () => {
   test('REQ-WORKFLOW-006: Complete recording workflow from login to download', async () => {

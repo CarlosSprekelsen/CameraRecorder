@@ -12,8 +12,7 @@
  * Architecture Compliance: Uses AuthHelper for consistent authentication
  */
 
-import { AuthHelper } from '../utils/auth-helper';
-import { WebSocketService } from '../../src/services/websocket/WebSocketService';
+import { AuthHelper, createAuthenticatedTestEnvironment } from '../utils/auth-helper';
 import { APIClient } from '../../src/services/abstraction/APIClient';
 import { AuthService } from '../../src/services/auth/AuthService';
 import { DeviceService } from '../../src/services/device/DeviceService';
@@ -37,7 +36,7 @@ interface RealTestResult {
 }
 
 class RealFunctionalityTester {
-  private webSocketService: WebSocketService;
+  private authHelper: AuthHelper;
   private apiClient: APIClient;
   private authService: AuthService;
   private deviceService: DeviceService;
@@ -46,12 +45,15 @@ class RealFunctionalityTester {
   private loggerService: LoggerService;
   private results: RealTestResult[] = [];
 
-  constructor() {
-    this.loggerService = new LoggerService();
-    this.webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
+  async connect(): Promise<void> {
+    // Use unified authentication approach
+    this.authHelper = await createAuthenticatedTestEnvironment(
+      process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws'
+    );
     
-    // Create APIClient for services (architecture compliance)
-    this.apiClient = new APIClient(this.webSocketService, this.loggerService);
+    const services = this.authHelper.getAuthenticatedServices();
+    this.apiClient = services.apiClient;
+    this.loggerService = services.logger;
     
     this.authService = new AuthService(this.apiClient, this.loggerService);
     this.deviceService = new DeviceService(this.apiClient, this.loggerService);
@@ -59,29 +61,13 @@ class RealFunctionalityTester {
     this.recordingService = new RecordingService(this.apiClient, this.loggerService);
   }
 
-  async connect(): Promise<void> {
-    await this.webSocketService.connect();
-    
-    // CRITICAL: Authenticate before any operations (Architecture Compliance)
-    const token = AuthHelper.generateTestToken('admin');
-    const authResult = await this.webSocketService.sendRPC('authenticate', { auth_token: token });
-    if (!authResult.authenticated) {
-      throw new Error('Failed to authenticate with server');
-    }
-    
-    // FIXED: Register connection for proper cleanup
-    // WebSocket registration no longer needed with IAPIClient abstraction
-    
-    await new Promise(resolve => setTimeout(resolve, 2000));
-  }
-
   async disconnect(): Promise<void> {
     // FIXED: Proper cleanup with timeout handling
-    if (this.webSocketService) {
+    if (this.authHelper) {
       try {
-        this.webSocketService.disconnect();
+        await this.authHelper.disconnect();
       } catch (error) {
-        console.warn('Error disconnecting WebSocket:', error);
+        console.warn('Error disconnecting AuthHelper:', error);
       }
     }
     

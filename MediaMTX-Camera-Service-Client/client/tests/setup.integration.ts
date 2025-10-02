@@ -20,6 +20,12 @@ import { loadTestEnvironment } from './utils/test-helpers';
 // Load test environment variables
 require('dotenv').config({ path: '.test_env' });
 
+// Import REAL WebSocket for Node.js environment - NO MOCKS in E2E tests!
+const WebSocket = require('ws');
+
+// Use REAL WebSocket for E2E tests - NO MOCKS!
+global.WebSocket = WebSocket;
+
 // Construct WebSocket URL from existing environment variables
 const TEST_WEBSOCKET_URL = `ws://${process.env.CAMERA_SERVICE_HOST}:${process.env.CAMERA_SERVICE_PORT}${process.env.CAMERA_SERVICE_WS_PATH}`;
 const TEST_JWT_SECRET = 'test-secret'; // Use consistent secret for test environment

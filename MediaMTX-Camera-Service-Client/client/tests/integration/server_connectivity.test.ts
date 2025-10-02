@@ -7,9 +7,7 @@
  * Architecture Compliance: Uses loadTestEnvironment() for consistent authentication
  */
 
-import { loadTestEnvironment, TestEnvironment } from '../utils/test-helpers';
-import { AuthHelper } from '../utils/auth-helper';
-import { WebSocketService } from '../../src/services/websocket/WebSocketService';
+import { AuthHelper, createAuthenticatedTestEnvironment } from '../utils/auth-helper';
 import { APIClient } from '../../src/services/abstraction/APIClient';
 import { AuthService } from '../../src/services/auth/AuthService';
 import { DeviceService } from '../../src/services/device/DeviceService';
@@ -18,8 +16,7 @@ import { ServerService } from '../../src/services/server/ServerService';
 import { LoggerService } from '../../src/services/logger/LoggerService';
 
 describe('Integration Tests: Server Connectivity', () => {
-  let testEnv: TestEnvironment;
-  let webSocketService: WebSocketService;
+  let authHelper: AuthHelper;
   let authService: AuthService;
   let deviceService: DeviceService;
   let fileService: FileService;
@@ -27,26 +24,14 @@ describe('Integration Tests: Server Connectivity', () => {
   let loggerService: LoggerService;
 
   beforeAll(async () => {
-    // Load test environment with authentication (Architecture Compliance)
-    testEnv = await loadTestEnvironment();
+    // Use unified authentication approach
+    authHelper = await createAuthenticatedTestEnvironment(
+      process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws'
+    );
     
-    // Initialize services with authenticated connection
-    loggerService = LoggerService.getInstance();
-    webSocketService = new WebSocketService({ url: 'ws://localhost:8002/ws' });
-    
-    // Connect to server
-    await webSocketService.connect();
-    
-    // Create APIClient for services
-    const apiClient = new APIClient(webSocketService, loggerService);
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // CRITICAL: Authenticate before any operations
-    const token = AuthHelper.generateTestToken('admin');
-    const authResult = await webSocketService.sendRPC('authenticate', { auth_token: token });
-    if (!authResult.authenticated) {
-      throw new Error('Failed to authenticate with server');
-    }
+    const services = authHelper.getAuthenticatedServices();
+    const apiClient = services.apiClient;
+    loggerService = services.logger;
     
     // Initialize services after authentication
     authService = new AuthService(apiClient, loggerService);
@@ -56,15 +41,15 @@ describe('Integration Tests: Server Connectivity', () => {
   });
 
   afterAll(async () => {
-    if (webSocketService) {
-      await webSocketService.disconnect();
+    if (authHelper) {
+      await authHelper.disconnect();
     }
   });
 
   describe('REQ-INT-001: Server Connection', () => {
     test('should connect to real server', async () => {
-      expect(webSocketService.isConnected).toBe(true);
-      expect(webSocketService.connectionState).toBe(1); // WebSocket.OPEN
+      expect(authHelper.isConnected()).toBe(true);
+      expect(authHelper.isConnected()).toBe(true); // Connection is open
     });
 
     test('should maintain connection stability', async () => {
@@ -73,7 +58,7 @@ describe('Integration Tests: Server Connectivity', () => {
       await new Promise(resolve => setTimeout(resolve, 5000));
       const endTime = Date.now();
       
-      expect(webSocketService.isConnected).toBe(true);
+      expect(authHelper.isConnected()).toBe(true);
       expect(endTime - startTime).toBeGreaterThan(4000);
     });
   });
@@ -139,10 +124,10 @@ describe('Integration Tests: Server Connectivity', () => {
   describe('REQ-INT-006: Performance Validation', () => {
     test('should meet connection performance targets', async () => {
       const startTime = Date.now();
-      const connected = webSocketService.isConnected;
+      const connected = authHelper.isConnected;
       const endTime = Date.now();
       
-      expect(connected).toBe(true);
+      expect(authHelper.isConnected()).toBe(true);
       expect(endTime - startTime).toBeLessThan(100); // < 100ms
     });
 
@@ -159,7 +144,7 @@ describe('Integration Tests: Server Connectivity', () => {
     test('should handle server disconnection gracefully', async () => {
       // This test would require server restart simulation
       // For now, just test that we can detect connection state
-      expect(webSocketService.connectionState).toBeDefined();
+      expect(authHelper.isConnected()).toBeDefined();
     });
 
     test('should handle invalid API calls gracefully', async () => {

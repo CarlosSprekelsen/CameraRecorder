@@ -15,7 +15,7 @@
  * Test Categories: E2E/Workflow/Performance
  */
 
-import { executeUserWorkflow, assertWorkflowResult } from '../../utils/workflow-test-helper';
+import { executeUserWorkflow, assertWorkflowResult } from '../utils/workflow-test-helper';
 
 describe('Performance → Load Testing Workflow', () => {
   test('REQ-WORKFLOW-036: Performance and load testing workflow', async () => {
