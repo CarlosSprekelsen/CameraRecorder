@@ -17,8 +17,31 @@
 
 import { loadTestEnvironment } from './utils/test-helpers';
 
-// Load test environment variables
-require('dotenv').config({ path: '.test_env' });
+// Load test environment variables from shell-format .test_env file
+import * as fs from 'fs';
+import * as path from 'path';
+
+const testEnvPath = path.join(__dirname, '../.test_env');
+if (fs.existsSync(testEnvPath)) {
+  const envContent = fs.readFileSync(testEnvPath, 'utf8');
+  const lines = envContent.split('\n');
+  
+  lines.forEach(line => {
+    line = line.trim();
+    if (line && !line.startsWith('#') && line.includes('export ')) {
+      // Parse shell export format: export KEY="value"
+      const match = line.match(/export\s+(\w+)="?([^"]*)"?/);
+      if (match) {
+        const [, key, value] = match;
+        process.env[key] = value;
+      }
+    }
+  });
+  
+  console.log('✅ Loaded environment variables from .test_env');
+} else {
+  console.warn('⚠️ .test_env file not found');
+}
 
 // Import REAL WebSocket for Node.js environment - NO MOCKS in E2E tests!
 const WebSocket = require('ws');

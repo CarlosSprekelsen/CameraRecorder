@@ -19,11 +19,9 @@
  * API Documentation Reference: mediamtx_camera_service_openrpc.json
  */
 
-import { TestAPIClient } from './api-client';
-import { AuthHelper } from './auth-helper';
+import { AuthHelper, createAuthenticatedTestEnvironment } from './auth-helper';
 import { APIResponseValidator } from './validators';
-import { AuthService } from '../../src/services/auth/AuthService';
-import { LoggerService } from '../../src/services/logger/LoggerService';
+import { APIClient } from '../../src/services/abstraction/APIClient';
 
 export interface WorkflowStep {
   action: string;
@@ -55,16 +53,15 @@ export const executeUserWorkflow = async (
   const startTime = Date.now();
   const results: WorkflowResult['steps'] = [];
 
-  // REUSE: TestAPIClient for API communication
-  const apiClient = new TestAPIClient({ mockMode: false });
-  await apiClient.connect();
-
-  // REUSE: AuthHelper for authentication
+  // Use unified authentication approach
   const token = AuthHelper.generateTestToken(role);
+  const authHelper = await createAuthenticatedTestEnvironment(
+    process.env.TEST_WEBSOCKET_URL || 'ws://localhost:8002/ws',
+    token
+  );
   
-  // Create AuthService following architectural pattern
-  const authService = new AuthService(apiClient, LoggerService.getInstance());
-  await authService.authenticate(token);
+  const services = authHelper.getAuthenticatedServices();
+  const apiClient = services.apiClient;
 
   let workflowSuccess = true;
 
@@ -99,7 +96,8 @@ export const executeUserWorkflow = async (
     }
   }
 
-  await apiClient.disconnect();
+  // Cleanup
+  await authHelper.disconnect();
 
   return {
     success: workflowSuccess,

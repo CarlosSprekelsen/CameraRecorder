@@ -66,3 +66,9 @@ load-test-results/
 integration-test-results/
 e2e-test-results/
 browser-test-results/
+
+# Test environment files with secrets
+.test_env
+.env.test
+.env.local
+.env.*.local
