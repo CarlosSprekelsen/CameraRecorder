@@ -26,7 +26,7 @@ func TestSilvusMock_BasicFunctionality(t *testing.T) {
 		t.Fatalf("GetState failed: %v", err)
 	}
 	if state.PowerDbm != 20 {
-		t.Errorf("Expected initial power 20, got %d", state.PowerDbm)
+		t.Errorf("Expected initial power 20, got %f", state.PowerDbm)
 	}
 	if state.FrequencyMhz != 2412.0 {
 		t.Errorf("Expected initial frequency 2412.0, got %f", state.FrequencyMhz)
@@ -43,7 +43,7 @@ func TestSilvusMock_BasicFunctionality(t *testing.T) {
 		t.Fatalf("GetState after SetPower failed: %v", err)
 	}
 	if state.PowerDbm != 25 {
-		t.Errorf("Expected power 25, got %d", state.PowerDbm)
+		t.Errorf("Expected power 25, got %f", state.PowerDbm)
 	}
 
 	// Test SetFrequency
@@ -263,7 +263,7 @@ func TestSilvusMock_StateManagement(t *testing.T) {
 	// Test initial state
 	power, freq, channel := mock.GetCurrentState()
 	if power != 20 {
-		t.Errorf("Expected initial power 20, got %d", power)
+		t.Errorf("Expected initial power 20, got %f", power)
 	}
 	if freq != 2412.0 {
 		t.Errorf("Expected initial frequency 2412.0, got %f", freq)
@@ -276,7 +276,7 @@ func TestSilvusMock_StateManagement(t *testing.T) {
 	mock.SetCurrentState(25, 2417.0, 2)
 	power, freq, channel = mock.GetCurrentState()
 	if power != 25 {
-		t.Errorf("Expected power 25, got %d", power)
+		t.Errorf("Expected power 25, got %f", power)
 	}
 	if freq != 2417.0 {
 		t.Errorf("Expected frequency 2417.0, got %f", freq)
@@ -291,7 +291,7 @@ func TestSilvusMock_StateManagement(t *testing.T) {
 		t.Fatalf("GetState failed: %v", err)
 	}
 	if state.PowerDbm != 25 {
-		t.Errorf("Expected persisted power 25, got %d", state.PowerDbm)
+		t.Errorf("Expected persisted power 25, got %f", state.PowerDbm)
 	}
 	if state.FrequencyMhz != 2417.0 {
 		t.Errorf("Expected persisted frequency 2417.0, got %f", state.FrequencyMhz)

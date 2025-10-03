@@ -1,6 +1,6 @@
 //go:build integration
 
-package orchestrator_test
+package orchestrator
 
 import (
 	"math/rand"

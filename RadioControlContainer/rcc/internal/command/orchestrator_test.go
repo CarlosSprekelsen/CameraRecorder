@@ -343,7 +343,7 @@ func TestTimeoutHandling(t *testing.T) {
 
 // MockRadioManager is a mock implementation of RadioManager for testing.
 type MockRadioManager struct {
-	Radios map[string]interface{}
+	Radios map[string]*radio.Radio
 }
 
 func (m *MockRadioManager) GetRadio(radioID string) (*radio.Radio, error) {
@@ -351,7 +351,7 @@ func (m *MockRadioManager) GetRadio(radioID string) (*radio.Radio, error) {
 	if !exists {
 		return nil, fmt.Errorf("radio %s not found", radioID)
 	}
-	return radioObj.(*radio.Radio), nil
+	return radioObj, nil
 }
 
 func TestSetChannelByIndex(t *testing.T) {
@@ -359,23 +359,14 @@ func TestSetChannelByIndex(t *testing.T) {
 
 	// Create mock radio manager with test channels
 	mockRadioManager := &MockRadioManager{
-		Radios: map[string]interface{}{
-			"radio-01": map[string]interface{}{
-				"id": "radio-01",
-				"capabilities": map[string]interface{}{
-					"channels": []interface{}{
-						map[string]interface{}{
-							"index":        float64(1),
-							"frequencyMhz": 2412.0,
-						},
-						map[string]interface{}{
-							"index":        float64(2),
-							"frequencyMhz": 2417.0,
-						},
-						map[string]interface{}{
-							"index":        float64(3),
-							"frequencyMhz": 2422.0,
-						},
+		Radios: map[string]*radio.Radio{
+			"radio-01": {
+				ID: "radio-01",
+				Capabilities: &adapter.RadioCapabilities{
+					Channels: []adapter.Channel{
+						{Index: 1, FrequencyMhz: 2412.0},
+						{Index: 2, FrequencyMhz: 2417.0},
+						{Index: 3, FrequencyMhz: 2422.0},
 					},
 				},
 			},
@@ -408,19 +399,13 @@ func TestSetChannelByIndexValidation(t *testing.T) {
 
 	// Create mock radio manager with test channels
 	mockRadioManager := &MockRadioManager{
-		Radios: map[string]interface{}{
-			"radio-01": map[string]interface{}{
-				"id": "radio-01",
-				"capabilities": map[string]interface{}{
-					"channels": []interface{}{
-						map[string]interface{}{
-							"index":        float64(1),
-							"frequencyMhz": 2412.0,
-						},
-						map[string]interface{}{
-							"index":        float64(2),
-							"frequencyMhz": 2417.0,
-						},
+		Radios: map[string]*radio.Radio{
+			"radio-01": {
+				ID: "radio-01",
+				Capabilities: &adapter.RadioCapabilities{
+					Channels: []adapter.Channel{
+						{Index: 1, FrequencyMhz: 2412.0},
+						{Index: 2, FrequencyMhz: 2417.0},
 					},
 				},
 			},
@@ -464,31 +449,16 @@ func TestSetChannelByIndexTableTests(t *testing.T) {
 
 	// Create comprehensive test data with various channel mappings
 	mockRadioManager := &MockRadioManager{
-		Radios: map[string]interface{}{
-			"radio-01": map[string]interface{}{
-				"id": "radio-01",
-				"capabilities": map[string]interface{}{
-					"channels": []interface{}{
-						map[string]interface{}{
-							"index":        float64(1),
-							"frequencyMhz": 2412.0,
-						},
-						map[string]interface{}{
-							"index":        float64(2),
-							"frequencyMhz": 2417.0,
-						},
-						map[string]interface{}{
-							"index":        float64(3),
-							"frequencyMhz": 2422.0,
-						},
-						map[string]interface{}{
-							"index":        float64(4),
-							"frequencyMhz": 2427.0,
-						},
-						map[string]interface{}{
-							"index":        float64(5),
-							"frequencyMhz": 2432.0,
-						},
+		Radios: map[string]*radio.Radio{
+			"radio-01": {
+				ID: "radio-01",
+				Capabilities: &adapter.RadioCapabilities{
+					Channels: []adapter.Channel{
+						{Index: 1, FrequencyMhz: 2412.0},
+						{Index: 2, FrequencyMhz: 2417.0},
+						{Index: 3, FrequencyMhz: 2422.0},
+						{Index: 4, FrequencyMhz: 2427.0},
+						{Index: 5, FrequencyMhz: 2432.0},
 					},
 				},
 			},
@@ -584,19 +554,13 @@ func TestResolveChannelIndex(t *testing.T) {
 
 	// Create mock radio manager with test channels
 	mockRadioManager := &MockRadioManager{
-		Radios: map[string]interface{}{
-			"radio-01": map[string]interface{}{
-				"id": "radio-01",
-				"capabilities": map[string]interface{}{
-					"channels": []interface{}{
-						map[string]interface{}{
-							"index":        float64(1),
-							"frequencyMhz": 2412.0,
-						},
-						map[string]interface{}{
-							"index":        float64(2),
-							"frequencyMhz": 2417.0,
-						},
+		Radios: map[string]*radio.Radio{
+			"radio-01": {
+				ID: "radio-01",
+				Capabilities: &adapter.RadioCapabilities{
+					Channels: []adapter.Channel{
+						{Index: 1, FrequencyMhz: 2412.0},
+						{Index: 2, FrequencyMhz: 2417.0},
 					},
 				},
 			},
@@ -635,19 +599,13 @@ func TestSetChannelByIndexAdapterCalledWithResolvedFrequency(t *testing.T) {
 
 	// Create mock radio manager with test channels
 	mockRadioManager := &MockRadioManager{
-		Radios: map[string]interface{}{
-			"radio-01": map[string]interface{}{
-				"id": "radio-01",
-				"capabilities": map[string]interface{}{
-					"channels": []interface{}{
-						map[string]interface{}{
-							"index":        float64(1),
-							"frequencyMhz": 2412.0,
-						},
-						map[string]interface{}{
-							"index":        float64(2),
-							"frequencyMhz": 2417.0,
-						},
+		Radios: map[string]*radio.Radio{
+			"radio-01": {
+				ID: "radio-01",
+				Capabilities: &adapter.RadioCapabilities{
+					Channels: []adapter.Channel{
+						{Index: 1, FrequencyMhz: 2412.0},
+						{Index: 2, FrequencyMhz: 2417.0},
 					},
 				},
 			},

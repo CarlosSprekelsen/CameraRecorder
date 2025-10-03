@@ -68,6 +68,10 @@ type Hub struct {
 	// Heartbeat ticker
 	heartbeatTicker *time.Ticker
 	stopHeartbeat   chan bool
+
+	// Synchronization for shutdown
+	done chan struct{}
+	wg   sync.WaitGroup
 }
 
 // EventBuffer maintains a circular buffer of events for a specific radio.
@@ -89,6 +93,7 @@ func NewHub(timingConfig *config.TimingConfig) *Hub {
 		radioIDs: make(map[string]*int64),
 		buffers:  make(map[string]*EventBuffer),
 		config:   timingConfig,
+		done:     make(chan struct{}),
 	}
 
 	return hub
@@ -161,7 +166,11 @@ func (h *Hub) Subscribe(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	h.mu.Unlock()
 
 	// Handle client events in a separate goroutine
-	go h.handleClient(client)
+	h.wg.Add(1)
+	go func() {
+		defer h.wg.Done()
+		h.handleClient(client)
+	}()
 
 	return nil
 }
@@ -190,6 +199,9 @@ func (h *Hub) Publish(event Event) error {
 	// Send to all clients without holding the lock
 	for _, client := range clients {
 		select {
+		case <-h.done:
+			// Hub is shutting down, don't send
+			return nil
 		case client.Events <- event:
 		case <-client.Context.Done():
 			// Client context cancelled, skip
@@ -395,7 +407,9 @@ func (h *Hub) startHeartbeat() {
 	ticker := h.heartbeatTicker
 	stopChan := h.stopHeartbeat
 
+	h.wg.Add(1)
 	go func() {
+		defer h.wg.Done()
 		defer func() {
 			// Use mutex to safely access heartbeat ticker
 			h.mu.Lock()
@@ -410,6 +424,8 @@ func (h *Hub) startHeartbeat() {
 			case <-ticker.C:
 				h.sendHeartbeat()
 			case <-stopChan:
+				return
+			case <-h.done:
 				return
 			}
 		}
@@ -431,19 +447,26 @@ func (h *Hub) sendHeartbeat() {
 
 // Stop stops the telemetry hub and cleans up resources.
 func (h *Hub) Stop() {
-	// Use mutex to safely access heartbeat fields
+	// Signal shutdown first
+	close(h.done)
+
+	// Stop heartbeat ticker
 	h.mu.Lock()
 	if h.heartbeatTicker != nil {
 		h.heartbeatTicker.Stop()
 		h.heartbeatTicker = nil
 	}
-
 	if h.stopHeartbeat != nil {
 		close(h.stopHeartbeat)
 		h.stopHeartbeat = nil
 	}
+	h.mu.Unlock()
+
+	// Wait for all goroutines to finish
+	h.wg.Wait()
 
 	// Close all client connections
+	h.mu.Lock()
 	for _, client := range h.clients {
 		client.Cancel()
 		// Use sync.Once to ensure the channel is only closed once

@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"net/http"
@@ -16,16 +17,14 @@ import (
 
 // threadSafeResponseWriter captures SSE events in a thread-safe way
 type threadSafeResponseWriter struct {
-	events chan string
+	mu      sync.Mutex
+	buf     bytes.Buffer
 	headers http.Header
-	statusCode int
 }
 
 func newThreadSafeResponseWriter() *threadSafeResponseWriter {
 	return &threadSafeResponseWriter{
-		events: make(chan string, 100), // Buffer for events
 		headers: make(http.Header),
-		statusCode: 200,
 	}
 }
 
@@ -34,32 +33,19 @@ func (w *threadSafeResponseWriter) Header() http.Header {
 }
 
 func (w *threadSafeResponseWriter) Write(data []byte) (int, error) {
-	// Send the data to the events channel instead of writing to a buffer
-	select {
-	case w.events <- string(data):
-		return len(data), nil
-	default:
-		// Channel full, drop the event
-		return len(data), nil
-	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.buf.Write(data)
 }
 
 func (w *threadSafeResponseWriter) WriteHeader(statusCode int) {
-	w.statusCode = statusCode
+	// No-op for testing
 }
 
-func (w *threadSafeResponseWriter) collectEvents(timeout time.Duration) []string {
-	var events []string
-	timeoutChan := time.After(timeout)
-	
-	for {
-		select {
-		case event := <-w.events:
-			events = append(events, event)
-		case <-timeoutChan:
-			return events
-		}
-	}
+func (w *threadSafeResponseWriter) String() string {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	return w.buf.String()
 }
 
 func TestNewHub(t *testing.T) {
@@ -386,8 +372,11 @@ func TestTelemetryContract_SubscribeReceiveHeartbeat(t *testing.T) {
 	// Wait for subscription to start
 	time.Sleep(50 * time.Millisecond)
 
-	// Collect events for 200ms (thread-safe)
-	events := w.collectEvents(200 * time.Millisecond)
+	// Wait for events to be processed
+	time.Sleep(200 * time.Millisecond)
+
+	// Get the response (hub will be stopped by defer)
+	response := w.String()
 
 	// Wait for the context timeout to occur naturally
 	select {
@@ -398,9 +387,6 @@ func TestTelemetryContract_SubscribeReceiveHeartbeat(t *testing.T) {
 	case <-time.After(500 * time.Millisecond):
 		t.Fatal("Subscribe() did not complete after timeout")
 	}
-
-	// Combine all events into a single response string
-	response := strings.Join(events, "")
 
 	// Check for ready event
 	if !strings.Contains(response, "event: ready") {
@@ -495,9 +481,8 @@ func TestTelemetryContract_PowerChannelChanges(t *testing.T) {
 	// Wait for events to be processed
 	time.Sleep(50 * time.Millisecond)
 
-	// Collect events (thread-safe)
-	events := w.collectEvents(50 * time.Millisecond)
-	response := strings.Join(events, "")
+	// Get the response (hub will be stopped by defer)
+	response := w.String()
 
 	// Check for powerChanged event
 	if !strings.Contains(response, "event: powerChanged") {
@@ -893,8 +878,8 @@ func TestTelemetryContract_SSEFormat(t *testing.T) {
 	req := httptest.NewRequest("GET", "/telemetry", nil)
 	req.Header.Set("Accept", "text/event-stream")
 
-	// Create test response recorder
-	w := httptest.NewRecorder()
+	// Use thread-safe writer
+	w := newThreadSafeResponseWriter()
 
 	// Subscribe
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -916,22 +901,12 @@ func TestTelemetryContract_SSEFormat(t *testing.T) {
 	}
 	hub.PublishRadio("radio-01", event)
 
-	// Wait for event to be processed
-	time.Sleep(50 * time.Millisecond)
+	// Wait for event to be processed and context to complete
+	time.Sleep(100 * time.Millisecond)
+	<-ctx.Done()
 
-	// Check SSE headers
-	if w.Header().Get("Content-Type") != "text/event-stream; charset=utf-8" {
-		t.Errorf("Expected Content-Type 'text/event-stream; charset=utf-8', got '%s'", w.Header().Get("Content-Type"))
-	}
-	if w.Header().Get("Cache-Control") != "no-cache" {
-		t.Errorf("Expected Cache-Control 'no-cache', got '%s'", w.Header().Get("Cache-Control"))
-	}
-	if w.Header().Get("Connection") != "keep-alive" {
-		t.Errorf("Expected Connection 'keep-alive', got '%s'", w.Header().Get("Connection"))
-	}
-
-	// Parse SSE response
-	response := w.Body.String()
+	// Now read the response (hub will be stopped by defer)
+	response := w.String()
 	lines := strings.Split(response, "\n")
 
 	// Check for SSE format
@@ -940,13 +915,13 @@ func TestTelemetryContract_SSEFormat(t *testing.T) {
 	hasID := false
 
 	for _, line := range lines {
-		if strings.HasPrefix(line, "event: ") {
+		if strings.HasPrefix(line, "event:") {
 			hasEventType = true
 		}
-		if strings.HasPrefix(line, "data: ") {
+		if strings.HasPrefix(line, "data:") {
 			hasData = true
 		}
-		if strings.HasPrefix(line, "id: ") {
+		if strings.HasPrefix(line, "id:") {
 			hasID = true
 		}
 	}

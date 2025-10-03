@@ -77,17 +77,7 @@ func TestE2E_HappyPath(t *testing.T) {
 	gotC := httpGetJSON(t, server.URL+"/api/v1/radios/silvus-001/channel")
 	mustHaveNumber(t, gotC, "data.frequencyMhz", 2437.0)
 
-	// Evidence: Audit log verification
-	auditLines, err := server.GetAuditLogs(3)
-	if err != nil {
-		t.Logf("Could not read audit logs: %v", err)
-	} else {
-		t.Logf("=== AUDIT EVIDENCE ===")
-		for i, line := range auditLines {
-			t.Logf("Audit Line %d: %s", i+1, line)
-		}
-		t.Logf("====================")
-	}
+	// Audit logs are server-side only per Architecture §8.6; no E2E access
 
 	t.Log("✅ Happy path working correctly")
 }

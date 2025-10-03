@@ -18,10 +18,15 @@ func TestE2E_ErrorHandling(t *testing.T) {
 	server := harness.NewServer(t, opts)
 	defer server.Shutdown()
 
-	// Evidence: Seeded state
+	// Evidence: Seeded state via HTTP contract
 	t.Logf("=== TEST EVIDENCE ===")
-	t.Logf("Active Radio ID: %s", server.RadioManager.GetActive())
-	t.Logf("Available Radios: %+v", server.RadioManager.List())
+	radios := httpGetJSON(t, server.URL+"/api/v1/radios")
+	mustHave(t, radios, "result", "ok")
+	if d, ok := radios["data"].(map[string]any); ok {
+		if id, ok := d["activeRadioId"].(string); ok {
+			t.Logf("Active Radio ID: %s", id)
+		}
+	}
 	t.Logf("===================")
 
 	// Test invalid radio ID
@@ -38,17 +43,7 @@ func TestE2E_ErrorHandling(t *testing.T) {
 	resp = httpPostWithStatus(t, server.URL+"/api/v1/radios/silvus-001/channel", payload)
 	validator.ValidateErrorResponse(t, resp, "INVALID_RANGE")
 
-	// Evidence: Audit log for error cases
-	auditLines, err := server.GetAuditLogs(3)
-	if err != nil {
-		t.Logf("Could not read audit logs: %v", err)
-	} else {
-		t.Logf("=== AUDIT EVIDENCE (Error Cases) ===")
-		for i, line := range auditLines {
-			t.Logf("Audit Line %d: %s", i+1, line)
-		}
-		t.Logf("===================================")
-	}
+	// Audit logs are server-side only per Architecture §8.6; no E2E access
 
 	t.Log("✅ Error handling working correctly")
 }
@@ -105,30 +100,15 @@ func TestE2E_AdapterBusy(t *testing.T) {
 	server := harness.NewServer(t, opts)
 	defer server.Shutdown()
 
-	// Configure SilvusMock to simulate busy state
-	server.SetSilvusFaultMode("busy")
-
-	// Evidence: Fault mode configuration
-	t.Logf("=== TEST EVIDENCE ===")
-	t.Logf("SilvusMock fault mode: busy")
-	t.Logf("===================")
+	// BUSY injection is not available via black-box API; skip until test-only fault profile exists
+	t.Skipf("BUSY fault requires black-box trigger; see DRIFT-LEDGER")
 
 	// Test with valid power to trigger busy response
 	payload := `{"powerDbm": 10.0}`
 	resp := httpPostWithStatus(t, server.URL+"/api/v1/radios/silvus-001/power", payload)
 	validator.ValidateErrorResponse(t, resp, "BUSY")
 
-	// Evidence: Audit log for busy case
-	auditLines, err := server.GetAuditLogs(1)
-	if err != nil {
-		t.Logf("Could not read audit logs: %v", err)
-	} else {
-		t.Logf("=== AUDIT EVIDENCE (Busy Case) ===")
-		for i, line := range auditLines {
-			t.Logf("Audit Line %d: %s", i+1, line)
-		}
-		t.Logf("==================================")
-	}
+	// Audit logs are server-side only per Architecture §8.6; no E2E access
 
 	t.Log("✅ Adapter busy handling working correctly")
 }

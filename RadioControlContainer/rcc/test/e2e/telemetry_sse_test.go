@@ -21,10 +21,15 @@ func TestE2E_TelemetrySSEConnection(t *testing.T) {
 	server := harness.NewServer(t, opts)
 	defer server.Shutdown()
 
-	// Evidence: Seeded state
+	// Evidence: Seeded state via HTTP contract
 	t.Logf("=== TEST EVIDENCE ===")
-	t.Logf("Active Radio ID: %s", server.RadioManager.GetActive())
-	t.Logf("Telemetry Hub: %+v", server.TelemetryHub != nil)
+	radios := httpGetJSON(t, server.URL+"/api/v1/radios")
+	mustHave(t, radios, "result", "ok")
+	if d, ok := radios["data"].(map[string]any); ok {
+		if id, ok := d["activeRadioId"].(string); ok {
+			t.Logf("Active Radio ID: %s", id)
+		}
+	}
 	t.Logf("===================")
 
 	// Subscribe to telemetry
@@ -37,7 +42,29 @@ func TestE2E_TelemetrySSEConnection(t *testing.T) {
 
 	telemetryDone := make(chan error, 1)
 	go func() {
-		telemetryDone <- server.TelemetryHub.Subscribe(ctx, w, req)
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			telemetryDone <- err
+			return
+		}
+		defer resp.Body.Close()
+
+		buf := make([]byte, 1024)
+		for {
+			select {
+			case <-ctx.Done():
+				telemetryDone <- ctx.Err()
+				return
+			default:
+				n, err := resp.Body.Read(buf)
+				if err != nil {
+					telemetryDone <- err
+					return
+				}
+				w.Write(buf[:n])
+			}
+		}
 	}()
 
 	// Wait for subscription to start
@@ -104,7 +131,29 @@ func TestE2E_TelemetryLastEventID(t *testing.T) {
 
 	telemetryDone1 := make(chan error, 1)
 	go func() {
-		telemetryDone1 <- server.TelemetryHub.Subscribe(ctx1, w1, req1)
+		client := &http.Client{}
+		resp, err := client.Do(req1)
+		if err != nil {
+			telemetryDone1 <- err
+			return
+		}
+		defer resp.Body.Close()
+
+		buf := make([]byte, 1024)
+		for {
+			select {
+			case <-ctx1.Done():
+				telemetryDone1 <- ctx1.Err()
+				return
+			default:
+				n, err := resp.Body.Read(buf)
+				if err != nil {
+					telemetryDone1 <- err
+					return
+				}
+				w1.Write(buf[:n])
+			}
+		}
 	}()
 
 	// Wait for subscription and trigger event
@@ -134,7 +183,29 @@ func TestE2E_TelemetryLastEventID(t *testing.T) {
 
 	telemetryDone2 := make(chan error, 1)
 	go func() {
-		telemetryDone2 <- server.TelemetryHub.Subscribe(ctx2, w2, req2)
+		client := &http.Client{}
+		resp, err := client.Do(req2)
+		if err != nil {
+			telemetryDone2 <- err
+			return
+		}
+		defer resp.Body.Close()
+
+		buf := make([]byte, 1024)
+		for {
+			select {
+			case <-ctx2.Done():
+				telemetryDone2 <- ctx2.Err()
+				return
+			default:
+				n, err := resp.Body.Read(buf)
+				if err != nil {
+					telemetryDone2 <- err
+					return
+				}
+				w2.Write(buf[:n])
+			}
+		}
 	}()
 
 	// Wait for second subscription
@@ -192,7 +263,29 @@ func TestE2E_TelemetryHeartbeat(t *testing.T) {
 
 	telemetryDone := make(chan error, 1)
 	go func() {
-		telemetryDone <- server.TelemetryHub.Subscribe(ctx, w, req)
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			telemetryDone <- err
+			return
+		}
+		defer resp.Body.Close()
+
+		buf := make([]byte, 1024)
+		for {
+			select {
+			case <-ctx.Done():
+				telemetryDone <- ctx.Err()
+				return
+			default:
+				n, err := resp.Body.Read(buf)
+				if err != nil {
+					telemetryDone <- err
+					return
+				}
+				w.Write(buf[:n])
+			}
+		}
 	}()
 
 	// Wait for subscription to start

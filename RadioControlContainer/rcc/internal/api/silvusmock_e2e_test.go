@@ -71,7 +71,7 @@ func TestSilvusMock_E2E_Integration(t *testing.T) {
 		// Test initial state
 		power, freq, channel := silvusAdapter.GetCurrentState()
 		if power != 20 {
-			t.Errorf("Expected initial power 20, got %d", power)
+			t.Errorf("Expected initial power 20, got %f", power)
 		}
 		if freq != 2412.0 {
 			t.Errorf("Expected initial frequency 2412.0, got %f", freq)
@@ -97,7 +97,7 @@ func TestSilvusMock_E2E_Integration(t *testing.T) {
 			t.Fatalf("GetState failed: %v", err)
 		}
 		if state.PowerDbm != 25 {
-			t.Errorf("Expected power 25, got %d", state.PowerDbm)
+			t.Errorf("Expected power 25, got %f", state.PowerDbm)
 		}
 
 		// Test frequency setting
@@ -284,7 +284,7 @@ func TestSilvusMock_E2E_Integration(t *testing.T) {
 		// Verify final state
 		power, freq, channel := silvusAdapter.GetCurrentState()
 		if power != 35 {
-			t.Errorf("Expected final power 35, got %d", power)
+			t.Errorf("Expected final power 35, got %f", power)
 		}
 		if freq != 2410.0 {
 			t.Errorf("Expected final frequency 2410.0, got %f", freq)
@@ -325,7 +325,7 @@ func TestSilvusMock_E2E_Integration(t *testing.T) {
 			t.Fatalf("GetState after concurrent access failed: %v", err)
 		}
 		if state.PowerDbm < 0 || state.PowerDbm > 39 {
-			t.Errorf("Power out of range after concurrent access: %d", state.PowerDbm)
+			t.Errorf("Power out of range after concurrent access: %f", state.PowerDbm)
 		}
 		if state.FrequencyMhz < 100 || state.FrequencyMhz > 6000 {
 			t.Errorf("Frequency out of range after concurrent access: %f", state.FrequencyMhz)

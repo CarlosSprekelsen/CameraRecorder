@@ -12,7 +12,7 @@ func TestRouteParity_OpenAPIValidation(t *testing.T) {
 	validator.PrintSpecVersion(t)
 
 	// Create a test server (this would normally be your actual server)
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Mock responses for testing
 		w.Header().Set("Content-Type", "application/json")
 
@@ -61,7 +61,7 @@ func TestRouteParity_OpenAPIValidation(t *testing.T) {
 			w.Write([]byte(`{"result":"error","code":"NOT_FOUND","message":"Not found"}`))
 		}
 	}))
-	defer server.Close()
+	defer ts.Close()
 
 	// Test routes against OpenAPI spec
 	testCases := []struct {
@@ -83,7 +83,7 @@ func TestRouteParity_OpenAPIValidation(t *testing.T) {
 
 	for _, tc := range testCases {
 		// Make HTTP request
-		req, err := http.NewRequest(tc.method, server.URL+tc.path, nil)
+		req, err := http.NewRequest(tc.method, ts.URL+tc.path, nil)
 		if err != nil {
 			t.Errorf("Failed to create request: %v", err)
 			continue

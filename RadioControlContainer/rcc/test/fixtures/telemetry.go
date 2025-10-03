@@ -3,6 +3,8 @@ package fixtures
 import (
 	"math/rand"
 	"time"
+
+	"github.com/radio-control/rcc/internal/telemetry"
 )
 
 // TelemetryEvent represents a standardized telemetry event for testing
@@ -169,6 +171,73 @@ func HighFrequencyEventSequence() []TelemetryEvent {
 				"sequence":  i,
 				"frequency": "high",
 			},
+		}
+	}
+
+	return events
+}
+
+// HeartbeatSequenceEvents returns a sequence of heartbeat events for testing using telemetry.Event
+func HeartbeatSequenceEvents() []telemetry.Event {
+	events := make([]telemetry.Event, 5)
+
+	for i := 0; i < 5; i++ {
+		events[i] = telemetry.Event{
+			ID:   int64(i + 1),
+			Type: "heartbeat",
+			Data: map[string]interface{}{
+				"status": "online",
+				"rssi":   -65 + i,
+				"snr":    25 + i,
+			},
+			Radio: "silvus-001",
+		}
+	}
+
+	return events
+}
+
+// PowerChangeSequenceEvents returns a sequence of power change events for testing using telemetry.Event
+func PowerChangeSequenceEvents() []telemetry.Event {
+	events := make([]telemetry.Event, 3)
+
+	powerLevels := []int{3, 5, 7}
+
+	for i, power := range powerLevels {
+		events[i] = telemetry.Event{
+			ID:   int64(i + 1),
+			Type: "power_change",
+			Data: map[string]interface{}{
+				"old_power": power - 1,
+				"new_power": power,
+				"channel":   6,
+			},
+			Radio: "silvus-001",
+		}
+	}
+
+	return events
+}
+
+// GenerateEventSequenceEvents generates a sequence of events with the specified count using telemetry.Event
+func GenerateEventSequenceEvents(count int) []telemetry.Event {
+	events := make([]telemetry.Event, count)
+
+	// Use deterministic seed for consistent test results
+	rand.Seed(42)
+
+	for i := 0; i < count; i++ {
+		eventTypes := []string{"heartbeat", "power_change", "channel_change", "error"}
+		eventType := eventTypes[rand.Intn(len(eventTypes))]
+
+		events[i] = telemetry.Event{
+			ID:   int64(i + 1),
+			Type: eventType,
+			Data: map[string]interface{}{
+				"sequence": i,
+				"random":   rand.Float64(),
+			},
+			Radio: "silvus-001",
 		}
 	}
 

@@ -15,7 +15,7 @@ import (
 func TestChannelFlow_OrchestratorToAdapter(t *testing.T) {
 	// Arrange: real orchestrator + real adapter wiring (no HTTP)
 	cfg := fixtures.LoadTestConfig()
-	telemetryHub := telemetry.NewHub()
+	telemetryHub := telemetry.NewHub(cfg)
 	orchestrator := command.NewOrchestrator(telemetryHub, cfg)
 
 	// Use test fixtures for consistent inputs
@@ -41,7 +41,7 @@ func TestChannelFlow_OrchestratorToAdapter(t *testing.T) {
 func TestChannelFlow_ErrorNormalization(t *testing.T) {
 	// Test error mapping per Architecture §8.5
 	cfg := fixtures.LoadTestConfig()
-	telemetryHub := telemetry.NewHub()
+	telemetryHub := telemetry.NewHub(cfg)
 	orchestrator := command.NewOrchestrator(telemetryHub, cfg)
 
 	// Use error scenario fixtures

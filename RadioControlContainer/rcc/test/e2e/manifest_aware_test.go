@@ -54,7 +54,7 @@ func TestManifestAware_E2EExecution(t *testing.T) {
 	t.Logf("Coverage: %d%%", manifest.Summary.CoveragePercentage)
 
 	// Create test server
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
 		switch r.URL.Path {
@@ -95,7 +95,7 @@ func TestManifestAware_E2EExecution(t *testing.T) {
 			w.Write([]byte(`{"result":"error","code":"NOT_FOUND","message":"Not found"}`))
 		}
 	}))
-	defer server.Close()
+	defer ts.Close()
 
 	// Test available routes only
 	availableRoutes := []struct {
@@ -119,7 +119,7 @@ func TestManifestAware_E2EExecution(t *testing.T) {
 	passCount := 0
 	for _, route := range availableRoutes {
 		// Make HTTP request
-		req, err := http.NewRequest(route.method, server.URL+route.path, nil)
+		req, err := http.NewRequest(route.method, ts.URL+route.path, nil)
 		if err != nil {
 			t.Errorf("Failed to create request: %v", err)
 			continue

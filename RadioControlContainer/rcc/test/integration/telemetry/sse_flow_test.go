@@ -15,8 +15,7 @@ func TestTelemetryFlow_HubToSSE(t *testing.T) {
 	hub := telemetry.NewHub(cfg)
 
 	// Use test fixtures for consistent event sequences
-	heartbeatSeq := fixtures.HeartbeatSequence()
-	powerChangeSeq := fixtures.PowerChangeSequence()
+	heartbeatSeq := fixtures.HeartbeatSequenceEvents()
 
 	// Act: emit events through hub
 	for _, event := range heartbeatSeq {
@@ -43,7 +42,7 @@ func TestTelemetryFlow_EventBuffering(t *testing.T) {
 
 	// Generate events beyond buffer capacity
 	bufferSize := cfg.EventBufferSize
-	events := fixtures.GenerateEventSequence(bufferSize + 10)
+	events := fixtures.GenerateEventSequenceEvents(bufferSize + 10)
 
 	// Act: emit all events
 	for _, event := range events {
@@ -60,7 +59,7 @@ func TestTelemetryFlow_ConnectionLifecycle(t *testing.T) {
 	hub := telemetry.NewHub(cfg)
 
 	// Emit events
-	events := fixtures.HeartbeatSequence()
+	events := fixtures.HeartbeatSequenceEvents()
 	for _, event := range events {
 		hub.Publish(event)
 	}

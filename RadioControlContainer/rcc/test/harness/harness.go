@@ -91,6 +91,7 @@ func NewServer(t *testing.T, opts Options) *Server {
 	orchestrator := command.NewOrchestrator(hub, cfg)
 	orchestrator.SetAuditLogger(auditLogger)
 	orchestrator.SetActiveAdapter(silvusAdapter)
+	orchestrator.SetRadioManager(radioManager) // Connect orchestrator to radio manager for channel resolution
 
 	// Create API server with deterministic correlation ID
 	apiServer := api.NewServer(hub, orchestrator, radioManager, 30*time.Second, 30*time.Second, 120*time.Second)

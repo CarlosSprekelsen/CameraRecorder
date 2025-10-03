@@ -2,6 +2,9 @@
 //
 // Requirements:
 //   - PRE-INT-09: "orchestrator.SetChannel consults this when adapter capabilities carry a model that matches"
+//go:build integration
+// +build integration
+
 package command
 
 import (
@@ -15,7 +18,7 @@ import (
 
 // SilvusTestRadioManager implements RadioManager interface for testing.
 type SilvusTestRadioManager struct {
-	radios map[string]interface{}
+	radios map[string]*radio.Radio
 }
 
 func (m *SilvusTestRadioManager) GetRadio(radioID string) (*radio.Radio, error) {
@@ -23,7 +26,7 @@ func (m *SilvusTestRadioManager) GetRadio(radioID string) (*radio.Radio, error) 
 	if !exists {
 		return nil, fmt.Errorf("radio %s not found", radioID)
 	}
-	return radioObj.(*radio.Radio), nil
+	return radioObj, nil
 }
 
 // TestOrchestrator_SilvusBandPlanIntegration tests orchestrator integration with Silvus band plans.
@@ -64,22 +67,22 @@ func TestOrchestrator_SilvusBandPlanIntegration(t *testing.T) {
 
 	// Create mock radio manager with radio data
 	radioManager := &SilvusTestRadioManager{
-		radios: map[string]interface{}{
-			"radio-01": map[string]interface{}{
-				"model": "Silvus-Scout",
-				"band":  "2.4GHz",
+		radios: map[string]*radio.Radio{
+			"radio-01": {
+				ID:    "radio-01",
+				Model: "Silvus-Scout",
 			},
-			"radio-02": map[string]interface{}{
-				"model": "Silvus-Scout",
-				"band":  "5GHz",
+			"radio-02": {
+				ID:    "radio-02",
+				Model: "Silvus-Scout",
 			},
-			"radio-03": map[string]interface{}{
-				"model": "Silvus-Tactical",
-				"band":  "UHF",
+			"radio-03": {
+				ID:    "radio-03",
+				Model: "Silvus-Tactical",
 			},
-			"radio-04": map[string]interface{}{
-				"model": "Unknown-Model",
-				"band":  "UnknownBand",
+			"radio-04": {
+				ID:    "radio-04",
+				Model: "Unknown-Model",
 			},
 		},
 	}
@@ -182,15 +185,15 @@ func TestOrchestrator_SilvusBandPlanFallback(t *testing.T) {
 
 	// Create mock radio manager with full channel capabilities
 	radioManager := &SilvusTestRadioManager{
-		radios: map[string]interface{}{
-			"radio-01": map[string]interface{}{
+		radios: map[string]*radio.Radio{
+			"radio-01": map[string]*radio.Radio{
 				"model": "Silvus-Scout",
 				"band":  "2.4GHz",
-				"capabilities": map[string]interface{}{
+				"capabilities": map[string]*radio.Radio{
 					"channels": []interface{}{
-						map[string]interface{}{"index": float64(1), "frequencyMhz": 2412.0},
-						map[string]interface{}{"index": float64(2), "frequencyMhz": 2417.0},
-						map[string]interface{}{"index": float64(3), "frequencyMhz": 2422.0},
+						map[string]*radio.Radio{"index": float64(1), "frequencyMhz": 2412.0},
+						map[string]*radio.Radio{"index": float64(2), "frequencyMhz": 2417.0},
+						map[string]*radio.Radio{"index": float64(3), "frequencyMhz": 2422.0},
 					},
 				},
 			},
@@ -240,14 +243,14 @@ func TestOrchestrator_NoSilvusBandPlan(t *testing.T) {
 
 	// Create mock radio manager
 	radioManager := &SilvusTestRadioManager{
-		radios: map[string]interface{}{
-			"radio-01": map[string]interface{}{
+		radios: map[string]*radio.Radio{
+			"radio-01": map[string]*radio.Radio{
 				"model": "Silvus-Scout",
 				"band":  "2.4GHz",
-				"capabilities": map[string]interface{}{
+				"capabilities": map[string]*radio.Radio{
 					"channels": []interface{}{
-						map[string]interface{}{"index": float64(1), "frequencyMhz": 2412.0},
-						map[string]interface{}{"index": float64(2), "frequencyMhz": 2417.0},
+						map[string]*radio.Radio{"index": float64(1), "frequencyMhz": 2412.0},
+						map[string]*radio.Radio{"index": float64(2), "frequencyMhz": 2417.0},
 					},
 				},
 			},
@@ -271,16 +274,16 @@ func TestOrchestrator_GetRadioModelAndBand(t *testing.T) {
 	orchestrator := &Orchestrator{}
 
 	radioManager := &SilvusTestRadioManager{
-		radios: map[string]interface{}{
-			"radio-01": map[string]interface{}{
+		radios: map[string]*radio.Radio{
+			"radio-01": map[string]*radio.Radio{
 				"model": "Silvus-Scout",
 				"band":  "2.4GHz",
 			},
-			"radio-02": map[string]interface{}{
+			"radio-02": map[string]*radio.Radio{
 				"model": "Silvus-Tactical",
 				// No band specified
 			},
-			"radio-03": map[string]interface{}{
+			"radio-03": map[string]*radio.Radio{
 				// No model specified
 			},
 		},
