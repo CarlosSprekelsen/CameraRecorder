@@ -69,6 +69,9 @@ func (cv *ContractValidator) ValidateHTTPResponse(t *testing.T, resp *http.Respo
 			t.Fatalf("Failed to parse JSON response: %v", err)
 		}
 
+		// Normalize dynamic fields before validation
+		cv.normalizeDynamicFields(envelope)
+
 		// Check for required envelope fields
 		if _, ok := envelope["result"]; !ok {
 			t.Error("Expected 'result' field in response envelope")
@@ -295,4 +298,29 @@ func loadTelemetrySchema(t *testing.T) map[string]interface{} {
 	}
 
 	return schema
+}
+
+// normalizeDynamicFields strips or normalizes dynamic fields in JSON responses
+func (cv *ContractValidator) normalizeDynamicFields(data map[string]interface{}) {
+	// Remove correlationId if present
+	delete(data, "correlationId")
+	
+	// Normalize timestamps to placeholder
+	if ts, ok := data["timestamp"].(string); ok && ts != "" {
+		data["timestamp"] = "<TIMESTAMP>"
+	}
+	
+	// Normalize nested objects recursively
+	if dataObj, ok := data["data"].(map[string]interface{}); ok {
+		cv.normalizeDynamicFields(dataObj)
+	}
+	
+	// Normalize arrays
+	if dataArray, ok := data["data"].([]interface{}); ok {
+		for _, item := range dataArray {
+			if itemMap, ok := item.(map[string]interface{}); ok {
+				cv.normalizeDynamicFields(itemMap)
+			}
+		}
+	}
 }
