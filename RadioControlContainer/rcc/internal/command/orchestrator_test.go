@@ -11,6 +11,7 @@ import (
 	"github.com/radio-control/rcc/internal/adapter"
 	"github.com/radio-control/rcc/internal/config"
 	"github.com/radio-control/rcc/internal/radio"
+	"github.com/radio-control/rcc/internal/telemetry"
 )
 
 // MockAdapter is a mock implementation of IRadioAdapter for testing.
@@ -657,5 +658,131 @@ func TestSetChannelByIndexAdapterCalledWithResolvedFrequency(t *testing.T) {
 
 	if calledFrequency != 2417.0 {
 		t.Errorf("Expected adapter to be called with frequency 2417.0, got %f", calledFrequency)
+	}
+}
+
+// TestNewOrchestratorWithRadioManager tests the NewOrchestratorWithRadioManager constructor
+func TestNewOrchestratorWithRadioManager(t *testing.T) {
+	cfg := config.LoadCBTimingBaseline()
+	hub := telemetry.NewHub(cfg)
+	defer hub.Stop()
+
+	mockRadioManager := &MockRadioManager{
+		Radios: map[string]*radio.Radio{
+			"radio-01": {
+				ID: "radio-01",
+				Capabilities: &adapter.RadioCapabilities{
+					Channels: []adapter.Channel{
+						{Index: 1, FrequencyMhz: 2412.0},
+					},
+				},
+			},
+		},
+	}
+
+	orchestrator := NewOrchestratorWithRadioManager(hub, cfg, mockRadioManager)
+
+	if orchestrator == nil {
+		t.Fatal("NewOrchestratorWithRadioManager() returned nil")
+	}
+
+	if orchestrator.telemetryHub != hub {
+		t.Error("TelemetryHub not set correctly")
+	}
+
+	if orchestrator.config != cfg {
+		t.Error("Config not set correctly")
+	}
+
+	if orchestrator.radioManager != mockRadioManager {
+		t.Error("RadioManager not set correctly")
+	}
+}
+
+// TestSetRadioManager tests the SetRadioManager method
+func TestSetRadioManager(t *testing.T) {
+	cfg := config.LoadCBTimingBaseline()
+	hub := telemetry.NewHub(cfg)
+	defer hub.Stop()
+
+	orchestrator := NewOrchestrator(hub, cfg)
+
+	mockRadioManager := &MockRadioManager{
+		Radios: map[string]*radio.Radio{
+			"radio-01": {
+				ID: "radio-01",
+				Capabilities: &adapter.RadioCapabilities{
+					Channels: []adapter.Channel{
+						{Index: 1, FrequencyMhz: 2412.0},
+					},
+				},
+			},
+		},
+	}
+
+	orchestrator.SetRadioManager(mockRadioManager)
+
+	if orchestrator.radioManager != mockRadioManager {
+		t.Error("RadioManager not set correctly")
+	}
+}
+
+// TestGetRadioModelAndBand tests the getRadioModelAndBand method
+func TestGetRadioModelAndBand(t *testing.T) {
+	cfg := config.LoadCBTimingBaseline()
+	hub := telemetry.NewHub(cfg)
+	defer hub.Stop()
+
+	orchestrator := NewOrchestrator(hub, cfg)
+
+	mockRadioManager := &MockRadioManager{
+		Radios: map[string]*radio.Radio{
+			"radio-01": {
+				ID:    "radio-01",
+				Model: "Silvus-Scout",
+				Capabilities: &adapter.RadioCapabilities{
+					Channels: []adapter.Channel{
+						{Index: 1, FrequencyMhz: 2412.0},
+					},
+				},
+			},
+		},
+	}
+
+	// Test with radio manager parameter
+	model, _, err := orchestrator.getRadioModelAndBand(context.Background(), "radio-01", mockRadioManager)
+	if err != nil {
+		t.Errorf("getRadioModelAndBand() failed: %v", err)
+	}
+
+	if model != "Silvus-Scout" {
+		t.Errorf("Expected model 'Silvus-Scout', got '%s'", model)
+	}
+
+	// Test with orchestrator's radio manager
+	orchestrator.SetRadioManager(mockRadioManager)
+	model, _, err = orchestrator.getRadioModelAndBand(context.Background(), "radio-01", nil)
+	if err != nil {
+		t.Errorf("getRadioModelAndBand() failed: %v", err)
+	}
+
+	if model != "Silvus-Scout" {
+		t.Errorf("Expected model 'Silvus-Scout', got '%s'", model)
+	}
+
+	// Test with empty radio manager
+	emptyManager := &MockRadioManager{
+		Radios: map[string]*radio.Radio{},
+	}
+	// This should fail because radio-01 is not in the empty manager
+	_, _, err = orchestrator.getRadioModelAndBand(context.Background(), "radio-01", emptyManager)
+	if err == nil {
+		t.Error("Expected error for radio not found in empty manager")
+	}
+
+	// Test with non-existent radio
+	_, _, err = orchestrator.getRadioModelAndBand(context.Background(), "non-existent", mockRadioManager)
+	if err == nil {
+		t.Error("Expected error for non-existent radio")
 	}
 }

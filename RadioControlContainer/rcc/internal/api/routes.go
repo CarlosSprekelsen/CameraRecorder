@@ -130,8 +130,9 @@ func (s *Server) handleSelectRadio(w http.ResponseWriter, r *http.Request) {
 	// Call orchestrator to confirm selection (ping adapter/state)
 	if err := s.orchestrator.SelectRadio(r.Context(), req.ID); err != nil {
 		status, body := ToAPIError(err)
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(status)
-		w.Write(body)
+		_, _ = w.Write(body)
 		return
 	}
 
@@ -255,8 +256,9 @@ func (s *Server) handleGetPower(w http.ResponseWriter, r *http.Request, radioID 
 	state, err := s.orchestrator.GetState(r.Context(), radioID)
 	if err != nil {
 		status, body := ToAPIError(err)
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(status)
-		w.Write(body)
+		_, _ = w.Write(body)
 		return
 	}
 	WriteSuccess(w, map[string]interface{}{"powerDbm": state.PowerDbm})
@@ -289,8 +291,9 @@ func (s *Server) handleSetPower(w http.ResponseWriter, r *http.Request, radioID 
 	}
 	if err := s.orchestrator.SetPower(r.Context(), radioID, request.PowerDbm); err != nil {
 		status, body := ToAPIError(err)
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(status)
-		w.Write(body)
+		_, _ = w.Write(body)
 		return
 	}
 	WriteSuccess(w, map[string]interface{}{"powerDbm": request.PowerDbm})
@@ -328,8 +331,9 @@ func (s *Server) handleGetChannel(w http.ResponseWriter, r *http.Request, radioI
 	state, err := s.orchestrator.GetState(r.Context(), radioID)
 	if err != nil {
 		status, body := ToAPIError(err)
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(status)
-		w.Write(body)
+		_, _ = w.Write(body)
 		return
 	}
 	// channelIndex may be null if not in derived set; we return frequency
@@ -367,8 +371,9 @@ func (s *Server) handleSetChannel(w http.ResponseWriter, r *http.Request, radioI
 	if request.FrequencyMhz != nil {
 		if err := s.orchestrator.SetChannel(r.Context(), radioID, *request.FrequencyMhz); err != nil {
 			status, body := ToAPIError(err)
-			w.WriteHeader(status)
-			w.Write(body)
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(status)
+		_, _ = w.Write(body)
 			return
 		}
 		WriteSuccess(w, map[string]interface{}{"frequencyMhz": *request.FrequencyMhz, "channelIndex": request.ChannelIndex})
@@ -379,8 +384,9 @@ func (s *Server) handleSetChannel(w http.ResponseWriter, r *http.Request, radioI
 	if request.ChannelIndex != nil {
 		if err := s.orchestrator.SetChannelByIndex(r.Context(), radioID, *request.ChannelIndex, s.radioManager); err != nil {
 			status, body := ToAPIError(err)
-			w.WriteHeader(status)
-			w.Write(body)
+			w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.WriteHeader(status)
+		_, _ = w.Write(body)
 			return
 		}
 		WriteSuccess(w, map[string]interface{}{"frequencyMhz": nil, "channelIndex": *request.ChannelIndex})

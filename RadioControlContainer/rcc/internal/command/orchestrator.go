@@ -77,6 +77,16 @@ func (o *Orchestrator) SetActiveAdapter(adapter adapter.IRadioAdapter) {
 func (o *Orchestrator) SetPower(ctx context.Context, radioID string, dBm float64) error {
 	start := time.Now()
 
+	// Ensure radio exists via radio manager
+	if o.radioManager == nil {
+		o.logAudit(ctx, "setPower", radioID, "UNAVAILABLE", time.Since(start))
+		return adapter.ErrUnavailable
+	}
+	if _, err := o.radioManager.GetRadio(radioID); err != nil {
+		o.logAudit(ctx, "setPower", radioID, "NOT_FOUND", time.Since(start))
+		return ErrNotFound
+	}
+
 	// Validate power range
 	if err := o.validatePowerRange(dBm); err != nil {
 		o.logAudit(ctx, "setPower", radioID, "INVALID_RANGE", time.Since(start))
@@ -86,7 +96,7 @@ func (o *Orchestrator) SetPower(ctx context.Context, radioID string, dBm float64
 	// Check if adapter is available
 	if o.activeAdapter == nil {
 		o.logAudit(ctx, "setPower", radioID, "UNAVAILABLE", time.Since(start))
-		return fmt.Errorf("no active radio adapter")
+		return adapter.ErrUnavailable
 	}
 
 	// Execute command with timeout
@@ -123,6 +133,16 @@ func (o *Orchestrator) SetPower(ctx context.Context, radioID string, dBm float64
 func (o *Orchestrator) SetChannel(ctx context.Context, radioID string, frequencyMhz float64) error {
 	start := time.Now()
 
+	// Ensure radio exists via radio manager
+	if o.radioManager == nil {
+		o.logAudit(ctx, "setChannel", radioID, "UNAVAILABLE", time.Since(start))
+		return adapter.ErrUnavailable
+	}
+	if _, err := o.radioManager.GetRadio(radioID); err != nil {
+		o.logAudit(ctx, "setChannel", radioID, "NOT_FOUND", time.Since(start))
+		return ErrNotFound
+	}
+
 	// Validate frequency range
 	if err := o.validateFrequencyRange(frequencyMhz); err != nil {
 		o.logAudit(ctx, "setChannel", radioID, "INVALID_RANGE", time.Since(start))
@@ -132,7 +152,7 @@ func (o *Orchestrator) SetChannel(ctx context.Context, radioID string, frequency
 	// Check if adapter is available
 	if o.activeAdapter == nil {
 		o.logAudit(ctx, "setChannel", radioID, "UNAVAILABLE", time.Since(start))
-		return fmt.Errorf("no active radio adapter")
+		return adapter.ErrUnavailable
 	}
 
 	// Execute command with timeout
@@ -169,16 +189,26 @@ func (o *Orchestrator) SetChannel(ctx context.Context, radioID string, frequency
 func (o *Orchestrator) SetChannelByIndex(ctx context.Context, radioID string, channelIndex int, radioManager RadioManager) error {
 	start := time.Now()
 
+	// Ensure radio exists via radio manager
+	if o.radioManager == nil {
+		o.logAudit(ctx, "setChannel", radioID, "UNAVAILABLE", time.Since(start))
+		return adapter.ErrUnavailable
+	}
+	if _, err := o.radioManager.GetRadio(radioID); err != nil {
+		o.logAudit(ctx, "setChannel", radioID, "NOT_FOUND", time.Since(start))
+		return ErrNotFound
+	}
+
 	// Validate channel index bounds (1-based)
 	if channelIndex < 1 {
 		o.logAudit(ctx, "setChannel", radioID, "INVALID_RANGE", time.Since(start))
-		return fmt.Errorf("channel index must be >= 1, got %d", channelIndex)
+		return adapter.ErrInvalidRange
 	}
 
 	// Check if adapter is available
 	if o.activeAdapter == nil {
 		o.logAudit(ctx, "setChannel", radioID, "UNAVAILABLE", time.Since(start))
-		return fmt.Errorf("no active radio adapter")
+		return adapter.ErrUnavailable
 	}
 
 	// Resolve channel index to frequency via radio manager
@@ -231,13 +261,23 @@ func (o *Orchestrator) SelectRadio(ctx context.Context, radioID string) error {
 	// Validate radio ID
 	if radioID == "" {
 		o.logAudit(ctx, "selectRadio", radioID, "INVALID_RANGE", time.Since(start))
-		return fmt.Errorf("radio ID cannot be empty")
+		return adapter.ErrInvalidRange
+	}
+
+	// Ensure radio exists via radio manager
+	if o.radioManager == nil {
+		o.logAudit(ctx, "selectRadio", radioID, "UNAVAILABLE", time.Since(start))
+		return adapter.ErrUnavailable
+	}
+	if _, err := o.radioManager.GetRadio(radioID); err != nil {
+		o.logAudit(ctx, "selectRadio", radioID, "NOT_FOUND", time.Since(start))
+		return ErrNotFound
 	}
 
 	// Check if adapter is available
 	if o.activeAdapter == nil {
 		o.logAudit(ctx, "selectRadio", radioID, "UNAVAILABLE", time.Since(start))
-		return fmt.Errorf("no active radio adapter")
+		return adapter.ErrUnavailable
 	}
 
 	// Execute command with timeout
@@ -274,10 +314,20 @@ func (o *Orchestrator) SelectRadio(ctx context.Context, radioID string) error {
 func (o *Orchestrator) GetState(ctx context.Context, radioID string) (*adapter.RadioState, error) {
 	start := time.Now()
 
+	// Ensure radio exists via radio manager
+	if o.radioManager == nil {
+		o.logAudit(ctx, "getState", radioID, "UNAVAILABLE", time.Since(start))
+		return nil, adapter.ErrUnavailable
+	}
+	if _, err := o.radioManager.GetRadio(radioID); err != nil {
+		o.logAudit(ctx, "getState", radioID, "NOT_FOUND", time.Since(start))
+		return nil, ErrNotFound
+	}
+
 	// Check if adapter is available
 	if o.activeAdapter == nil {
 		o.logAudit(ctx, "getState", radioID, "UNAVAILABLE", time.Since(start))
-		return nil, fmt.Errorf("no active radio adapter")
+		return nil, adapter.ErrUnavailable
 	}
 
 	// Execute command with timeout
@@ -310,7 +360,7 @@ func (o *Orchestrator) GetState(ctx context.Context, radioID string) (*adapter.R
 // Quote: "Range: 0..39 (accuracy typically 10..39)"
 func (o *Orchestrator) validatePowerRange(dBm float64) error {
 	if dBm < 0 || dBm > 39 {
-		return fmt.Errorf("power must be between 0 and 39 dBm, got %f", dBm)
+		return adapter.ErrInvalidRange
 	}
 	return nil
 }
@@ -322,12 +372,12 @@ func (o *Orchestrator) validateFrequencyRange(frequencyMhz float64) error {
 	// Basic frequency validation - more sophisticated validation will be added later
 	// with derived channel maps
 	if frequencyMhz <= 0 {
-		return fmt.Errorf("frequency must be positive, got %f", frequencyMhz)
+		return adapter.ErrInvalidRange
 	}
 
 	// Check against reasonable frequency ranges (will be enhanced with channel maps)
 	if frequencyMhz < 100 || frequencyMhz > 6000 {
-		return fmt.Errorf("frequency must be between 100 and 6000 MHz, got %f", frequencyMhz)
+		return adapter.ErrInvalidRange
 	}
 
 	return nil
@@ -456,11 +506,7 @@ func (o *Orchestrator) getRadioModelAndBand(ctx context.Context, radioID string,
 	// Use the provided radio manager or fall back to the orchestrator's radio manager
 	var manager RadioManager
 	if radioManager != nil {
-		if rm, ok := radioManager.(RadioManager); ok {
-			manager = rm
-		} else {
-			return "", "", fmt.Errorf("invalid radio manager type")
-		}
+		manager = radioManager
 	} else {
 		manager = o.radioManager
 	}
@@ -489,11 +535,7 @@ func (o *Orchestrator) resolveChannelIndexFromRadioManager(ctx context.Context, 
 	// Use the provided radio manager or fall back to the orchestrator's radio manager
 	var manager RadioManager
 	if radioManager != nil {
-		if rm, ok := radioManager.(RadioManager); ok {
-			manager = rm
-		} else {
-			return 0, fmt.Errorf("invalid radio manager type")
-		}
+		manager = radioManager
 	} else {
 		manager = o.radioManager
 	}

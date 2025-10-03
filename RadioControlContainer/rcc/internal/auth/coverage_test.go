@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -122,6 +123,74 @@ func TestJWKToRSAPublicKey(t *testing.T) {
 	_, err = (&Verifier{}).jwkToRSAPublicKey(jwk)
 	if err == nil {
 		t.Error("Expected error for invalid JWK format")
+	}
+}
+
+// TestJwkToRSAPublicKeyErrorPaths tests specific error paths in jwkToRSAPublicKey
+func TestJwkToRSAPublicKeyErrorPaths(t *testing.T) {
+	// Test invalid modulus (N) - should fail on base64URLDecode
+	jwk1 := JWK{
+		Kty: "RSA",
+		Use: "sig",
+		Alg: "RS256",
+		N:   "invalid-base64url", // Invalid base64url
+		E:   "AQAB",              // Valid base64url
+	}
+
+	_, err := (&Verifier{}).jwkToRSAPublicKey(jwk1)
+	if err == nil {
+		t.Error("Expected error for invalid modulus")
+	}
+	if !strings.Contains(err.Error(), "failed to decode modulus") {
+		t.Errorf("Expected modulus decode error, got: %v", err)
+	}
+
+	// Test invalid exponent (E) - should fail on base64URLDecode
+	jwk2 := JWK{
+		Kty: "RSA",
+		Use: "sig",
+		Alg: "RS256",
+		N:   "dGVzdA",            // Valid base64url
+		E:   "invalid-base64url", // Invalid base64url
+	}
+
+	_, err = (&Verifier{}).jwkToRSAPublicKey(jwk2)
+	if err == nil {
+		t.Error("Expected error for invalid exponent")
+	}
+	if !strings.Contains(err.Error(), "failed to decode exponent") {
+		t.Errorf("Expected exponent decode error, got: %v", err)
+	}
+
+	// Test edge case: empty modulus (valid base64url, but creates invalid RSA key)
+	jwk3 := JWK{
+		Kty: "RSA",
+		Use: "sig",
+		Alg: "RS256",
+		N:   "", // Empty modulus - valid base64url but invalid RSA
+		E:   "AQAB",
+	}
+
+	_, err = (&Verifier{}).jwkToRSAPublicKey(jwk3)
+	// Empty string is valid base64url, so this should succeed but create an invalid key
+	// The function doesn't validate RSA key correctness, just base64url decoding
+	if err != nil {
+		t.Errorf("Empty modulus should decode successfully: %v", err)
+	}
+
+	// Test edge case: empty exponent (valid base64url, but creates invalid RSA key)
+	jwk4 := JWK{
+		Kty: "RSA",
+		Use: "sig",
+		Alg: "RS256",
+		N:   "dGVzdA",
+		E:   "", // Empty exponent - valid base64url but invalid RSA
+	}
+
+	_, err = (&Verifier{}).jwkToRSAPublicKey(jwk4)
+	// Empty string is valid base64url, so this should succeed but create an invalid key
+	if err != nil {
+		t.Errorf("Empty exponent should decode successfully: %v", err)
 	}
 }
 

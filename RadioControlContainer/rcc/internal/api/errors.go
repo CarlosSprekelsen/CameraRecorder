@@ -14,6 +14,7 @@ import (
 	"net/http"
 
 	"github.com/radio-control/rcc/internal/adapter"
+	"github.com/radio-control/rcc/internal/command"
 )
 
 // APIError represents an API-layer error with HTTP status code.
@@ -71,6 +72,9 @@ func ToAPIError(err error) (int, []byte) {
 	}
 
 	// Check for API-layer errors
+	if errors.Is(err, command.ErrNotFound) {
+		return http.StatusNotFound, marshalErrorResponse("NOT_FOUND", "Resource not found", nil)
+	}
 	if errors.Is(err, ErrUnauthorizedError) {
 		return http.StatusUnauthorized, marshalErrorResponse("UNAUTHORIZED", "Authentication required", nil)
 	}

@@ -3,6 +3,7 @@ package command
 
 import (
 	"context"
+	"errors"
 
 	"github.com/radio-control/rcc/internal/adapter"
 	"github.com/radio-control/rcc/internal/radio"
@@ -21,3 +22,6 @@ type OrchestratorPort interface {
 type RadioManager interface {
 	GetRadio(radioID string) (*radio.Radio, error)
 }
+
+// ErrNotFound indicates a requested radio was not found.
+var ErrNotFound = errors.New("NOT_FOUND")
