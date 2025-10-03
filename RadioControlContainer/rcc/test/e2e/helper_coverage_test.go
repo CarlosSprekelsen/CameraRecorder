@@ -85,7 +85,7 @@ func TestHelperFunctions_getJSONPath(t *testing.T) {
 func TestHelperFunctions_threadSafeResponseWriter(t *testing.T) {
 	// Test WriteHeader path
 	w := newThreadSafeResponseWriter()
-	
+
 	// Test WriteHeader
 	w.WriteHeader(404)
 	if w.statusCode != 404 {

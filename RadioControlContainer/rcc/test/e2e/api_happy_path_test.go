@@ -27,8 +27,6 @@ func TestE2E_HappyPath(t *testing.T) {
 
 	// Evidence: Route table and seeded IDs
 	t.Logf("=== TEST EVIDENCE ===")
-	t.Logf("Active Radio ID: %s", server.RadioManager.GetActive())
-	t.Logf("Band Plan: %+v", server.SilvusAdapter.GetBandPlan())
 	t.Logf("Server URL: %s", server.URL)
 	t.Logf("===================")
 
@@ -106,11 +104,10 @@ func TestE2E_TelemetryIntegration(t *testing.T) {
 
 	// Evidence: Seeded state
 	t.Logf("=== TEST EVIDENCE ===")
-	t.Logf("Active Radio ID: %s", server.RadioManager.GetActive())
-	t.Logf("Telemetry Hub: %+v", server.TelemetryHub != nil)
+	t.Logf("Server URL: %s", server.URL)
 	t.Logf("===================")
 
-	// Subscribe to telemetry using the harness
+	// Subscribe to telemetry using HTTP SSE endpoint
 	req, _ := http.NewRequest("GET", server.URL+"/api/v1/telemetry", nil)
 	req.Header.Set("Accept", "text/event-stream")
 
@@ -119,10 +116,33 @@ func TestE2E_TelemetryIntegration(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	// Start telemetry subscription
+	// Start telemetry subscription via HTTP
 	telemetryDone := make(chan error, 1)
 	go func() {
-		telemetryDone <- server.TelemetryHub.Subscribe(ctx, w, req)
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			telemetryDone <- err
+			return
+		}
+		defer resp.Body.Close()
+
+		// Read SSE stream
+		buf := make([]byte, 1024)
+		for {
+			select {
+			case <-ctx.Done():
+				telemetryDone <- ctx.Err()
+				return
+			default:
+				n, err := resp.Body.Read(buf)
+				if err != nil {
+					telemetryDone <- err
+					return
+				}
+				w.Write(buf[:n])
+			}
+		}
 	}()
 
 	// Wait for subscription to start

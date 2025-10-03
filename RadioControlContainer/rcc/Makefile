@@ -2,7 +2,7 @@
 # Source: PRE-INT-10
 # Quote: "Prevent backsliding before integration"
 
-.PHONY: help unit e2e race bench perf cover lint clean test-all
+.PHONY: help unit e2e race bench perf cover lint clean test-all integration test-unit-team test-integration-team test-e2e-team test-parallel integration-cover coverage-gaps coverage-diff test-quarantine
 .DEFAULT_GOAL := help
 
 # Configuration
@@ -150,3 +150,49 @@ test-coverage-package: ## Run tests with coverage for specific package (usage: m
 	@echo "$(BLUE)Running tests with coverage for package $(PACKAGE)...$(NC)"
 	@go test -coverprofile=$(PACKAGE)_coverage.out -covermode=atomic ./internal/$(PACKAGE)/...
 	@go tool cover -func=$(PACKAGE)_coverage.out | grep total
+
+# Integration Tests
+integration: ## Run integration tests (multi-component, no HTTP)
+	@echo "$(BLUE)Running integration tests...$(NC)"
+	@go test ./test/integration/... -count=1 -tags=integration -timeout=10m
+
+integration-cover: ## Integration coverage
+	@echo "$(BLUE)Running integration tests with coverage...$(NC)"
+	@go test -coverprofile=integration_coverage.out ./test/integration/... -tags=integration -count=1
+	@go tool cover -func=integration_coverage.out | grep total || true
+
+# Team-specific test suites
+test-unit-team: ## Team 1: Unit tests (fast)
+	@echo "$(BLUE)Team 1: Running unit tests...$(NC)"
+	@go test ./internal/auth/... ./internal/command/... ./internal/config/... ./internal/adapter/... -short -count=1 -timeout=5m
+
+test-integration-team: ## Team 2: Integration tests
+	@echo "$(BLUE)Team 2: Running integration tests...$(NC)"
+	@go test ./test/integration/... -tags=integration -count=1 -timeout=10m
+
+test-e2e-team: ## Team 3: E2E tests (HTTP black-box)
+	@echo "$(BLUE)Team 3: Running E2E tests...$(NC)"
+	@go test ./test/e2e/... -count=1 -v -timeout=20m
+
+# Parallel execution
+test-parallel: ## Run all test suites in parallel
+	@echo "$(BLUE)Running all test suites in parallel...$(NC)"
+	@$(MAKE) -j3 test-unit-team test-integration-team test-e2e-team
+
+# Coverage analysis
+coverage-gaps: ## Identify uncovered critical paths
+	@echo "$(BLUE)Identifying coverage gaps...$(NC)"
+	@go test -coverprofile=full.out ./...
+	@go tool cover -func=full.out | grep -E "0\.0%|[0-4][0-9]\.[0-9]%" | tee gaps.txt || true
+	@echo "$(RED)Coverage gaps found (see gaps.txt)$(NC)"
+
+coverage-diff: ## Coverage delta vs main
+	@echo "$(BLUE)Comparing coverage with main branch...$(NC)"
+	@git show main:coverage.out > coverage_main.out || true
+	@go test -coverprofile=coverage_current.out ./...
+	@echo "$(YELLOW)Compare coverage_main.out vs coverage_current.out offline$(NC)"
+
+# Flaky test quarantine
+test-quarantine: ## Run quarantined tests separately
+	@echo "$(BLUE)Running quarantined tests...$(NC)"
+	@go test -tags=flaky ./... -count=10 -failfast=false -timeout=20m | tee quarantine.log
