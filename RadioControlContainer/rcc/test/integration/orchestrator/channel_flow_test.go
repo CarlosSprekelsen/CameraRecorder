@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/radio-control/rcc/internal/adapter"
+	"github.com/radio-control/rcc/internal/audit"
 	"github.com/radio-control/rcc/internal/command"
 	"github.com/radio-control/rcc/internal/radio"
 	"github.com/radio-control/rcc/internal/telemetry"
@@ -17,15 +18,20 @@ import (
 )
 
 func TestChannelFlow_OrchestratorToAdapter(t *testing.T) {
-	// Arrange: real orchestrator + real adapter wiring (no HTTP)
+	// Arrange: real orchestrator + real components (only radio adapter mocked)
 	cfg := fixtures.LoadTestConfig()
 	telemetryHub := telemetry.NewHub(cfg)
 
-	// Create real radio manager
+	// Create real components
 	radioManager := radio.NewManager()
+	auditLogger, err := audit.NewLogger("/tmp/audit_test")
+	if err != nil {
+		t.Fatalf("Failed to create audit logger: %v", err)
+	}
 
-	// Create orchestrator with radio manager
+	// Create orchestrator with real components
 	orchestrator := command.NewOrchestratorWithRadioManager(telemetryHub, cfg, radioManager)
+	orchestrator.SetAuditLogger(auditLogger)
 
 	// Use test fixtures for consistent inputs
 	radioID := "test-radio-flow"
@@ -35,7 +41,7 @@ func TestChannelFlow_OrchestratorToAdapter(t *testing.T) {
 	fakeAdapter := fakes.NewFakeAdapter("test-radio-flow")
 
 	// Load capabilities for the radio
-	err := radioManager.LoadCapabilities(radioID, fakeAdapter, 5*time.Second)
+	err = radioManager.LoadCapabilities(radioID, fakeAdapter, 5*time.Second)
 	if err != nil {
 		t.Fatalf("Failed to load capabilities: %v", err)
 	}

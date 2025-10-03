@@ -176,10 +176,10 @@ func main() {
 	http.HandleFunc("/audit", handleAudit)
 
 	// Start server
-	log.Println("RCC Web UI server starting on http://127.0.0.1:3000")
+	log.Println("RCC Web UI server starting on http://0.0.0.0:3000")
 	log.Printf("Proxying to RCC at %s", config.RCCBaseURL)
 
-	if err := http.ListenAndServe("127.0.0.1:3000", nil); err != nil {
+	if err := http.ListenAndServe("0.0.0.0:3000", nil); err != nil {
 		log.Fatalf("Server failed: %v", err)
 	}
 }

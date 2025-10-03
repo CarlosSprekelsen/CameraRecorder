@@ -234,3 +234,10 @@ func (f *FakeAdapter) GetCurrentState() (float64, float64) {
 	defer f.mu.RUnlock()
 	return f.powerDbm, f.frequencyMhz
 }
+
+// SetMode sets the behavior mode for testing different error conditions.
+func (f *FakeAdapter) SetMode(mode string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.mode = mode
+}

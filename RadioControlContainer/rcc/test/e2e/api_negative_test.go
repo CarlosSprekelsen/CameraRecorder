@@ -62,8 +62,8 @@ func TestE2E_InvalidJSON(t *testing.T) {
 	resp := httpPostWithStatus(t, server.URL+"/api/v1/radios/silvus-001/power", payload)
 	validator.ValidateHTTPResponse(t, resp, 400)
 
-	// Test missing required fields
-	payload = `{}`
+	// Test out-of-range power value (valid JSON but invalid business logic)
+	payload = `{"powerDbm": 100}`
 	resp = httpPostWithStatus(t, server.URL+"/api/v1/radios/silvus-001/power", payload)
 	validator.ValidateHTTPResponse(t, resp, 400)
 

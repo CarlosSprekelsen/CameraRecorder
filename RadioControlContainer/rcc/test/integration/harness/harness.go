@@ -33,7 +33,10 @@ func BuildCommandStack(t *testing.T, seed Radios) (orch command.OrchestratorPort
 	})
 
 	// Create real audit logger (writes to temp dir for tests)
-	auditLogger = audit.NewLogger()
+	auditLogger, err := audit.NewLogger("/tmp/audit_test")
+	if err != nil {
+		t.Fatalf("Failed to create audit logger: %v", err)
+	}
 
 	// Create real radio manager
 	rm = radio.NewManager()

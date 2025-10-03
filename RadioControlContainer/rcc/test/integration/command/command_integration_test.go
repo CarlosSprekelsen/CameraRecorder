@@ -4,6 +4,7 @@ package command_test
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/radio-control/rcc/internal/adapter"
@@ -62,7 +63,7 @@ func TestCommand_SetChannelByIndex_ResolvesIndexToFrequency(t *testing.T) {
 	if fakeAdapterTyped.GetCallCount("SetFrequency") != 1 {
 		t.Errorf("Expected SetFrequency to be called once, got %d calls", fakeAdapterTyped.GetCallCount("SetFrequency"))
 	}
-	
+
 	expectedFreq := 2437.0 // Channel 6 = 2437 MHz per ICD
 	actualFreq := fakeAdapterTyped.GetLastSetFrequencyCall()
 	if actualFreq != expectedFreq {
@@ -107,7 +108,7 @@ func TestCommand_ErrorNormalization_Table(t *testing.T) {
 			} else {
 				if err == nil {
 					t.Errorf("Expected error %v, got success", tc.expectedErr)
-				} else if err != tc.expectedErr {
+				} else if !errors.Is(err, tc.expectedErr) {
 					t.Errorf("Expected error %v, got %v", tc.expectedErr, err)
 				}
 			}

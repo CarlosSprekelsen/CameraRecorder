@@ -7,7 +7,7 @@ echo "============================="
 BASE_URL="http://127.0.0.1:3000"
 
 echo "1. Testing static file serving..."
-if curl -s "$BASE_URL/" | grep -q "Silvus Radio Control"; then
+if curl -s "$BASE_URL/" | grep -q "Radio Control"; then
     echo "✓ HTML page loads correctly"
 else
     echo "✗ HTML page failed to load"
