@@ -299,25 +299,29 @@ func (h *Hub) handleClient(client *Client) {
 		h.unregisterClient(client.ID)
 	}()
 
-	// Add timeout to prevent infinite loops and connection leaks
-	timeout := time.NewTimer(30 * time.Second)
-	defer timeout.Stop()
-
 	for {
+		// ✅ CHECK CONTEXT FIRST - before select
 		select {
 		case <-client.Context.Done():
-			// Context cancelled, clean up and return immediately - PRIORITY
+			return // Immediate exit
+		default:
+		}
+
+		// Then normal select with short timeout
+		timeout := time.NewTimer(100 * time.Millisecond) // ✅ Shorter!
+		select {
+		case <-client.Context.Done():
+			timeout.Stop()
 			return
 		case <-timeout.C:
-			// Force cleanup on timeout to prevent connection leaks
-			return
+			// Loop continues, rechecks context
+			continue
 		case event, ok := <-client.Events:
+			timeout.Stop()
 			if !ok {
-				// Channel closed
 				return
 			}
 			if err := h.sendEventToClient(client, event); err != nil {
-				// Send error, close connection
 				return
 			}
 		}

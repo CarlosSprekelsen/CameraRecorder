@@ -15,3 +15,249 @@ pkg: github.com/radio-control/rcc/internal/telemetry
 cpu: Intel(R) Core(TM) i5 CPU       M 480  @ 2.67GHz
 BenchmarkPublishWithSubscribers/Subscribers_1-4         	 1385274	       923.0 ns/op	     439 B/op	       3 allocs/op
 BenchmarkPublishWithSubscribers/Subscribers_10-4        	 1315579	       900.3 ns/op	     439 B/op	       3 allocs/op
+SIGQUIT: quit
+PC=0x47e061 m=0 sigcode=0
+
+goroutine 0 gp=0x8a2d20 m=0 mp=0x8a3c00 [idle]:
+runtime.futex(0x8a3d58, 0x80, 0x0, 0x0, 0x0, 0x0)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/sys_linux_amd64.s:557 +0x21 fp=0x7ffdfce79748 sp=0x7ffdfce79740 pc=0x47e061
+runtime.futexsleep(0x7ffdfce797c0?, 0x414891?, 0x7ffdfce797f0?)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/os_linux.go:75 +0x30 fp=0x7ffdfce79798 sp=0x7ffdfce79748 pc=0x43a570
+runtime.notesleep(0x8a3d58)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/lock_futex.go:47 +0x87 fp=0x7ffdfce797d0 sp=0x7ffdfce79798 pc=0x413fa7
+runtime.mPark(...)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:1919
+runtime.stopm()
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:2950 +0x8c fp=0x7ffdfce79800 sp=0x7ffdfce797d0 pc=0x445dac
+runtime.findRunnable()
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:3699 +0xd9c fp=0x7ffdfce79978 sp=0x7ffdfce79800 pc=0x44787c
+runtime.schedule()
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:4072 +0xb1 fp=0x7ffdfce799b0 sp=0x7ffdfce79978 pc=0x448971
+runtime.park_m(0xc000124700)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:4201 +0x285 fp=0x7ffdfce79a10 sp=0x7ffdfce799b0 pc=0x448de5
+runtime.mcall()
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/asm_amd64.s:459 +0x4e fp=0x7ffdfce79a28 sp=0x7ffdfce79a10 pc=0x47a1ee
+
+goroutine 1 gp=0xc000002380 m=nil [chan receive, 10 minutes]:
+runtime.gopark(0x0?, 0x200000000000000?, 0x48?, 0x1?, 0x70ada503a5c0?)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:435 +0xce fp=0xc000058840 sp=0xc000058820 pc=0x474d0e
+runtime.chanrecv(0xc000090150, 0x0, 0x1)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/chan.go:664 +0x445 fp=0xc0000588b8 sp=0xc000058840 pc=0x40ee85
+runtime.chanrecv1(0x4158de?, 0x70ada4c52a88?)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/chan.go:506 +0x12 fp=0xc0000588e0 sp=0xc0000588b8 pc=0x40ea12
+testing.(*B).run1(0xc0002902c8)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/testing/benchmark.go:247 +0xa6 fp=0xc0000589d0 sp=0xc0000588e0 pc=0x4ea066
+testing.(*B).Run(0xc000290008, {0x68b209?, 0x499353?}, 0x699680)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/testing/benchmark.go:847 +0x491 fp=0xc000058ad0 sp=0xc0000589d0 pc=0x4ecb51
+testing.runBenchmarks.func1(0xc000290008)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/testing/benchmark.go:708 +0x37 fp=0xc000058b10 sp=0xc000058ad0 pc=0x4ebc57
+testing.(*B).runN(0xc000290008, 0x1)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/testing/benchmark.go:219 +0x190 fp=0xc000058ba0 sp=0xc000058b10 pc=0x4e9e50
+testing.runBenchmarks({0x690aa1, 0x2f}, 0x0?, {0x89afc0, 0x7, 0x7?})
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/testing/benchmark.go:717 +0x5f6 fp=0xc000058ca0 sp=0xc000058ba0 pc=0x4ebb96
+testing.(*M).Run(0xc00009e3c0)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/testing/testing.go:2158 +0x9b6 fp=0xc000058ed0 sp=0xc000058ca0 pc=0x4f7f16
+main.main()
+	_testmain.go:93 +0x9b fp=0xc000058f50 sp=0xc000058ed0 pc=0x5d74bb
+runtime.main()
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:283 +0x28b fp=0xc000058fe0 sp=0xc000058f50 pc=0x440e6b
+runtime.goexit({})
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc000058fe8 sp=0xc000058fe0 pc=0x47c221
+
+goroutine 2 gp=0xc000002e00 m=nil [force gc (idle), 2 minutes]:
+runtime.gopark(0x12f2ce0d5a55?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:435 +0xce fp=0xc000048fa8 sp=0xc000048f88 pc=0x474d0e
+runtime.goparkunlock(...)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:441
+runtime.forcegchelper()
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:348 +0xb3 fp=0xc000048fe0 sp=0xc000048fa8 pc=0x4411b3
+runtime.goexit({})
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc000048fe8 sp=0xc000048fe0 pc=0x47c221
+created by runtime.init.7 in goroutine 1
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:336 +0x1a
+
+goroutine 3 gp=0xc000003340 m=nil [GC sweep wait]:
+runtime.gopark(0x1?, 0x0?, 0x0?, 0x0?, 0x0?)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:435 +0xce fp=0xc000049780 sp=0xc000049760 pc=0x474d0e
+runtime.goparkunlock(...)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:441
+runtime.bgsweep(0xc000024080)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgcsweep.go:316 +0xdf fp=0xc0000497c8 sp=0xc000049780 pc=0x4291bf
+runtime.gcenable.gowrap1()
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgc.go:204 +0x25 fp=0xc0000497e0 sp=0xc0000497c8 pc=0x41d645
+runtime.goexit({})
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0000497e8 sp=0xc0000497e0 pc=0x47c221
+created by runtime.gcenable in goroutine 1
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgc.go:204 +0x66
+
+goroutine 4 gp=0xc000003500 m=nil [GC scavenge wait]:
+runtime.gopark(0x3dacec?, 0x7844b?, 0x0?, 0x0?, 0x0?)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:435 +0xce fp=0xc000049f78 sp=0xc000049f58 pc=0x474d0e
+runtime.goparkunlock(...)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:441
+runtime.(*scavengerState).park(0x8a2b00)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgcscavenge.go:425 +0x49 fp=0xc000049fa8 sp=0xc000049f78 pc=0x426c29
+runtime.bgscavenge(0xc000024080)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgcscavenge.go:658 +0x59 fp=0xc000049fc8 sp=0xc000049fa8 pc=0x4271b9
+runtime.gcenable.gowrap2()
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgc.go:205 +0x25 fp=0xc000049fe0 sp=0xc000049fc8 pc=0x41d5e5
+runtime.goexit({})
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc000049fe8 sp=0xc000049fe0 pc=0x47c221
+created by runtime.gcenable in goroutine 1
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgc.go:205 +0xa5
+
+goroutine 18 gp=0xc000082700 m=nil [finalizer wait, 10 minutes]:
+runtime.gopark(0x1b8?, 0xc000002380?, 0x1?, 0x23?, 0xc000048688?)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:435 +0xce fp=0xc000048630 sp=0xc000048610 pc=0x474d0e
+runtime.runfinq()
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mfinal.go:196 +0x107 fp=0xc0000487e0 sp=0xc000048630 pc=0x41c607
+runtime.goexit({})
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0000487e8 sp=0xc0000487e0 pc=0x47c221
+created by runtime.createfing in goroutine 1
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mfinal.go:166 +0x3d
+
+goroutine 19 gp=0xc0000828c0 m=nil [chan receive, 2 minutes]:
+runtime.gopark(0xc00009e1e0?, 0xc000200240?, 0x60?, 0x47?, 0x5732c8?)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:435 +0xce fp=0xc000044718 sp=0xc0000446f8 pc=0x474d0e
+runtime.chanrecv(0xc0000900e0, 0x0, 0x1)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/chan.go:664 +0x445 fp=0xc000044790 sp=0xc000044718 pc=0x40ee85
+runtime.chanrecv1(0x0?, 0x0?)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/chan.go:506 +0x12 fp=0xc0000447b8 sp=0xc000044790 pc=0x40ea12
+runtime.unique_runtime_registerUniqueMapCleanup.func2(...)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgc.go:1797
+runtime.unique_runtime_registerUniqueMapCleanup.gowrap1()
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgc.go:1800 +0x2f fp=0xc0000447e0 sp=0xc0000447b8 pc=0x42078f
+runtime.goexit({})
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0000447e8 sp=0xc0000447e0 pc=0x47c221
+created by unique.runtime_registerUniqueMapCleanup in goroutine 1
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgc.go:1795 +0x79
+
+goroutine 118 gp=0xc000082e00 m=nil [GC worker (idle)]:
+runtime.gopark(0x12f2ce1da764?, 0x3?, 0x11?, 0xfa?, 0x0?)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:435 +0xce fp=0xc00041df38 sp=0xc00041df18 pc=0x474d0e
+runtime.gcBgMarkWorker(0xc000182230)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgc.go:1423 +0xe9 fp=0xc00041dfc8 sp=0xc00041df38 pc=0x41faa9
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgc.go:1339 +0x25 fp=0xc00041dfe0 sp=0xc00041dfc8 pc=0x41f985
+runtime.goexit({})
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc00041dfe8 sp=0xc00041dfe0 pc=0x47c221
+created by runtime.gcBgMarkStartWorkers in goroutine 1
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgc.go:1339 +0x105
+
+goroutine 262 gp=0xc0001b4c40 m=nil [select]:
+runtime.gopark(0xc000113c58?, 0x3?, 0x78?, 0xaa?, 0xc000113c1a?)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:435 +0xce fp=0xc000113a98 sp=0xc000113a78 pc=0x474d0e
+runtime.selectgo(0xc000113c58, 0xc000113c14, 0x65a860?, 0x0, 0xc000113c20?, 0x1)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/select.go:351 +0x837 fp=0xc000113bd0 sp=0xc000113a98 pc=0x453637
+github.com/radio-control/rcc/internal/telemetry.(*Hub).handleClient(0xc000180180, 0xc0001cc850)
+	/home/carlossprekelsen/CameraRecorder/RadioControlContainer/rcc/internal/telemetry/hub.go:322 +0x185 fp=0xc000113d00 sp=0xc000113bd0 pc=0x5cb465
+github.com/radio-control/rcc/internal/telemetry.(*Hub).Subscribe(0xc000180180, {0x6df840, 0xc0001cc620}, {0x6df500, 0xc0000acbc0}, 0xc0000f6140)
+	/home/carlossprekelsen/CameraRecorder/RadioControlContainer/rcc/internal/telemetry/hub.go:169 +0x767 fp=0xc000113df8 sp=0xc000113d00 pc=0x5ca4a7
+github.com/radio-control/rcc/internal/telemetry.BenchmarkPublishWithSubscribers.func1(0xc000290588)
+	/home/carlossprekelsen/CameraRecorder/RadioControlContainer/rcc/internal/telemetry/hub_bench_test.go:41 +0x85 fp=0xc000113f10 sp=0xc000113df8 pc=0x5cd125
+testing.(*B).runN(0xc000290588, 0x1)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/testing/benchmark.go:219 +0x190 fp=0xc000113fa0 sp=0xc000113f10 pc=0x4e9e50
+testing.(*B).run1.func1()
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/testing/benchmark.go:245 +0x48 fp=0xc000113fe0 sp=0xc000113fa0 pc=0x4ea4c8
+runtime.goexit({})
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc000113fe8 sp=0xc000113fe0 pc=0x47c221
+created by testing.(*B).run1 in goroutine 65
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/testing/benchmark.go:238 +0x90
+
+goroutine 65 gp=0xc0001b4e00 m=nil [chan receive, 6 minutes]:
+runtime.gopark(0x0?, 0x200000000000000?, 0x88?, 0x16?, 0x70ada503a108?)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:435 +0xce fp=0xc00005fbb0 sp=0xc00005fb90 pc=0x474d0e
+runtime.chanrecv(0xc0002c6070, 0x0, 0x1)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/chan.go:664 +0x445 fp=0xc00005fc28 sp=0xc00005fbb0 pc=0x40ee85
+runtime.chanrecv1(0x4158de?, 0x70ada4c52a88?)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/chan.go:506 +0x12 fp=0xc00005fc50 sp=0xc00005fc28 pc=0x40ea12
+testing.(*B).run1(0xc000290588)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/testing/benchmark.go:247 +0xa6 fp=0xc00005fd40 sp=0xc00005fc50 pc=0x4ea066
+testing.(*B).Run(0xc0002902c8, {0xc0003e8670?, 0xc000409ee8?}, 0xc0000f4000)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/testing/benchmark.go:847 +0x491 fp=0xc00005fe40 sp=0xc00005fd40 pc=0x4ecb51
+github.com/radio-control/rcc/internal/telemetry.BenchmarkPublishWithSubscribers(0xc0002902c8)
+	/home/carlossprekelsen/CameraRecorder/RadioControlContainer/rcc/internal/telemetry/hub_bench_test.go:23 +0x215 fp=0xc00005ff10 sp=0xc00005fe40 pc=0x5ccf95
+testing.(*B).runN(0xc0002902c8, 0x1)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/testing/benchmark.go:219 +0x190 fp=0xc00005ffa0 sp=0xc00005ff10 pc=0x4e9e50
+testing.(*B).run1.func1()
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/testing/benchmark.go:245 +0x48 fp=0xc00005ffe0 sp=0xc00005ffa0 pc=0x4ea4c8
+runtime.goexit({})
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc00005ffe8 sp=0xc00005ffe0 pc=0x47c221
+created by testing.(*B).run1 in goroutine 1
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/testing/benchmark.go:238 +0x90
+
+goroutine 119 gp=0xc0001b5880 m=nil [GC worker (idle), 6 minutes]:
+runtime.gopark(0x129eed838e63?, 0x3?, 0xb?, 0xa7?, 0x0?)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:435 +0xce fp=0xc0001b6f38 sp=0xc0001b6f18 pc=0x474d0e
+runtime.gcBgMarkWorker(0xc000182230)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgc.go:1423 +0xe9 fp=0xc0001b6fc8 sp=0xc0001b6f38 pc=0x41faa9
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgc.go:1339 +0x25 fp=0xc0001b6fe0 sp=0xc0001b6fc8 pc=0x41f985
+runtime.goexit({})
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0001b6fe8 sp=0xc0001b6fe0 pc=0x47c221
+created by runtime.gcBgMarkStartWorkers in goroutine 1
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgc.go:1339 +0x105
+
+goroutine 120 gp=0xc0001b5a40 m=nil [GC worker (idle), 6 minutes]:
+runtime.gopark(0x129eef92e98f?, 0x3?, 0x66?, 0xc4?, 0x0?)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:435 +0xce fp=0xc00004af38 sp=0xc00004af18 pc=0x474d0e
+runtime.gcBgMarkWorker(0xc000182230)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgc.go:1423 +0xe9 fp=0xc00004afc8 sp=0xc00004af38 pc=0x41faa9
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgc.go:1339 +0x25 fp=0xc00004afe0 sp=0xc00004afc8 pc=0x41f985
+runtime.goexit({})
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc00004afe8 sp=0xc00004afe0 pc=0x47c221
+created by runtime.gcBgMarkStartWorkers in goroutine 1
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgc.go:1339 +0x105
+
+goroutine 121 gp=0xc0001b5c00 m=nil [GC worker (idle), 6 minutes]:
+runtime.gopark(0x129eef92ea89?, 0x3?, 0x67?, 0x1b?, 0x0?)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:435 +0xce fp=0xc0001bbf38 sp=0xc0001bbf18 pc=0x474d0e
+runtime.gcBgMarkWorker(0xc000182230)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgc.go:1423 +0xe9 fp=0xc0001bbfc8 sp=0xc0001bbf38 pc=0x41faa9
+runtime.gcBgMarkStartWorkers.gowrap1()
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgc.go:1339 +0x25 fp=0xc0001bbfe0 sp=0xc0001bbfc8 pc=0x41f985
+runtime.goexit({})
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc0001bbfe8 sp=0xc0001bbfe0 pc=0x47c221
+created by runtime.gcBgMarkStartWorkers in goroutine 1
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/mgc.go:1339 +0x105
+
+goroutine 390 gp=0xc000124700 m=nil [select]:
+runtime.gopark(0xc00004b770?, 0x3?, 0x0?, 0x0?, 0xc00004b752?)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/proc.go:435 +0xce fp=0xc00004b5e0 sp=0xc00004b5c0 pc=0x474d0e
+runtime.selectgo(0xc00004b770, 0xc00004b74c, 0xc00004b748?, 0x0, 0xc000182320?, 0x1)
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/select.go:351 +0x837 fp=0xc00004b718 sp=0xc00004b5e0 pc=0x453637
+github.com/radio-control/rcc/internal/telemetry.(*Hub).startHeartbeat.func1()
+	/home/carlossprekelsen/CameraRecorder/RadioControlContainer/rcc/internal/telemetry/hub.go:451 +0x105 fp=0xc00004b7e0 sp=0xc00004b718 pc=0x5cc025
+runtime.goexit({})
+	/home/carlossprekelsen/go/pkg/mod/golang.org/toolchain@v0.0.1-go1.24.6.linux-amd64/src/runtime/asm_amd64.s:1700 +0x1 fp=0xc00004b7e8 sp=0xc00004b7e0 pc=0x47c221
+created by github.com/radio-control/rcc/internal/telemetry.(*Hub).startHeartbeat in goroutine 262
+	/home/carlossprekelsen/CameraRecorder/RadioControlContainer/rcc/internal/telemetry/hub.go:439 +0x125
+
+rax    0xca
+rbx    0x0
+rcx    0x47e063
+rdx    0x0
+rdi    0x8a3d58
+rsi    0x80
+rbp    0x7ffdfce79788
+rsp    0x7ffdfce79740
+r8     0x0
+r9     0x0
+r10    0x0
+r11    0x286
+r12    0x7ffdfce79798
+r13    0xc00004b752
+r14    0x8a2d20
+r15    0x0
+rip    0x47e061
+rflags 0x286
+cs     0x33
+fs     0x0
+gs     0x0
+*** Test killed with quit: ran too long (11m0s).
+exit status 2
+FAIL	github.com/radio-control/rcc/internal/telemetry	660.010s
+PASS
+ok  	github.com/radio-control/rcc/internal/adapter	0.007s
+FAIL
