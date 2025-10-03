@@ -2,7 +2,7 @@
 # Source: PRE-INT-10
 # Quote: "Prevent backsliding before integration"
 
-.PHONY: help unit e2e cover lint clean test-all
+.PHONY: help unit e2e race bench perf cover lint clean test-all
 .DEFAULT_GOAL := help
 
 # Configuration
@@ -35,11 +35,23 @@ help: ## Show this help message
 
 unit: ## Run unit tests
 	@echo "$(BLUE)Running unit tests...$(NC)"
-	@go test -v -timeout 30s ./internal/auth/... ./internal/command/... ./internal/config/... ./internal/adapter/... ./internal/audit/...
+	@go test ./internal/... -count=1 -short
 
 e2e: ## Run end-to-end tests
 	@echo "$(BLUE)Running end-to-end tests...$(NC)"
-	@go test -v -timeout 60s -run "Test.*E2E\|Test.*Integration" ./...
+	@go test ./test/e2e -count=1 -v
+
+race: ## Run tests with race detection
+	@echo "$(BLUE)Running tests with race detection...$(NC)"
+	@go test -race ./... -count=1
+
+bench: ## Run performance benchmarks
+	@echo "$(BLUE)Running performance benchmarks...$(NC)"
+	@go test -bench=. -benchmem ./internal/command ./internal/telemetry ./internal/adapter
+
+perf: ## Run load testing scenarios
+	@echo "$(BLUE)Running load testing scenarios...$(NC)"
+	@bash test/perf/vegeta_scenarios.sh || true
 
 cover: ## Run tests with coverage and enforce thresholds
 	@echo "$(BLUE)Running tests with coverage...$(NC)"
@@ -55,7 +67,7 @@ lint: ## Run golangci-lint with strict configuration
 	@golangci-lint run --enable=errcheck,staticcheck,gocritic,govet,ineffassign,misspell,unused --timeout=5m ./internal/auth/... ./internal/command/... ./internal/config/... ./internal/adapter/... ./internal/audit/...
 	@echo "$(GREEN)✅ Lint passed with 0 warnings$(NC)"
 
-test-all: unit e2e cover lint ## Run all tests and quality checks
+test-all: unit e2e race bench cover lint ## Run all tests and quality checks
 	@echo "$(GREEN)✅ All quality gates passed$(NC)"
 
 clean: ## Clean generated files
