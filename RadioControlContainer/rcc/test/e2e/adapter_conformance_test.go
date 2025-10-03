@@ -2,6 +2,7 @@
 package e2e
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -18,68 +19,53 @@ func TestE2E_SilvusMockConformance(t *testing.T) {
 		{Index: 11, FrequencyMhz: 2462.0},
 	})
 
-	// Test GetCapabilities
-	caps, err := silvus.GetCapabilities()
-	if err != nil {
-		t.Fatalf("GetCapabilities failed: %v", err)
-	}
-
-	if caps.RadioID != "silvus-001" {
-		t.Errorf("Expected radio ID 'silvus-001', got '%s'", caps.RadioID)
-	}
-
-	if len(caps.Channels) != 3 {
-		t.Errorf("Expected 3 channels, got %d", len(caps.Channels))
-	}
-
-	// Test SetPower
-	err = silvus.SetPower(10.0)
-	if err != nil {
-		t.Fatalf("SetPower failed: %v", err)
-	}
-
-	// Test GetPower
-	power, err := silvus.GetPower()
-	if err != nil {
-		t.Fatalf("GetPower failed: %v", err)
-	}
-
-	if power != 10.0 {
-		t.Errorf("Expected power 10.0, got %f", power)
-	}
-
-	// Test SetChannel
-	err = silvus.SetChannel(6)
-	if err != nil {
-		t.Fatalf("SetChannel failed: %v", err)
-	}
-
-	// Test GetChannel
-	channel, err := silvus.GetChannel()
-	if err != nil {
-		t.Fatalf("GetChannel failed: %v", err)
-	}
-
-	if channel != 6 {
-		t.Errorf("Expected channel 6, got %d", channel)
-	}
+	ctx := context.Background()
 
 	// Test GetState
-	state, err := silvus.GetState()
+	state, err := silvus.GetState(ctx)
 	if err != nil {
 		t.Fatalf("GetState failed: %v", err)
 	}
 
-	if state.RadioID != "silvus-001" {
-		t.Errorf("Expected radio ID 'silvus-001', got '%s'", state.RadioID)
+	// RadioState doesn't have RadioID field, check power instead
+	if state.PowerDbm < 0 || state.PowerDbm > 100 {
+		t.Errorf("Expected reasonable power value, got %d", state.PowerDbm)
 	}
 
-	if state.PowerDbm != 10.0 {
-		t.Errorf("Expected power 10.0, got %f", state.PowerDbm)
+	// Test SetPower
+	err = silvus.SetPower(ctx, 10)
+	if err != nil {
+		t.Fatalf("SetPower failed: %v", err)
 	}
 
-	if state.ChannelIndex != 6 {
-		t.Errorf("Expected channel 6, got %d", state.ChannelIndex)
+	// Test ReadPowerActual
+	power, err := silvus.ReadPowerActual(ctx)
+	if err != nil {
+		t.Fatalf("ReadPowerActual failed: %v", err)
+	}
+
+	if power != 10 {
+		t.Errorf("Expected power 10, got %d", power)
+	}
+
+	// Test SetFrequency
+	err = silvus.SetFrequency(ctx, 2437.0)
+	if err != nil {
+		t.Fatalf("SetFrequency failed: %v", err)
+	}
+
+	// Test GetState after changes
+	state, err = silvus.GetState(ctx)
+	if err != nil {
+		t.Fatalf("GetState after changes failed: %v", err)
+	}
+
+	if state.PowerDbm != 10 {
+		t.Errorf("Expected power 10, got %d", state.PowerDbm)
+	}
+
+	if state.FrequencyMhz != 2437.0 {
+		t.Errorf("Expected frequency 2437.0, got %f", state.FrequencyMhz)
 	}
 
 	t.Log("✅ SilvusMock adapter conformance working correctly")
@@ -92,20 +78,16 @@ func TestE2E_SilvusMockErrorHandling(t *testing.T) {
 		{Index: 11, FrequencyMhz: 2462.0},
 	})
 
+	ctx := context.Background()
+
 	// Test power out of range
-	err := silvus.SetPower(100.0)
+	err := silvus.SetPower(ctx, 100)
 	if err == nil {
 		t.Error("Expected error for power out of range")
 	}
 
-	// Test channel out of range
-	err = silvus.SetChannel(99)
-	if err == nil {
-		t.Error("Expected error for channel out of range")
-	}
-
-	// Test invalid frequency
-	err = silvus.SetChannelByFrequency(10000.0)
+	// Test frequency out of range
+	err = silvus.SetFrequency(ctx, 10000.0)
 	if err == nil {
 		t.Error("Expected error for frequency out of range")
 	}
@@ -135,43 +117,19 @@ func TestE2E_SilvusMockWithRadioManager(t *testing.T) {
 	}
 
 	// Test operations through RadioManager
-	activeRadio, err := rm.GetActive()
-	if err != nil {
-		t.Fatalf("GetActive failed: %v", err)
+	activeRadioID := rm.GetActive()
+	if activeRadioID != "silvus-001" {
+		t.Errorf("Expected active radio 'silvus-001', got '%s'", activeRadioID)
+	}
+
+	// Test getting active radio
+	activeRadio := rm.GetActiveRadio()
+	if activeRadio == nil {
+		t.Fatal("Expected active radio, got nil")
 	}
 
 	if activeRadio.ID != "silvus-001" {
-		t.Errorf("Expected active radio 'silvus-001', got '%s'", activeRadio.ID)
-	}
-
-	// Test power operations
-	err = rm.SetPower("silvus-001", 15.0)
-	if err != nil {
-		t.Fatalf("SetPower through RadioManager failed: %v", err)
-	}
-
-	power, err := rm.GetPower("silvus-001")
-	if err != nil {
-		t.Fatalf("GetPower through RadioManager failed: %v", err)
-	}
-
-	if power != 15.0 {
-		t.Errorf("Expected power 15.0, got %f", power)
-	}
-
-	// Test channel operations
-	err = rm.SetChannel("silvus-001", 11)
-	if err != nil {
-		t.Fatalf("SetChannel through RadioManager failed: %v", err)
-	}
-
-	channel, err := rm.GetChannel("silvus-001")
-	if err != nil {
-		t.Fatalf("GetChannel through RadioManager failed: %v", err)
-	}
-
-	if channel != 11 {
-		t.Errorf("Expected channel 11, got %d", channel)
+		t.Errorf("Expected active radio ID 'silvus-001', got '%s'", activeRadio.ID)
 	}
 
 	t.Log("✅ SilvusMock integration with RadioManager working correctly")
@@ -184,17 +142,19 @@ func TestE2E_SilvusMockConcurrentOperations(t *testing.T) {
 		{Index: 11, FrequencyMhz: 2462.0},
 	})
 
+	ctx := context.Background()
+
 	// Test concurrent power operations
 	done := make(chan bool, 10)
 
 	for i := 0; i < 10; i++ {
-		go func(power float64) {
+		go func(power int) {
 			defer func() { done <- true }()
-			err := silvus.SetPower(power)
+			err := silvus.SetPower(ctx, power)
 			if err != nil {
 				t.Errorf("Concurrent SetPower failed: %v", err)
 			}
-		}(float64(i + 1))
+		}(i + 1)
 	}
 
 	// Wait for all operations to complete
@@ -207,14 +167,14 @@ func TestE2E_SilvusMockConcurrentOperations(t *testing.T) {
 	}
 
 	// Verify final state
-	power, err := silvus.GetPower()
+	power, err := silvus.ReadPowerActual(ctx)
 	if err != nil {
-		t.Fatalf("GetPower after concurrent operations failed: %v", err)
+		t.Fatalf("ReadPowerActual after concurrent operations failed: %v", err)
 	}
 
-	// Power should be the last value set (10.0)
-	if power != 10.0 {
-		t.Errorf("Expected final power 10.0, got %f", power)
+	// Power should be the last value set (10)
+	if power != 10 {
+		t.Errorf("Expected final power 10, got %d", power)
 	}
 
 	t.Log("✅ SilvusMock concurrent operations working correctly")

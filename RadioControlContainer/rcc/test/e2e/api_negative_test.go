@@ -80,7 +80,7 @@ func TestE2E_AdapterBusy(t *testing.T) {
 	// Test with invalid power to trigger error response
 	payload := `{"powerDbm": 1000.0}`
 	resp := httpPostWithStatus(t, ts.URL+"/api/v1/radios/silvus-001/power", payload)
-	
+
 	if resp.StatusCode != http.StatusBadRequest {
 		t.Errorf("Expected status 400 for invalid power, got %d", resp.StatusCode)
 	}

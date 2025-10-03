@@ -55,12 +55,12 @@ func TestE2E_TelemetryIntegration(t *testing.T) {
 		{Index: 6, FrequencyMhz: 2437.0},
 		{Index: 11, FrequencyMhz: 2462.0},
 	})
-	
+
 	err := rm.LoadCapabilities("silvus-001", silvus, 5*time.Second)
 	if err != nil {
 		t.Fatalf("Failed to load capabilities: %v", err)
 	}
-	
+
 	err = rm.SetActive("silvus-001")
 	if err != nil {
 		t.Fatalf("Failed to set active radio: %v", err)
@@ -75,7 +75,7 @@ func TestE2E_TelemetryIntegration(t *testing.T) {
 	// Subscribe to telemetry
 	req, _ := http.NewRequest("GET", ts.URL+"/api/v1/telemetry", nil)
 	req.Header.Set("Accept", "text/event-stream")
-	
+
 	// Create thread-safe response writer
 	w := newThreadSafeResponseWriter()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)

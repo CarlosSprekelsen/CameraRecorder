@@ -2,7 +2,6 @@
 package e2e
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -13,7 +12,6 @@ import (
 	"github.com/radio-control/rcc/internal/adapter"
 	"github.com/radio-control/rcc/internal/adapter/silvusmock"
 	"github.com/radio-control/rcc/internal/api"
-	"github.com/radio-control/rcc/internal/audit"
 	"github.com/radio-control/rcc/internal/command"
 	"github.com/radio-control/rcc/internal/config"
 	"github.com/radio-control/rcc/internal/radio"
@@ -26,7 +24,6 @@ func newServerForE2E(t *testing.T) *httptest.Server {
 	cfg := config.LoadCBTimingBaseline()
 
 	hub := telemetry.NewHub(cfg)
-	aud := audit.NewInMemory()
 	rm := radio.NewManager()
 
 	// Register SilvusMock with a band plan
@@ -35,12 +32,12 @@ func newServerForE2E(t *testing.T) *httptest.Server {
 		{Index: 6, FrequencyMhz: 2437.0},
 		{Index: 11, FrequencyMhz: 2462.0},
 	})
-	
+
 	err := rm.LoadCapabilities("silvus-001", silvus, 5*time.Second)
 	if err != nil {
 		t.Fatalf("Failed to load capabilities: %v", err)
 	}
-	
+
 	err = rm.SetActive("silvus-001")
 	if err != nil {
 		t.Fatalf("Failed to set active radio: %v", err)
@@ -48,7 +45,7 @@ func newServerForE2E(t *testing.T) *httptest.Server {
 
 	orch := command.NewOrchestratorWithRadioManager(hub, cfg, rm)
 	s := api.NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 60*time.Second)
-	ts := httptest.NewServer(s)
+	ts := httptest.NewServer(s.Handler())
 	t.Cleanup(ts.Close)
 	return ts
 }
@@ -124,33 +121,33 @@ func mustHaveNumber(t *testing.T, data map[string]interface{}, path string, expe
 func getJSONPath(data map[string]interface{}, path string) interface{} {
 	parts := strings.Split(path, ".")
 	current := data
-	
+
 	for i, part := range parts {
 		if i == len(parts)-1 {
 			return current[part]
 		}
-		
+
 		if next, ok := current[part].(map[string]interface{}); ok {
 			current = next
 		} else {
 			return nil
 		}
 	}
-	
+
 	return nil
 }
 
 // Thread-safe response writer for SSE testing
 type threadSafeResponseWriter struct {
-	events chan string
-	headers http.Header
+	events     chan string
+	headers    http.Header
 	statusCode int
 }
 
 func newThreadSafeResponseWriter() *threadSafeResponseWriter {
 	return &threadSafeResponseWriter{
-		events: make(chan string, 100),
-		headers: make(http.Header),
+		events:     make(chan string, 100),
+		headers:    make(http.Header),
 		statusCode: 200,
 	}
 }
@@ -175,7 +172,7 @@ func (w *threadSafeResponseWriter) WriteHeader(statusCode int) {
 func (w *threadSafeResponseWriter) collectEvents(timeout time.Duration) []string {
 	var events []string
 	timeoutChan := time.After(timeout)
-	
+
 	for {
 		select {
 		case event := <-w.events:
