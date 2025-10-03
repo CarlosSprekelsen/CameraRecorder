@@ -215,7 +215,7 @@ func (o *Orchestrator) SetChannelByIndex(ctx context.Context, radioID string, ch
 	frequencyMhz, err := o.resolveChannelIndex(ctx, radioID, channelIndex, radioManager)
 	if err != nil {
 		o.logAudit(ctx, "setChannel", radioID, "INVALID_RANGE", time.Since(start))
-		return adapter.ErrInvalidRange
+		return err
 	}
 
 	// Validate resolved frequency range
@@ -574,5 +574,13 @@ func (o *Orchestrator) resolveChannelIndexFromRadioManager(ctx context.Context, 
 		}
 	}
 
-	return 0, fmt.Errorf("channel index %d not found for radio %s", channelIndex, radioID)
+	return 0, &adapter.VendorError{
+		Code:     adapter.ErrInvalidRange,
+		Original: fmt.Errorf("channel index %d not found for radio %s", channelIndex, radioID),
+		Details: map[string]interface{}{
+			"radioID":           radioID,
+			"requestedIndex":    channelIndex,
+			"availableChannels": len(channels),
+		},
+	}
 }
