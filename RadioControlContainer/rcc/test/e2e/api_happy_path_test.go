@@ -4,76 +4,96 @@ package e2e
 import (
 	"context"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/radio-control/rcc/internal/adapter"
-	"github.com/radio-control/rcc/internal/adapter/silvusmock"
-	"github.com/radio-control/rcc/internal/api"
-	"github.com/radio-control/rcc/internal/audit"
-	"github.com/radio-control/rcc/internal/command"
-	"github.com/radio-control/rcc/internal/config"
-	"github.com/radio-control/rcc/internal/radio"
-	"github.com/radio-control/rcc/internal/telemetry"
+	"github.com/radio-control/rcc/test/harness"
 )
 
 func TestE2E_HappyPath(t *testing.T) {
-	ts := newServerForE2E(t)
+	// Create test harness with seeded state
+	opts := harness.DefaultOptions()
+	opts.ActiveRadioID = "silvus-001"
+	opts.CorrelationID = "test-001"
 
-	// 1) List radios
-	body := httpGetJSON(t, ts.URL+"/api/v1/radios")
+	server := harness.NewServer(t, opts)
+	defer server.Shutdown()
+
+	// Evidence: Route table and seeded IDs
+	t.Logf("=== TEST EVIDENCE ===")
+	t.Logf("Active Radio ID: %s", server.RadioManager.GetActive())
+	t.Logf("Band Plan: %+v", server.SilvusAdapter.GetBandPlan())
+	t.Logf("Server URL: %s", server.URL)
+	t.Logf("===================")
+
+	// 1) List radios - should return seeded radio
+	body := httpGetJSON(t, server.URL+"/api/v1/radios")
 	mustHave(t, body, "result", "ok")
 
-	// 2) Select radio
-	httpPostJSON200(t, ts.URL+"/api/v1/radios/select", map[string]any{"radioId": "silvus-001"})
+	// Normalize dynamic fields in assertions
+	// Check if data is a slice or map
+	data := body["data"]
+	if data == nil {
+		t.Fatal("Expected 'data' field in response")
+	}
+
+	// Handle different response structures
+	switch v := data.(type) {
+	case []interface{}:
+		if len(v) == 0 {
+			t.Fatal("Expected at least one radio")
+		}
+		radio := v[0].(map[string]interface{})
+		mustHave(t, radio, "id", "silvus-001")
+		mustHave(t, radio, "type", "Silvus")
+	case map[string]interface{}:
+		// Single radio response
+		mustHave(t, v, "id", "silvus-001")
+		mustHave(t, v, "type", "Silvus")
+	default:
+		t.Fatalf("Unexpected data type: %T", v)
+	}
+
+	// 2) Select radio (should already be active)
+	httpPostJSON200(t, server.URL+"/api/v1/radios/select", map[string]any{"radioId": "silvus-001"})
 
 	// 3) Set power
-	httpPostJSON200(t, ts.URL+"/api/v1/radios/silvus-001/power", map[string]any{"powerDbm": 10.0})
+	httpPostJSON200(t, server.URL+"/api/v1/radios/silvus-001/power", map[string]any{"powerDbm": 10.0})
 
 	// 4) Set channel (by index ⇒ frequency mapping)
-	httpPostJSON200(t, ts.URL+"/api/v1/radios/silvus-001/channel", map[string]any{"channelIndex": 6})
+	httpPostJSON200(t, server.URL+"/api/v1/radios/silvus-001/channel", map[string]any{"channelIndex": 6})
 
 	// 5) Read-back checks
-	gotP := httpGetJSON(t, ts.URL+"/api/v1/radios/silvus-001/power")
+	gotP := httpGetJSON(t, server.URL+"/api/v1/radios/silvus-001/power")
 	mustHaveNumber(t, gotP, "data.powerDbm", 10.0)
 
-	gotC := httpGetJSON(t, ts.URL+"/api/v1/radios/silvus-001/channel")
+	gotC := httpGetJSON(t, server.URL+"/api/v1/radios/silvus-001/channel")
 	mustHaveNumber(t, gotC, "data.frequencyMhz", 2437.0)
+
+	// Evidence: Audit log verification
+	auditLines, err := server.GetAuditLogs(3)
+	if err != nil {
+		t.Logf("Could not read audit logs: %v", err)
+	} else {
+		t.Logf("=== AUDIT EVIDENCE ===")
+		for i, line := range auditLines {
+			t.Logf("Audit Line %d: %s", i+1, line)
+		}
+		t.Logf("====================")
+	}
+
+	t.Log("✅ Happy path working correctly")
 }
 
 func TestE2E_TelemetryIntegration(t *testing.T) {
-	// Setup test environment
-	cfg := config.LoadCBTimingBaseline()
-	hub := telemetry.NewHub(cfg)
-	defer hub.Stop()
+	// Create test harness
+	opts := harness.DefaultOptions()
+	server := harness.NewServer(t, opts)
+	defer server.Shutdown()
 
-	rm := radio.NewManager()
-	silvus := silvusmock.NewSilvusMock("silvus-001", []adapter.Channel{
-		{Index: 1, FrequencyMhz: 2412.0},
-		{Index: 6, FrequencyMhz: 2437.0},
-		{Index: 11, FrequencyMhz: 2462.0},
-	})
-
-	err := rm.LoadCapabilities("silvus-001", silvus, 5*time.Second)
-	if err != nil {
-		t.Fatalf("Failed to load capabilities: %v", err)
-	}
-
-	err = rm.SetActive("silvus-001")
-	if err != nil {
-		t.Fatalf("Failed to set active radio: %v", err)
-	}
-
-	aud := audit.NewInMemory()
-	orch := command.NewOrchestratorWithRadioManager(hub, cfg, rm)
-	s := api.NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 60*time.Second)
-	ts := httptest.NewServer(s)
-	defer ts.Close()
-
-	// Subscribe to telemetry
-	req, _ := http.NewRequest("GET", ts.URL+"/api/v1/telemetry", nil)
+	// Subscribe to telemetry using the harness
+	req, _ := http.NewRequest("GET", server.URL+"/api/v1/telemetry", nil)
 	req.Header.Set("Accept", "text/event-stream")
 
 	// Create thread-safe response writer
@@ -84,14 +104,14 @@ func TestE2E_TelemetryIntegration(t *testing.T) {
 	// Start telemetry subscription
 	telemetryDone := make(chan error, 1)
 	go func() {
-		telemetryDone <- hub.Subscribe(ctx, w, req)
+		telemetryDone <- server.TelemetryHub.Subscribe(ctx, w, req)
 	}()
 
 	// Wait for subscription to start
 	time.Sleep(100 * time.Millisecond)
 
 	// Trigger power change
-	httpPostJSON200(t, ts.URL+"/api/v1/radios/silvus-001/power", map[string]any{"powerDbm": 25.0})
+	httpPostJSON200(t, server.URL+"/api/v1/radios/silvus-001/power", map[string]any{"powerDbm": 25.0})
 
 	// Wait for events
 	time.Sleep(200 * time.Millisecond)
@@ -99,6 +119,14 @@ func TestE2E_TelemetryIntegration(t *testing.T) {
 	// Collect telemetry events
 	events := w.collectEvents(500 * time.Millisecond)
 	response := strings.Join(events, "")
+
+	// Evidence: SSE events
+	t.Logf("=== SSE EVIDENCE ===")
+	t.Logf("Received %d events", len(events))
+	for i, event := range events {
+		t.Logf("Event %d: %s", i+1, strings.TrimSpace(event))
+	}
+	t.Logf("===================")
 
 	// Verify telemetry events
 	if !strings.Contains(response, "event: ready") {

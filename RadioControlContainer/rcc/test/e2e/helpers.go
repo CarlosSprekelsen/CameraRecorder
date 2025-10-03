@@ -4,51 +4,10 @@ package e2e
 import (
 	"encoding/json"
 	"net/http"
-	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
-
-	"github.com/radio-control/rcc/internal/adapter"
-	"github.com/radio-control/rcc/internal/adapter/silvusmock"
-	"github.com/radio-control/rcc/internal/api"
-	"github.com/radio-control/rcc/internal/command"
-	"github.com/radio-control/rcc/internal/config"
-	"github.com/radio-control/rcc/internal/radio"
-	"github.com/radio-control/rcc/internal/telemetry"
 )
-
-// newServerForE2E creates a test server with SilvusMock adapter
-func newServerForE2E(t *testing.T) *httptest.Server {
-	t.Helper()
-	cfg := config.LoadCBTimingBaseline()
-
-	hub := telemetry.NewHub(cfg)
-	rm := radio.NewManager()
-
-	// Register SilvusMock with a band plan
-	silvus := silvusmock.NewSilvusMock("silvus-001", []adapter.Channel{
-		{Index: 1, FrequencyMhz: 2412.0},
-		{Index: 6, FrequencyMhz: 2437.0},
-		{Index: 11, FrequencyMhz: 2462.0},
-	})
-
-	err := rm.LoadCapabilities("silvus-001", silvus, 5*time.Second)
-	if err != nil {
-		t.Fatalf("Failed to load capabilities: %v", err)
-	}
-
-	err = rm.SetActive("silvus-001")
-	if err != nil {
-		t.Fatalf("Failed to set active radio: %v", err)
-	}
-
-	orch := command.NewOrchestratorWithRadioManager(hub, cfg, rm)
-	s := api.NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 60*time.Second)
-	ts := httptest.NewServer(s.Handler())
-	t.Cleanup(ts.Close)
-	return ts
-}
 
 // HTTP helper functions
 func httpGetJSON(t *testing.T, url string) map[string]interface{} {

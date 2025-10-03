@@ -7,31 +7,39 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/radio-control/rcc/test/harness"
 )
 
 func TestE2E_TelemetrySSEConnection(t *testing.T) {
-	ts := newServerForE2E(t)
+	opts := harness.DefaultOptions()
+	server := harness.NewServer(t, opts)
+	defer server.Shutdown()
+
+	// Evidence: Seeded state
+	t.Logf("=== TEST EVIDENCE ===")
+	t.Logf("Active Radio ID: %s", server.RadioManager.GetActive())
+	t.Logf("Telemetry Hub: %+v", server.TelemetryHub != nil)
+	t.Logf("===================")
 
 	// Subscribe to telemetry
-	req, _ := http.NewRequest("GET", ts.URL+"/api/v1/telemetry", nil)
+	req, _ := http.NewRequest("GET", server.URL+"/api/v1/telemetry", nil)
 	req.Header.Set("Accept", "text/event-stream")
 
-	// Create thread-safe response writer
 	w := newThreadSafeResponseWriter()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
-	// Start telemetry subscription
 	telemetryDone := make(chan error, 1)
 	go func() {
-		telemetryDone <- hub.Subscribe(ctx, w, req)
+		telemetryDone <- server.TelemetryHub.Subscribe(ctx, w, req)
 	}()
 
 	// Wait for subscription to start
 	time.Sleep(100 * time.Millisecond)
 
 	// Trigger power change
-	httpPostJSON200(t, ts.URL+"/api/v1/radios/silvus-001/power", map[string]any{"powerDbm": 25.0})
+	httpPostJSON200(t, server.URL+"/api/v1/radios/silvus-001/power", map[string]any{"powerDbm": 25.0})
 
 	// Wait for events
 	time.Sleep(200 * time.Millisecond)
@@ -39,6 +47,14 @@ func TestE2E_TelemetrySSEConnection(t *testing.T) {
 	// Collect telemetry events
 	events := w.collectEvents(500 * time.Millisecond)
 	response := strings.Join(events, "")
+
+	// Evidence: SSE events
+	t.Logf("=== SSE EVIDENCE ===")
+	t.Logf("Received %d events", len(events))
+	for i, event := range events {
+		t.Logf("Event %d: %s", i+1, strings.TrimSpace(event))
+	}
+	t.Logf("===================")
 
 	// Verify telemetry events
 	if !strings.Contains(response, "event: ready") {
@@ -63,10 +79,12 @@ func TestE2E_TelemetrySSEConnection(t *testing.T) {
 }
 
 func TestE2E_TelemetryLastEventID(t *testing.T) {
-	ts := newServerForE2E(t)
+	opts := harness.DefaultOptions()
+	server := harness.NewServer(t, opts)
+	defer server.Shutdown()
 
 	// First connection - get some events
-	req1, _ := http.NewRequest("GET", ts.URL+"/api/v1/telemetry", nil)
+	req1, _ := http.NewRequest("GET", server.URL+"/api/v1/telemetry", nil)
 	req1.Header.Set("Accept", "text/event-stream")
 
 	w1 := newThreadSafeResponseWriter()
@@ -75,12 +93,12 @@ func TestE2E_TelemetryLastEventID(t *testing.T) {
 
 	telemetryDone1 := make(chan error, 1)
 	go func() {
-		telemetryDone1 <- hub.Subscribe(ctx1, w1, req1)
+		telemetryDone1 <- server.TelemetryHub.Subscribe(ctx1, w1, req1)
 	}()
 
 	// Wait for subscription and trigger event
 	time.Sleep(100 * time.Millisecond)
-	httpPostJSON200(t, ts.URL+"/api/v1/radios/silvus-001/power", map[string]any{"powerDbm": 15.0})
+	httpPostJSON200(t, server.URL+"/api/v1/radios/silvus-001/power", map[string]any{"powerDbm": 15.0})
 	time.Sleep(200 * time.Millisecond)
 
 	// Collect first batch of events
@@ -95,7 +113,7 @@ func TestE2E_TelemetryLastEventID(t *testing.T) {
 	}
 
 	// Second connection with Last-Event-ID
-	req2, _ := http.NewRequest("GET", ts.URL+"/api/v1/telemetry", nil)
+	req2, _ := http.NewRequest("GET", server.URL+"/api/v1/telemetry", nil)
 	req2.Header.Set("Accept", "text/event-stream")
 	req2.Header.Set("Last-Event-ID", "1") // Simulate reconnection
 
@@ -105,14 +123,14 @@ func TestE2E_TelemetryLastEventID(t *testing.T) {
 
 	telemetryDone2 := make(chan error, 1)
 	go func() {
-		telemetryDone2 <- hub.Subscribe(ctx2, w2, req2)
+		telemetryDone2 <- server.TelemetryHub.Subscribe(ctx2, w2, req2)
 	}()
 
 	// Wait for second subscription
 	time.Sleep(100 * time.Millisecond)
 
 	// Trigger another event
-	httpPostJSON200(t, ts.URL+"/api/v1/radios/silvus-001/power", map[string]any{"powerDbm": 20.0})
+	httpPostJSON200(t, server.URL+"/api/v1/radios/silvus-001/power", map[string]any{"powerDbm": 20.0})
 	time.Sleep(200 * time.Millisecond)
 
 	// Collect second batch of events
@@ -125,6 +143,12 @@ func TestE2E_TelemetryLastEventID(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("Second telemetry connection did not complete")
 	}
+
+	// Evidence: Reconnection events
+	t.Logf("=== RECONNECTION EVIDENCE ===")
+	t.Logf("First connection events: %d", len(events1))
+	t.Logf("Second connection events: %d", len(events2))
+	t.Logf("=============================")
 
 	// Verify both connections received events
 	if !strings.Contains(response1, "powerChanged") {
@@ -139,10 +163,12 @@ func TestE2E_TelemetryLastEventID(t *testing.T) {
 }
 
 func TestE2E_TelemetryHeartbeat(t *testing.T) {
-	ts := newServerForE2E(t)
+	opts := harness.DefaultOptions()
+	server := harness.NewServer(t, opts)
+	defer server.Shutdown()
 
 	// Subscribe to telemetry
-	req, _ := http.NewRequest("GET", ts.URL+"/api/v1/telemetry", nil)
+	req, _ := http.NewRequest("GET", server.URL+"/api/v1/telemetry", nil)
 	req.Header.Set("Accept", "text/event-stream")
 
 	w := newThreadSafeResponseWriter()
@@ -151,7 +177,7 @@ func TestE2E_TelemetryHeartbeat(t *testing.T) {
 
 	telemetryDone := make(chan error, 1)
 	go func() {
-		telemetryDone <- hub.Subscribe(ctx, w, req)
+		telemetryDone <- server.TelemetryHub.Subscribe(ctx, w, req)
 	}()
 
 	// Wait for subscription to start
@@ -171,8 +197,14 @@ func TestE2E_TelemetryHeartbeat(t *testing.T) {
 		t.Fatal("Telemetry did not complete")
 	}
 
-	// Verify heartbeat events
+	// Evidence: Heartbeat events
 	heartbeatCount := strings.Count(response, "event: heartbeat")
+	t.Logf("=== HEARTBEAT EVIDENCE ===")
+	t.Logf("Total events: %d", len(events))
+	t.Logf("Heartbeat events: %d", heartbeatCount)
+	t.Logf("=========================")
+
+	// Verify heartbeat events
 	if heartbeatCount < 1 {
 		t.Errorf("Expected at least 1 heartbeat event, got %d", heartbeatCount)
 	}

@@ -248,14 +248,21 @@ func TestAPIErrorResponsesGolden(t *testing.T) {
 			// Get response body
 			body := w.Body.Bytes()
 
+			// Normalize response for stable comparison
+			normalized := normalizeResponse(t, body)
+			normalizedJSON, err := json.MarshalIndent(normalized, "", "  ")
+			if err != nil {
+				t.Fatalf("Failed to marshal normalized response: %v", err)
+			}
+
 			goldenPath := filepath.Join("testdata", "api", tt.goldenFile)
 
 			if *update {
-				// Update golden file
+				// Update golden file with normalized response
 				if err := os.MkdirAll(filepath.Dir(goldenPath), 0755); err != nil {
 					t.Fatalf("Failed to create testdata directory: %v", err)
 				}
-				if err := ioutil.WriteFile(goldenPath, body, 0644); err != nil {
+				if err := ioutil.WriteFile(goldenPath, normalizedJSON, 0644); err != nil {
 					t.Fatalf("Failed to write golden file: %v", err)
 				}
 				t.Logf("Updated golden file: %s", goldenPath)
@@ -268,10 +275,16 @@ func TestAPIErrorResponsesGolden(t *testing.T) {
 				t.Fatalf("Failed to read golden file %s: %v", goldenPath, err)
 			}
 
-			// Compare responses
-			if string(body) != string(golden) {
+			// Compare normalized responses
+			if string(normalizedJSON) != string(golden) {
 				t.Errorf("Response doesn't match golden file %s\nExpected:\n%s\nGot:\n%s",
-					goldenPath, string(golden), string(body))
+					goldenPath, string(golden), string(normalizedJSON))
+			}
+
+			// For tests that need to verify correlationId presence, do so on original response
+			var originalResponse map[string]any
+			if err := json.Unmarshal(body, &originalResponse); err == nil {
+				assertCorrelationIdPresent(t, originalResponse, tt.name)
 			}
 		})
 	}

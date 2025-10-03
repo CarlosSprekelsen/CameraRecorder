@@ -282,23 +282,18 @@ func TestHandleRadios(t *testing.T) {
 }
 
 func TestHandleSelectRadio(t *testing.T) {
-	cfg := config.LoadCBTimingBaseline()
-	hub := telemetry.NewHub(cfg)
-	defer hub.Stop()
+	server, _, _, _ := setupAPITest(t)
 
-	rm := radio.NewManager()
-	orch := command.NewOrchestrator(hub, cfg)
-	server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
-
-	// Test POST /radios/select
-	req := httptest.NewRequest("POST", "/api/v1/radios/select", strings.NewReader(`{"id":"radio-01"}`))
+	// Test POST /radios/select with valid radio ID
+	req := httptest.NewRequest("POST", "/api/v1/radios/select", strings.NewReader(`{"id":"silvus-001"}`))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
 	server.handleSelectRadio(w, req)
 
-	if w.Code != http.StatusNotImplemented {
-		t.Errorf("Expected status 501, got %d", w.Code)
+	// Should succeed with seeded radio
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
 	var response Response
@@ -306,25 +301,19 @@ func TestHandleSelectRadio(t *testing.T) {
 		t.Fatalf("Failed to unmarshal response: %v", err)
 	}
 
-	if response.Result != "error" {
-		t.Errorf("Expected result 'error', got '%s'", response.Result)
+	if response.Result != "ok" {
+		t.Errorf("Expected result 'ok', got '%s'", response.Result)
 	}
-	if response.Code != "NOT_IMPLEMENTED" {
-		t.Errorf("Expected code 'NOT_IMPLEMENTED', got '%s'", response.Code)
+	if response.Code != "ok" {
+		t.Errorf("Expected code 'ok', got '%s'", response.Code)
 	}
 }
 
 func TestHandleRadioByID(t *testing.T) {
-	cfg := config.LoadCBTimingBaseline()
-	hub := telemetry.NewHub(cfg)
-	defer hub.Stop()
+	server, _, _, _ := setupAPITest(t)
 
-	rm := radio.NewManager()
-	orch := command.NewOrchestrator(hub, cfg)
-	server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
-
-	// Test GET /radios/{id}
-	req := httptest.NewRequest("GET", "/api/v1/radios/radio-01", nil)
+	// Test GET /radios/{id} with seeded radio
+	req := httptest.NewRequest("GET", "/api/v1/radios/silvus-001", nil)
 	w := httptest.NewRecorder()
 
 	server.handleRadioByID(w, req)
@@ -344,19 +333,13 @@ func TestHandleRadioByID(t *testing.T) {
 }
 
 func TestHandleGetPower(t *testing.T) {
-	cfg := config.LoadCBTimingBaseline()
-	hub := telemetry.NewHub(cfg)
-	defer hub.Stop()
+	server, _, _, _ := setupAPITest(t)
 
-	rm := radio.NewManager()
-	orch := command.NewOrchestrator(hub, cfg)
-	server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
-
-	// Test GET /radios/{id}/power
-	req := httptest.NewRequest("GET", "/api/v1/radios/radio-01/power", nil)
+	// Test GET /radios/{id}/power with seeded radio
+	req := httptest.NewRequest("GET", "/api/v1/radios/silvus-001/power", nil)
 	w := httptest.NewRecorder()
 
-	server.handleGetPower(w, req, "radio-01")
+	server.handleGetPower(w, req, "silvus-001")
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", w.Code)
@@ -373,33 +356,28 @@ func TestHandleGetPower(t *testing.T) {
 }
 
 func TestHandleSetPower(t *testing.T) {
-	cfg := config.LoadCBTimingBaseline()
-	hub := telemetry.NewHub(cfg)
-	defer hub.Stop()
-
-	rm := radio.NewManager()
-	orch := command.NewOrchestrator(hub, cfg)
-	server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
+	server, _, _, _ := setupAPITest(t)
 
 	// Test POST /radios/{id}/power with valid power
-	req := httptest.NewRequest("POST", "/api/v1/radios/radio-01/power",
+	req := httptest.NewRequest("POST", "/api/v1/radios/silvus-001/power",
 		strings.NewReader(`{"powerDbm":30}`))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	server.handleSetPower(w, req, "radio-01")
+	server.handleSetPower(w, req, "silvus-001")
 
-	if w.Code != http.StatusNotImplemented {
-		t.Errorf("Expected status 501, got %d", w.Code)
+	// Should succeed with seeded radio and active adapter
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d", w.Code)
 	}
 
 	// Test with invalid power (too high)
-	req = httptest.NewRequest("POST", "/api/v1/radios/radio-01/power",
+	req = httptest.NewRequest("POST", "/api/v1/radios/silvus-001/power",
 		strings.NewReader(`{"powerDbm":50}`))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
 
-	server.handleSetPower(w, req, "radio-01")
+	server.handleSetPower(w, req, "silvus-001")
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", w.Code)
@@ -419,19 +397,13 @@ func TestHandleSetPower(t *testing.T) {
 }
 
 func TestHandleGetChannel(t *testing.T) {
-	cfg := config.LoadCBTimingBaseline()
-	hub := telemetry.NewHub(cfg)
-	defer hub.Stop()
+	server, _, _, _ := setupAPITest(t)
 
-	rm := radio.NewManager()
-	orch := command.NewOrchestrator(hub, cfg)
-	server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
-
-	// Test GET /radios/{id}/channel
-	req := httptest.NewRequest("GET", "/api/v1/radios/radio-01/channel", nil)
+	// Test GET /radios/{id}/channel with seeded radio
+	req := httptest.NewRequest("GET", "/api/v1/radios/silvus-001/channel", nil)
 	w := httptest.NewRecorder()
 
-	server.handleGetChannel(w, req, "radio-01")
+	server.handleGetChannel(w, req, "silvus-001")
 
 	if w.Code != http.StatusOK {
 		t.Errorf("Expected status 200, got %d", w.Code)
