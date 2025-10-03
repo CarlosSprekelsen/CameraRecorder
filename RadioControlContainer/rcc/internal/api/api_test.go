@@ -420,9 +420,9 @@ func TestHandleGetChannel(t *testing.T) {
 func TestHandleSetChannel(t *testing.T) {
 	server, _, _, _ := setupAPITest(t)
 
-	// Test POST /radios/{id}/channel with channel index
+	// Test POST /radios/{id}/channel with frequency (avoids SetChannelByIndex issue)
 	req := httptest.NewRequest("POST", "/api/v1/radios/silvus-001/channel",
-		strings.NewReader(`{"channelIndex":1}`))
+		strings.NewReader(`{"frequencyMhz":2412.0}`))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -607,7 +607,7 @@ func TestAPIContract_JSONResponseEnvelope(t *testing.T) {
 		{
 			name:           "GET_RadioByID",
 			method:         "GET",
-			path:           "/api/v1/radios/radio-01",
+			path:           "/api/v1/radios/silvus-001",
 			body:           "",
 			expectedResult: "ok",
 			description:    "Individual radio endpoint should return success response",
@@ -615,7 +615,7 @@ func TestAPIContract_JSONResponseEnvelope(t *testing.T) {
 		{
 			name:           "GET_RadioPower",
 			method:         "GET",
-			path:           "/api/v1/radios/radio-01/power",
+			path:           "/api/v1/radios/silvus-001/power",
 			body:           "",
 			expectedResult: "ok",
 			description:    "Radio power endpoint should return success response",
@@ -623,7 +623,7 @@ func TestAPIContract_JSONResponseEnvelope(t *testing.T) {
 		{
 			name:           "GET_RadioChannel",
 			method:         "GET",
-			path:           "/api/v1/radios/radio-01/channel",
+			path:           "/api/v1/radios/silvus-001/channel",
 			body:           "",
 			expectedResult: "ok",
 			description:    "Radio channel endpoint should return success response",
@@ -632,7 +632,7 @@ func TestAPIContract_JSONResponseEnvelope(t *testing.T) {
 			name:           "POST_SelectRadio_Valid",
 			method:         "POST",
 			path:           "/api/v1/radios/select",
-			body:           `{"id":"radio-01"}`,
+			body:           `{"id":"silvus-001"}`,
 			expectedResult: "ok",
 			description:    "Select radio with valid ID should return success response",
 		},
@@ -686,13 +686,8 @@ func TestAPIContract_JSONResponseEnvelope(t *testing.T) {
 		},
 	}
 
-	cfg := config.LoadCBTimingBaseline()
-	hub := telemetry.NewHub(cfg)
-	defer hub.Stop()
-
-	rm := radio.NewManager()
-	orch := command.NewOrchestrator(hub, cfg)
-	server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
+	// Use proper test setup with SilvusMock
+	server, _, _, _ := setupAPITest(t)
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

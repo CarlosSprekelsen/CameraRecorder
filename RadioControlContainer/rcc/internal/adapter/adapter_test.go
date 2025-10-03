@@ -11,7 +11,7 @@ type MockAdapter struct {
 	AdapterBase
 	state    *RadioState
 	profiles []FrequencyProfile
-	powerDbm int
+	powerDbm float64
 }
 
 // NewMockAdapter creates a new mock adapter for testing.
@@ -23,7 +23,7 @@ func NewMockAdapter(radioID, model string) *MockAdapter {
 			Status:  "online",
 		},
 		state: &RadioState{
-			PowerDbm:     30,
+			PowerDbm:     30.0,
 			FrequencyMhz: 2412.0,
 		},
 		profiles: []FrequencyProfile{
@@ -33,7 +33,7 @@ func NewMockAdapter(radioID, model string) *MockAdapter {
 				AntennaMask: 1,
 			},
 		},
-		powerDbm: 30,
+		powerDbm: 30.0,
 	}
 }
 
@@ -43,7 +43,7 @@ func (m *MockAdapter) GetState(ctx context.Context) (*RadioState, error) {
 }
 
 // SetPower implements IRadioAdapter.SetPower
-func (m *MockAdapter) SetPower(ctx context.Context, dBm int) error {
+func (m *MockAdapter) SetPower(ctx context.Context, dBm float64) error {
 	if dBm < 0 || dBm > 39 {
 		return ErrInvalidRange
 	}
@@ -62,7 +62,7 @@ func (m *MockAdapter) SetFrequency(ctx context.Context, frequencyMhz float64) er
 }
 
 // ReadPowerActual implements IRadioAdapter.ReadPowerActual
-func (m *MockAdapter) ReadPowerActual(ctx context.Context) (int, error) {
+func (m *MockAdapter) ReadPowerActual(ctx context.Context) (float64, error) {
 	return m.powerDbm, nil
 }
 
@@ -89,12 +89,12 @@ func TestIRadioAdapterInterface(t *testing.T) {
 	if state == nil {
 		t.Error("GetState returned nil state")
 	}
-	if state.PowerDbm != 30 {
-		t.Errorf("GetState returned power %d, want 30", state.PowerDbm)
+	if state.PowerDbm != 30.0 {
+		t.Errorf("GetState returned power %f, want 30.0", state.PowerDbm)
 	}
 
 	// Test SetPower
-	err = adapter.SetPower(ctx, 25)
+	err = adapter.SetPower(ctx, 25.0)
 	if err != nil {
 		t.Errorf("SetPower failed: %v", err)
 	}
@@ -122,8 +122,8 @@ func TestIRadioAdapterInterface(t *testing.T) {
 	if err != nil {
 		t.Errorf("ReadPowerActual failed: %v", err)
 	}
-	if power != 25 {
-		t.Errorf("ReadPowerActual returned %d, want 25", power)
+	if power != 25.0 {
+		t.Errorf("ReadPowerActual returned %f, want 25.0", power)
 	}
 
 	// Test SupportedFrequencyProfiles
@@ -165,12 +165,12 @@ func TestAdapterBase(t *testing.T) {
 // TestRadioState ensures the RadioState struct works correctly.
 func TestRadioState(t *testing.T) {
 	state := &RadioState{
-		PowerDbm:     30,
+		PowerDbm:     30.0,
 		FrequencyMhz: 2412.0,
 	}
 
-	if state.PowerDbm != 30 {
-		t.Errorf("PowerDbm = %d, want 30", state.PowerDbm)
+	if state.PowerDbm != 30.0 {
+		t.Errorf("PowerDbm = %f, want 30.0", state.PowerDbm)
 	}
 
 	if state.FrequencyMhz != 2412.0 {

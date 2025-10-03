@@ -13,7 +13,7 @@ import (
 // RadioState represents the current state of a radio.
 // Source: OpenAPI v1 §4.1 Radio model
 type RadioState struct {
-	PowerDbm     int     `json:"powerDbm"`
+	PowerDbm     float64 `json:"powerDbm"`
 	FrequencyMhz float64 `json:"frequencyMhz"`
 }
 
@@ -51,7 +51,7 @@ type IRadioAdapter interface {
 	// SetPower sets the transmit power in dBm.
 	// Source: ICD §6.1.3 power_dBm (set)
 	// Params: dBm (0-39, accuracy 10-39)
-	SetPower(ctx context.Context, dBm int) error
+	SetPower(ctx context.Context, dBm float64) error
 
 	// SetFrequency sets the transmit frequency in MHz.
 	// Source: ICD §6.1.1 freq (set)
@@ -61,7 +61,7 @@ type IRadioAdapter interface {
 
 	// ReadPowerActual reads the current power setting.
 	// Source: ICD §6.1.3 power_dBm (read)
-	ReadPowerActual(ctx context.Context) (int, error)
+	ReadPowerActual(ctx context.Context) (float64, error)
 
 	// SupportedFrequencyProfiles returns allowed frequency/bandwidth/antenna combinations.
 	// Source: ICD §6.1.2 supported_frequency_profiles

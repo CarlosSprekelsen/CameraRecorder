@@ -267,7 +267,7 @@ func (s *Server) handleGetPower(w http.ResponseWriter, r *http.Request, radioID 
 func (s *Server) handleSetPower(w http.ResponseWriter, r *http.Request, radioID string) {
 	// Parse request body
 	var request struct {
-		PowerDbm int `json:"powerDbm"`
+		PowerDbm float64 `json:"powerDbm"`
 	}
 
 	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {

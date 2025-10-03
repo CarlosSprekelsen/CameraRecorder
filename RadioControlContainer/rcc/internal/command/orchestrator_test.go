@@ -10,16 +10,17 @@ import (
 
 	"github.com/radio-control/rcc/internal/adapter"
 	"github.com/radio-control/rcc/internal/config"
+	"github.com/radio-control/rcc/internal/radio"
 )
 
 // MockAdapter is a mock implementation of IRadioAdapter for testing.
 type MockAdapter struct {
-	SetPowerFunc     func(ctx context.Context, dBm int) error
+	SetPowerFunc     func(ctx context.Context, dBm float64) error
 	SetFrequencyFunc func(ctx context.Context, frequencyMhz float64) error
 	GetStateFunc     func(ctx context.Context) (*adapter.RadioState, error)
 }
 
-func (m *MockAdapter) SetPower(ctx context.Context, dBm int) error {
+func (m *MockAdapter) SetPower(ctx context.Context, dBm float64) error {
 	if m.SetPowerFunc != nil {
 		return m.SetPowerFunc(ctx, dBm)
 	}
@@ -37,11 +38,11 @@ func (m *MockAdapter) GetState(ctx context.Context) (*adapter.RadioState, error)
 	if m.GetStateFunc != nil {
 		return m.GetStateFunc(ctx)
 	}
-	return &adapter.RadioState{PowerDbm: 30, FrequencyMhz: 2412}, nil
+	return &adapter.RadioState{PowerDbm: 30.0, FrequencyMhz: 2412.0}, nil
 }
 
-func (m *MockAdapter) ReadPowerActual(ctx context.Context) (int, error) {
-	return 30, nil
+func (m *MockAdapter) ReadPowerActual(ctx context.Context) (float64, error) {
+	return 30.0, nil
 }
 
 func (m *MockAdapter) SupportedFrequencyProfiles(ctx context.Context) ([]adapter.FrequencyProfile, error) {
@@ -120,24 +121,24 @@ func TestSetPowerValidation(t *testing.T) {
 
 	// Test invalid power range
 	tests := []struct {
-		power int
+		power float64
 		valid bool
 	}{
-		{-1, false},
-		{0, true},
-		{30, true},
-		{39, true},
-		{40, false},
-		{100, false},
+		{-1.0, false},
+		{0.0, true},
+		{30.0, true},
+		{39.0, true},
+		{40.0, false},
+		{100.0, false},
 	}
 
 	for _, test := range tests {
 		err := orchestrator.SetPower(context.Background(), "radio-01", test.power)
 		if test.valid && err != nil {
-			t.Errorf("SetPower(%d) should succeed, got error: %v", test.power, err)
+			t.Errorf("SetPower(%f) should succeed, got error: %v", test.power, err)
 		}
 		if !test.valid && err == nil {
-			t.Errorf("SetPower(%d) should fail, but succeeded", test.power)
+			t.Errorf("SetPower(%f) should fail, but succeeded", test.power)
 		}
 	}
 }
@@ -282,7 +283,7 @@ func TestAdapterErrorHandling(t *testing.T) {
 
 	// Test with adapter that returns error
 	mockAdapter := &MockAdapter{
-		SetPowerFunc: func(ctx context.Context, dBm int) error {
+		SetPowerFunc: func(ctx context.Context, dBm float64) error {
 			return errors.New("adapter error")
 		},
 	}
@@ -345,12 +346,12 @@ type MockRadioManager struct {
 	Radios map[string]interface{}
 }
 
-func (m *MockRadioManager) GetRadio(radioID string) (interface{}, error) {
-	radio, exists := m.Radios[radioID]
+func (m *MockRadioManager) GetRadio(radioID string) (*radio.Radio, error) {
+	radioObj, exists := m.Radios[radioID]
 	if !exists {
 		return nil, fmt.Errorf("radio %s not found", radioID)
 	}
-	return radio, nil
+	return radioObj.(*radio.Radio), nil
 }
 
 func TestSetChannelByIndex(t *testing.T) {

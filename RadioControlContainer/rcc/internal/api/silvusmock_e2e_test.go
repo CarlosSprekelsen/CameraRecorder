@@ -307,7 +307,7 @@ func TestSilvusMock_E2E_Integration(t *testing.T) {
 
 				// Mix of operations
 				if index%2 == 0 {
-					silvusAdapter.SetPower(ctx, 20+index)
+					silvusAdapter.SetPower(ctx, float64(20+index))
 				} else {
 					silvusAdapter.SetFrequency(ctx, 2400.0+float64(index))
 				}

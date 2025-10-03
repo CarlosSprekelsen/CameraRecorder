@@ -13,32 +13,8 @@ import (
 	"github.com/radio-control/rcc/internal/telemetry"
 )
 
-// radioManagerWrapper wraps radio.Manager to implement the RadioManager interface
-type radioManagerWrapper struct {
-	rm *radio.Manager
-}
-
-func (w *radioManagerWrapper) GetRadio(radioID string) (interface{}, error) {
-	radio, err := w.rm.GetRadio(radioID)
-	if err != nil {
-		return nil, err
-	}
-
-	// Convert radio to map[string]interface{} as expected by orchestrator
-	radioMap := map[string]interface{}{
-		"id":           radio.ID,
-		"model":        radio.Model,
-		"status":       radio.Status,
-		"capabilities": radio.Capabilities,
-		"state":        radio.State,
-		"lastSeen":     radio.LastSeen,
-	}
-
-	return radioMap, nil
-}
-
 // setupAPITest creates a fully wired API test environment with SilvusMock
-func setupAPITest(t *testing.T) (*Server, *radio.Manager, *command.Orchestrator, *silvusmock.SilvusMock) {
+func setupAPITest(t *testing.T) (*Server, *radio.Manager, *command.Orchestrator, adapter.IRadioAdapter) {
 	cfg := config.LoadCBTimingBaseline()
 	hub := telemetry.NewHub(cfg)
 	t.Cleanup(func() { hub.Stop() })
@@ -55,10 +31,9 @@ func setupAPITest(t *testing.T) (*Server, *radio.Manager, *command.Orchestrator,
 	rm.LoadCapabilities("silvus-001", adapter, 5*time.Second)
 	rm.SetActive("silvus-001")
 
-	// Create orchestrator and set radio manager with wrapper
+	// Create orchestrator and set radio manager
 	orch := command.NewOrchestrator(hub, cfg)
-	radioManagerWrapper := &radioManagerWrapper{rm: rm}
-	orch.SetRadioManager(radioManagerWrapper)
+	orch.SetRadioManager(rm)
 
 	// Set up audit logger
 	auditLogger, err := audit.NewLogger(t.TempDir())
@@ -78,7 +53,13 @@ func setupAPITest(t *testing.T) (*Server, *radio.Manager, *command.Orchestrator,
 
 // setupAPITestWithFault creates API test environment with specific fault mode
 func setupAPITestWithFault(t *testing.T, faultMode string) (*Server, *radio.Manager, *command.Orchestrator, *silvusmock.SilvusMock) {
-	server, rm, orch, adapter := setupAPITest(t)
+	server, rm, orch, adapterIface := setupAPITest(t)
+
+	// Type-assert to SilvusMock to set fault mode
+	adapter, ok := adapterIface.(*silvusmock.SilvusMock)
+	if !ok {
+		t.Fatalf("Failed to type-assert adapter to *silvusmock.SilvusMock")
+	}
 
 	// Set fault mode if specified
 	if faultMode != "" {

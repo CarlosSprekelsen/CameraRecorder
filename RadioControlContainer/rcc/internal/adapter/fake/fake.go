@@ -19,7 +19,7 @@ type FakeAdapter struct {
 	adapter.AdapterBase
 
 	// Current state
-	currentPower     int
+	currentPower     float64
 	currentFrequency float64
 
 	// Configuration
@@ -77,7 +77,7 @@ func (f *FakeAdapter) GetState(ctx context.Context) (*adapter.RadioState, error)
 }
 
 // SetPower sets the transmit power in dBm.
-func (f *FakeAdapter) SetPower(ctx context.Context, dBm int) error {
+func (f *FakeAdapter) SetPower(ctx context.Context, dBm float64) error {
 	// Check for context cancellation
 	select {
 	case <-ctx.Done():
@@ -90,8 +90,8 @@ func (f *FakeAdapter) SetPower(ctx context.Context, dBm int) error {
 	}
 
 	// Validate power range
-	if dBm < f.minPower || dBm > f.maxPower {
-		return fmt.Errorf("INVALID_RANGE: power %d is outside valid range [%d, %d]", dBm, f.minPower, f.maxPower)
+	if dBm < float64(f.minPower) || dBm > float64(f.maxPower) {
+		return fmt.Errorf("INVALID_RANGE: power %f is outside valid range [%d, %d]", dBm, f.minPower, f.maxPower)
 	}
 
 	f.currentPower = dBm
@@ -126,7 +126,7 @@ func (f *FakeAdapter) SetFrequency(ctx context.Context, frequencyMhz float64) er
 }
 
 // ReadPowerActual reads the current power setting.
-func (f *FakeAdapter) ReadPowerActual(ctx context.Context) (int, error) {
+func (f *FakeAdapter) ReadPowerActual(ctx context.Context) (float64, error) {
 	// Check for context cancellation
 	select {
 	case <-ctx.Done():
@@ -195,12 +195,12 @@ func (f *FakeAdapter) getSimulatedError() error {
 }
 
 // GetCurrentState returns the current internal state (for testing).
-func (f *FakeAdapter) GetCurrentState() (int, float64) {
+func (f *FakeAdapter) GetCurrentState() (float64, float64) {
 	return f.currentPower, f.currentFrequency
 }
 
 // SetCurrentState sets the current internal state (for testing).
-func (f *FakeAdapter) SetCurrentState(power int, frequency float64) {
+func (f *FakeAdapter) SetCurrentState(power float64, frequency float64) {
 	f.currentPower = power
 	f.currentFrequency = frequency
 }

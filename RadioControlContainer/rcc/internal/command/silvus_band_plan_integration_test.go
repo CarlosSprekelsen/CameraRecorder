@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/radio-control/rcc/internal/config"
+	"github.com/radio-control/rcc/internal/radio"
 )
 
 // SilvusTestRadioManager implements RadioManager interface for testing.
@@ -17,12 +18,12 @@ type SilvusTestRadioManager struct {
 	radios map[string]interface{}
 }
 
-func (m *SilvusTestRadioManager) GetRadio(radioID string) (interface{}, error) {
-	radio, exists := m.radios[radioID]
+func (m *SilvusTestRadioManager) GetRadio(radioID string) (*radio.Radio, error) {
+	radioObj, exists := m.radios[radioID]
 	if !exists {
 		return nil, fmt.Errorf("radio %s not found", radioID)
 	}
-	return radio, nil
+	return radioObj.(*radio.Radio), nil
 }
 
 // TestOrchestrator_SilvusBandPlanIntegration tests orchestrator integration with Silvus band plans.

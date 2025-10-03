@@ -25,7 +25,7 @@ type SilvusMock struct {
 
 	// In-memory state
 	mu              sync.RWMutex
-	powerDbm        int
+	powerDbm        float64
 	frequencyMhz    float64
 	channelIndex    int
 	bandPlan        []adapter.Channel
@@ -107,7 +107,7 @@ func (s *SilvusMock) GetState(ctx context.Context) (*adapter.RadioState, error) 
 // SetPower sets the transmit power in dBm.
 // Source: PRE-INT-08
 // Quote: "Inject fault modes per call: ReturnBusy, ReturnUnavailable, ReturnInvalidRange"
-func (s *SilvusMock) SetPower(ctx context.Context, dBm int) error {
+func (s *SilvusMock) SetPower(ctx context.Context, dBm float64) error {
 	// Check for context cancellation
 	select {
 	case <-ctx.Done():
@@ -121,8 +121,8 @@ func (s *SilvusMock) SetPower(ctx context.Context, dBm int) error {
 	}
 
 	// Validate power range
-	if dBm < s.minPower || dBm > s.maxPower {
-		return fmt.Errorf("INVALID_RANGE: power %d is outside valid range [%d, %d]", dBm, s.minPower, s.maxPower)
+	if dBm < float64(s.minPower) || dBm > float64(s.maxPower) {
+		return fmt.Errorf("INVALID_RANGE: power %f is outside valid range [%d, %d]", dBm, s.minPower, s.maxPower)
 	}
 
 	s.mu.Lock()
@@ -171,7 +171,7 @@ func (s *SilvusMock) SetFrequency(ctx context.Context, frequencyMhz float64) err
 }
 
 // ReadPowerActual reads the current power setting.
-func (s *SilvusMock) ReadPowerActual(ctx context.Context) (int, error) {
+func (s *SilvusMock) ReadPowerActual(ctx context.Context) (float64, error) {
 	// Check for context cancellation
 	select {
 	case <-ctx.Done():
@@ -268,14 +268,14 @@ func (s *SilvusMock) updateChannelIndex(frequencyMhz float64) {
 // Helper methods for testing
 
 // GetCurrentState returns the current internal state (for testing).
-func (s *SilvusMock) GetCurrentState() (int, float64, int) {
+func (s *SilvusMock) GetCurrentState() (float64, float64, int) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.powerDbm, s.frequencyMhz, s.channelIndex
 }
 
 // SetCurrentState sets the current internal state (for testing).
-func (s *SilvusMock) SetCurrentState(power int, frequency float64, channel int) {
+func (s *SilvusMock) SetCurrentState(power float64, frequency float64, channel int) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.powerDbm = power

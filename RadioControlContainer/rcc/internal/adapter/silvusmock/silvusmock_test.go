@@ -157,14 +157,14 @@ func TestSilvusMock_Validation(t *testing.T) {
 	ctx := context.Background()
 
 	// Test invalid power ranges
-	invalidPowers := []int{-1, 40, 100}
+	invalidPowers := []float64{-1.0, 40.0, 100.0}
 	for _, power := range invalidPowers {
 		err := mock.SetPower(ctx, power)
 		if err == nil {
-			t.Errorf("Expected error for power %d, got nil", power)
+			t.Errorf("Expected error for power %f, got nil", power)
 		}
-		if err.Error() != fmt.Sprintf("INVALID_RANGE: power %d is outside valid range [0, 39]", power) {
-			t.Errorf("Expected INVALID_RANGE error for power %d, got: %v", power, err)
+		if err.Error() != fmt.Sprintf("INVALID_RANGE: power %f is outside valid range [0, 39]", power) {
+			t.Errorf("Expected INVALID_RANGE error for power %f, got: %v", power, err)
 		}
 	}
 
@@ -195,7 +195,7 @@ func TestSilvusMock_Concurrency(t *testing.T) {
 
 			// Mix of operations
 			if index%2 == 0 {
-				mock.SetPower(ctx, 20+index)
+				mock.SetPower(ctx, float64(20+index))
 			} else {
 				mock.SetFrequency(ctx, 2412.0+float64(index))
 			}
@@ -213,7 +213,7 @@ func TestSilvusMock_Concurrency(t *testing.T) {
 		t.Fatalf("GetState after concurrent access failed: %v", err)
 	}
 	if state.PowerDbm < 0 || state.PowerDbm > 39 {
-		t.Errorf("Power out of range after concurrent access: %d", state.PowerDbm)
+		t.Errorf("Power out of range after concurrent access: %f", state.PowerDbm)
 	}
 	if state.FrequencyMhz < 100 || state.FrequencyMhz > 6000 {
 		t.Errorf("Frequency out of range after concurrent access: %f", state.FrequencyMhz)

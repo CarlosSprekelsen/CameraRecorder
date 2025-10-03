@@ -14,6 +14,7 @@ import (
 
 	"github.com/radio-control/rcc/internal/adapter"
 	"github.com/radio-control/rcc/internal/config"
+	"github.com/radio-control/rcc/internal/radio"
 	"github.com/radio-control/rcc/internal/telemetry"
 )
 
@@ -37,10 +38,12 @@ type Orchestrator struct {
 	radioManager RadioManager
 }
 
-// RadioManager interface for channel index resolution
-type RadioManager interface {
-	GetRadio(radioID string) (interface{}, error)
-}
+
+// Compile-time assertion that radio.Manager implements RadioManager
+var _ RadioManager = (*radio.Manager)(nil)
+
+// Compile-time assertion that Orchestrator implements OrchestratorPort
+var _ OrchestratorPort = (*Orchestrator)(nil)
 
 // AuditLogger interface for writing audit records.
 type AuditLogger interface {
@@ -72,7 +75,7 @@ func (o *Orchestrator) SetActiveAdapter(adapter adapter.IRadioAdapter) {
 // SetPower sets the transmit power for the active radio.
 // Source: OpenAPI v1 §3.6
 // Quote: "Set TX power for a radio (dBm)"
-func (o *Orchestrator) SetPower(ctx context.Context, radioID string, dBm int) error {
+func (o *Orchestrator) SetPower(ctx context.Context, radioID string, dBm float64) error {
 	start := time.Now()
 
 	// Validate power range
@@ -164,7 +167,7 @@ func (o *Orchestrator) SetChannel(ctx context.Context, radioID string, frequency
 // SetChannelByIndex sets the channel for the active radio by channel index.
 // Source: OpenAPI v1 §3.8
 // Quote: "Set radio channel by UI channel index or by frequency"
-func (o *Orchestrator) SetChannelByIndex(ctx context.Context, radioID string, channelIndex int, radioManager interface{}) error {
+func (o *Orchestrator) SetChannelByIndex(ctx context.Context, radioID string, channelIndex int, radioManager RadioManager) error {
 	start := time.Now()
 
 	// Validate channel index bounds (1-based)
@@ -306,9 +309,9 @@ func (o *Orchestrator) GetState(ctx context.Context, radioID string) (*adapter.R
 // validatePowerRange validates the power range.
 // Source: OpenAPI v1 §3.6
 // Quote: "Range: 0..39 (accuracy typically 10..39)"
-func (o *Orchestrator) validatePowerRange(dBm int) error {
+func (o *Orchestrator) validatePowerRange(dBm float64) error {
 	if dBm < 0 || dBm > 39 {
-		return fmt.Errorf("power must be between 0 and 39 dBm, got %d", dBm)
+		return fmt.Errorf("power must be between 0 and 39 dBm, got %f", dBm)
 	}
 	return nil
 }
@@ -333,7 +336,7 @@ func (o *Orchestrator) validateFrequencyRange(frequencyMhz float64) error {
 
 // publishPowerChangedEvent publishes a power changed event.
 // Source: Telemetry SSE v1 §2.2d
-func (o *Orchestrator) publishPowerChangedEvent(radioID string, powerDbm int) {
+func (o *Orchestrator) publishPowerChangedEvent(radioID string, powerDbm float64) {
 	if o.telemetryHub == nil {
 		return // Skip if no telemetry hub
 	}
@@ -431,7 +434,7 @@ func (o *Orchestrator) SetRadioManager(radioManager RadioManager) {
 // resolveChannelIndex resolves a channel index to frequency via radio manager or Silvus band plan.
 // Source: PRE-INT-09
 // Quote: "orchestrator.SetChannel consults this when adapter capabilities carry a model that matches"
-func (o *Orchestrator) resolveChannelIndex(ctx context.Context, radioID string, channelIndex int, radioManager interface{}) (float64, error) {
+func (o *Orchestrator) resolveChannelIndex(ctx context.Context, radioID string, channelIndex int, radioManager RadioManager) (float64, error) {
 	// First, try to resolve using Silvus band plan if available
 	if o.config != nil && o.config.SilvusBandPlan != nil {
 		// Try to get model and band from radio manager
@@ -450,7 +453,7 @@ func (o *Orchestrator) resolveChannelIndex(ctx context.Context, radioID string, 
 }
 
 // getRadioModelAndBand extracts model and band information from radio manager.
-func (o *Orchestrator) getRadioModelAndBand(ctx context.Context, radioID string, radioManager interface{}) (string, string, error) {
+func (o *Orchestrator) getRadioModelAndBand(ctx context.Context, radioID string, radioManager RadioManager) (string, string, error) {
 	// Use the provided radio manager or fall back to the orchestrator's radio manager
 	var manager RadioManager
 	if radioManager != nil {
@@ -474,27 +477,16 @@ func (o *Orchestrator) getRadioModelAndBand(ctx context.Context, radioID string,
 	}
 
 	// Extract model and band from radio data
-	radioMap, ok := radio.(map[string]interface{})
-	if !ok {
-		return "", "", fmt.Errorf("invalid radio data format")
-	}
+	model := radio.Model
 
-	model, ok := radioMap["model"].(string)
-	if !ok {
-		return "", "", fmt.Errorf("radio %s has no model", radioID)
-	}
-
-	band, ok := radioMap["band"].(string)
-	if !ok {
-		// Default band if not specified
-		band = "default"
-	}
+	// Default band if not specified in radio
+	band := "default"
 
 	return model, band, nil
 }
 
 // resolveChannelIndexFromRadioManager resolves a channel index to frequency via radio manager (legacy method).
-func (o *Orchestrator) resolveChannelIndexFromRadioManager(ctx context.Context, radioID string, channelIndex int, radioManager interface{}) (float64, error) {
+func (o *Orchestrator) resolveChannelIndexFromRadioManager(ctx context.Context, radioID string, channelIndex int, radioManager RadioManager) (float64, error) {
 	// Use the provided radio manager or fall back to the orchestrator's radio manager
 	var manager RadioManager
 	if radioManager != nil {
@@ -517,41 +509,21 @@ func (o *Orchestrator) resolveChannelIndexFromRadioManager(ctx context.Context, 
 		return 0, fmt.Errorf("radio %s not found: %w", radioID, err)
 	}
 
-	// Extract capabilities from radio (assuming it has a Capabilities field)
-	// This is a simplified approach - in a real implementation, we'd need proper type assertions
-	radioMap, ok := radio.(map[string]interface{})
-	if !ok {
-		return 0, fmt.Errorf("invalid radio data format")
-	}
-
-	capabilities, ok := radioMap["capabilities"].(map[string]interface{})
-	if !ok {
+	// Extract capabilities from radio
+	capabilities := radio.Capabilities
+	if capabilities == nil {
 		return 0, fmt.Errorf("radio %s has no capabilities", radioID)
 	}
 
-	channels, ok := capabilities["channels"].([]interface{})
-	if !ok {
+	channels := capabilities.Channels
+	if len(channels) == 0 {
 		return 0, fmt.Errorf("radio %s has no channels", radioID)
 	}
 
 	// Find channel with matching index
-	for _, channelInterface := range channels {
-		channel, ok := channelInterface.(map[string]interface{})
-		if !ok {
-			continue
-		}
-
-		index, ok := channel["index"].(float64)
-		if !ok {
-			continue
-		}
-
-		if int(index) == channelIndex {
-			frequency, ok := channel["frequencyMhz"].(float64)
-			if !ok {
-				return 0, fmt.Errorf("channel %d has invalid frequency", channelIndex)
-			}
-			return frequency, nil
+	for _, channel := range channels {
+		if channel.Index == channelIndex {
+			return channel.FrequencyMhz, nil
 		}
 	}
 

@@ -50,8 +50,8 @@ func TestFakeAdapterBasicFunctionality(t *testing.T) {
 		t.Fatalf("GetState failed: %v", err)
 	}
 
-	if state.PowerDbm != 20 {
-		t.Errorf("Expected power 20, got %d", state.PowerDbm)
+	if state.PowerDbm != 20.0 {
+		t.Errorf("Expected power 20.0, got %f", state.PowerDbm)
 	}
 
 	if state.FrequencyMhz != 2412.0 {
@@ -59,7 +59,7 @@ func TestFakeAdapterBasicFunctionality(t *testing.T) {
 	}
 
 	// Test power setting
-	err = adapter.SetPower(ctx, 30)
+	err = adapter.SetPower(ctx, 30.0)
 	if err != nil {
 		t.Fatalf("SetPower failed: %v", err)
 	}
@@ -69,8 +69,8 @@ func TestFakeAdapterBasicFunctionality(t *testing.T) {
 		t.Fatalf("GetState after SetPower failed: %v", err)
 	}
 
-	if state.PowerDbm != 30 {
-		t.Errorf("Expected power 30 after SetPower, got %d", state.PowerDbm)
+	if state.PowerDbm != 30.0 {
+		t.Errorf("Expected power 30.0 after SetPower, got %f", state.PowerDbm)
 	}
 
 	// Test frequency setting

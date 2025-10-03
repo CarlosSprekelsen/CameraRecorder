@@ -14,19 +14,6 @@ import (
 	"github.com/radio-control/rcc/internal/telemetry"
 )
 
-// radioManagerWrapper wraps radio.Manager to implement the RadioManager interface
-type radioManagerWrapper struct {
-	rm *radio.Manager
-}
-
-func (w *radioManagerWrapper) GetRadio(radioID string) (interface{}, error) {
-	radio, err := w.rm.GetRadio(radioID)
-	if err != nil {
-		return nil, err
-	}
-	return radio, nil
-}
-
 func BenchmarkSetPower(b *testing.B) {
 	// Setup orchestrator with mock
 	cfg := config.LoadCBTimingBaseline()
@@ -60,8 +47,7 @@ func BenchmarkSetPower(b *testing.B) {
 	}
 
 	orch := NewOrchestrator(hub, cfg)
-	radioManagerWrapper := &radioManagerWrapper{rm: rm}
-	orch.SetRadioManager(radioManagerWrapper)
+	orch.SetRadioManager(rm)
 	orch.SetAuditLogger(aud)
 	orch.SetActiveAdapter(silvus)
 
@@ -70,7 +56,7 @@ func BenchmarkSetPower(b *testing.B) {
 	// Run b.N iterations of SetPower
 	ctx := context.Background()
 	for i := 0; i < b.N; i++ {
-		err := orch.SetPower(ctx, "silvus-001", 10+i%10)
+		err := orch.SetPower(ctx, "silvus-001", float64(10+i%10))
 		if err != nil {
 			b.Fatalf("SetPower failed: %v", err)
 		}
@@ -108,8 +94,7 @@ func BenchmarkSetPowerWithoutTelemetry(b *testing.B) {
 
 	// Create orchestrator without telemetry hub
 	orch := NewOrchestrator(nil, cfg)
-	radioManagerWrapper := &radioManagerWrapper{rm: rm}
-	orch.SetRadioManager(radioManagerWrapper)
+	orch.SetRadioManager(rm)
 	orch.SetAuditLogger(aud)
 	orch.SetActiveAdapter(silvus)
 
@@ -118,7 +103,7 @@ func BenchmarkSetPowerWithoutTelemetry(b *testing.B) {
 	// Run b.N iterations of SetPower
 	ctx := context.Background()
 	for i := 0; i < b.N; i++ {
-		err := orch.SetPower(ctx, "silvus-001", 10+i%10)
+		err := orch.SetPower(ctx, "silvus-001", float64(10+i%10))
 		if err != nil {
 			b.Fatalf("SetPower failed: %v", err)
 		}
@@ -160,8 +145,7 @@ func BenchmarkSetChannel(b *testing.B) {
 	}
 
 	orch := NewOrchestrator(hub, cfg)
-	radioManagerWrapper := &radioManagerWrapper{rm: rm}
-	orch.SetRadioManager(radioManagerWrapper)
+	orch.SetRadioManager(rm)
 	orch.SetAuditLogger(aud)
 	orch.SetActiveAdapter(silvus)
 
@@ -212,8 +196,7 @@ func BenchmarkGetState(b *testing.B) {
 	}
 
 	orch := NewOrchestrator(hub, cfg)
-	radioManagerWrapper := &radioManagerWrapper{rm: rm}
-	orch.SetRadioManager(radioManagerWrapper)
+	orch.SetRadioManager(rm)
 	orch.SetAuditLogger(aud)
 	orch.SetActiveAdapter(silvus)
 
@@ -263,8 +246,7 @@ func BenchmarkOrchestratorConcurrent(b *testing.B) {
 	}
 
 	orch := NewOrchestrator(hub, cfg)
-	radioManagerWrapper := &radioManagerWrapper{rm: rm}
-	orch.SetRadioManager(radioManagerWrapper)
+	orch.SetRadioManager(rm)
 	orch.SetAuditLogger(aud)
 	orch.SetActiveAdapter(silvus)
 
