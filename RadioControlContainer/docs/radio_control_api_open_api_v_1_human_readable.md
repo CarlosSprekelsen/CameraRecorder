@@ -54,13 +54,16 @@ All endpoints return **200 OK** with a success body **or** an error body with an
 ```
 
 **Standard codes**
-- `INVALID_RANGE` → HTTP 400
+- `BAD_REQUEST` → HTTP 400 (malformed JSON, trailing data, or structural validation failure)
+- `INVALID_RANGE` → HTTP 400 (semantic validation failure: parameter value outside allowed range)
 - `UNAUTHORIZED` → HTTP 401
 - `FORBIDDEN` → HTTP 403
 - `NOT_FOUND` → HTTP 404
 - `BUSY` → HTTP 503 (retry with backoff)
 - `UNAVAILABLE` → HTTP 503 (radio rebooting/soft‑boot)
 - `INTERNAL` → HTTP 500
+
+> **Distinction**: `BAD_REQUEST` indicates the request structure is invalid (JSON parse error, unknown fields, trailing data). `INVALID_RANGE` indicates the request structure is valid but parameter values fail semantic validation (e.g., power outside 0-39 dBm range). Both return HTTP 400, but with different error codes to guide client remediation.
 
 > Error mapping normalizes vendor/adapter errors to the codes above. See Architecture §8.5 for normalization rules.
 

@@ -436,11 +436,12 @@ All timing parameters, cadences, timeouts, and buffer sizes are defined in **CB-
 - **Power profiles**: Named presets → watts; limits enforced per radio capability.
 
 ### 8.5 Error Model & Normalization
-- **Container codes**: `OK`, `INVALID_RANGE`, `BUSY`, `UNAVAILABLE`, `INTERNAL`.
+- **Container codes**: `OK`, `BAD_REQUEST`, `INVALID_RANGE`, `BUSY`, `UNAVAILABLE`, `INTERNAL`.
 - **Normalized mapping (architecture-level)** — transport/HTTP mapping is specified in the OpenAPI:
 
 | Vendor error (string/object) | Container code | Notes                                 |
 |------------------------------|----------------|---------------------------------------|
+| _(malformed JSON)_           | `BAD_REQUEST`  | Structural parse error; fix request.  |
 | `"OUT_OF_RANGE"`, `{...}`    | `INVALID_RANGE`| Fix params and re-submit.             |
 | `"BUSY"`, `{...}`            | `BUSY`         | Use backoff per §8.3.                 |
 | `"UNAVAILABLE"`, `{...}`     | `UNAVAILABLE`  | Radio rebooting/soft-boot; retry.     |

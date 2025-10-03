@@ -8,7 +8,7 @@ set -e
 echo "🔍 Checking error code compliance..."
 
 # Expected error codes from OpenAPI v1 §2.2
-EXPECTED_CODES=("INVALID_RANGE" "BUSY" "UNAVAILABLE" "INTERNAL" "UNAUTHORIZED" "FORBIDDEN" "NOT_FOUND")
+EXPECTED_CODES=("BAD_REQUEST" "INVALID_RANGE" "BUSY" "UNAVAILABLE" "INTERNAL" "UNAUTHORIZED" "FORBIDDEN" "NOT_FOUND")
 
 # Check adapter error codes
 echo "  📋 Checking adapter error codes..."

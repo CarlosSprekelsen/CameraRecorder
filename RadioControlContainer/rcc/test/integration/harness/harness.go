@@ -5,94 +5,68 @@
 package harness
 
 import (
-	"os"
+	"testing"
 	"time"
 
 	"github.com/radio-control/rcc/internal/adapter"
-	"github.com/radio-control/rcc/internal/audit"
 	"github.com/radio-control/rcc/internal/command"
-	"github.com/radio-control/rcc/internal/config"
-	"github.com/radio-control/rcc/internal/radio"
 	"github.com/radio-control/rcc/internal/telemetry"
-	"github.com/radio-control/rcc/test/integration/fixtures"
 	"github.com/radio-control/rcc/test/integration/fakes"
+	"github.com/radio-control/rcc/test/integration/fixtures"
+	"github.com/radio-control/rcc/test/integration/mocks"
 )
 
 // BuildCommandStack wires real implementations via public constructors only.
-// Returns components via their public interfaces/ports.
-func BuildCommandStack(cfg *config.TimingConfig, seed Radios) (orch command.OrchestratorPort, rm *radio.Manager, tele *telemetry.Hub, auditSink *audit.Logger, cleanup func()) {
+// Returns components via their public interfaces/ports with automatic cleanup.
+func BuildCommandStack(t *testing.T, seed Radios) (orch command.OrchestratorPort, rm *mocks.MockRadioManager, tele *telemetry.Hub, mockAudit *mocks.MockAuditLogger, adapter adapter.IRadioAdapter) {
+	// Create test config
+	cfg := fixtures.TestTimingConfig()
+	
 	// Create telemetry hub
 	tele = telemetry.NewHub(cfg)
+	
+	// Register cleanup for telemetry hub
+	t.Cleanup(func() {
+		tele.Stop()
+	})
 
-	// Create audit logger in temp dir
-	tmpDir, err := os.MkdirTemp("", "integration-audit-*")
-	if err != nil {
-		panic("failed to create temp dir for audit logs: " + err.Error())
-	}
-	auditSink, err = audit.NewLogger(tmpDir)
-	if err != nil {
-		panic("failed to create audit logger: " + err.Error())
-	}
+	// Create mock audit logger (no filesystem access)
+	mockAudit = mocks.NewMockAuditLogger()
 
-	// Create radio manager
-	rm = radio.NewManager()
+	// Create mock radio manager for test isolation
+	rm = mocks.NewMockRadioManager()
 
-	// Create orchestrator with radio manager
+	// Create orchestrator with real telemetry hub and mock radio manager
 	orchestrator := command.NewOrchestratorWithRadioManager(tele, cfg, rm)
-	orchestrator.SetAuditLogger(auditSink)
+	orchestrator.SetAuditLogger(mockAudit)
 
-	// Seed radios if provided
+	// Seed radios if provided and return the first adapter
 	if seed != nil {
 		for id, fakeAdapter := range seed {
-			if err := SeedRadios(rm, id, fakeAdapter); err != nil {
-				panic("failed to seed radio " + id + ": " + err.Error())
+			if err := rm.LoadCapabilities(id, fakeAdapter, 5*time.Second); err != nil {
+				t.Fatalf("Failed to seed radio %s: %v", id, err)
 			}
 			orchestrator.SetActiveAdapter(fakeAdapter)
+			adapter = fakeAdapter // Return the adapter for test verification
 		}
 	}
 
-	cleanup = func() {
-		tele.Stop()
-		auditSink.Close()
-		os.RemoveAll(tmpDir)
-	}
-
-	return orchestrator, rm, tele, auditSink, cleanup
+	return orchestrator, rm, tele, mockAudit, adapter
 }
 
 // Radios represents a collection of radios to seed for testing.
 type Radios map[string]adapter.IRadioAdapter
 
-// SeedRadios registers a fake adapter under the given radio ID via manager port.
-func SeedRadios(rm *radio.Manager, id string, fakeAdapter adapter.IRadioAdapter) error {
-	// Use the public LoadCapabilities method to register the adapter
-	// This avoids peeking into radio manager internals
-	return rm.LoadCapabilities(id, fakeAdapter, 5*time.Second)
-}
-
 // BuildTestStack creates a complete test stack with fake adapters and fixtures.
-func BuildTestStack() (orch command.OrchestratorPort, rm *radio.Manager, tele *telemetry.Hub, auditSink *audit.Logger, clock *fixtures.ManualClock, correlationIDGen *fixtures.CorrelationIDGenerator, cleanup func()) {
-	// Create test fixtures
-	clock = fixtures.NewManualClock()
-	correlationIDGen = fixtures.NewCorrelationIDGenerator()
-	
-	// Create config with test timing
-	cfg := config.LoadCBTimingBaseline()
-	
+func BuildTestStack(t *testing.T) (orch command.OrchestratorPort, rm *mocks.MockRadioManager, tele *telemetry.Hub, mockAudit *mocks.MockAuditLogger, adapter adapter.IRadioAdapter) {
 	// Create fake adapters
 	fakeAdapter := fakes.NewFakeAdapter("fake-001").
-		WithInitial(20.0, 2412.0, []adapter.Channel{
-			{Index: 1, FrequencyMhz: 2412.0},
-			{Index: 6, FrequencyMhz: 2437.0},
-			{Index: 11, FrequencyMhz: 2462.0},
-		})
+		WithInitial(20.0, 2412.0, nil) // No channels needed for basic tests
 	
 	seedRadios := Radios{
 		"fake-001": fakeAdapter,
 	}
 	
 	// Build the command stack
-	orch, rm, tele, auditSink, cleanup = BuildCommandStack(cfg, seedRadios)
-	
-	return
+	return BuildCommandStack(t, seedRadios)
 }

@@ -260,8 +260,8 @@ func (o *Orchestrator) SelectRadio(ctx context.Context, radioID string) error {
 
 	// Validate radio ID
 	if radioID == "" {
-		o.logAudit(ctx, "selectRadio", radioID, "INVALID_RANGE", time.Since(start))
-		return adapter.ErrInvalidRange
+        o.logAudit(ctx, "selectRadio", radioID, "BAD_REQUEST", time.Since(start))
+        return ErrInvalidParameter
 	}
 
 	// Ensure radio exists via radio manager

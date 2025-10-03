@@ -59,7 +59,7 @@ This document provides a comprehensive consistency matrix verifying that all Rad
 
 | Rule | Architecture §8.5 | OpenAPI §2.2 | Telemetry §5 | ICD §8 | Status |
 |------|-------------------|--------------|-------------|-------|--------|
-| **Error codes** | `INVALID_RANGE`, `BUSY`, `UNAVAILABLE`, `INTERNAL` | ✓ Identical | ✓ Identical | ✓ Referenced | ✅ **ALIGNED** |
+| **Error codes** | `BAD_REQUEST`, `INVALID_RANGE`, `BUSY`, `UNAVAILABLE`, `INTERNAL` | ✓ Identical | ✓ Identical | ✓ Referenced | ✅ **ALIGNED** |
 | **HTTP mapping** | N/A | ✓ Explicit | ✓ Explicit | N/A | ✅ **ALIGNED** |
 | **Normalization rules** | ✓ Detailed | ✓ Referenced | ✓ Referenced | ✓ Referenced | ✅ **ALIGNED** |
 | **Vendor error handling** | ✓ §8.5.1 | ✓ Referenced | ✓ Referenced | ✓ §8.1 | ✅ **ALIGNED** |

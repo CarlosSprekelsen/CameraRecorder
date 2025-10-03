@@ -3,6 +3,11 @@
   "description": "Error code to HTTP status mapping for Radio Control Container API",
   "mappings": [
     {
+      "adapter_error": "BAD_REQUEST",
+      "http_status": 400,
+      "description": "Malformed request: JSON parse error, unknown fields, or trailing data"
+    },
+    {
       "adapter_error": "INVALID_RANGE",
       "http_status": 400,
       "description": "Parameter value outside valid range"
