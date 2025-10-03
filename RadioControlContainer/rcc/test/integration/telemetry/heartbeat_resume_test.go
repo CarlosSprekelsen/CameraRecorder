@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/radio-control/rcc/internal/config"
-	"github.com/radio-control/rcc/test/integration/fixtures"
 	"github.com/radio-control/rcc/test/integration/harness"
 )
 
@@ -45,7 +44,7 @@ func TestTelemetry_Heartbeat_AndResume(t *testing.T) {
 // TestTelemetry_EventOrdering tests that events are properly ordered and sequenced.
 func TestTelemetry_EventOrdering(t *testing.T) {
 	// Arrange: Build test stack
-	orch, rm, tele, auditSink, clock, _, cleanup := harness.BuildTestStack()
+	orch, _, _, _, _, _, cleanup := harness.BuildTestStack()
 	defer cleanup()
 
 	// Act: Perform multiple operations to generate events
@@ -68,11 +67,10 @@ func TestTelemetry_EventOrdering(t *testing.T) {
 // TestTelemetry_EventBuffering tests event buffering and replay capabilities.
 func TestTelemetry_EventBuffering(t *testing.T) {
 	// Arrange: Build test stack
-	orch, rm, tele, auditSink, clock, _, cleanup := harness.BuildTestStack()
+	orch, _, _, _, _, _, cleanup := harness.BuildTestStack()
 	defer cleanup()
 
 	// Get buffer configuration from CB-TIMING
-	cfg := config.LoadCBTimingBaseline()
 	expectedBufferSize := 50 // From CB-TIMING v0.3 §6.1
 	
 	t.Logf("Expected buffer size: %d events", expectedBufferSize)
