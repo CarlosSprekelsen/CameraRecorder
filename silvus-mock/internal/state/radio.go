@@ -11,16 +11,18 @@ import (
 
 // RadioState represents the thread-safe state of the radio
 type RadioState struct {
-	mu                sync.RWMutex
-	currentFreq       string
-	currentPower      int
-	blackoutUntil     time.Time
-	mode              string
-	frequencyProfiles []config.FrequencyProfile
-	powerLimits       PowerLimits
-	softBootDuration  time.Duration
-	commandQueue      chan Command
-	stopChan          chan struct{}
+	mu                  sync.RWMutex
+	currentFreq         string
+	currentPower        int
+	blackoutUntil       time.Time
+	mode                string
+	frequencyProfiles   []config.FrequencyProfile
+	powerLimits         PowerLimits
+	softBootDuration    time.Duration // Channel change blackout
+	powerChangeDuration time.Duration // Power change blackout
+	radioResetDuration  time.Duration // Radio reset blackout
+	commandQueue        chan Command
+	stopChan            chan struct{}
 }
 
 // PowerLimits holds power range limits
@@ -54,9 +56,11 @@ func NewRadioState(cfg *config.Config) *RadioState {
 			MinDBm: cfg.Power.MinDBm,
 			MaxDBm: cfg.Power.MaxDBm,
 		},
-		softBootDuration: time.Duration(cfg.Timing.Blackout.SoftBootSec) * time.Second,
-		commandQueue:     make(chan Command, 100),
-		stopChan:         make(chan struct{}),
+		softBootDuration:    time.Duration(cfg.Timing.Blackout.SoftBootSec) * time.Second,    // Channel change blackout
+		powerChangeDuration: time.Duration(cfg.Timing.Blackout.PowerChangeSec) * time.Second, // Power change blackout
+		radioResetDuration:  time.Duration(cfg.Timing.Blackout.RadioResetSec) * time.Second,  // Radio reset blackout
+		commandQueue:        make(chan Command, 100),
+		stopChan:            make(chan struct{}),
 	}
 
 	// Start the command processing worker
@@ -83,9 +87,11 @@ func (rs *RadioState) processCommand(cmd Command) {
 	defer rs.mu.Unlock()
 
 	// Check if we're in blackout
+	// ICD §6.1.1: During soft-boot, avoid concurrent API calls
+	// All commands (including reads) should return UNAVAILABLE during blackout
 	if time.Now().Before(rs.blackoutUntil) {
 		cmd.Response <- CommandResponse{
-			Error: "BUSY",
+			Error: "UNAVAILABLE",
 		}
 		return
 	}
@@ -202,8 +208,8 @@ func (rs *RadioState) handleZeroize(cmd Command) {
 
 // handleRadioReset handles radio reset operation
 func (rs *RadioState) handleRadioReset(cmd Command) {
-	// Enter a short blackout to simulate reboot
-	rs.blackoutUntil = time.Now().Add(3 * time.Second)
+	// Enter radio reset blackout (CB-TIMING v0.3 §6.2: 60s)
+	rs.blackoutUntil = time.Now().Add(rs.radioResetDuration)
 
 	cmd.Response <- CommandResponse{
 		Result: []string{""},

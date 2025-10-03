@@ -4,6 +4,7 @@ package e2e
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -357,6 +358,85 @@ func (cv *ContractValidator) ValidateHeartbeatInterval(t *testing.T, events []st
 	}
 
 	t.Logf("================================")
+}
+
+// ValidateHeartbeatIntervalNonFailing validates heartbeat timing without failing tests (for negative test cases)
+func (cv *ContractValidator) ValidateHeartbeatIntervalNonFailing(t *testing.T, events []string, baseInterval time.Duration, jitter time.Duration) []string {
+	heartbeatEvents := make([]time.Time, 0)
+
+	// Parse events to extract heartbeat timestamps
+	for _, event := range events {
+		if strings.Contains(event, "event: heartbeat") {
+			// Extract timestamp from event data
+			lines := strings.Split(event, "\n")
+			for _, line := range lines {
+				if strings.HasPrefix(line, "data:") {
+					var data map[string]interface{}
+					jsonData := strings.TrimPrefix(line, "data: ")
+					if err := json.Unmarshal([]byte(jsonData), &data); err == nil {
+						if ts, ok := data["timestamp"].(string); ok {
+							if parsedTime, err := time.Parse(time.RFC3339, ts); err == nil {
+								heartbeatEvents = append(heartbeatEvents, parsedTime)
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	var errors []string
+
+	// Log heartbeat analysis
+	t.Logf("=== HEARTBEAT TIMING ANALYSIS ===")
+	t.Logf("Base interval: %v", baseInterval)
+	t.Logf("Jitter: %v", jitter)
+	t.Logf("Heartbeat events found: %d", len(heartbeatEvents))
+
+	// Validate heartbeat intervals
+	if len(heartbeatEvents) < 2 {
+		msg := fmt.Sprintf("Insufficient heartbeat events for interval validation (need ≥2, got %d)", len(heartbeatEvents))
+		t.Logf("%s", msg)
+		errors = append(errors, msg)
+		return errors
+	}
+
+	// Calculate tolerance window
+	minInterval := baseInterval - jitter
+	maxInterval := baseInterval + jitter
+	timeout := baseInterval * 3 // Allow up to 3x base interval as timeout
+
+	t.Logf("Tolerance window: [%v, %v]", minInterval, maxInterval)
+	t.Logf("Timeout threshold: %v", timeout)
+
+	// Validate each interval
+	for i := 1; i < len(heartbeatEvents); i++ {
+		interval := heartbeatEvents[i].Sub(heartbeatEvents[i-1])
+		t.Logf("Interval %d: %v", i, interval)
+
+		// Check for timeout (gap too large)
+		if interval > timeout {
+			msg := fmt.Sprintf("Heartbeat gap %v exceeds timeout %v", interval, timeout)
+			t.Logf("%s", msg)
+			errors = append(errors, msg)
+		}
+
+		// Check for tolerance window
+		if interval < minInterval {
+			msg := fmt.Sprintf("Heartbeat interval %v too fast (below %v)", interval, minInterval)
+			t.Logf("%s", msg)
+			errors = append(errors, msg)
+		}
+
+		if interval > maxInterval {
+			msg := fmt.Sprintf("Heartbeat interval %v too slow (above %v)", interval, maxInterval)
+			t.Logf("%s", msg)
+			errors = append(errors, msg)
+		}
+	}
+
+	t.Logf("================================")
+	return errors
 }
 
 // Helper functions

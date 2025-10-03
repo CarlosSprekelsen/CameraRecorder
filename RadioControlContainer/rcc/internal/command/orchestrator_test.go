@@ -71,16 +71,40 @@ func (m *MockAuditLogger) LogAction(ctx context.Context, action, radioID, result
 	})
 }
 
+// setupTestOrchestrator creates an orchestrator with radio manager and adapter for testing
+func setupTestOrchestrator(t *testing.T) *Orchestrator {
+	cfg := config.LoadCBTimingBaseline()
+	
+	orchestrator := &Orchestrator{
+		config: cfg,
+	}
+
+	// Set up radio manager
+	mockRadioManager := &MockRadioManager{
+		Radios: map[string]*radio.Radio{
+			"radio-01": {
+				ID: "radio-01",
+				Capabilities: &adapter.RadioCapabilities{
+					Channels: []adapter.Channel{
+						{Index: 1, FrequencyMhz: 2412.0},
+						{Index: 6, FrequencyMhz: 2437.0},
+						{Index: 11, FrequencyMhz: 2462.0},
+					},
+				},
+			},
+		},
+	}
+	orchestrator.SetRadioManager(mockRadioManager)
+
+	return orchestrator
+}
+
 func TestNewOrchestrator(t *testing.T) {
 	cfg := config.LoadCBTimingBaseline()
 
 	// Create orchestrator without telemetry hub to avoid hanging
 	orchestrator := &Orchestrator{
 		config: cfg,
-	}
-
-	if orchestrator == nil {
-		t.Fatal("NewOrchestrator() returned nil")
 	}
 
 	if orchestrator.config != cfg {
@@ -95,10 +119,25 @@ func TestSetPower(t *testing.T) {
 		config: cfg,
 	}
 
-	// Test with no adapter
+	// Test with no radio manager
 	err := orchestrator.SetPower(context.Background(), "radio-01", 30)
 	if err == nil {
+		t.Error("Expected error when no radio manager is set")
+	}
+	if err != adapter.ErrUnavailable {
+		t.Errorf("Expected ErrUnavailable when no radio manager, got: %v", err)
+	}
+
+	// Set up orchestrator with radio manager
+	orchestrator = setupTestOrchestrator(t)
+
+	// Test with no adapter
+	err = orchestrator.SetPower(context.Background(), "radio-01", 30)
+	if err == nil {
 		t.Error("Expected error when no adapter is set")
+	}
+	if err != adapter.ErrUnavailable {
+		t.Errorf("Expected ErrUnavailable when no adapter, got: %v", err)
 	}
 
 	// Test with valid adapter
@@ -112,11 +151,7 @@ func TestSetPower(t *testing.T) {
 }
 
 func TestSetPowerValidation(t *testing.T) {
-	cfg := config.LoadCBTimingBaseline()
-
-	orchestrator := &Orchestrator{
-		config: cfg,
-	}
+	orchestrator := setupTestOrchestrator(t)
 	mockAdapter := &MockAdapter{}
 	orchestrator.SetActiveAdapter(mockAdapter)
 
@@ -145,16 +180,15 @@ func TestSetPowerValidation(t *testing.T) {
 }
 
 func TestSetChannel(t *testing.T) {
-	cfg := config.LoadCBTimingBaseline()
-
-	orchestrator := &Orchestrator{
-		config: cfg,
-	}
+	orchestrator := setupTestOrchestrator(t)
 
 	// Test with no adapter
 	err := orchestrator.SetChannel(context.Background(), "radio-01", 2412.0)
 	if err == nil {
 		t.Error("Expected error when no adapter is set")
+	}
+	if err != adapter.ErrUnavailable {
+		t.Errorf("Expected ErrUnavailable when no adapter, got: %v", err)
 	}
 
 	// Test with valid adapter
@@ -168,11 +202,7 @@ func TestSetChannel(t *testing.T) {
 }
 
 func TestSetChannelValidation(t *testing.T) {
-	cfg := config.LoadCBTimingBaseline()
-
-	orchestrator := &Orchestrator{
-		config: cfg,
-	}
+	orchestrator := setupTestOrchestrator(t)
 	mockAdapter := &MockAdapter{}
 	orchestrator.SetActiveAdapter(mockAdapter)
 
@@ -202,16 +232,15 @@ func TestSetChannelValidation(t *testing.T) {
 }
 
 func TestSelectRadio(t *testing.T) {
-	cfg := config.LoadCBTimingBaseline()
-
-	orchestrator := &Orchestrator{
-		config: cfg,
-	}
+	orchestrator := setupTestOrchestrator(t)
 
 	// Test with no adapter
 	err := orchestrator.SelectRadio(context.Background(), "radio-01")
 	if err == nil {
 		t.Error("Expected error when no adapter is set")
+	}
+	if err != adapter.ErrUnavailable {
+		t.Errorf("Expected ErrUnavailable when no adapter, got: %v", err)
 	}
 
 	// Test with valid adapter
@@ -225,11 +254,7 @@ func TestSelectRadio(t *testing.T) {
 }
 
 func TestSelectRadioValidation(t *testing.T) {
-	cfg := config.LoadCBTimingBaseline()
-
-	orchestrator := &Orchestrator{
-		config: cfg,
-	}
+	orchestrator := setupTestOrchestrator(t)
 	mockAdapter := &MockAdapter{}
 	orchestrator.SetActiveAdapter(mockAdapter)
 
@@ -247,16 +272,15 @@ func TestSelectRadioValidation(t *testing.T) {
 }
 
 func TestGetState(t *testing.T) {
-	cfg := config.LoadCBTimingBaseline()
-
-	orchestrator := &Orchestrator{
-		config: cfg,
-	}
+	orchestrator := setupTestOrchestrator(t)
 
 	// Test with no adapter
 	state, err := orchestrator.GetState(context.Background(), "radio-01")
 	if err == nil {
 		t.Error("Expected error when no adapter is set")
+	}
+	if err != adapter.ErrUnavailable {
+		t.Errorf("Expected ErrUnavailable when no adapter, got: %v", err)
 	}
 	if state != nil {
 		t.Error("Expected nil state when no adapter is set")
@@ -276,11 +300,7 @@ func TestGetState(t *testing.T) {
 }
 
 func TestAdapterErrorHandling(t *testing.T) {
-	cfg := config.LoadCBTimingBaseline()
-
-	orchestrator := &Orchestrator{
-		config: cfg,
-	}
+	orchestrator := setupTestOrchestrator(t)
 
 	// Test with adapter that returns error
 	mockAdapter := &MockAdapter{
@@ -302,11 +322,7 @@ func TestAdapterErrorHandling(t *testing.T) {
 }
 
 func TestAuditLogging(t *testing.T) {
-	cfg := config.LoadCBTimingBaseline()
-
-	orchestrator := &Orchestrator{
-		config: cfg,
-	}
+	orchestrator := setupTestOrchestrator(t)
 	mockLogger := &MockAuditLogger{}
 	orchestrator.SetAuditLogger(mockLogger)
 
@@ -517,11 +533,7 @@ func TestSetChannelByIndexTableTests(t *testing.T) {
 }
 
 func TestSetChannelFrequencyPassthrough(t *testing.T) {
-	cfg := config.LoadCBTimingBaseline()
-
-	orchestrator := &Orchestrator{
-		config: cfg,
-	}
+	orchestrator := setupTestOrchestrator(t)
 	mockAdapter := &MockAdapter{}
 	orchestrator.SetActiveAdapter(mockAdapter)
 

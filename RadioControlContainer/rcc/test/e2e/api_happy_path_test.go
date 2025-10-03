@@ -123,7 +123,7 @@ func TestE2E_TelemetryIntegration(t *testing.T) {
 	var events []string
 	buf := make([]byte, 1024)
 	readDone := make(chan struct{})
-	
+
 	go func() {
 		defer close(readDone)
 		for {
@@ -139,7 +139,7 @@ func TestE2E_TelemetryIntegration(t *testing.T) {
 			}
 		}
 	}()
-	
+
 	// Wait for events or timeout
 	select {
 	case <-readDone:
@@ -147,7 +147,7 @@ func TestE2E_TelemetryIntegration(t *testing.T) {
 	case <-time.After(1 * time.Second):
 		// Timeout - collect events we have so far
 	}
-	
+
 	response := strings.Join(events, "")
 
 	// Evidence: SSE events
@@ -168,7 +168,6 @@ func TestE2E_TelemetryIntegration(t *testing.T) {
 	if !strings.Contains(response, "powerChanged") {
 		t.Error("Expected powerChanged event in telemetry")
 	}
-
 
 	t.Log("✅ Telemetry integration working correctly")
 }

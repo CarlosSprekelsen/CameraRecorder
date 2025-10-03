@@ -27,6 +27,7 @@ type NetworkConfig struct {
 type HTTPConfig struct {
 	Port         int    `yaml:"port"`
 	ServerHeader string `yaml:"serverHeader"`
+	DevMode      bool   `yaml:"devMode"`
 }
 
 // MaintenanceConfig holds maintenance TCP server settings
@@ -62,15 +63,17 @@ type TimingConfig struct {
 
 // BlackoutConfig holds soft-boot blackout settings
 type BlackoutConfig struct {
-	SoftBootSec int `yaml:"softBootSec"`
+	SoftBootSec    int `yaml:"softBootSec"`    // Channel change blackout (CB-TIMING v0.3 §6.2: 30s)
+	PowerChangeSec int `yaml:"powerChangeSec"` // Power change blackout (CB-TIMING v0.3 §6.2: 5s)
+	RadioResetSec  int `yaml:"radioResetSec"`  // Radio reset blackout (CB-TIMING v0.3 §6.2: 60s)
 }
 
 // CommandsConfig holds command timeout settings
 type CommandsConfig struct {
-	SetPower    TimeoutConfig `yaml:"setPower"`
-	SetChannel  TimeoutConfig `yaml:"setChannel"`
-	SelectRadio TimeoutConfig `yaml:"selectRadio"`
-	Read        TimeoutConfig `yaml:"read"`
+	SetPower    TimeoutConfig `yaml:"setPower"`    // CB-TIMING v0.3 §5: 10s
+	SetChannel  TimeoutConfig `yaml:"setChannel"`  // CB-TIMING v0.3 §5: 30s
+	SelectRadio TimeoutConfig `yaml:"selectRadio"` // CB-TIMING v0.3 §5: 5s
+	Read        TimeoutConfig `yaml:"read"`        // CB-TIMING v0.3 §5: 5s
 }
 
 // TimeoutConfig holds timeout settings for a command
@@ -119,6 +122,7 @@ func getDefaultConfig() *Config {
 			HTTP: HTTPConfig{
 				Port:         80,
 				ServerHeader: "",
+				DevMode:      false,
 			},
 			Maintenance: MaintenanceConfig{
 				Port:         50000,
@@ -150,13 +154,15 @@ func getDefaultConfig() *Config {
 		},
 		Timing: TimingConfig{
 			Blackout: BlackoutConfig{
-				SoftBootSec: 5, // Default, will be overridden by CB-TIMING
+				SoftBootSec:    30, // CB-TIMING v0.3 §6.2: Channel change blackout
+				PowerChangeSec: 5,  // CB-TIMING v0.3 §6.2: Power change blackout
+				RadioResetSec:  60, // CB-TIMING v0.3 §6.2: Radio reset blackout
 			},
 			Commands: CommandsConfig{
-				SetPower:    TimeoutConfig{TimeoutSec: 10},
-				SetChannel:  TimeoutConfig{TimeoutSec: 30},
-				SelectRadio: TimeoutConfig{TimeoutSec: 5},
-				Read:        TimeoutConfig{TimeoutSec: 5},
+				SetPower:    TimeoutConfig{TimeoutSec: 10}, // CB-TIMING v0.3 §5
+				SetChannel:  TimeoutConfig{TimeoutSec: 30}, // CB-TIMING v0.3 §5
+				SelectRadio: TimeoutConfig{TimeoutSec: 5},  // CB-TIMING v0.3 §5
+				Read:        TimeoutConfig{TimeoutSec: 5},  // CB-TIMING v0.3 §5
 			},
 			Backoff: BackoffConfig{
 				BusyBaseMs: 1000,

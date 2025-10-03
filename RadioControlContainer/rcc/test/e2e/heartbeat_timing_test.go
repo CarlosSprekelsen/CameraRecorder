@@ -25,8 +25,9 @@ func TestHeartbeatTiming_PositiveCases(t *testing.T) {
 func TestHeartbeatTiming_NegativeCases(t *testing.T) {
 	validator := NewContractValidator(t)
 
-	// Test case 1: Heartbeat too fast
+	// Test case 1: Heartbeat too fast - should detect and log error
 	t.Run("too_fast", func(t *testing.T) {
+		// Capture test output to verify error detection
 		events := []string{
 			"event: heartbeat\ndata: {\"timestamp\":\"2025-10-03T10:00:00Z\"}",
 			"event: heartbeat\ndata: {\"timestamp\":\"2025-10-03T10:00:05Z\"}", // 5s < 13s min
@@ -35,10 +36,14 @@ func TestHeartbeatTiming_NegativeCases(t *testing.T) {
 		baseInterval := 15 * time.Second
 		jitter := 2 * time.Second
 
-		validator.ValidateHeartbeatInterval(t, events, baseInterval, jitter)
+		// This should detect errors but not fail the test
+		errors := validator.ValidateHeartbeatIntervalNonFailing(t, events, baseInterval, jitter)
+		if len(errors) == 0 {
+			t.Error("Expected validation errors for too-fast heartbeat, got none")
+		}
 	})
 
-	// Test case 2: Heartbeat too slow
+	// Test case 2: Heartbeat too slow - should detect and log error
 	t.Run("too_slow", func(t *testing.T) {
 		events := []string{
 			"event: heartbeat\ndata: {\"timestamp\":\"2025-10-03T10:00:00Z\"}",
@@ -48,10 +53,14 @@ func TestHeartbeatTiming_NegativeCases(t *testing.T) {
 		baseInterval := 15 * time.Second
 		jitter := 2 * time.Second
 
-		validator.ValidateHeartbeatInterval(t, events, baseInterval, jitter)
+		// This should detect errors but not fail the test
+		errors := validator.ValidateHeartbeatIntervalNonFailing(t, events, baseInterval, jitter)
+		if len(errors) == 0 {
+			t.Error("Expected validation errors for too-slow heartbeat, got none")
+		}
 	})
 
-	// Test case 3: Insufficient events
+	// Test case 3: Insufficient events - should handle gracefully
 	t.Run("insufficient_events", func(t *testing.T) {
 		events := []string{
 			"event: heartbeat\ndata: {\"timestamp\":\"2025-10-03T10:00:00Z\"}",
@@ -60,10 +69,14 @@ func TestHeartbeatTiming_NegativeCases(t *testing.T) {
 		baseInterval := 15 * time.Second
 		jitter := 2 * time.Second
 
-		validator.ValidateHeartbeatInterval(t, events, baseInterval, jitter)
+		// This should handle insufficient events gracefully
+		errors := validator.ValidateHeartbeatIntervalNonFailing(t, events, baseInterval, jitter)
+		if len(errors) == 0 {
+			t.Error("Expected validation errors for insufficient events, got none")
+		}
 	})
 
-	// Test case 4: No heartbeat events
+	// Test case 4: No heartbeat events - should handle gracefully
 	t.Run("no_heartbeats", func(t *testing.T) {
 		events := []string{
 			"event: ready\ndata: {\"snapshot\":{}}",
@@ -73,7 +86,11 @@ func TestHeartbeatTiming_NegativeCases(t *testing.T) {
 		baseInterval := 15 * time.Second
 		jitter := 2 * time.Second
 
-		validator.ValidateHeartbeatInterval(t, events, baseInterval, jitter)
+		// This should handle no heartbeat events gracefully
+		errors := validator.ValidateHeartbeatIntervalNonFailing(t, events, baseInterval, jitter)
+		if len(errors) == 0 {
+			t.Error("Expected validation errors for no heartbeat events, got none")
+		}
 	})
 }
 
@@ -106,16 +123,20 @@ func TestHeartbeatTiming_EdgeCases(t *testing.T) {
 		validator.ValidateHeartbeatInterval(t, events, baseInterval, jitter)
 	})
 
-	// Test case 3: Timeout threshold
+	// Test case 3: Timeout threshold - should detect timeout
 	t.Run("timeout_threshold", func(t *testing.T) {
 		events := []string{
 			"event: heartbeat\ndata: {\"timestamp\":\"2025-10-03T10:00:00Z\"}",
-			"event: heartbeat\ndata: {\"timestamp\":\"2025-10-03T10:00:45Z\"}", // 45s > 45s timeout (15*3)
+			"event: heartbeat\ndata: {\"timestamp\":\"2025-10-03T10:00:45Z\"}", // 45s = 45s timeout (15*3)
 		}
 
 		baseInterval := 15 * time.Second
 		jitter := 2 * time.Second
 
-		validator.ValidateHeartbeatInterval(t, events, baseInterval, jitter)
+		// This should detect timeout error (45s exceeds tolerance window)
+		errors := validator.ValidateHeartbeatIntervalNonFailing(t, events, baseInterval, jitter)
+		if len(errors) == 0 {
+			t.Error("Expected validation errors for timeout threshold, got none")
+		}
 	})
 }

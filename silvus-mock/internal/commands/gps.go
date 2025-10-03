@@ -11,18 +11,18 @@ import (
 
 // GPSCommandHandler handles GPS-related commands
 type GPSCommandHandler struct {
-	state    *state.RadioState
-	config   *config.Config
-	location GPSCoordinates
+	state      *state.RadioState
+	config     *config.Config
+	location   GPSCoordinates
 	lastUpdate time.Time
 }
 
 // GPSCoordinates represents GPS location data
 type GPSCoordinates struct {
-	Latitude  float64 `json:"latitude"`
-	Longitude float64 `json:"longitude"`
-	Altitude  float64 `json:"altitude"`
-	Accuracy  float64 `json:"accuracy"`
+	Latitude  float64   `json:"latitude"`
+	Longitude float64   `json:"longitude"`
+	Altitude  float64   `json:"altitude"`
+	Accuracy  float64   `json:"accuracy"`
 	Timestamp time.Time `json:"timestamp"`
 }
 
@@ -53,7 +53,7 @@ func NewGPSCommandHandler(radioState *state.RadioState, cfg *config.Config) *GPS
 func (h *GPSCommandHandler) Handle(ctx context.Context, params []string) (interface{}, error) {
 	// Get subcommand from context
 	subcommand := ctx.Value("subcommand").(string)
-	
+
 	switch subcommand {
 	case "coordinates":
 		return h.handleCoordinates(params)
@@ -73,27 +73,27 @@ func (h *GPSCommandHandler) handleCoordinates(params []string) (interface{}, err
 		h.updateLocation() // Simulate GPS update
 		return []GPSCoordinates{h.location}, nil
 	}
-	
+
 	// Set coordinates (simulate GPS update)
 	if len(params) != 3 {
 		return nil, &CommandError{Code: ErrInvalidParams, Message: "Expected 3 parameters: latitude, longitude, altitude"}
 	}
-	
+
 	lat, err := strconv.ParseFloat(params[0], 64)
 	if err != nil {
 		return nil, &CommandError{Code: ErrInvalidParams, Message: "Invalid latitude: " + params[0]}
 	}
-	
+
 	lon, err := strconv.ParseFloat(params[1], 64)
 	if err != nil {
 		return nil, &CommandError{Code: ErrInvalidParams, Message: "Invalid longitude: " + params[1]}
 	}
-	
+
 	alt, err := strconv.ParseFloat(params[2], 64)
 	if err != nil {
 		return nil, &CommandError{Code: ErrInvalidParams, Message: "Invalid altitude: " + params[2]}
 	}
-	
+
 	// Validate ranges
 	if lat < -90 || lat > 90 {
 		return nil, &CommandError{Code: ErrInvalidRange, Message: "Latitude must be between -90 and 90"}
@@ -101,7 +101,7 @@ func (h *GPSCommandHandler) handleCoordinates(params []string) (interface{}, err
 	if lon < -180 || lon > 180 {
 		return nil, &CommandError{Code: ErrInvalidRange, Message: "Longitude must be between -180 and 180"}
 	}
-	
+
 	h.location = GPSCoordinates{
 		Latitude:  lat,
 		Longitude: lon,
@@ -110,7 +110,7 @@ func (h *GPSCommandHandler) handleCoordinates(params []string) (interface{}, err
 		Timestamp: time.Now(),
 	}
 	h.lastUpdate = time.Now()
-	
+
 	return []string{""}, nil // Success response
 }
 
@@ -125,20 +125,20 @@ func (h *GPSCommandHandler) handleMode(params []string) (interface{}, error) {
 		}
 		return []GPSMode{mode}, nil
 	}
-	
+
 	// Set GPS mode
 	if len(params) != 1 {
 		return nil, &CommandError{Code: ErrInvalidParams, Message: "Expected 1 parameter: enabled"}
 	}
-	
+
 	enabled, err := strconv.ParseBool(params[0])
 	if err != nil {
 		return nil, &CommandError{Code: ErrInvalidParams, Message: "Invalid boolean value: " + params[0]}
 	}
-	
+
 	// Simulate GPS mode change
 	_ = enabled // In real implementation, this would control GPS hardware
-	
+
 	return []string{""}, nil // Success response
 }
 
@@ -149,25 +149,25 @@ func (h *GPSCommandHandler) handleTime(params []string) (interface{}, error) {
 		gpsTime := time.Now().Unix()
 		return []string{strconv.FormatInt(gpsTime, 10)}, nil
 	}
-	
+
 	// Set GPS time
 	if len(params) != 1 {
 		return nil, &CommandError{Code: ErrInvalidParams, Message: "Expected 1 parameter: unix_timestamp"}
 	}
-	
+
 	timestamp, err := strconv.ParseInt(params[0], 10, 64)
 	if err != nil {
 		return nil, &CommandError{Code: ErrInvalidParams, Message: "Invalid timestamp: " + params[0]}
 	}
-	
+
 	// Validate timestamp (reasonable range)
 	if timestamp < 946684800 || timestamp > 4102444800 { // 2000-2100
 		return nil, &CommandError{Code: ErrInvalidRange, Message: "Timestamp out of reasonable range"}
 	}
-	
+
 	// Simulate GPS time setting
 	_ = timestamp // In real implementation, this would set GPS time
-	
+
 	return []string{""}, nil // Success response
 }
 

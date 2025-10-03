@@ -38,8 +38,15 @@ func main() {
 	httpMux := http.NewServeMux()
 	httpMux.HandleFunc("/streamscape_api", jsonrpcServer.HandleRequest)
 
+	// Determine HTTP port based on dev mode
+	httpPort := cfg.Network.HTTP.Port
+	if cfg.Network.HTTP.DevMode {
+		httpPort = 8080
+		log.Println("Development mode: using port 8080")
+	}
+
 	httpServer := &http.Server{
-		Addr:         fmt.Sprintf(":%d", cfg.Network.HTTP.Port),
+		Addr:         fmt.Sprintf(":%d", httpPort),
 		Handler:      httpMux,
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
@@ -50,7 +57,7 @@ func main() {
 
 	// Start HTTP server
 	go func() {
-		log.Printf("Starting HTTP server on port %d", cfg.Network.HTTP.Port)
+		log.Printf("Starting HTTP server on port %d", httpPort)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("HTTP server failed: %v", err)
 		}

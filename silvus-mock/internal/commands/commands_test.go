@@ -10,20 +10,20 @@ import (
 
 func TestCommandRegistry(t *testing.T) {
 	registry := NewCommandRegistry()
-	
+
 	// Test empty registry
 	if len(registry.List()) != 0 {
 		t.Error("Expected empty registry")
 	}
-	
+
 	// Test registering commands
 	handler := &mockCommandHandler{name: "test_command"}
 	registry.Register(handler)
-	
+
 	if len(registry.List()) != 1 {
 		t.Error("Expected one command in registry")
 	}
-	
+
 	// Test getting command
 	retrieved, exists := registry.Get("test_command")
 	if !exists {
@@ -32,7 +32,7 @@ func TestCommandRegistry(t *testing.T) {
 	if retrieved != handler {
 		t.Error("Expected to get the same handler")
 	}
-	
+
 	// Test getting non-existent command
 	_, exists = registry.Get("non_existent")
 	if exists {
@@ -44,18 +44,18 @@ func TestCoreCommands(t *testing.T) {
 	cfg := createTestConfig()
 	radioState := createTestRadioState(cfg)
 	defer radioState.Close()
-	
+
 	registry := NewCommandRegistry()
 	RegisterCoreCommands(registry, radioState, cfg)
-	
+
 	// Test that core commands are registered
 	expectedCommands := []string{
 		"freq",
-		"power_dBm", 
+		"power_dBm",
 		"supported_frequency_profiles",
 		"maintenance",
 	}
-	
+
 	for _, cmd := range expectedCommands {
 		handler, exists := registry.Get(cmd)
 		if !exists {
@@ -71,9 +71,9 @@ func TestFreqCommandHandler(t *testing.T) {
 	cfg := createTestConfig()
 	radioState := createTestRadioState(cfg)
 	defer radioState.Close()
-	
+
 	handler := NewFreqCommandHandler(radioState, cfg)
-	
+
 	// Test command properties
 	if handler.GetName() != "freq" {
 		t.Errorf("Expected name 'freq', got %s", handler.GetName())
@@ -84,7 +84,7 @@ func TestFreqCommandHandler(t *testing.T) {
 	if !handler.RequiresBlackout() {
 		t.Error("Expected freq command to require blackout")
 	}
-	
+
 	// Test read frequency
 	ctx := context.Background()
 	result, err := handler.Handle(ctx, []string{})
@@ -94,7 +94,7 @@ func TestFreqCommandHandler(t *testing.T) {
 	if result == nil {
 		t.Error("Expected frequency result")
 	}
-	
+
 	// Test set frequency
 	result, err = handler.Handle(ctx, []string{"4700"})
 	if err != nil {
@@ -109,9 +109,9 @@ func TestPowerCommandHandler(t *testing.T) {
 	cfg := createTestConfig()
 	radioState := createTestRadioState(cfg)
 	defer radioState.Close()
-	
+
 	handler := NewPowerCommandHandler(radioState, cfg)
-	
+
 	// Test command properties
 	if handler.GetName() != "power_dBm" {
 		t.Errorf("Expected name 'power_dBm', got %s", handler.GetName())
@@ -122,7 +122,7 @@ func TestPowerCommandHandler(t *testing.T) {
 	if handler.RequiresBlackout() {
 		t.Error("Expected power command to not require blackout")
 	}
-	
+
 	// Test read power
 	ctx := context.Background()
 	result, err := handler.Handle(ctx, []string{})
@@ -132,7 +132,7 @@ func TestPowerCommandHandler(t *testing.T) {
 	if result == nil {
 		t.Error("Expected power result")
 	}
-	
+
 	// Test set power
 	result, err = handler.Handle(ctx, []string{"25"})
 	if err != nil {
@@ -147,9 +147,9 @@ func TestProfilesCommandHandler(t *testing.T) {
 	cfg := createTestConfig()
 	radioState := createTestRadioState(cfg)
 	defer radioState.Close()
-	
+
 	handler := NewProfilesCommandHandler(radioState, cfg)
-	
+
 	// Test command properties
 	if handler.GetName() != "supported_frequency_profiles" {
 		t.Errorf("Expected name 'supported_frequency_profiles', got %s", handler.GetName())
@@ -160,7 +160,7 @@ func TestProfilesCommandHandler(t *testing.T) {
 	if handler.RequiresBlackout() {
 		t.Error("Expected profiles command to not require blackout")
 	}
-	
+
 	// Test get profiles
 	ctx := context.Background()
 	result, err := handler.Handle(ctx, []string{})
@@ -170,7 +170,7 @@ func TestProfilesCommandHandler(t *testing.T) {
 	if result == nil {
 		t.Error("Expected profiles result")
 	}
-	
+
 	// Test with parameters (should error)
 	result, err = handler.Handle(ctx, []string{"extra"})
 	if err == nil {
@@ -182,17 +182,17 @@ func TestGPSCommands(t *testing.T) {
 	cfg := createTestConfig()
 	radioState := createTestRadioState(cfg)
 	defer radioState.Close()
-	
+
 	registry := NewCommandRegistry()
 	RegisterGPSCommands(registry, radioState, cfg)
-	
+
 	// Test that GPS commands are registered
 	expectedCommands := []string{
 		"gps_coordinates",
 		"gps_mode",
 		"gps_time",
 	}
-	
+
 	for _, cmd := range expectedCommands {
 		handler, exists := registry.Get(cmd)
 		if !exists {
@@ -208,9 +208,9 @@ func TestGPSCoordinatesHandler(t *testing.T) {
 	cfg := createTestConfig()
 	radioState := createTestRadioState(cfg)
 	defer radioState.Close()
-	
+
 	handler := NewGpsCoordinatesCommandHandler(radioState, cfg)
-	
+
 	// Test read coordinates
 	ctx := context.Background()
 	result, err := handler.Handle(ctx, []string{})
@@ -220,7 +220,7 @@ func TestGPSCoordinatesHandler(t *testing.T) {
 	if result == nil {
 		t.Error("Expected coordinates result")
 	}
-	
+
 	// Test set coordinates
 	result, err = handler.Handle(ctx, []string{"40.7128", "-74.0060", "10.0"})
 	if err != nil {
@@ -229,18 +229,18 @@ func TestGPSCoordinatesHandler(t *testing.T) {
 	if result == nil {
 		t.Error("Expected success result")
 	}
-	
+
 	// Test invalid coordinates
 	result, err = handler.Handle(ctx, []string{"91.0", "-74.0060", "10.0"}) // Invalid latitude
 	if err == nil {
 		t.Error("Expected error for invalid latitude")
 	}
-	
+
 	result, err = handler.Handle(ctx, []string{"40.7128", "181.0", "10.0"}) // Invalid longitude
 	if err == nil {
 		t.Error("Expected error for invalid longitude")
 	}
-	
+
 	result, err = handler.Handle(ctx, []string{"40.7128", "-74.0060"}) // Missing altitude
 	if err == nil {
 		t.Error("Expected error for missing altitude")
@@ -251,9 +251,9 @@ func TestGPSModeHandler(t *testing.T) {
 	cfg := createTestConfig()
 	radioState := createTestRadioState(cfg)
 	defer radioState.Close()
-	
+
 	handler := NewGpsModeCommandHandler(radioState, cfg)
-	
+
 	// Test read mode
 	ctx := context.Background()
 	result, err := handler.Handle(ctx, []string{})
@@ -263,7 +263,7 @@ func TestGPSModeHandler(t *testing.T) {
 	if result == nil {
 		t.Error("Expected mode result")
 	}
-	
+
 	// Test set mode
 	result, err = handler.Handle(ctx, []string{"true"})
 	if err != nil {
@@ -272,7 +272,7 @@ func TestGPSModeHandler(t *testing.T) {
 	if result == nil {
 		t.Error("Expected success result")
 	}
-	
+
 	// Test invalid mode
 	result, err = handler.Handle(ctx, []string{"invalid"})
 	if err == nil {
@@ -284,9 +284,9 @@ func TestGPSTimeHandler(t *testing.T) {
 	cfg := createTestConfig()
 	radioState := createTestRadioState(cfg)
 	defer radioState.Close()
-	
+
 	handler := NewGpsTimeCommandHandler(radioState, cfg)
-	
+
 	// Test read time
 	ctx := context.Background()
 	result, err := handler.Handle(ctx, []string{})
@@ -296,7 +296,7 @@ func TestGPSTimeHandler(t *testing.T) {
 	if result == nil {
 		t.Error("Expected time result")
 	}
-	
+
 	// Test set time
 	result, err = handler.Handle(ctx, []string{"1640995200"}) // 2022-01-01
 	if err != nil {
@@ -305,13 +305,13 @@ func TestGPSTimeHandler(t *testing.T) {
 	if result == nil {
 		t.Error("Expected success result")
 	}
-	
+
 	// Test invalid time
 	result, err = handler.Handle(ctx, []string{"invalid"})
 	if err == nil {
 		t.Error("Expected error for invalid time")
 	}
-	
+
 	result, err = handler.Handle(ctx, []string{"1"}) // Too old
 	if err == nil {
 		t.Error("Expected error for time too old")
@@ -328,7 +328,7 @@ func TestCustomCommandHandler(t *testing.T) {
 			return map[string]string{"status": "ok"}, nil
 		},
 	)
-	
+
 	// Test properties
 	if handler.GetName() != "test_command" {
 		t.Errorf("Expected name 'test_command', got %s", handler.GetName())
@@ -339,7 +339,7 @@ func TestCustomCommandHandler(t *testing.T) {
 	if handler.RequiresBlackout() {
 		t.Error("Expected custom command to not require blackout")
 	}
-	
+
 	// Test execution
 	ctx := context.Background()
 	result, err := handler.Handle(ctx, []string{})
@@ -355,15 +355,15 @@ func TestExtensibleServer(t *testing.T) {
 	cfg := createTestConfig()
 	radioState := createTestRadioState(cfg)
 	defer radioState.Close()
-	
+
 	server := NewExtensibleJSONRPCServer(cfg, radioState)
-	
+
 	// Test available commands
 	commands := server.GetAvailableCommands()
 	if len(commands) == 0 {
 		t.Error("Expected available commands")
 	}
-	
+
 	// Test adding custom command
 	customHandler := NewCustomCommandHandler(
 		"custom_test",
@@ -374,9 +374,9 @@ func TestExtensibleServer(t *testing.T) {
 			return "test result", nil
 		},
 	)
-	
+
 	server.AddCustomCommand(customHandler)
-	
+
 	// Verify command was added
 	commands = server.GetAvailableCommands()
 	found := false
@@ -389,10 +389,10 @@ func TestExtensibleServer(t *testing.T) {
 	if !found {
 		t.Error("Expected custom command to be added")
 	}
-	
+
 	// Test removing command
 	server.RemoveCommand("custom_test")
-	
+
 	// Verify command was removed
 	commands = server.GetAvailableCommands()
 	found = false

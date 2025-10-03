@@ -9,16 +9,16 @@ import (
 type CommandHandler interface {
 	// Handle processes a command and returns the response
 	Handle(ctx context.Context, params []string) (interface{}, error)
-	
+
 	// GetName returns the command name
 	GetName() string
-	
+
 	// GetDescription returns a human-readable description
 	GetDescription() string
-	
+
 	// IsReadOnly returns true if the command only reads data
 	IsReadOnly() bool
-	
+
 	// RequiresBlackout returns true if the command triggers a blackout period
 	RequiresBlackout() bool
 }
@@ -57,10 +57,10 @@ func (r *CommandRegistry) List() []string {
 
 // CommandContext provides context for command execution
 type CommandContext struct {
-	RadioID    string
-	Timestamp  time.Time
-	UserID     string
-	SessionID  string
+	RadioID   string
+	Timestamp time.Time
+	UserID    string
+	SessionID string
 }
 
 // CommandResponse represents the result of a command execution
@@ -82,7 +82,7 @@ func (e *CommandError) Error() string {
 
 // Common error codes
 const (
-	ErrInvalidRange   = "INVALID_RANGE"
+	ErrInvalidRange  = "INVALID_RANGE"
 	ErrBusy          = "BUSY"
 	ErrUnavailable   = "UNAVAILABLE"
 	ErrInternal      = "INTERNAL"

@@ -6,14 +6,16 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/silvus-mock/internal/commands"
 	"github.com/silvus-mock/internal/config"
 	"github.com/silvus-mock/internal/state"
 )
 
 // Server handles JSON-RPC HTTP requests
 type Server struct {
-	config *config.Config
-	state  *state.RadioState
+	config           *config.Config
+	state            *state.RadioState
+	extensibleServer *commands.ExtensibleJSONRPCServer
 }
 
 // Request represents a JSON-RPC 2.0 request
@@ -42,8 +44,9 @@ type ErrorResponse struct {
 // NewServer creates a new JSON-RPC server
 func NewServer(cfg *config.Config, radioState *state.RadioState) *Server {
 	return &Server{
-		config: cfg,
-		state:  radioState,
+		config:           cfg,
+		state:            radioState,
+		extensibleServer: commands.NewExtensibleJSONRPCServer(cfg, radioState),
 	}
 }
 
@@ -51,41 +54,20 @@ func NewServer(cfg *config.Config, radioState *state.RadioState) *Server {
 func (s *Server) HandleRequest(w http.ResponseWriter, r *http.Request) {
 	start := time.Now()
 
-	// Set response headers
-	w.Header().Set("Content-Type", "application/json")
-	if s.config.Network.HTTP.ServerHeader != "" {
-		w.Header().Set("Server", s.config.Network.HTTP.ServerHeader)
+	// Delegate to extensible server for all command processing
+	s.extensibleServer.HandleRequest(w, r)
+
+	// Log request processing time (extract method from request if possible)
+	var method string
+	if r.Body != nil {
+		var req Request
+		if err := json.NewDecoder(r.Body).Decode(&req); err == nil {
+			method = req.Method
+		}
 	}
 
-	// Only accept POST requests
-	if r.Method != http.MethodPost {
-		s.writeErrorResponse(w, -32600, "Invalid Request", nil)
-		return
-	}
-
-	// Parse JSON-RPC request
-	var req Request
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		s.writeErrorResponse(w, -32700, "Parse error", nil)
-		return
-	}
-
-	// Validate JSON-RPC version
-	if req.JSONRPC != "2.0" {
-		s.writeErrorResponse(w, -32600, "Invalid Request", req.ID)
-		return
-	}
-
-	// Process the request
-	response := s.processRequest(&req)
-
-	// Write response
-	if err := json.NewEncoder(w).Encode(response); err != nil {
-		log.Printf("Failed to encode response: %v", err)
-		return
-	}
-
-	log.Printf("JSON-RPC request processed: method=%s, duration=%v", req.Method, time.Since(start))
+	duration := time.Since(start)
+	log.Printf("JSON-RPC request processed: method=%s, duration=%v", method, duration)
 }
 
 // processRequest processes a JSON-RPC request

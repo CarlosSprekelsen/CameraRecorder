@@ -18,6 +18,9 @@ func TestServerHandleRequest(t *testing.T) {
 	server := NewServer(cfg, radioState)
 	defer radioState.Close()
 
+	// Wait for any blackout to clear
+	time.Sleep(6 * time.Second)
+
 	tests := []struct {
 		name           string
 		method         string
@@ -343,10 +346,10 @@ func TestGetTimeoutForMethod(t *testing.T) {
 		method   string
 		expected int // seconds
 	}{
-		{"freq", 30},           // setChannel timeout
-		{"power_dBm", 10},      // setPower timeout
+		{"freq", 30},                        // setChannel timeout
+		{"power_dBm", 10},                   // setPower timeout
 		{"supported_frequency_profiles", 5}, // read timeout
-		{"unknown", 5},         // default read timeout
+		{"unknown", 5},                      // default read timeout
 	}
 
 	for _, tt := range tests {

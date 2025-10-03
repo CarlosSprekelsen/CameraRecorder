@@ -206,7 +206,7 @@ func (s *Server) Close() error {
 	default:
 		close(s.stopChan)
 	}
-	
+
 	if s.listener != nil {
 		return s.listener.Close()
 	}

@@ -3,8 +3,9 @@
 
 network:
   http:
-    port: 8080
+    port: 80  # Production port (use CAP_NET_BIND_SERVICE for non-root)
     serverHeader: ""  # Suppress server identification
+    devMode: false    # Set to true to use port 8080 for development
   maintenance:
     port: 50000
     allowedCidrs:
@@ -36,16 +37,18 @@ power:
 # Timing configuration based on CB-TIMING v0.3
 timing:
   blackout:
-    softBootSec: 5  # Will be overridden by CBTIMING_CONFIG if present
+    softBootSec: 30      # CB-TIMING v0.3 §6.2: Channel change blackout
+    powerChangeSec: 5    # CB-TIMING v0.3 §6.2: Power change blackout
+    radioResetSec: 60    # CB-TIMING v0.3 §6.2: Radio reset blackout
   commands:
     setPower:
-      timeoutSec: 10  # CB-TIMING §5
+      timeoutSec: 10     # CB-TIMING v0.3 §5
     setChannel:
-      timeoutSec: 30  # CB-TIMING §5
+      timeoutSec: 30     # CB-TIMING v0.3 §5
     selectRadio:
-      timeoutSec: 5   # CB-TIMING §5
+      timeoutSec: 5      # CB-TIMING v0.3 §5
     read:
-      timeoutSec: 5   # CB-TIMING §5
+      timeoutSec: 5      # CB-TIMING v0.3 §5
   backoff:
     busyBaseMs: 1000
 

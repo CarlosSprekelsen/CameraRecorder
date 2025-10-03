@@ -31,10 +31,10 @@ func TestNewRadioState(t *testing.T) {
 			},
 		},
 	}
-	
+
 	rs := NewRadioState(cfg)
 	defer rs.Close()
-	
+
 	// Test initial state
 	if rs.currentFreq != "2490.0" {
 		t.Errorf("Expected initial frequency 2490.0, got %s", rs.currentFreq)
@@ -49,61 +49,61 @@ func TestNewRadioState(t *testing.T) {
 
 func TestExecuteCommandSetPower(t *testing.T) {
 	tests := []struct {
-		name     string
-		params   []string
-		wantErr  string
+		name      string
+		params    []string
+		wantErr   string
 		wantPower int
 	}{
 		{
-			name:     "valid power",
-			params:   []string{"25"},
-			wantErr:  "",
+			name:      "valid power",
+			params:    []string{"25"},
+			wantErr:   "",
 			wantPower: 25,
 		},
 		{
-			name:     "power too low",
-			params:   []string{"-1"},
-			wantErr:  "INVALID_RANGE",
+			name:      "power too low",
+			params:    []string{"-1"},
+			wantErr:   "INVALID_RANGE",
 			wantPower: 30, // unchanged
 		},
 		{
-			name:     "power too high",
-			params:   []string{"50"},
-			wantErr:  "INVALID_RANGE",
+			name:      "power too high",
+			params:    []string{"50"},
+			wantErr:   "INVALID_RANGE",
 			wantPower: 30, // unchanged
 		},
 		{
-			name:     "invalid format",
-			params:   []string{"abc"},
-			wantErr:  "INVALID_RANGE",
+			name:      "invalid format",
+			params:    []string{"abc"},
+			wantErr:   "INVALID_RANGE",
 			wantPower: 30, // unchanged
 		},
 		{
-			name:     "wrong param count",
-			params:   []string{"25", "extra"},
-			wantErr:  "INTERNAL",
+			name:      "wrong param count",
+			params:    []string{"25", "extra"},
+			wantErr:   "INTERNAL",
 			wantPower: 30, // unchanged
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rs := createTestRadioState()
 			defer rs.Close()
-			
+
 			// Wait for any blackout to clear
 			time.Sleep(6 * time.Second)
-			
+
 			response := rs.ExecuteCommand("setPower", tt.params)
-			
+
 			if response.Error != tt.wantErr {
 				t.Errorf("ExecuteCommand() error = %v, want %v", response.Error, tt.wantErr)
 			}
-			
+
 			if tt.wantErr == "" && response.Result == nil {
 				t.Error("Expected result for successful command")
 			}
-			
+
 			// Check power was set correctly
 			readResponse := rs.ExecuteCommand("getPower", []string{})
 			if readResponse.Error != "" {
@@ -127,17 +127,17 @@ func TestExecuteCommandSetPower(t *testing.T) {
 func TestExecuteCommandGetPower(t *testing.T) {
 	rs := createTestRadioState()
 	defer rs.Close()
-	
+
 	response := rs.ExecuteCommand("getPower", []string{})
-	
+
 	if response.Error != "" {
 		t.Errorf("ExecuteCommand() error = %v", response.Error)
 	}
-	
+
 	if response.Result == nil {
 		t.Error("Expected result for getPower")
 	}
-	
+
 	result := response.Result.([]string)
 	if len(result) != 1 {
 		t.Errorf("Expected single power value, got %v", result)
@@ -148,7 +148,7 @@ func TestExecuteCommandGetPower(t *testing.T) {
 }
 
 func TestExecuteCommandSetFreq(t *testing.T) {
-	
+
 	tests := []struct {
 		name    string
 		params  []string
@@ -175,21 +175,21 @@ func TestExecuteCommandSetFreq(t *testing.T) {
 			wantErr: "INVALID_RANGE",
 		},
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			rs := createTestRadioState()
 			defer rs.Close()
-			
+
 			// Wait for any blackout to clear
 			time.Sleep(6 * time.Second)
-			
+
 			response := rs.ExecuteCommand("setFreq", tt.params)
-			
+
 			if response.Error != tt.wantErr {
 				t.Errorf("ExecuteCommand() error = %v, want %v", response.Error, tt.wantErr)
 			}
-			
+
 			if tt.wantErr == "" && response.Result == nil {
 				t.Error("Expected result for successful command")
 			}
@@ -200,17 +200,17 @@ func TestExecuteCommandSetFreq(t *testing.T) {
 func TestExecuteCommandGetFreq(t *testing.T) {
 	rs := createTestRadioState()
 	defer rs.Close()
-	
+
 	response := rs.ExecuteCommand("getFreq", []string{})
-	
+
 	if response.Error != "" {
 		t.Errorf("ExecuteCommand() error = %v", response.Error)
 	}
-	
+
 	if response.Result == nil {
 		t.Error("Expected result for getFreq")
 	}
-	
+
 	result := response.Result.([]string)
 	if len(result) != 1 {
 		t.Errorf("Expected single frequency value, got %v", result)
@@ -223,17 +223,17 @@ func TestExecuteCommandGetFreq(t *testing.T) {
 func TestExecuteCommandGetProfiles(t *testing.T) {
 	rs := createTestRadioState()
 	defer rs.Close()
-	
+
 	response := rs.ExecuteCommand("getProfiles", []string{})
-	
+
 	if response.Error != "" {
 		t.Errorf("ExecuteCommand() error = %v", response.Error)
 	}
-	
+
 	if response.Result == nil {
 		t.Error("Expected result for getProfiles")
 	}
-	
+
 	result := response.Result.([]config.FrequencyProfile)
 	if len(result) == 0 {
 		t.Error("Expected at least one frequency profile")
@@ -243,32 +243,32 @@ func TestExecuteCommandGetProfiles(t *testing.T) {
 func TestSoftBootBlackout(t *testing.T) {
 	rs := createTestRadioState()
 	defer rs.Close()
-	
+
 	// Set frequency to trigger soft boot
 	response := rs.ExecuteCommand("setFreq", []string{"4700"})
 	if response.Error != "" {
 		t.Fatalf("Failed to set frequency: %v", response.Error)
 	}
-	
+
 	// Should be in blackout now
 	if rs.IsAvailable() {
 		t.Error("Expected radio to be unavailable during blackout")
 	}
-	
+
 	// Commands should return BUSY during blackout
 	busyResponse := rs.ExecuteCommand("setPower", []string{"25"})
 	if busyResponse.Error != "BUSY" {
 		t.Errorf("Expected BUSY during blackout, got %v", busyResponse.Error)
 	}
-	
+
 	// Wait for blackout to clear (plus small buffer)
 	time.Sleep(6 * time.Second)
-	
+
 	// Should be available again
 	if !rs.IsAvailable() {
 		t.Error("Expected radio to be available after blackout")
 	}
-	
+
 	// Commands should work again
 	response = rs.ExecuteCommand("setPower", []string{"25"})
 	if response.Error != "" {
@@ -279,21 +279,21 @@ func TestSoftBootBlackout(t *testing.T) {
 func TestIsValidFrequency(t *testing.T) {
 	rs := createTestRadioState()
 	defer rs.Close()
-	
+
 	tests := []struct {
-		freq    string
+		freq      string
 		wantValid bool
 	}{
-		{"4700", true},    // exact match
-		{"2220", true},    // within range
-		{"2200", true},    // start of range
-		{"2380", true},    // end of range
-		{"2490", false},   // outside range
-		{"9999", false},   // way outside
-		{"abc", false},    // invalid format
-		{"", false},       // empty
+		{"4700", true},  // exact match
+		{"2220", true},  // within range
+		{"2200", true},  // start of range
+		{"2380", true},  // end of range
+		{"2490", false}, // outside range
+		{"9999", false}, // way outside
+		{"abc", false},  // invalid format
+		{"", false},     // empty
 	}
-	
+
 	for _, tt := range tests {
 		t.Run(tt.freq, func(t *testing.T) {
 			valid := rs.isValidFrequency(tt.freq)
@@ -307,21 +307,21 @@ func TestIsValidFrequency(t *testing.T) {
 func TestFrequencyInRange(t *testing.T) {
 	rs := createTestRadioState()
 	defer rs.Close()
-	
+
 	tests := []struct {
-		freq     float64
+		freq      float64
 		freqRange string
 		wantValid bool
 	}{
-		{4700, "4700", true},           // exact single frequency
-		{2220, "2200:20:2380", true},   // within range
-		{2200, "2200:20:2380", true},   // start of range
-		{2380, "2200:20:2380", true},   // end of range
-		{2490, "2200:20:2380", false},  // outside range
-		{4700, "2200:20:2380", false},  // outside range
-		{2220, "4700", false},          // wrong single frequency
+		{4700, "4700", true},          // exact single frequency
+		{2220, "2200:20:2380", true},  // within range
+		{2200, "2200:20:2380", true},  // start of range
+		{2380, "2200:20:2380", true},  // end of range
+		{2490, "2200:20:2380", false}, // outside range
+		{4700, "2200:20:2380", false}, // outside range
+		{2220, "4700", false},         // wrong single frequency
 	}
-	
+
 	for _, tt := range tests {
 		t.Run("", func(t *testing.T) {
 			valid := rs.frequencyInRange(tt.freq, tt.freqRange)
@@ -335,19 +335,19 @@ func TestFrequencyInRange(t *testing.T) {
 func TestConcurrentAccess(t *testing.T) {
 	rs := createTestRadioState()
 	defer rs.Close()
-	
+
 	const numGoroutines = 10
 	const numCommands = 5
-	
+
 	var wg sync.WaitGroup
 	errors := make(chan error, numGoroutines*numCommands)
-	
+
 	// Start multiple goroutines doing concurrent operations
 	for i := 0; i < numGoroutines; i++ {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
-			
+
 			for j := 0; j < numCommands; j++ {
 				// Mix of read and write operations
 				if j%2 == 0 {
@@ -366,10 +366,10 @@ func TestConcurrentAccess(t *testing.T) {
 			}
 		}(i)
 	}
-	
+
 	wg.Wait()
 	close(errors)
-	
+
 	// Check for errors
 	for err := range errors {
 		if err != nil {
@@ -381,16 +381,16 @@ func TestConcurrentAccess(t *testing.T) {
 func TestMaintenanceCommands(t *testing.T) {
 	rs := createTestRadioState()
 	defer rs.Close()
-	
+
 	// Wait for any blackout to clear
 	time.Sleep(6 * time.Second)
-	
+
 	// Test zeroize
 	response := rs.ExecuteCommand("zeroize", []string{})
 	if response.Error != "" {
 		t.Errorf("Zeroize failed: %v", response.Error)
 	}
-	
+
 	// Check that values were reset
 	freqResponse := rs.ExecuteCommand("getFreq", []string{})
 	if freqResponse.Error != "" {
@@ -401,7 +401,7 @@ func TestMaintenanceCommands(t *testing.T) {
 			t.Errorf("Expected frequency 2490.0 after zeroize, got %s", result[0])
 		}
 	}
-	
+
 	powerResponse := rs.ExecuteCommand("getPower", []string{})
 	if powerResponse.Error != "" {
 		t.Errorf("Failed to read power after zeroize: %v", powerResponse.Error)
@@ -411,18 +411,21 @@ func TestMaintenanceCommands(t *testing.T) {
 			t.Errorf("Expected power 30 after zeroize, got %s", result[0])
 		}
 	}
-	
+
 	// Test radio reset
 	response = rs.ExecuteCommand("radioReset", []string{})
 	if response.Error != "" {
 		t.Errorf("Radio reset failed: %v", response.Error)
 	}
-	
+
 	// Should be in blackout after reset
 	if rs.IsAvailable() {
 		t.Error("Expected radio to be unavailable after reset")
 	}
-	
+
+	// Wait for radio reset blackout to clear
+	time.Sleep(6 * time.Second)
+
 	// Test factory reset
 	response = rs.ExecuteCommand("factoryReset", []string{})
 	if response.Error != "" {
@@ -433,9 +436,9 @@ func TestMaintenanceCommands(t *testing.T) {
 func TestGetStatus(t *testing.T) {
 	rs := createTestRadioState()
 	defer rs.Close()
-	
+
 	freq, power, available := rs.GetStatus()
-	
+
 	if freq != "2490.0" {
 		t.Errorf("Expected frequency 2490.0, got %s", freq)
 	}
@@ -450,7 +453,7 @@ func TestGetStatus(t *testing.T) {
 func TestInvalidCommand(t *testing.T) {
 	rs := createTestRadioState()
 	defer rs.Close()
-	
+
 	response := rs.ExecuteCommand("invalidCommand", []string{})
 	if response.Error != "INTERNAL" {
 		t.Errorf("Expected INTERNAL error for invalid command, got %v", response.Error)
@@ -480,6 +483,6 @@ func createTestRadioState() *RadioState {
 			},
 		},
 	}
-	
+
 	return NewRadioState(cfg)
 }

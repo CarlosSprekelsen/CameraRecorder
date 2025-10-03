@@ -18,10 +18,10 @@ type ExtensibleJSONRPCServer struct {
 
 // Request represents a JSON-RPC 2.0 request
 type Request struct {
-	JSONRPC string        `json:"jsonrpc"`
-	Method  string        `json:"method"`
-	Params  []string      `json:"params,omitempty"`
-	ID      interface{}   `json:"id"`
+	JSONRPC string      `json:"jsonrpc"`
+	Method  string      `json:"method"`
+	Params  []string    `json:"params,omitempty"`
+	ID      interface{} `json:"id"`
 }
 
 // Response represents a JSON-RPC 2.0 response
@@ -35,16 +35,19 @@ type Response struct {
 // NewExtensibleJSONRPCServer creates a new extensible JSON-RPC server
 func NewExtensibleJSONRPCServer(cfg *config.Config, radioState *state.RadioState) *ExtensibleJSONRPCServer {
 	registry := NewCommandRegistry()
-	
+
 	// Register core commands
 	RegisterCoreCommands(registry, radioState, cfg)
-	
-	// Register optional commands (GPS, etc.)
+
+	// Register optional commands (ICD §6.2)
+	RegisterOptionalCommands(registry, radioState, cfg)
+
+	// Register GPS commands (ICD §6.2)
 	RegisterGPSCommands(registry, radioState, cfg)
-	
+
 	// Register any other optional commands here
 	// RegisterOtherCommands(registry, radioState, cfg)
-	
+
 	return &ExtensibleJSONRPCServer{
 		registry: registry,
 		config:   cfg,
@@ -102,7 +105,7 @@ func (s *ExtensibleJSONRPCServer) processRequest(req *Request) *Response {
 
 	// Create context with command information
 	ctx := context.WithValue(context.Background(), "commandName", req.Method)
-	
+
 	// Execute command
 	result, err := handler.Handle(ctx, req.Params)
 	if err != nil {
@@ -114,7 +117,7 @@ func (s *ExtensibleJSONRPCServer) processRequest(req *Request) *Response {
 				ID:      req.ID,
 			}
 		}
-		
+
 		// Handle other errors
 		return &Response{
 			JSONRPC: "2.0",
@@ -148,7 +151,7 @@ func (s *ExtensibleJSONRPCServer) writeErrorResponse(w http.ResponseWriter, code
 // GetAvailableCommands returns a list of available commands
 func (s *ExtensibleJSONRPCServer) GetAvailableCommands() []CommandInfo {
 	commands := make([]CommandInfo, 0, len(s.registry.handlers))
-	
+
 	for _, handler := range s.registry.handlers {
 		commands = append(commands, CommandInfo{
 			Name:        handler.GetName(),
@@ -157,7 +160,7 @@ func (s *ExtensibleJSONRPCServer) GetAvailableCommands() []CommandInfo {
 			Blackout:    handler.RequiresBlackout(),
 		})
 	}
-	
+
 	return commands
 }
 

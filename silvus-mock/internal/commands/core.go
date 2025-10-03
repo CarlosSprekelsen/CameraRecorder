@@ -9,7 +9,7 @@ import (
 
 // CoreCommandHandler handles core radio commands (freq, power_dBm, supported_frequency_profiles)
 type CoreCommandHandler struct {
-	state *state.RadioState
+	state  *state.RadioState
 	config *config.Config
 }
 
@@ -49,7 +49,7 @@ func (h *CoreCommandHandler) RequiresBlackout() bool {
 
 // FreqCommandHandler handles frequency commands
 type FreqCommandHandler struct {
-	state *state.RadioState
+	state  *state.RadioState
 	config *config.Config
 }
 
@@ -71,7 +71,7 @@ func (h *FreqCommandHandler) Handle(ctx context.Context, params []string) (inter
 		}
 		return response.Result, nil
 	}
-	
+
 	// Set frequency
 	response := h.state.ExecuteCommand("setFreq", params)
 	if response.Error != "" {
@@ -102,7 +102,7 @@ func (h *FreqCommandHandler) RequiresBlackout() bool {
 
 // PowerCommandHandler handles power commands
 type PowerCommandHandler struct {
-	state *state.RadioState
+	state  *state.RadioState
 	config *config.Config
 }
 
@@ -124,7 +124,7 @@ func (h *PowerCommandHandler) Handle(ctx context.Context, params []string) (inte
 		}
 		return response.Result, nil
 	}
-	
+
 	// Set power
 	response := h.state.ExecuteCommand("setPower", params)
 	if response.Error != "" {
@@ -155,7 +155,7 @@ func (h *PowerCommandHandler) RequiresBlackout() bool {
 
 // ProfilesCommandHandler handles frequency profiles commands
 type ProfilesCommandHandler struct {
-	state *state.RadioState
+	state  *state.RadioState
 	config *config.Config
 }
 
@@ -172,7 +172,7 @@ func (h *ProfilesCommandHandler) Handle(ctx context.Context, params []string) (i
 	if len(params) > 0 {
 		return nil, &CommandError{Code: ErrInvalidParams, Message: "This command does not accept parameters"}
 	}
-	
+
 	response := h.state.ExecuteCommand("getProfiles", []string{})
 	if response.Error != "" {
 		return nil, &CommandError{Code: response.Error, Message: response.Error}
@@ -202,7 +202,7 @@ func (h *ProfilesCommandHandler) RequiresBlackout() bool {
 
 // MaintenanceCommandHandler handles maintenance commands
 type MaintenanceCommandHandler struct {
-	state *state.RadioState
+	state  *state.RadioState
 	config *config.Config
 }
 
@@ -218,7 +218,7 @@ func NewMaintenanceCommandHandler(radioState *state.RadioState, cfg *config.Conf
 func (h *MaintenanceCommandHandler) Handle(ctx context.Context, params []string) (interface{}, error) {
 	// Get command name from context or determine from parameters
 	commandName := ctx.Value("commandName").(string)
-	
+
 	response := h.state.ExecuteCommand(commandName, params)
 	if response.Error != "" {
 		return nil, &CommandError{Code: response.Error, Message: response.Error}

@@ -33,6 +33,9 @@ func TestProcessMaintenanceRequest(t *testing.T) {
 	server := NewServer(cfg, radioState)
 	defer radioState.Close()
 
+	// Wait for any blackout to clear
+	time.Sleep(6 * time.Second)
+
 	tests := []struct {
 		name         string
 		method       string
@@ -100,7 +103,7 @@ func TestIsAllowedConnection(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a mock connection
 			conn := &mockConn{remoteAddr: tt.remoteAddr}
-			
+
 			allowed := server.isAllowedConnection(conn)
 			if allowed != tt.expectAllow {
 				t.Errorf("Expected allowed=%v for %s, got %v", tt.expectAllow, tt.remoteAddr, allowed)
@@ -309,7 +312,7 @@ func TestCIDRFiltering(t *testing.T) {
 		"172.20.0.0/16",
 		"10.0.0.0/8",
 	}
-	
+
 	radioState := createTestRadioState(cfg)
 	server := NewServer(cfg, radioState)
 	defer radioState.Close()
@@ -350,7 +353,7 @@ func (m *mockConn) Read(b []byte) (n int, err error) {
 	if m.readPos >= len(m.readData) {
 		return 0, nil // EOF
 	}
-	
+
 	n = copy(b, m.readData[m.readPos:])
 	m.readPos += n
 	return n, nil

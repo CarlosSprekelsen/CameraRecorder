@@ -65,6 +65,21 @@ func httpPostWithStatus(t *testing.T, url, payload string) *http.Response {
 // JSON assertion helpers
 func mustHave(t *testing.T, data map[string]interface{}, path string, expected interface{}) {
 	actual := getJSONPath(data, path)
+	
+	// Handle map comparison safely
+	if expectedMap, ok := expected.(map[string]interface{}); ok {
+		if actualMap, ok := actual.(map[string]interface{}); ok {
+			// Compare maps by converting to JSON strings
+			expectedJSON, _ := json.Marshal(expectedMap)
+			actualJSON, _ := json.Marshal(actualMap)
+			if string(expectedJSON) != string(actualJSON) {
+				t.Errorf("Expected %s to be %v, got %v", path, expected, actual)
+			}
+			return
+		}
+	}
+	
+	// For non-map types, use direct comparison
 	if actual != expected {
 		t.Errorf("Expected %s to be %v, got %v", path, expected, actual)
 	}
