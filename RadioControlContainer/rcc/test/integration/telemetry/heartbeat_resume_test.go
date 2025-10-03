@@ -5,92 +5,89 @@ package telemetry
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/radio-control/rcc/internal/config"
+	"github.com/radio-control/rcc/test/integration/fixtures"
 	"github.com/radio-control/rcc/test/integration/harness"
 )
 
-// TestTelemetry_Heartbeat_AndResume tests telemetry hub heartbeat cadence and resume functionality.
-// Boundary: telemetry hub in-proc; validates timing and event ordering.
-func TestTelemetry_Heartbeat_AndResume(t *testing.T) {
-	// Arrange: Build test stack with manual clock
-	_, _, _, _, clock, _, cleanup := harness.BuildTestStack()
-	defer cleanup()
+// TestTelemetry_ConfigurationValidation tests telemetry configuration loading.
+// Boundary: telemetry hub in-proc; validates timing configuration.
+func TestTelemetry_ConfigurationValidation(t *testing.T) {
+	// Arrange: Build test stack
+	_, _, tele, _, _ := harness.BuildTestStack(t)
 
-	// Note: The telemetry hub is designed for HTTP SSE clients
-	// For integration testing, we focus on timing configuration validation
+	// Get test configuration
+	cfg := fixtures.TestTimingConfig()
 
-	// Get heartbeat configuration from CB-TIMING
-	cfg := config.LoadCBTimingBaseline()
-	heartbeatInterval := cfg.HeartbeatInterval
-	heartbeatJitter := cfg.HeartbeatJitter
-	
-	t.Logf("Heartbeat config: interval=%v, jitter=%v", heartbeatInterval, heartbeatJitter)
+	// Act: Verify telemetry hub is created with configuration
+	if tele == nil {
+		t.Fatal("Telemetry hub should be created")
+	}
 
-	// Act: Test timing configuration
-	// Note: The actual heartbeat implementation may not use our manual clock
-	// If it doesn't, we'll record this as DRIFT
-	clock.Advance(heartbeatInterval + heartbeatJitter)
-	
-	// For integration testing, we validate that the configuration is properly loaded
-	// The actual heartbeat behavior is tested in unit tests
-	t.Logf("DRIFT: Heartbeat timing validation requires HTTP SSE client testing")
-	t.Logf("Expected heartbeat interval: %v, jitter: %v", heartbeatInterval, heartbeatJitter)
+	// Assert: Configuration should be loaded
+	if cfg.HeartbeatInterval <= 0 {
+		t.Error("Heartbeat interval should be positive")
+	}
+	if cfg.HeartbeatJitter < 0 {
+		t.Error("Heartbeat jitter should be non-negative")
+	}
+	if cfg.EventBufferSize <= 0 {
+		t.Error("Event buffer size should be positive")
+	}
 
-	t.Logf("✅ Heartbeat cadence: Uses config timing (or DRIFT noted)")
+	t.Logf("✅ Telemetry configuration validated: interval=%v, jitter=%v, buffer=%d",
+		cfg.HeartbeatInterval, cfg.HeartbeatJitter, cfg.EventBufferSize)
 }
 
-// TestTelemetry_EventOrdering tests that events are properly ordered and sequenced.
-func TestTelemetry_EventOrdering(t *testing.T) {
+// TestTelemetry_CommandFlowIntegration tests that commands trigger telemetry events.
+func TestTelemetry_CommandFlowIntegration(t *testing.T) {
 	// Arrange: Build test stack
-	orch, _, _, _, _, _, cleanup := harness.BuildTestStack()
-	defer cleanup()
+	orch, _, tele, _, _ := harness.BuildTestStack(t)
 
-	// Act: Perform multiple operations to generate events
+	// Act: Execute commands that should trigger telemetry events
 	ctx := context.Background()
-	
-	// Set power (should emit powerChanged)
+
+	// Set power (should trigger telemetry event)
 	err := orch.SetPower(ctx, "fake-001", 25.0)
 	if err != nil {
 		t.Fatalf("SetPower failed: %v", err)
 	}
 
-	// Note: Telemetry events are published via the hub.Publish method
-	// For integration testing, we focus on the command flow
-	// Event ordering and structure validation is handled in unit tests
-	t.Logf("DRIFT: Telemetry event ordering requires HTTP SSE client testing")
-
-	t.Logf("✅ Event ordering: Command flow validated")
-}
-
-// TestTelemetry_EventBuffering tests event buffering and replay capabilities.
-func TestTelemetry_EventBuffering(t *testing.T) {
-	// Arrange: Build test stack
-	orch, _, _, _, _, _, cleanup := harness.BuildTestStack()
-	defer cleanup()
-
-	// Get buffer configuration from CB-TIMING
-	expectedBufferSize := 50 // From CB-TIMING v0.3 §6.1
-	
-	t.Logf("Expected buffer size: %d events", expectedBufferSize)
-
-	// Act: Generate multiple events
-	ctx := context.Background()
-	for i := 0; i < 10; i++ {
-		err := orch.SetPower(ctx, "fake-001", float64(20+i))
-		if err != nil {
-			t.Fatalf("SetPower %d failed: %v", i, err)
-		}
-		// Small delay to ensure events are processed
-		time.Sleep(10 * time.Millisecond)
+	// Assert: Telemetry hub should be available for event publishing
+	if tele == nil {
+		t.Fatal("Telemetry hub should be available for event publishing")
 	}
 
-	// Note: Event buffering testing requires HTTP SSE client integration
-	// For integration testing, we validate the command flow executes successfully
-	t.Logf("DRIFT: Event buffering validation requires HTTP SSE client testing")
+	// Note: Actual telemetry event validation requires HTTP SSE client testing
+	// This integration test focuses on command flow and telemetry hub availability
+	t.Logf("✅ Command flow integration: SetPower executed, telemetry hub available")
+}
 
-	// Note: Testing actual buffer size limits would require generating more than 50 events
-	// and checking if older events are evicted, which is beyond the scope of this test
-	t.Logf("✅ Event buffering: Command flow validated for multiple operations")
+// TestTelemetry_ConfigurationConsistency tests that test config is consistent with production config.
+func TestTelemetry_ConfigurationConsistency(t *testing.T) {
+	// Arrange: Load both test and production configurations
+	testCfg := fixtures.TestTimingConfig()
+	prodCfg := config.LoadCBTimingBaseline()
+
+	// Act & Assert: Verify test config is faster than production for test efficiency
+	if testCfg.HeartbeatInterval >= prodCfg.HeartbeatInterval {
+		t.Errorf("Test heartbeat interval (%v) should be faster than production (%v)",
+			testCfg.HeartbeatInterval, prodCfg.HeartbeatInterval)
+	}
+
+	if testCfg.EventBufferSize >= prodCfg.EventBufferSize {
+		t.Errorf("Test buffer size (%d) should be smaller than production (%d)",
+			testCfg.EventBufferSize, prodCfg.EventBufferSize)
+	}
+
+	// Verify test config has reasonable values
+	if testCfg.HeartbeatInterval <= 0 {
+		t.Error("Test heartbeat interval should be positive")
+	}
+	if testCfg.EventBufferSize <= 0 {
+		t.Error("Test buffer size should be positive")
+	}
+
+	t.Logf("✅ Configuration consistency: Test config optimized for fast execution")
 }

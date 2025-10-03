@@ -260,8 +260,8 @@ func (o *Orchestrator) SelectRadio(ctx context.Context, radioID string) error {
 
 	// Validate radio ID
 	if radioID == "" {
-        o.logAudit(ctx, "selectRadio", radioID, "BAD_REQUEST", time.Since(start))
-        return ErrInvalidParameter
+		o.logAudit(ctx, "selectRadio", radioID, "BAD_REQUEST", time.Since(start))
+		return ErrInvalidParameter
 	}
 
 	// Ensure radio exists via radio manager
@@ -270,6 +270,12 @@ func (o *Orchestrator) SelectRadio(ctx context.Context, radioID string) error {
 		return adapter.ErrUnavailable
 	}
 	if _, err := o.radioManager.GetRadio(radioID); err != nil {
+		o.logAudit(ctx, "selectRadio", radioID, "NOT_FOUND", time.Since(start))
+		return ErrNotFound
+	}
+
+	// Select the active radio via RadioManager per Architecture §5
+	if err := o.radioManager.SetActive(radioID); err != nil {
 		o.logAudit(ctx, "selectRadio", radioID, "NOT_FOUND", time.Since(start))
 		return ErrNotFound
 	}

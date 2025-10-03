@@ -1,0 +1,93 @@
+package main
+
+import (
+	"context"
+	"fmt"
+	"log"
+	"net"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
+
+	"github.com/natefinch/lumberjack"
+	"github.com/silvus-mock/internal/config"
+	"github.com/silvus-mock/internal/jsonrpc"
+	"github.com/silvus-mock/internal/maintenance"
+	"github.com/silvus-mock/internal/state"
+)
+
+func main() {
+	// Load configuration
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Failed to load configuration: %v", err)
+	}
+
+	// Setup logging
+	logger := &lumberjack.Logger{
+		Filename:   "/var/log/silvus-mock.log",
+		MaxSize:    100, // megabytes
+		MaxBackups: 3,
+		MaxAge:     28, // days
+	}
+	log.SetOutput(logger)
+
+	log.Printf("Starting Silvus Mock Radio Emulator with config: %+v", cfg)
+
+	// Initialize radio state
+	radioState := state.NewRadioState(cfg)
+
+	// Create JSON-RPC HTTP server
+	jsonrpcServer := jsonrpc.NewServer(cfg, radioState)
+	httpMux := http.NewServeMux()
+	httpMux.HandleFunc("/streamscape_api", jsonrpcServer.HandleRequest)
+
+	httpServer := &http.Server{
+		Addr:         fmt.Sprintf(":%d", cfg.Network.HTTP.Port),
+		Handler:      httpMux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	// Create maintenance TCP server
+	maintenanceServer := maintenance.NewServer(cfg, radioState)
+
+	// Start HTTP server
+	go func() {
+		log.Printf("Starting HTTP server on port %d", cfg.Network.HTTP.Port)
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("HTTP server failed: %v", err)
+		}
+	}()
+
+	// Start maintenance TCP server
+	go func() {
+		log.Printf("Starting maintenance TCP server on port %d", cfg.Network.Maintenance.Port)
+		if err := maintenanceServer.ListenAndServe(); err != nil {
+			log.Fatalf("Maintenance server failed: %v", err)
+		}
+	}()
+
+	// Wait for interrupt signal
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+
+	log.Println("Shutting down servers...")
+
+	// Shutdown HTTP server
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := httpServer.Shutdown(ctx); err != nil {
+		log.Printf("HTTP server shutdown error: %v", err)
+	}
+
+	// Shutdown maintenance server
+	if err := maintenanceServer.Close(); err != nil {
+		log.Printf("Maintenance server shutdown error: %v", err)
+	}
+
+	log.Println("Servers stopped")
+}

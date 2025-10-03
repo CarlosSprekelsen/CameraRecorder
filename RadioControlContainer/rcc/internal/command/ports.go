@@ -21,6 +21,7 @@ type OrchestratorPort interface {
 // RadioManager interface for channel index resolution
 type RadioManager interface {
 	GetRadio(radioID string) (*radio.Radio, error)
+	SetActive(radioID string) error
 }
 
 // ErrNotFound indicates a requested radio was not found.

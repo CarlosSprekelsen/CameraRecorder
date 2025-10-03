@@ -9,6 +9,7 @@ package api
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
 	"time"
@@ -107,28 +108,30 @@ func (s *Server) handleSelectRadio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse request
+	// Parse request (strict JSON)
 	var req struct {
-		ID string `json:"id"`
+		RadioID string `json:"radioId"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.ID == "" {
-		WriteError(w, http.StatusBadRequest, "INVALID_RANGE", "Missing or invalid id", nil)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		WriteError(w, http.StatusBadRequest, "BAD_REQUEST", "Malformed JSON or unknown fields", nil)
+		return
+	}
+	// Trailing data check
+	if err := dec.Decode(&struct{}{}); err != io.EOF {
+		WriteError(w, http.StatusBadRequest, "BAD_REQUEST", "Trailing data after JSON object", nil)
 		return
 	}
 
-	// Validate radio exists and select via RadioManager
+	// Ensure services available
 	if s.radioManager == nil || s.orchestrator == nil {
 		WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Service not available", nil)
 		return
 	}
 
-	if err := s.radioManager.SetActive(req.ID); err != nil {
-		WriteError(w, http.StatusNotFound, "NOT_FOUND", "Radio not found", nil)
-		return
-	}
-
 	// Call orchestrator to confirm selection (ping adapter/state)
-	if err := s.orchestrator.SelectRadio(r.Context(), req.ID); err != nil {
+	if err := s.orchestrator.SelectRadio(r.Context(), req.RadioID); err != nil {
 		status, body := ToAPIError(err)
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(status)
@@ -136,7 +139,7 @@ func (s *Server) handleSelectRadio(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	WriteSuccess(w, map[string]string{"activeRadioId": req.ID})
+	WriteSuccess(w, map[string]string{"activeRadioId": req.RadioID})
 }
 
 // handleRadioEndpoints handles all radio-specific endpoints.
@@ -147,7 +150,7 @@ func (s *Server) handleRadioEndpoints(w http.ResponseWriter, r *http.Request) {
 	// Extract radio ID and determine endpoint type
 	radioID := s.extractRadioID(path)
 	if radioID == "" {
-		WriteError(w, http.StatusBadRequest, "INVALID_RANGE",
+		WriteError(w, http.StatusBadRequest, "BAD_REQUEST",
 			"Radio ID is required", nil)
 		return
 	}
@@ -204,7 +207,7 @@ func (s *Server) handleRadioByID(w http.ResponseWriter, r *http.Request) {
 	// Extract radio ID from path
 	radioID := s.extractRadioID(r.URL.Path)
 	if radioID == "" {
-		WriteError(w, http.StatusBadRequest, "INVALID_RANGE",
+		WriteError(w, http.StatusBadRequest, "BAD_REQUEST",
 			"Radio ID is required", nil)
 		return
 	}
@@ -267,21 +270,19 @@ func (s *Server) handleGetPower(w http.ResponseWriter, r *http.Request, radioID 
 // handleSetPower handles POST /radios/{id}/power
 // Source: OpenAPI v1 §3.6
 func (s *Server) handleSetPower(w http.ResponseWriter, r *http.Request, radioID string) {
-	// Parse request body
+	// Parse request body (strict JSON)
 	var request struct {
 		PowerDbm float64 `json:"powerDbm"`
 	}
-
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		WriteError(w, http.StatusBadRequest, "INVALID_RANGE",
-			"Invalid JSON in request body", nil)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&request); err != nil {
+		WriteError(w, http.StatusBadRequest, "BAD_REQUEST",
+			"Malformed JSON or unknown fields", nil)
 		return
 	}
-
-	// Validate power range
-	if request.PowerDbm < 0 || request.PowerDbm > 39 {
-		WriteError(w, http.StatusBadRequest, "INVALID_RANGE",
-			"Power must be between 0 and 39 dBm", nil)
+	if err := dec.Decode(&struct{}{}); err != io.EOF {
+		WriteError(w, http.StatusBadRequest, "BAD_REQUEST", "Trailing data after JSON object", nil)
 		return
 	}
 
@@ -343,21 +344,26 @@ func (s *Server) handleGetChannel(w http.ResponseWriter, r *http.Request, radioI
 // handleSetChannel handles POST /radios/{id}/channel
 // Source: OpenAPI v1 §3.8
 func (s *Server) handleSetChannel(w http.ResponseWriter, r *http.Request, radioID string) {
-	// Parse request body
+	// Parse request body (strict JSON)
 	var request struct {
 		ChannelIndex *int     `json:"channelIndex,omitempty"`
 		FrequencyMhz *float64 `json:"frequencyMhz,omitempty"`
 	}
-
-	if err := json.NewDecoder(r.Body).Decode(&request); err != nil {
-		WriteError(w, http.StatusBadRequest, "INVALID_RANGE",
-			"Invalid JSON in request body", nil)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&request); err != nil {
+		WriteError(w, http.StatusBadRequest, "BAD_REQUEST",
+			"Malformed JSON or unknown fields", nil)
+		return
+	}
+	if err := dec.Decode(&struct{}{}); err != io.EOF {
+		WriteError(w, http.StatusBadRequest, "BAD_REQUEST", "Trailing data after JSON object", nil)
 		return
 	}
 
-	// Validate that at least one parameter is provided
+	// Validate that at least one parameter is provided (structural)
 	if request.ChannelIndex == nil && request.FrequencyMhz == nil {
-		WriteError(w, http.StatusBadRequest, "INVALID_RANGE",
+		WriteError(w, http.StatusBadRequest, "BAD_REQUEST",
 			"Either channelIndex or frequencyMhz must be provided", nil)
 		return
 	}
@@ -372,8 +378,8 @@ func (s *Server) handleSetChannel(w http.ResponseWriter, r *http.Request, radioI
 		if err := s.orchestrator.SetChannel(r.Context(), radioID, *request.FrequencyMhz); err != nil {
 			status, body := ToAPIError(err)
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(status)
-		_, _ = w.Write(body)
+			w.WriteHeader(status)
+			_, _ = w.Write(body)
 			return
 		}
 		WriteSuccess(w, map[string]interface{}{"frequencyMhz": *request.FrequencyMhz, "channelIndex": request.ChannelIndex})
@@ -385,8 +391,8 @@ func (s *Server) handleSetChannel(w http.ResponseWriter, r *http.Request, radioI
 		if err := s.orchestrator.SetChannelByIndex(r.Context(), radioID, *request.ChannelIndex, s.radioManager); err != nil {
 			status, body := ToAPIError(err)
 			w.Header().Set("Content-Type", "application/json; charset=utf-8")
-		w.WriteHeader(status)
-		_, _ = w.Write(body)
+			w.WriteHeader(status)
+			_, _ = w.Write(body)
 			return
 		}
 		WriteSuccess(w, map[string]interface{}{"frequencyMhz": nil, "channelIndex": *request.ChannelIndex})

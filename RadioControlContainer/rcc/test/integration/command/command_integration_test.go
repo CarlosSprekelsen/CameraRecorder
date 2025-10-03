@@ -7,8 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/radio-control/rcc/internal/adapter"
-	"github.com/radio-control/rcc/internal/command"
 	"github.com/radio-control/rcc/test/integration/fakes"
 	"github.com/radio-control/rcc/test/integration/harness"
 )
@@ -17,19 +15,19 @@ import (
 func TestCommand_SetPower_PublishesAuditAndCallsAdapter(t *testing.T) {
 	// Arrange: Setup test stack with mocks
 	orch, _, _, mockAudit, fakeAdapter := harness.BuildTestStack(t)
-	
+
 	// Cast to fake adapter for verification
 	fakeAdapterTyped := fakeAdapter.(*fakes.FakeAdapter)
 
 	// Act: Execute SetPower command
 	ctx := context.Background()
 	err := orch.SetPower(ctx, "fake-001", 25.0)
-	
+
 	// Assert: Command execution
 	if err != nil {
 		t.Errorf("SetPower failed: %v", err)
 	}
-	
+
 	// Assert: Audit logging via mock (no filesystem access)
 	if len(mockAudit.GetLoggedActions()) == 0 {
 		t.Error("Expected audit log entry, but none was recorded")
@@ -50,7 +48,7 @@ func TestCommand_SetPower_PublishesAuditAndCallsAdapter(t *testing.T) {
 			}
 		}
 	}
-	
+
 	// Assert: Adapter was called
 	if fakeAdapterTyped.GetCallCount("SetPower") != 1 {
 		t.Errorf("Expected SetPower to be called once, got %d calls", fakeAdapterTyped.GetCallCount("SetPower"))
@@ -58,7 +56,7 @@ func TestCommand_SetPower_PublishesAuditAndCallsAdapter(t *testing.T) {
 	if fakeAdapterTyped.GetLastSetPowerCall() != 25.0 {
 		t.Errorf("Expected SetPower(25.0), got SetPower(%f)", fakeAdapterTyped.GetLastSetPowerCall())
 	}
-	
+
 	t.Logf("✅ SetPower integration flow: Command → Audit → Adapter")
 }
 
@@ -66,19 +64,19 @@ func TestCommand_SetPower_PublishesAuditAndCallsAdapter(t *testing.T) {
 func TestCommand_SetChannelByIndex_ResolvesIndexToFrequency(t *testing.T) {
 	// Arrange: Setup test stack with mocks
 	orch, rm, _, mockAudit, fakeAdapter := harness.BuildTestStack(t)
-	
+
 	// Cast to fake adapter for verification
 	fakeAdapterTyped := fakeAdapter.(*fakes.FakeAdapter)
 
 	// Act: Execute SetChannelByIndex command
 	ctx := context.Background()
 	err := orch.SetChannelByIndex(ctx, "fake-001", 6, rm)
-	
+
 	// Assert: Command execution should succeed
 	if err != nil {
 		t.Fatalf("BUG: SetChannelByIndex: expected index 6→2437.0 MHz (Architecture §13), got error: %v", err)
 	}
-	
+
 	// Assert: Adapter was called with correct frequency
 	if fakeAdapterTyped.GetCallCount("SetFrequency") != 1 {
 		t.Errorf("Expected SetFrequency to be called once, got %d calls", fakeAdapterTyped.GetCallCount("SetFrequency"))
@@ -86,7 +84,7 @@ func TestCommand_SetChannelByIndex_ResolvesIndexToFrequency(t *testing.T) {
 	if fakeAdapterTyped.GetLastSetFrequencyCall() != 2437.0 {
 		t.Errorf("Expected SetFrequency(2437.0), got SetFrequency(%f)", fakeAdapterTyped.GetLastSetFrequencyCall())
 	}
-	
+
 	// Assert: Audit logging via mock
 	if len(mockAudit.GetLoggedActions()) == 0 {
 		t.Error("Expected audit log entry, but none was recorded")
@@ -107,7 +105,7 @@ func TestCommand_SetChannelByIndex_ResolvesIndexToFrequency(t *testing.T) {
 			}
 		}
 	}
-	
+
 	t.Logf("✅ SetChannelByIndex integration flow: Index 6 → Frequency 2437.0 → Adapter")
 }
 
@@ -150,27 +148,27 @@ func TestCommand_ErrorNormalization_Table(t *testing.T) {
 			expectedErr: "INTERNAL",
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			// Arrange: Setup test stack with mocks
 			orch, _, _, mockAudit, fakeAdapter := harness.BuildTestStack(t)
-			
+
 			// Cast to fake adapter and set mode
 			fakeAdapterTyped := fakeAdapter.(*fakes.FakeAdapter)
 			fakeAdapterTyped.WithMode(tc.mode)
-			
+
 			// Act: Execute operation
 			ctx := context.Background()
 			var operationErr error
-			
+
 			switch tc.operation {
 			case "SetPower":
 				operationErr = orch.SetPower(ctx, "fake-001", 25.0)
 			default:
 				t.Fatalf("Unknown operation: %s", tc.operation)
 			}
-			
+
 			// Assert: Error normalization
 			if tc.expectedErr == "" {
 				if operationErr != nil {
@@ -189,7 +187,7 @@ func TestCommand_ErrorNormalization_Table(t *testing.T) {
 					}
 				}
 			}
-			
+
 			t.Logf("✅ %s: %s", tc.operation, tc.name)
 		})
 	}

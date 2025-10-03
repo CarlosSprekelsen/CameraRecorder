@@ -11,7 +11,7 @@ import (
 // MockAuditLogger captures audit calls for verification in integration tests.
 // This replaces filesystem access with in-memory capture.
 type MockAuditLogger struct {
-	mu           sync.RWMutex
+	mu            sync.RWMutex
 	LoggedActions []AuditCall
 }
 
@@ -34,7 +34,7 @@ func NewMockAuditLogger() *MockAuditLogger {
 func (m *MockAuditLogger) LogAction(ctx context.Context, action, radioID, result string, latency time.Duration) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	
+
 	m.LoggedActions = append(m.LoggedActions, AuditCall{
 		Action:  action,
 		RadioID: radioID,
@@ -47,7 +47,7 @@ func (m *MockAuditLogger) LogAction(ctx context.Context, action, radioID, result
 func (m *MockAuditLogger) GetLoggedActions() []AuditCall {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
-	
+
 	result := make([]AuditCall, len(m.LoggedActions))
 	copy(result, m.LoggedActions)
 	return result
@@ -64,3 +64,5 @@ func (m *MockAuditLogger) Clear() {
 func (m *MockAuditLogger) Close() error {
 	return nil
 }
+
+

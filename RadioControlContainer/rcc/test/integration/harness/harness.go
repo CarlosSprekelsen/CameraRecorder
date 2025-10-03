@@ -21,10 +21,10 @@ import (
 func BuildCommandStack(t *testing.T, seed Radios) (orch command.OrchestratorPort, rm *mocks.MockRadioManager, tele *telemetry.Hub, mockAudit *mocks.MockAuditLogger, adapter adapter.IRadioAdapter) {
 	// Create test config
 	cfg := fixtures.TestTimingConfig()
-	
+
 	// Create telemetry hub
 	tele = telemetry.NewHub(cfg)
-	
+
 	// Register cleanup for telemetry hub
 	t.Cleanup(func() {
 		tele.Stop()
@@ -62,11 +62,11 @@ func BuildTestStack(t *testing.T) (orch command.OrchestratorPort, rm *mocks.Mock
 	// Create fake adapters
 	fakeAdapter := fakes.NewFakeAdapter("fake-001").
 		WithInitial(20.0, 2412.0, nil) // No channels needed for basic tests
-	
+
 	seedRadios := Radios{
 		"fake-001": fakeAdapter,
 	}
-	
+
 	// Build the command stack
 	return BuildCommandStack(t, seedRadios)
 }
