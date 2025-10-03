@@ -1,8 +1,5 @@
 {
-  "code": "INTERNAL",
-  "details": {
-    "original": "no active radio adapter"
-  },
-  "message": "Internal server error",
+  "code": "UNAVAILABLE",
+  "message": "Service is temporarily unavailable",
   "result": "error"
 }

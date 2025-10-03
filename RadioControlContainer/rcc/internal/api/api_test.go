@@ -1135,7 +1135,7 @@ func TestAPIContract_ResponseConsistency(t *testing.T) {
 		{"/api/v1/radios/radio-01", "GET", ""},
 		{"/api/v1/radios/radio-01/power", "GET", ""},
 		{"/api/v1/radios/radio-01/channel", "GET", ""},
-		{"/api/v1/radios/select", "POST", `{"id":"radio-01"}`},
+		{"/api/v1/radios/select", "POST", `{"radioId":"radio-01"}`},
 		{"/api/v1/radios/radio-01/power", "POST", `{"powerDbm":25}`},
 		{"/api/v1/radios/radio-01/channel", "POST", `{"frequencyMhz":2412.0}`},
 	}

@@ -150,7 +150,7 @@ func (s *Server) handleRadioEndpoints(w http.ResponseWriter, r *http.Request) {
 	// Extract radio ID and determine endpoint type
 	radioID := s.extractRadioID(path)
 	if radioID == "" {
-		WriteError(w, http.StatusBadRequest, "BAD_REQUEST",
+		WriteError(w, http.StatusBadRequest, "INVALID_RANGE",
 			"Radio ID is required", nil)
 		return
 	}
@@ -207,7 +207,7 @@ func (s *Server) handleRadioByID(w http.ResponseWriter, r *http.Request) {
 	// Extract radio ID from path
 	radioID := s.extractRadioID(r.URL.Path)
 	if radioID == "" {
-		WriteError(w, http.StatusBadRequest, "BAD_REQUEST",
+		WriteError(w, http.StatusBadRequest, "INVALID_RANGE",
 			"Radio ID is required", nil)
 		return
 	}

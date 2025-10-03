@@ -21,15 +21,15 @@ func setupAPITest(t *testing.T) (*Server, *radio.Manager, *command.Orchestrator,
 
 	// Create radio manager and register SilvusMock
 	rm := radio.NewManager()
-	adapter := silvusmock.NewSilvusMock("silvus-001", []adapter.Channel{
+	adapter := silvusmock.NewSilvusMock("radio-01", []adapter.Channel{
 		{Index: 1, FrequencyMhz: 2412},
 		{Index: 6, FrequencyMhz: 2437},
 		{Index: 11, FrequencyMhz: 2462},
 	})
 
 	// Load capabilities to register adapter
-	rm.LoadCapabilities("silvus-001", adapter, 5*time.Second)
-	rm.SetActive("silvus-001")
+	rm.LoadCapabilities("radio-01", adapter, 5*time.Second)
+	rm.SetActive("radio-01")
 
 	// Create orchestrator and set radio manager
 	orch := command.NewOrchestrator(hub, cfg)

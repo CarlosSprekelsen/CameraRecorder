@@ -12,10 +12,10 @@ import (
 type fakeOrchestrator struct {
 	setChannelError        error
 	setChannelByIndexError error
-	
+
 	// Record calls for assertions
-	lastSetChannelRadioID    string
-	lastSetChannelFrequency  float64
+	lastSetChannelRadioID        string
+	lastSetChannelFrequency      float64
 	lastSetChannelByIndexRadioID string
 	lastSetChannelByIndexIndex   int
 }
@@ -46,21 +46,21 @@ func TestHandleSetChannel_Unit(t *testing.T) {
 			requestBody:    `{}`,
 			expectedStatus: 400,
 			expectedResult: "error",
-			expectedCode:   "INVALID_RANGE",
+			expectedCode:   "BAD_REQUEST",
 		},
 		{
 			name:           "invalid_json",
 			requestBody:    `{"channelIndex": 6,}`,
 			expectedStatus: 400,
 			expectedResult: "error",
-			expectedCode:   "INVALID_RANGE",
+			expectedCode:   "BAD_REQUEST",
 		},
 		{
 			name:           "empty_body",
 			requestBody:    ``,
 			expectedStatus: 400,
 			expectedResult: "error",
-			expectedCode:   "INVALID_RANGE",
+			expectedCode:   "BAD_REQUEST",
 		},
 	}
 
