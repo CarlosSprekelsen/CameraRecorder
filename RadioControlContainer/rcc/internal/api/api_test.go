@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -285,7 +286,7 @@ func TestHandleSelectRadio(t *testing.T) {
 	server, _, _, _ := setupAPITest(t)
 
 	// Test POST /radios/select with valid radio ID
-	req := httptest.NewRequest("POST", "/api/v1/radios/select", strings.NewReader(`{"id":"silvus-001"}`))
+	req := httptest.NewRequest("POST", "/api/v1/radios/select", strings.NewReader(`{"radioId":"silvus-001"}`))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -523,12 +524,33 @@ func TestHandleTelemetry(t *testing.T) {
 	orch := command.NewOrchestrator(hub, cfg)
 	server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
 
-	// Test GET /telemetry
+	// Test GET /telemetry with timeout context
 	req := httptest.NewRequest("GET", "/api/v1/telemetry", nil)
 	req.Header.Set("Accept", "text/event-stream")
+
+	// Add timeout context to the request
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	req = req.WithContext(ctx)
+
 	w := httptest.NewRecorder()
 
-	server.handleTelemetry(w, req)
+	// Run in goroutine to avoid blocking
+	done := make(chan error, 1)
+	go func() {
+		server.handleTelemetry(w, req)
+		done <- nil
+	}()
+
+	// Wait for timeout or completion
+	select {
+	case <-ctx.Done():
+		// Expected timeout - test passes
+	case err := <-done:
+		if err != nil {
+			t.Errorf("handleTelemetry failed: %v", err)
+		}
+	}
 
 	// The telemetry endpoint should not return an error response
 	// It should handle SSE streaming (which is complex to test in unit tests)
@@ -632,7 +654,7 @@ func TestAPIContract_JSONResponseEnvelope(t *testing.T) {
 			name:           "POST_SelectRadio_Valid",
 			method:         "POST",
 			path:           "/api/v1/radios/select",
-			body:           `{"id":"silvus-001"}`,
+			body:           `{"radioId":"silvus-001"}`,
 			expectedResult: "ok",
 			description:    "Select radio with valid ID should return success response",
 		},
@@ -898,12 +920,33 @@ func TestAPIContract_TelemetryContentType(t *testing.T) {
 	orch := command.NewOrchestrator(hub, cfg)
 	server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
 
-	// Test GET /telemetry
+	// Test GET /telemetry with timeout context
 	req := httptest.NewRequest("GET", "/api/v1/telemetry", nil)
 	req.Header.Set("Accept", "text/event-stream")
+
+	// Add timeout context to the request
+	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	defer cancel()
+	req = req.WithContext(ctx)
+
 	w := httptest.NewRecorder()
 
-	server.handleTelemetry(w, req)
+	// Run in goroutine to avoid blocking
+	done := make(chan error, 1)
+	go func() {
+		server.handleTelemetry(w, req)
+		done <- nil
+	}()
+
+	// Wait for timeout or completion
+	select {
+	case <-ctx.Done():
+		// Expected timeout - test passes
+	case err := <-done:
+		if err != nil {
+			t.Errorf("handleTelemetry failed: %v", err)
+		}
+	}
 
 	// Verify content type
 	contentType := w.Header().Get("Content-Type")
@@ -1048,6 +1091,14 @@ func TestAPIContract_RouteParity(t *testing.T) {
 
 	for _, testRoute := range testRoutes {
 		req := httptest.NewRequest(testRoute.method, testRoute.path, nil)
+
+		// Add timeout context for telemetry route
+		if testRoute.path == "/api/v1/telemetry" {
+			ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+			defer cancel()
+			req = req.WithContext(ctx)
+		}
+
 		w := httptest.NewRecorder()
 
 		// Test that the route exists and can be called

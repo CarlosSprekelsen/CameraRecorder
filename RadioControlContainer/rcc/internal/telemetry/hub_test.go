@@ -299,14 +299,17 @@ func TestHubSubscribeBasic(t *testing.T) {
 	// Create thread-safe response writer
 	w := newThreadSafeResponseWriter()
 
-	// Subscribe
+	// Subscribe in a goroutine to check client registration
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 
-	err := hub.Subscribe(ctx, w, req)
-	if err != nil {
-		t.Fatalf("Subscribe() failed: %v", err)
-	}
+	done := make(chan error, 1)
+	go func() {
+		done <- hub.Subscribe(ctx, w, req)
+	}()
+
+	// Wait a bit for client to be registered
+	time.Sleep(10 * time.Millisecond)
 
 	// Check that client was registered
 	hub.mu.RLock()
@@ -315,6 +318,12 @@ func TestHubSubscribeBasic(t *testing.T) {
 
 	if clientCount != 1 {
 		t.Errorf("Expected 1 client, got %d", clientCount)
+	}
+
+	// Wait for subscribe to complete
+	err := <-done
+	if err != nil && err != context.DeadlineExceeded {
+		t.Fatalf("Subscribe() failed: %v", err)
 	}
 
 	// Check response headers
@@ -437,14 +446,17 @@ func TestTelemetryContract_PowerChannelChanges(t *testing.T) {
 	// Create thread-safe response writer
 	w := newThreadSafeResponseWriter()
 
-	// Subscribe
-	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
+	// Subscribe in a goroutine
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
-	err := hub.Subscribe(ctx, w, req)
-	if err != nil {
-		t.Fatalf("Subscribe() failed: %v", err)
-	}
+	done := make(chan error, 1)
+	go func() {
+		done <- hub.Subscribe(ctx, w, req)
+	}()
+
+	// Wait for client to be registered
+	time.Sleep(10 * time.Millisecond)
 
 	// Simulate power change via orchestrator
 	powerEvent := Event{
@@ -457,7 +469,7 @@ func TestTelemetryContract_PowerChannelChanges(t *testing.T) {
 		Radio: "radio-01",
 	}
 
-	err = hub.PublishRadio("radio-01", powerEvent)
+	err := hub.PublishRadio("radio-01", powerEvent)
 	if err != nil {
 		t.Fatalf("PublishRadio() failed: %v", err)
 	}

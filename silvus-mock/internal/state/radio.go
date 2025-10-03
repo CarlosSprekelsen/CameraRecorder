@@ -1,6 +1,8 @@
 package state
 
 import (
+	"context"
+	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -23,6 +25,9 @@ type RadioState struct {
 	radioResetDuration  time.Duration // Radio reset blackout
 	commandQueue        chan Command
 	stopChan            chan struct{}
+	wg                  sync.WaitGroup  // For graceful shutdown
+	ctx                 context.Context // For cancellation
+	cancel              context.CancelFunc
 }
 
 // PowerLimits holds power range limits
@@ -47,8 +52,10 @@ type CommandResponse struct {
 
 // NewRadioState creates a new radio state instance
 func NewRadioState(cfg *config.Config) *RadioState {
+	ctx, cancel := context.WithCancel(context.Background())
+	
 	rs := &RadioState{
-		currentFreq:       "2490.0", // Default frequency
+		currentFreq:       "4700.0", // Default frequency
 		currentPower:      30,       // Default power in dBm
 		mode:              cfg.Mode,
 		frequencyProfiles: cfg.Profiles.FrequencyProfiles,
@@ -61,9 +68,12 @@ func NewRadioState(cfg *config.Config) *RadioState {
 		radioResetDuration:  time.Duration(cfg.Timing.Blackout.RadioResetSec) * time.Second,  // Radio reset blackout
 		commandQueue:        make(chan Command, 100),
 		stopChan:            make(chan struct{}),
+		ctx:                 ctx,
+		cancel:              cancel,
 	}
 
-	// Start the command processing worker
+	// Start the command processing worker with proper lifecycle management
+	rs.wg.Add(1)
 	go rs.commandWorker()
 
 	return rs
@@ -71,11 +81,15 @@ func NewRadioState(cfg *config.Config) *RadioState {
 
 // commandWorker processes commands in FIFO order
 func (rs *RadioState) commandWorker() {
+	defer rs.wg.Done()
+	
 	for {
 		select {
 		case cmd := <-rs.commandQueue:
 			rs.processCommand(cmd)
 		case <-rs.stopChan:
+			return
+		case <-rs.ctx.Done():
 			return
 		}
 	}
@@ -318,20 +332,48 @@ func (rs *RadioState) ExecuteCommand(cmdType string, params []string) CommandRes
 		Timestamp: time.Now(),
 	}
 
-	// Read commands should work even during blackout
-	// Only write commands are blocked during blackout
-
+	// Add backpressure handling and timeout
 	select {
 	case rs.commandQueue <- cmd:
-		return <-response
-	case <-time.After(30 * time.Second): // Use a longer timeout for command processing
-		return CommandResponse{
-			Error: "INTERNAL",
+		// Command queued successfully
+		select {
+		case resp := <-response:
+			return resp
+		case <-time.After(30 * time.Second):
+			return CommandResponse{Error: "INTERNAL"}
+		case <-rs.ctx.Done():
+			return CommandResponse{Error: "UNAVAILABLE"}
 		}
+	case <-time.After(5 * time.Second):
+		// Command queue full or system busy
+		return CommandResponse{Error: "BUSY"}
+	case <-rs.ctx.Done():
+		// System shutting down
+		return CommandResponse{Error: "UNAVAILABLE"}
 	}
 }
 
-// Close shuts down the radio state
-func (rs *RadioState) Close() {
+// Close shuts down the radio state gracefully
+func (rs *RadioState) Close() error {
+	// Cancel context to stop all operations
+	rs.cancel()
+	
+	// Close stop channel
 	close(rs.stopChan)
+	
+	// Wait for goroutines to finish with timeout
+	done := make(chan struct{})
+	go func() {
+		rs.wg.Wait()
+		close(done)
+	}()
+	
+	select {
+	case <-done:
+		// Clean shutdown
+		return nil
+	case <-time.After(10 * time.Second):
+		// Force shutdown after timeout
+		return fmt.Errorf("shutdown timeout")
+	}
 }

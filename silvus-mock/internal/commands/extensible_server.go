@@ -98,8 +98,11 @@ func (s *ExtensibleJSONRPCServer) processRequest(req *Request) *Response {
 	if !exists {
 		return &Response{
 			JSONRPC: "2.0",
-			Error:   "Method not found",
-			ID:      req.ID,
+			Error: map[string]interface{}{
+				"code":    -32601, // Method not found
+				"message": "Method not found",
+			},
+			ID: req.ID,
 		}
 	}
 
@@ -113,16 +116,22 @@ func (s *ExtensibleJSONRPCServer) processRequest(req *Request) *Response {
 		if cmdErr, ok := err.(*CommandError); ok {
 			return &Response{
 				JSONRPC: "2.0",
-				Error:   cmdErr.Code,
-				ID:      req.ID,
+				Error: map[string]interface{}{
+					"code":    -32602, // Invalid params
+					"message": cmdErr.Code,
+				},
+				ID: req.ID,
 			}
 		}
 
 		// Handle other errors
 		return &Response{
 			JSONRPC: "2.0",
-			Error:   "INTERNAL",
-			ID:      req.ID,
+			Error: map[string]interface{}{
+				"code":    -32603, // Internal error
+				"message": "INTERNAL",
+			},
+			ID: req.ID,
 		}
 	}
 

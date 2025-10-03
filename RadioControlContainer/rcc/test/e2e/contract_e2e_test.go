@@ -24,7 +24,7 @@ func TestContractIntegration_SelectRadio(t *testing.T) {
 
 	// Act: POST /radios/select
 	req, err := http.NewRequest("POST", server.URL+"/api/v1/radios/select",
-		strings.NewReader(`{"id":"silvus-001"}`))
+		strings.NewReader(`{"radioId":"silvus-001"}`))
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)
 	}

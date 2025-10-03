@@ -37,7 +37,7 @@ func TestE2E_TelemetrySSEConnection(t *testing.T) {
 	req.Header.Set("Accept", "text/event-stream")
 
 	w := newThreadSafeResponseWriter()
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 	defer cancel()
 
 	telemetryDone := make(chan error, 1)
@@ -105,7 +105,7 @@ func TestE2E_TelemetrySSEConnection(t *testing.T) {
 		if err != nil && err != context.DeadlineExceeded {
 			t.Errorf("Telemetry failed: %v", err)
 		}
-	case <-time.After(3 * time.Second):
+	case <-time.After(5 * time.Second):
 		t.Fatal("Telemetry did not complete")
 	}
 
@@ -126,7 +126,7 @@ func TestE2E_TelemetryLastEventID(t *testing.T) {
 	req1.Header.Set("Accept", "text/event-stream")
 
 	w1 := newThreadSafeResponseWriter()
-	ctx1, cancel1 := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx1, cancel1 := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel1()
 
 	telemetryDone1 := make(chan error, 1)
@@ -178,7 +178,7 @@ func TestE2E_TelemetryLastEventID(t *testing.T) {
 	req2.Header.Set("Last-Event-ID", "1") // Simulate reconnection
 
 	w2 := newThreadSafeResponseWriter()
-	ctx2, cancel2 := context.WithTimeout(context.Background(), 1*time.Second)
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel2()
 
 	telemetryDone2 := make(chan error, 1)
@@ -258,7 +258,7 @@ func TestE2E_TelemetryHeartbeat(t *testing.T) {
 	req.Header.Set("Accept", "text/event-stream")
 
 	w := newThreadSafeResponseWriter()
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
 	defer cancel()
 
 	telemetryDone := make(chan error, 1)

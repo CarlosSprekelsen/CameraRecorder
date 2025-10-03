@@ -1,11 +1,13 @@
 package maintenance
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/silvus-mock/internal/config"
@@ -14,10 +16,14 @@ import (
 
 // Server handles maintenance TCP connections
 type Server struct {
-	config   *config.Config
-	state    *state.RadioState
-	listener net.Listener
-	stopChan chan struct{}
+	config             *config.Config
+	state              *state.RadioState
+	listener           net.Listener
+	stopChan           chan struct{}
+	activeConnections  map[string]net.Conn
+	connectionsMutex   sync.RWMutex
+	maxConnections     int
+	connectionTimeout  time.Duration
 }
 
 // Request represents a JSON-RPC request over TCP

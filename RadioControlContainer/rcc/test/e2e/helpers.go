@@ -4,6 +4,7 @@ package e2e
 import (
 	"encoding/json"
 	"net/http"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -65,7 +66,7 @@ func httpPostWithStatus(t *testing.T, url, payload string) *http.Response {
 // JSON assertion helpers
 func mustHave(t *testing.T, data map[string]interface{}, path string, expected interface{}) {
 	actual := getJSONPath(data, path)
-	
+
 	// Handle map comparison safely
 	if expectedMap, ok := expected.(map[string]interface{}); ok {
 		if actualMap, ok := actual.(map[string]interface{}); ok {
@@ -78,7 +79,7 @@ func mustHave(t *testing.T, data map[string]interface{}, path string, expected i
 			return
 		}
 	}
-	
+
 	// For non-map types, use direct comparison
 	if actual != expected {
 		t.Errorf("Expected %s to be %v, got %v", path, expected, actual)
@@ -87,8 +88,22 @@ func mustHave(t *testing.T, data map[string]interface{}, path string, expected i
 
 func mustHaveNumber(t *testing.T, data map[string]interface{}, path string, expected float64) {
 	actual := getJSONPath(data, path)
-	if num, ok := actual.(float64); !ok || num != expected {
-		t.Errorf("Expected %s to be %v, got %v", path, expected, actual)
+	var num float64
+	switch v := actual.(type) {
+	case float64:
+		num = v
+	case int:
+		num = float64(v)
+	case int64:
+		num = float64(v)
+	case float32:
+		num = float64(v)
+	default:
+		t.Errorf("Expected %s to be a number, got %T: %v", path, actual, actual)
+		return
+	}
+	if num != expected {
+		t.Errorf("Expected %s to be %v, got %v", path, expected, num)
 	}
 }
 
@@ -101,10 +116,44 @@ func getJSONPath(data map[string]interface{}, path string) interface{} {
 			return current[part]
 		}
 
-		if next, ok := current[part].(map[string]interface{}); ok {
-			current = next
+		// Handle array indices (e.g., "items[0]")
+		if strings.Contains(part, "[") && strings.Contains(part, "]") {
+			// Extract array name and index
+			openBracket := strings.Index(part, "[")
+			closeBracket := strings.Index(part, "]")
+			if openBracket > 0 && closeBracket > openBracket {
+				arrayName := part[:openBracket]
+				indexStr := part[openBracket+1 : closeBracket]
+
+				// Get the array
+				if array, ok := current[arrayName].([]interface{}); ok {
+					// Parse index
+					if index, err := strconv.Atoi(indexStr); err == nil && index >= 0 && index < len(array) {
+						if i == len(parts)-1 {
+							return array[index]
+						}
+						// Convert to map for next iteration
+						if next, ok := array[index].(map[string]interface{}); ok {
+							current = next
+						} else {
+							return nil
+						}
+					} else {
+						return nil
+					}
+				} else {
+					return nil
+				}
+			} else {
+				return nil
+			}
 		} else {
-			return nil
+			// Handle regular map access
+			if next, ok := current[part].(map[string]interface{}); ok {
+				current = next
+			} else {
+				return nil
+			}
 		}
 	}
 

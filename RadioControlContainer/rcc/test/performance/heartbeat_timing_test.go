@@ -62,7 +62,7 @@ func TestTelemetryPerformance_PublishLatency(t *testing.T) {
 
 	for i := 0; i < numEvents; i++ {
 		start := time.Now()
-		
+
 		hub.PublishRadio("latency-test-radio", telemetry.Event{
 			Type: "powerChanged",
 			Data: map[string]interface{}{"powerDbm": float64(20 + i%10)},
@@ -119,10 +119,10 @@ func TestTelemetryPerformance_ConcurrentPublish(t *testing.T) {
 
 	totalTime := time.Since(start)
 	avgGoroutineTime := totalGoroutineTime / numGoroutines
-	
+
 	t.Logf("✅ Concurrent telemetry publishing completed in %v", totalTime)
 	t.Logf("Average goroutine time: %v", avgGoroutineTime)
-	
+
 	// Concurrent publishing should complete quickly
 	if totalTime > 2*time.Second {
 		t.Errorf("Concurrent publishing took too long: %v", totalTime)

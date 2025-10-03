@@ -16,7 +16,7 @@ func TestFixedHandleSelectRadio(t *testing.T) {
 	defer server.Shutdown()
 
 	// Test POST /radios/select with existing radio
-	req := httptest.NewRequest("POST", server.URL+"/api/v1/radios/select", strings.NewReader(`{"id":"silvus-001"}`))
+	req := httptest.NewRequest("POST", server.URL+"/api/v1/radios/select", strings.NewReader(`{"radioId":"silvus-001"}`))
 	req.Header.Set("Content-Type", "application/json")
 
 	// Make the actual HTTP request

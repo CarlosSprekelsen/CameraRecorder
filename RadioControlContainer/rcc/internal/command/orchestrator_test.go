@@ -360,7 +360,8 @@ func TestTimeoutHandling(t *testing.T) {
 
 // MockRadioManager is a mock implementation of RadioManager for testing.
 type MockRadioManager struct {
-	Radios map[string]*radio.Radio
+	Radios        map[string]*radio.Radio
+	SetActiveError error
 }
 
 func (m *MockRadioManager) GetRadio(radioID string) (*radio.Radio, error) {
@@ -372,6 +373,10 @@ func (m *MockRadioManager) GetRadio(radioID string) (*radio.Radio, error) {
 }
 
 func (m *MockRadioManager) SetActive(radioID string) error {
+	// Return configured error if set
+	if m.SetActiveError != nil {
+		return m.SetActiveError
+	}
 	// Mock implementation - just verify radio exists
 	if _, exists := m.Radios[radioID]; !exists {
 		return fmt.Errorf("radio %s not found", radioID)
@@ -804,5 +809,247 @@ func TestGetRadioModelAndBand(t *testing.T) {
 	_, _, err = orchestrator.getRadioModelAndBand(context.Background(), "non-existent", mockRadioManager)
 	if err == nil {
 		t.Error("Expected error for non-existent radio")
+	}
+}
+
+func TestSetChannelErrorPaths(t *testing.T) {
+	orchestrator := setupTestOrchestrator(t)
+	mockAdapter := &MockAdapter{}
+	orchestrator.SetActiveAdapter(mockAdapter)
+
+	// Test with no radio manager
+	orchestrator.SetRadioManager(nil)
+	err := orchestrator.SetChannel(context.Background(), "radio-01", 2412.0)
+	if err != adapter.ErrUnavailable {
+		t.Errorf("Expected ErrUnavailable when no radio manager, got: %v", err)
+	}
+
+	// Test with no adapter
+	orchestrator = setupTestOrchestrator(t)
+	orchestrator.SetActiveAdapter(nil)
+	err = orchestrator.SetChannel(context.Background(), "radio-01", 2412.0)
+	if err != adapter.ErrUnavailable {
+		t.Errorf("Expected ErrUnavailable when no adapter, got: %v", err)
+	}
+
+	// Test with invalid radio
+	orchestrator = setupTestOrchestrator(t)
+	orchestrator.SetActiveAdapter(mockAdapter)
+	err = orchestrator.SetChannel(context.Background(), "invalid-radio", 2412.0)
+	if err == nil {
+		t.Error("Expected error for invalid radio")
+	}
+}
+
+func TestSetChannelByIndexErrorPaths(t *testing.T) {
+	orchestrator := setupTestOrchestrator(t)
+	mockAdapter := &MockAdapter{}
+	orchestrator.SetActiveAdapter(mockAdapter)
+
+	// Test with no radio manager
+	orchestrator.SetRadioManager(nil)
+	err := orchestrator.SetChannelByIndex(context.Background(), "radio-01", 1, nil)
+	if err != adapter.ErrUnavailable {
+		t.Errorf("Expected ErrUnavailable when no radio manager, got: %v", err)
+	}
+
+	// Test with no adapter
+	orchestrator = setupTestOrchestrator(t)
+	orchestrator.SetActiveAdapter(nil)
+	err = orchestrator.SetChannelByIndex(context.Background(), "radio-01", 1, orchestrator.radioManager)
+	if err != adapter.ErrUnavailable {
+		t.Errorf("Expected ErrUnavailable when no adapter, got: %v", err)
+	}
+
+	// Test with invalid radio
+	orchestrator = setupTestOrchestrator(t)
+	orchestrator.SetActiveAdapter(mockAdapter)
+	err = orchestrator.SetChannelByIndex(context.Background(), "invalid-radio", 1, orchestrator.radioManager)
+	if err == nil {
+		t.Error("Expected error for invalid radio")
+	}
+}
+
+func TestSelectRadioErrorPaths(t *testing.T) {
+	orchestrator := setupTestOrchestrator(t)
+
+	// Test with no radio manager
+	orchestrator.SetRadioManager(nil)
+	err := orchestrator.SelectRadio(context.Background(), "radio-01")
+	if err != adapter.ErrUnavailable {
+		t.Errorf("Expected ErrUnavailable when no radio manager, got: %v", err)
+	}
+
+	// Test with invalid radio
+	orchestrator = setupTestOrchestrator(t)
+	err = orchestrator.SelectRadio(context.Background(), "invalid-radio")
+	if err == nil {
+		t.Error("Expected error for invalid radio")
+	}
+}
+
+func TestGetStateErrorPaths(t *testing.T) {
+	orchestrator := setupTestOrchestrator(t)
+
+	// Test with no radio manager
+	orchestrator.SetRadioManager(nil)
+	_, err := orchestrator.GetState(context.Background(), "radio-01")
+	if err != adapter.ErrUnavailable {
+		t.Errorf("Expected ErrUnavailable when no radio manager, got: %v", err)
+	}
+
+	// Test with no adapter
+	orchestrator = setupTestOrchestrator(t)
+	orchestrator.SetActiveAdapter(nil)
+	_, err = orchestrator.GetState(context.Background(), "radio-01")
+	if err != adapter.ErrUnavailable {
+		t.Errorf("Expected ErrUnavailable when no adapter, got: %v", err)
+	}
+
+	// Test with invalid radio
+	orchestrator = setupTestOrchestrator(t)
+	mockAdapter := &MockAdapter{}
+	orchestrator.SetActiveAdapter(mockAdapter)
+	_, err = orchestrator.GetState(context.Background(), "invalid-radio")
+	if err == nil {
+		t.Error("Expected error for invalid radio")
+	}
+}
+
+func TestResolveChannelIndexErrorPaths(t *testing.T) {
+	orchestrator := setupTestOrchestrator(t)
+
+	// Test with no radio manager
+	orchestrator.SetRadioManager(nil)
+	_, err := orchestrator.resolveChannelIndex(context.Background(), "radio-01", 1, nil)
+	if err == nil {
+		t.Error("Expected error when no radio manager")
+	}
+
+	// Test with invalid radio
+	orchestrator = setupTestOrchestrator(t)
+	_, err = orchestrator.resolveChannelIndex(context.Background(), "invalid-radio", 1, orchestrator.radioManager)
+	if err == nil {
+		t.Error("Expected error for invalid radio")
+	}
+}
+
+func TestEventPublishingWithNilTelemetryHub(t *testing.T) {
+	// Set up radio manager for the tests
+	orchestrator := setupTestOrchestrator(t)
+	mockAdapter := &MockAdapter{}
+	orchestrator.SetActiveAdapter(mockAdapter)
+	orchestrator.telemetryHub = nil // Set telemetry hub to nil after setup
+
+	// Test that methods don't panic with nil telemetry hub
+	err := orchestrator.SetPower(context.Background(), "radio-01", 30.0)
+	if err != nil {
+		t.Errorf("SetPower should not fail with nil telemetry hub: %v", err)
+	}
+
+	err = orchestrator.SetChannel(context.Background(), "radio-01", 2412.0)
+	if err != nil {
+		t.Errorf("SetChannel should not fail with nil telemetry hub: %v", err)
+	}
+
+	err = orchestrator.SetChannelByIndex(context.Background(), "radio-01", 1, orchestrator.radioManager)
+	if err != nil {
+		t.Errorf("SetChannelByIndex should not fail with nil telemetry hub: %v", err)
+	}
+
+	_, err = orchestrator.GetState(context.Background(), "radio-01")
+	if err != nil {
+		t.Errorf("GetState should not fail with nil telemetry hub: %v", err)
+	}
+}
+
+func TestSetChannelWithAdapterError(t *testing.T) {
+	orchestrator := setupTestOrchestrator(t)
+	mockAdapter := &MockAdapter{
+		SetFrequencyFunc: func(ctx context.Context, frequencyMhz float64) error {
+			return errors.New("adapter error")
+		},
+	}
+	orchestrator.SetActiveAdapter(mockAdapter)
+
+	err := orchestrator.SetChannel(context.Background(), "radio-01", 2412.0)
+	if err == nil {
+		t.Error("Expected error when adapter fails")
+	}
+}
+
+func TestSetChannelByIndexWithAdapterError(t *testing.T) {
+	orchestrator := setupTestOrchestrator(t)
+	mockAdapter := &MockAdapter{
+		SetFrequencyFunc: func(ctx context.Context, frequencyMhz float64) error {
+			return errors.New("adapter error")
+		},
+	}
+	orchestrator.SetActiveAdapter(mockAdapter)
+
+	err := orchestrator.SetChannelByIndex(context.Background(), "radio-01", 1, orchestrator.radioManager)
+	if err == nil {
+		t.Error("Expected error when adapter fails")
+	}
+}
+
+func TestSelectRadioWithRadioManagerError(t *testing.T) {
+	orchestrator := setupTestOrchestrator(t)
+	
+	// Test with radio manager that returns error on SetActive
+	mockRadioManager := &MockRadioManager{
+		Radios: map[string]*radio.Radio{
+			"radio-01": {
+				ID: "radio-01",
+				Capabilities: &adapter.RadioCapabilities{
+					Channels: []adapter.Channel{
+						{Index: 1, FrequencyMhz: 2412.0},
+					},
+				},
+			},
+		},
+		SetActiveError: errors.New("radio manager error"),
+	}
+	orchestrator.SetRadioManager(mockRadioManager)
+
+	err := orchestrator.SelectRadio(context.Background(), "radio-01")
+	if err == nil {
+		t.Error("Expected error when radio manager fails")
+	}
+}
+
+func TestGetStateWithAdapterError(t *testing.T) {
+	orchestrator := setupTestOrchestrator(t)
+	mockAdapter := &MockAdapter{
+		GetStateFunc: func(ctx context.Context) (*adapter.RadioState, error) {
+			return nil, errors.New("adapter error")
+		},
+	}
+	orchestrator.SetActiveAdapter(mockAdapter)
+
+	_, err := orchestrator.GetState(context.Background(), "radio-01")
+	if err == nil {
+		t.Error("Expected error when adapter fails")
+	}
+}
+
+func TestResolveChannelIndexSuccess(t *testing.T) {
+	orchestrator := setupTestOrchestrator(t)
+	
+	frequency, err := orchestrator.resolveChannelIndex(context.Background(), "radio-01", 1, orchestrator.radioManager)
+	if err != nil {
+		t.Errorf("Expected success, got error: %v", err)
+	}
+	if frequency != 2412.0 {
+		t.Errorf("Expected frequency 2412.0, got %f", frequency)
+	}
+}
+
+func TestResolveChannelIndexInvalidChannel(t *testing.T) {
+	orchestrator := setupTestOrchestrator(t)
+	
+	_, err := orchestrator.resolveChannelIndex(context.Background(), "radio-01", 999, orchestrator.radioManager)
+	if err == nil {
+		t.Error("Expected error for invalid channel index")
 	}
 }

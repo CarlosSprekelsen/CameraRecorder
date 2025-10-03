@@ -220,6 +220,7 @@ func (h *Hub) PublishRadio(radioID string, event Event) error {
 // Source: Telemetry SSE v1 §2.2a
 func (h *Hub) sendReadyEvent(client *Client) error {
 	readyEvent := Event{
+		ID:   h.getNextEventID(client.Radio),
 		Type: "ready",
 		Data: map[string]interface{}{
 			"snapshot": map[string]interface{}{
@@ -260,9 +261,13 @@ func (h *Hub) replayEvents(client *Client, lastEventID int64) error {
 func (h *Hub) sendEventToClient(client *Client, event Event) error {
 	// Format as SSE
 	if event.ID > 0 {
-		fmt.Fprintf(client.Writer, "id: %d\n", event.ID)
+		if _, err := fmt.Fprintf(client.Writer, "id: %d\n", event.ID); err != nil {
+			return fmt.Errorf("failed to write event ID: %w", err)
+		}
 	}
-	fmt.Fprintf(client.Writer, "event: %s\n", event.Type)
+	if _, err := fmt.Fprintf(client.Writer, "event: %s\n", event.Type); err != nil {
+		return fmt.Errorf("failed to write event type: %w", err)
+	}
 
 	// Serialize data as JSON
 	data, err := json.Marshal(event.Data)
@@ -270,9 +275,11 @@ func (h *Hub) sendEventToClient(client *Client, event Event) error {
 		return fmt.Errorf("failed to marshal event data: %w", err)
 	}
 
-	fmt.Fprintf(client.Writer, "data: %s\n\n", string(data))
+	if _, err := fmt.Fprintf(client.Writer, "data: %s\n\n", string(data)); err != nil {
+		return fmt.Errorf("failed to write event data: %w", err)
+	}
 
-	// Flush the response
+	// Flush the response immediately
 	if flusher, ok := client.Writer.(http.Flusher); ok {
 		flusher.Flush()
 	}
@@ -291,9 +298,17 @@ func (h *Hub) handleClient(client *Client) {
 		h.unregisterClient(client.ID)
 	}()
 
+	// Add timeout to prevent infinite loops and connection leaks
+	timeout := time.NewTimer(30 * time.Second)
+	defer timeout.Stop()
+
 	for {
 		select {
 		case <-client.Context.Done():
+			// Context cancelled, clean up and return
+			return
+		case <-timeout.C:
+			// Force cleanup on timeout to prevent connection leaks
 			return
 		case event, ok := <-client.Events:
 			if !ok {
@@ -301,6 +316,7 @@ func (h *Hub) handleClient(client *Client) {
 				return
 			}
 			if err := h.sendEventToClient(client, event); err != nil {
+				// Send error, close connection
 				return
 			}
 		}

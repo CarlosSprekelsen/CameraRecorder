@@ -43,8 +43,13 @@ func DefaultOptions() Options {
 
 // Server represents a test server with all components wired
 type Server struct {
-	URL      string
-	Shutdown func()
+	URL           string
+	Shutdown      func()
+	RadioManager  *radio.Manager
+	Orchestrator  *command.Orchestrator
+	TelemetryHub  *telemetry.Hub
+	AuditLogger   *audit.Logger
+	SilvusAdapter *silvusmock.SilvusMock
 }
 
 // NewServer creates a fully-wired test server
@@ -120,8 +125,13 @@ func NewServer(t *testing.T, opts Options) *Server {
 	t.Logf("=====================")
 
 	return &Server{
-		URL:      httpServer.URL,
-		Shutdown: httpServer.Close,
+		URL:           httpServer.URL,
+		Shutdown:      httpServer.Close,
+		RadioManager:  radioManager,
+		Orchestrator:  orchestrator,
+		TelemetryHub:  hub,
+		AuditLogger:   auditLogger,
+		SilvusAdapter: silvusAdapter,
 	}
 }
 

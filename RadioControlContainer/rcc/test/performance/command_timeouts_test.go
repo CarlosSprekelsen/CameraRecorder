@@ -42,7 +42,11 @@ func (f *SimpleFakeAdapter) ReadPowerActual(ctx context.Context) (float64, error
 
 func (f *SimpleFakeAdapter) SupportedFrequencyProfiles(ctx context.Context) ([]adapter.FrequencyProfile, error) {
 	return []adapter.FrequencyProfile{
-		{Name: "2.4GHz", MinFreqMhz: 2412.0, MaxFreqMhz: 2484.0},
+		{
+			Frequencies: []float64{2412.0, 2417.0, 2422.0, 2427.0, 2432.0, 2437.0, 2442.0, 2447.0, 2452.0, 2457.0, 2462.0},
+			Bandwidth:   20.0,
+			AntennaMask: 1,
+		},
 	}, nil
 }
 
@@ -154,7 +158,7 @@ func TestCommandTimeouts_ValidateCB_TIMING(t *testing.T) {
 			}
 
 			if latency > tc.timeout {
-				t.Errorf("Command %s took %v, exceeds CB-TIMING timeout %v", 
+				t.Errorf("Command %s took %v, exceeds CB-TIMING timeout %v",
 					tc.name, latency, tc.timeout)
 			}
 
@@ -229,7 +233,7 @@ func TestCommandTimeouts_ConcurrentOperations(t *testing.T) {
 	}
 
 	totalTime := time.Since(start)
-	t.Logf("✅ Concurrent operations completed in %v with %d/%d failures", 
+	t.Logf("✅ Concurrent operations completed in %v with %d/%d failures",
 		totalTime, failures, numGoroutines)
 
 	// Allow some failures due to concurrent access to fake adapter

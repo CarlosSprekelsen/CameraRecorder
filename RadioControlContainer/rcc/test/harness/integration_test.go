@@ -15,7 +15,7 @@ func TestIntegration_SelectRadio(t *testing.T) {
 	defer server.Shutdown()
 
 	// Test POST /radios/select with existing radio
-	req, err := http.NewRequest("POST", server.URL+"/api/v1/radios/select", strings.NewReader(`{"id":"silvus-001"}`))
+	req, err := http.NewRequest("POST", server.URL+"/api/v1/radios/select", strings.NewReader(`{"radioId":"silvus-001"}`))
 	if err != nil {
 		t.Fatalf("Failed to create request: %v", err)
 	}
