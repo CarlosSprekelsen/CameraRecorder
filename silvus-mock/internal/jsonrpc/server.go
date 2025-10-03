@@ -18,10 +18,10 @@ type Server struct {
 
 // Request represents a JSON-RPC 2.0 request
 type Request struct {
-	JSONRPC string        `json:"jsonrpc"`
-	Method  string        `json:"method"`
-	Params  []string      `json:"params,omitempty"`
-	ID      interface{}   `json:"id"`
+	JSONRPC string      `json:"jsonrpc"`
+	Method  string      `json:"method"`
+	Params  []string    `json:"params,omitempty"`
+	ID      interface{} `json:"id"`
 }
 
 // Response represents a JSON-RPC 2.0 response
@@ -119,34 +119,19 @@ func (s *Server) processRequest(req *Request) *Response {
 		}
 	}
 
-	// Execute command with timeout
-	timeout := s.getTimeoutForMethod(req.Method)
-	response := make(chan state.CommandResponse, 1)
-	
-	go func() {
-		response <- s.state.ExecuteCommand(cmdType, params)
-	}()
-
-	select {
-	case cmdResponse := <-response:
-		if cmdResponse.Error != "" {
-			return &Response{
-				JSONRPC: "2.0",
-				Error:   cmdResponse.Error,
-				ID:      req.ID,
-			}
-		}
+	// Execute command directly (timeout handled in ExecuteCommand)
+	cmdResponse := s.state.ExecuteCommand(cmdType, params)
+	if cmdResponse.Error != "" {
 		return &Response{
 			JSONRPC: "2.0",
-			Result:  cmdResponse.Result,
+			Error:   cmdResponse.Error,
 			ID:      req.ID,
 		}
-	case <-time.After(timeout):
-		return &Response{
-			JSONRPC: "2.0",
-			Error:   "INTERNAL",
-			ID:      req.ID,
-		}
+	}
+	return &Response{
+		JSONRPC: "2.0",
+		Result:  cmdResponse.Result,
+		ID:      req.ID,
 	}
 }
 

@@ -3,7 +3,7 @@
 
 network:
   http:
-    port: 80
+    port: 8080
     serverHeader: ""  # Suppress server identification
   maintenance:
     port: 50000

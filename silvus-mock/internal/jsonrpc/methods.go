@@ -46,7 +46,7 @@ func (mh *MethodHandler) ValidatePower(powerStr string) bool {
 	if err != nil {
 		return false
 	}
-	
+
 	return power >= mh.server.config.Power.MinDBm && power <= mh.server.config.Power.MaxDBm
 }
 

@@ -10,11 +10,11 @@ import (
 
 // Config represents the complete configuration for the Silvus mock
 type Config struct {
-	Network   NetworkConfig   `yaml:"network"`
-	Profiles  ProfilesConfig  `yaml:"profiles"`
-	Power     PowerConfig     `yaml:"power"`
-	Timing    TimingConfig    `yaml:"timing"`
-	Mode      string          `yaml:"mode"`
+	Network  NetworkConfig  `yaml:"network"`
+	Profiles ProfilesConfig `yaml:"profiles"`
+	Power    PowerConfig    `yaml:"power"`
+	Timing   TimingConfig   `yaml:"timing"`
+	Mode     string         `yaml:"mode"`
 }
 
 // NetworkConfig holds network-related settings
@@ -55,9 +55,9 @@ type PowerConfig struct {
 
 // TimingConfig holds all timing-related settings
 type TimingConfig struct {
-	Blackout BlackoutConfig  `yaml:"blackout"`
-	Commands CommandsConfig  `yaml:"commands"`
-	Backoff  BackoffConfig   `yaml:"backoff"`
+	Blackout BlackoutConfig `yaml:"blackout"`
+	Commands CommandsConfig `yaml:"commands"`
+	Backoff  BackoffConfig  `yaml:"backoff"`
 }
 
 // BlackoutConfig holds soft-boot blackout settings
@@ -87,6 +87,12 @@ type BackoffConfig struct {
 func Load() (*Config, error) {
 	// Load default configuration
 	cfg := getDefaultConfig()
+
+	// Load from default config file
+	if err := loadFromFile(cfg, "config/default.yaml"); err != nil {
+		// If default config doesn't exist, continue with defaults
+		fmt.Printf("Warning: Could not load default config: %v\n", err)
+	}
 
 	// Load from config file if CBTIMING_CONFIG is set
 	if cbTimingConfig := os.Getenv("CBTIMING_CONFIG"); cbTimingConfig != "" {

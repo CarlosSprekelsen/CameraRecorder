@@ -14,18 +14,18 @@ import (
 
 // Server handles maintenance TCP connections
 type Server struct {
-	config    *config.Config
-	state     *state.RadioState
-	listener  net.Listener
-	stopChan  chan struct{}
+	config   *config.Config
+	state    *state.RadioState
+	listener net.Listener
+	stopChan chan struct{}
 }
 
 // Request represents a JSON-RPC request over TCP
 type Request struct {
-	JSONRPC string        `json:"jsonrpc"`
-	Method  string        `json:"method"`
-	Params  []string      `json:"params,omitempty"`
-	ID      interface{}   `json:"id"`
+	JSONRPC string      `json:"jsonrpc"`
+	Method  string      `json:"method"`
+	Params  []string    `json:"params,omitempty"`
+	ID      interface{} `json:"id"`
 }
 
 // Response represents a JSON-RPC response over TCP

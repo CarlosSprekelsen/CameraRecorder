@@ -1,7 +1,6 @@
 package state
 
 import (
-	"fmt"
 	"strconv"
 	"strings"
 	"sync"
@@ -12,16 +11,16 @@ import (
 
 // RadioState represents the thread-safe state of the radio
 type RadioState struct {
-	mu               sync.RWMutex
-	currentFreq      string
-	currentPower     int
-	blackoutUntil    time.Time
-	mode             string
+	mu                sync.RWMutex
+	currentFreq       string
+	currentPower      int
+	blackoutUntil     time.Time
+	mode              string
 	frequencyProfiles []config.FrequencyProfile
-	powerLimits      PowerLimits
-	softBootDuration time.Duration
-	commandQueue     chan Command
-	stopChan         chan struct{}
+	powerLimits       PowerLimits
+	softBootDuration  time.Duration
+	commandQueue      chan Command
+	stopChan          chan struct{}
 }
 
 // PowerLimits holds power range limits
@@ -47,9 +46,9 @@ type CommandResponse struct {
 // NewRadioState creates a new radio state instance
 func NewRadioState(cfg *config.Config) *RadioState {
 	rs := &RadioState{
-		currentFreq:      "2490.0", // Default frequency
-		currentPower:     30,       // Default power in dBm
-		mode:            cfg.Mode,
+		currentFreq:       "2490.0", // Default frequency
+		currentPower:      30,       // Default power in dBm
+		mode:              cfg.Mode,
 		frequencyProfiles: cfg.Profiles.FrequencyProfiles,
 		powerLimits: PowerLimits{
 			MinDBm: cfg.Power.MinDBm,
@@ -143,9 +142,7 @@ func (rs *RadioState) handleSetFreq(cmd Command) {
 
 // handleGetFreq handles frequency reading
 func (rs *RadioState) handleGetFreq(cmd Command) {
-	rs.mu.RLock()
-	defer rs.mu.RUnlock()
-
+	// Note: processCommand already holds the write lock
 	cmd.Response <- CommandResponse{
 		Result: []string{rs.currentFreq},
 	}
@@ -177,9 +174,7 @@ func (rs *RadioState) handleSetPower(cmd Command) {
 
 // handleGetPower handles power reading
 func (rs *RadioState) handleGetPower(cmd Command) {
-	rs.mu.RLock()
-	defer rs.mu.RUnlock()
-
+	// Note: processCommand already holds the write lock
 	cmd.Response <- CommandResponse{
 		Result: []string{strconv.Itoa(rs.currentPower)},
 	}
@@ -187,9 +182,7 @@ func (rs *RadioState) handleGetPower(cmd Command) {
 
 // handleGetProfiles handles frequency profiles reading
 func (rs *RadioState) handleGetProfiles(cmd Command) {
-	rs.mu.RLock()
-	defer rs.mu.RUnlock()
-
+	// Note: processCommand already holds the write lock
 	cmd.Response <- CommandResponse{
 		Result: rs.frequencyProfiles,
 	}
@@ -291,7 +284,8 @@ func (rs *RadioState) frequencyInRange(freq float64, freqRange string) bool {
 		}
 	}
 
-	return false
+	// Also check if frequency is within the range bounds (for decimal frequencies)
+	return freq >= start && freq <= end
 }
 
 // IsAvailable checks if the radio is available (not in blackout)
@@ -318,19 +312,13 @@ func (rs *RadioState) ExecuteCommand(cmdType string, params []string) CommandRes
 		Timestamp: time.Now(),
 	}
 
-	// For read commands, check if we're available first
-	if cmdType == "getFreq" || cmdType == "getPower" || cmdType == "getProfiles" {
-		if !rs.IsAvailable() {
-			return CommandResponse{
-				Error: "UNAVAILABLE",
-			}
-		}
-	}
+	// Read commands should work even during blackout
+	// Only write commands are blocked during blackout
 
 	select {
 	case rs.commandQueue <- cmd:
 		return <-response
-	case <-time.After(5 * time.Second):
+	case <-time.After(30 * time.Second): // Use a longer timeout for command processing
 		return CommandResponse{
 			Error: "INTERNAL",
 		}

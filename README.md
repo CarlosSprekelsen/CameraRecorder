@@ -1,183 +1,252 @@
-# MediaMTX Camera Service
+# RCC v1 Web UI
 
-A distributed video sensor management service designed for OCI-compliant container environments. This service provides real-time video source discovery, streaming, recording, and management capabilities as part of a larger multi-sensor ecosystem with centralized service discovery.
+A desktop-first, single-page Web UI for Silvus Radio Control Container (RCC) implementing OpenAPI v1 and Telemetry SSE v1 with CB-TIMING v0.3 conformance.
 
-## System Overview
+## Features
 
-The MediaMTX Camera Service is an always-on containerized service that manages both USB video devices and external RTSP feeds within a coordinated sensor ecosystem. It operates as a specialized video sensor container that registers with a central service discovery aggregator and provides standardized video services to client applications.
+- **Radio Selection**: List and select active radio from available radios
+- **Power Control**: Set power level (0-39 dBm) with real-time feedback
+- **Channel Control**: Set channel by index (1-based) or frequency (MHz) with precedence rules
+- **Live Telemetry**: Real-time SSE stream with event resume and buffering
+- **Error Handling**: Normalized error codes with CB-TIMING backoff policies
+- **Audit Logging**: Structured logs with correlation ID passthrough
 
-### High-Level Architecture
+## Architecture Compliance
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                    Service Discovery Aggregator                  │
-│              (Control Plane - Identity, Config, Discovery)       │
-└─────────────────┬───────────────────────┬───────────────────────┘
-                  │                       │
-         ┌────────▼──────────┐   ┌──────▼──────┐
-         │   Client Apps     │   │   Platform  │
-         │ (Android/iOS/Web) │   │  Management │
-         └────────┬──────────┘   └─────────────┘
-                  │
-         ┌────────▼──────────┐
-         │    Video Sensor   │
-         │    Container      │ ◄──── Hub OS (VID:PID Routing)
-         │  (This Service)   │
-         └────────┬──────────┘
-                  │
-        ┌─────────┼─────────┐
-        │                   │
-    ┌───▼──┐          ┌────▼────┐
-    │ USB  │          │ RTSP    │
-    │Video │          │ Feeds   │
-    │Device│          │         │
-    └──────┘          └─────────┘
-```
+- **Gate A (OpenAPI parity)**: All endpoints match OpenAPI v1 specification
+- **Gate B (Telemetry parity)**: SSE events match Telemetry SSE v1 specification  
+- **Gate C (Timing policy)**: All timing values from CB-TIMING v0.3 config
+- **Gate D (Indexing)**: Channel indices are 1-based throughout UI
 
-## System Integration Model
+## Quick Start
 
-### Service Discovery Pattern
-**Three-Tier Communication Model:**
-1. **Container → Aggregator**: Service registration, health reporting, capability announcement
-2. **Client → Aggregator**: Service discovery, endpoint resolution
-3. **Client → Container**: Direct data consumption (streaming, recording, control)
+### Prerequisites
 
-### Device Management Philosophy
-**Always-On Container Principle:**
-- Containers automatically detect and claim assigned video sources
-- Hub OS handles VID:PID-based device routing to appropriate containers
-- Containers manage their own lifecycle and report health status
-- Graceful handling of device connect/disconnect events
+- Go 1.21+ 
+- RCC container running on `http://localhost:8080`
 
-## Architecture Components
+### Installation
 
-### Video Sensor Container (This Service)
-**Purpose**: Unified video source management with abstraction layer
-**Responsibilities**:
-- USB camera discovery via Linux udev events
-- RTSP feed management via configuration
-- Multi-protocol streaming through MediaMTX integration
-- Recording and snapshot capabilities
-- Client-agnostic API (WebSocket JSON-RPC)
-- Service registration with discovery aggregator
+1. Clone or download the RCC Web UI files
+2. Ensure `config.json` is present with RCC base URL
+3. Run the server:
 
-### Service Discovery Integration
-**Registration**: Announces video service capabilities and endpoints to aggregator
-**Health Reporting**: Continuous status updates for coordination and monitoring  
-**Resource Advertising**: Reports available capacity and device inventory
-**Identity Management**: Consumes platform security tokens and identity services
-
-### Client Application Layer
-**Discovery**: Queries aggregator for available video services
-**Connection**: Establishes direct connections to video containers for data streams
-**Platform Agnostic**: Supports Android, iOS, web, and other client types
-**Offline Behavior**: Graceful degradation during connectivity issues
-
-## Video Source Management
-
-### USB Device Handling
-- **Device Assignment**: Receives pre-configured VID:PID assignments from Hub OS
-- **Hot-Plug Support**: Real-time device connection and disconnection handling
-- **Capability Detection**: Automatic discovery of camera specifications and formats
-- **Hardware Constraints**: Supports up to 8 concurrent video streams per hardware limitations
-
-### RTSP Feed Integration  
-- **Configuration-Driven**: Manages only pre-configured RTSP sources via YAML configuration
-- **Network Sources**: Integrates external IP cameras and video feeds
-- **Authentication Support**: Handles credentials and security for external feeds  
-- **Unified Abstraction**: Provides consistent API regardless of video source type
-
-### Media Processing Pipeline
-```
-Video Sources → FFmpeg Capture → MediaMTX Server → Multi-Protocol Streaming
-     │                                                        │
-     └── USB Cameras                                         ├── RTSP
-     └── RTSP Feeds                                          ├── WebRTC  
-                                                             └── HLS
+```bash
+go run main.go
 ```
 
-## OCI Compliance and Container Architecture
+4. Open browser to `http://127.0.0.1:3000`
 
-### Standards Compliance
-**Container Runtime**: Compatible with containerd, CRI-O, and other OCI-compliant runtimes  
-**Orchestration**: Supports CNCF-compliant orchestration platforms  
-**Image Format**: Adheres to OCI image specification  
-**Resource Management**: Implements proper resource limits and health checks
+### Configuration
 
-### Container Characteristics
-**Always-On Operation**: Designed for continuous operation with automatic recovery  
-**Device Integration**: Requires USB device passthrough and udev event access  
-**Network Architecture**: Multi-port service supporting control and data planes  
-**Resource Efficiency**: Optimized for low power consumption and small footprint
+The `config.json` file contains timing parameters from CB-TIMING v0.3:
 
-### Deployment Flexibility
-**Single Container**: Self-contained service with embedded MediaMTX integration  
-**Multi-Instance**: Supports load balancing across multiple containers for different device types  
-**Platform Agnostic**: Runs on any Linux-based container platform with USB support
+```json
+{
+  "rccBaseUrl": "http://localhost:8080",
+  "timing": {
+    "heartbeatIntervalSec": 15,
+    "heartbeatTimeoutSec": 45,
+    "probeNormalSec": 30,
+    "probeRecoveringMinSec": 5,
+    "probeRecoveringMaxSec": 15,
+    "probeOfflineMinSec": 10,
+    "probeOfflineMaxSec": 300,
+    "cmdTimeoutsSec": {
+      "setPower": 10,
+      "setChannel": 30,
+      "selectRadio": 5,
+      "getState": 5
+    },
+    "retry": {
+      "busyBaseMs": 1000,
+      "unavailableBaseMs": 2000,
+      "jitterMs": 200
+    }
+  }
+}
+```
 
-## Service Interfaces
+## API Integration
 
-### Control Plane (JSON-RPC over WebSocket)
-**Real-time Operations**: Camera control, recording management, status monitoring  
-**Event Notifications**: Device connect/disconnect, recording status, system health  
-**Configuration Management**: Dynamic source configuration and capability reporting
+### OpenAPI v1 Endpoints
 
-### Data Plane (Multi-Protocol Streaming)
-**RTSP**: Standard IP camera protocol for professional integrations  
-**WebRTC**: Low-latency browser streaming for web applications  
-**HLS**: HTTP Live Streaming for mobile and diverse client support
+- `GET /radios` - List available radios and active radio
+- `POST /radios/select` - Select active radio
+- `GET /radios/{id}/power` - Get current power level
+- `POST /radios/{id}/power` - Set power level
+- `GET /radios/{id}/channel` - Get current channel/frequency
+- `POST /radios/{id}/channel` - Set channel by index or frequency
 
-### Management Plane (REST API)
-**File Access**: Recording downloads, snapshot retrieval  
-**System Status**: Health checks, capability queries, resource utilization  
-**Configuration**: Service configuration and source management
+### Response Envelopes
 
-## Operational Characteristics
+**Success Response:**
+```json
+{
+  "result": "ok",
+  "data": { ... },
+  "correlationId": "uuid"
+}
+```
 
-### Performance Profile
-**Discovery Latency**: Sub-200ms device detection and registration  
-**Streaming Latency**: Sub-500ms end-to-end for WebRTC, under 2s for HLS  
-**Concurrent Capacity**: Supports hardware-limited concurrent streams (up to 8)  
-**Resource Efficiency**: Optimized for edge computing and resource-constrained environments
+**Error Response:**
+```json
+{
+  "result": "error", 
+  "code": "INVALID_RANGE|BUSY|UNAVAILABLE|INTERNAL",
+  "message": "Human readable error",
+  "details": { ... },
+  "correlationId": "uuid"
+}
+```
 
-### Reliability Features
-**Fault Tolerance**: Automatic recovery from device disconnections and network issues  
-**Health Monitoring**: Continuous self-health assessment and reporting  
-**Graceful Degradation**: Maintains service availability during partial failures  
-**Clean Shutdown**: Proper deregistration and resource cleanup
+### Telemetry SSE v1 Events
 
-## Multi-Sensor Ecosystem Integration
+- `ready` - System ready event
+- `state` - Radio state change (online/recovering/offline)
+- `powerChanged` - Power level change
+- `channelChanged` - Channel/frequency change  
+- `fault` - Fault condition
+- `heartbeat` - Periodic heartbeat
 
-### Container Ecosystem Role
-**Specialized Service**: Handles video sensor class within broader sensor management platform  
-**Peer Services**: Coordinates with serial sensor containers and other specialized services  
-**Resource Coordination**: Participates in platform-wide resource management and load balancing
+## Testing
 
-### Service Discovery Ecosystem
-**Service Registration**: Announces capabilities and endpoints to central aggregator  
-**Client Discovery**: Enables platform-agnostic client applications to find video services  
-**Health Coordination**: Participates in platform-wide health and monitoring systems
+### Manual Testing with curl
 
-### Platform Integration
-**Security Model**: Integrates with platform identity and authentication systems  
-**Configuration Management**: Receives configuration through platform management interfaces  
-**Observability**: Provides structured logging, metrics, and tracing for platform monitoring
+```bash
+# Test radio listing
+curl -X GET http://localhost:3000/radios
 
-## Deployment Scenarios
+# Test radio selection  
+curl -X POST http://localhost:3000/radios/select \
+  -H "Content-Type: application/json" \
+  -d '{"id":"radio-01"}'
 
-### Edge Computing
-**Single Node**: Complete video management on edge devices with local USB cameras  
-**Resource Constrained**: Optimized for low power consumption and minimal footprint  
-**Offline Operation**: Maintains core functionality during network connectivity issues
+# Test power setting
+curl -X POST http://localhost:3000/radios/radio-01/power \
+  -H "Content-Type: application/json" \
+  -d '{"powerDbm":30}'
 
-### Distributed Systems
-**Multi-Container**: Load balancing across multiple instances for high-capacity deployments  
-**Service Mesh**: Integration with CNCF service mesh technologies for advanced networking  
-**Hybrid Sources**: Simultaneous management of local USB devices and remote RTSP feeds
+# Test channel setting by frequency
+curl -X POST http://localhost:3000/radios/radio-01/channel \
+  -H "Content-Type: application/json" \
+  -d '{"frequencyMhz":2437}'
 
----
+# Test channel setting by index (1-based)
+curl -X POST http://localhost:3000/radios/radio-01/channel \
+  -H "Content-Type: application/json" \
+  -d '{"channelIndex":6}'
 
-**Architecture Version**: 2.0  
-**Service Classification**: Video Sensor Container  
-**Platform Compliance**: OCI + CNCF Standards  
-**Integration Model**: Service Discovery + Direct Data Plane
+# Test telemetry stream
+curl -N http://localhost:3000/telemetry
+```
+
+### Fake vs Real Adapter Testing
+
+1. **Fake Adapter**: Set RCC container to use fake adapter for testing
+2. **Real Adapter**: Set RCC container to use real radio hardware
+3. Toggle between adapters in RCC container configuration
+4. UI automatically adapts to available radios and capabilities
+
+## IV&V Acceptance Checklist
+
+### Radio Management
+- [ ] `GET /radios` populates radio list with active radio highlighted
+- [ ] `POST /radios/select` updates active radio selection
+- [ ] Radio status indicator shows online/recovering/offline states
+
+### Power Control  
+- [ ] `GET /radios/{id}/power` displays current power level
+- [ ] `POST /radios/{id}/power` sets power with validation
+- [ ] Power slider reflects current value and updates on changes
+- [ ] Power changes trigger `powerChanged` telemetry events
+
+### Channel Control
+- [ ] `GET /radios/{id}/channel` displays current frequency and index
+- [ ] `POST /radios/{id}/channel` accepts both index and frequency
+- [ ] Frequency precedence: MHz overrides index when both provided
+- [ ] Channel indices displayed as 1-based throughout UI
+- [ ] Channel changes trigger `channelChanged` telemetry events
+
+### Telemetry Integration
+- [ ] SSE connection establishes and receives `ready` event
+- [ ] `state` events update radio status indicator
+- [ ] `powerChanged` and `channelChanged` events update UI
+- [ ] `fault` events display error toasts
+- [ ] `heartbeat` events logged to telemetry display
+- [ ] Resume with `Last-Event-ID` works after reconnection
+- [ ] Telemetry log shows last 50 events with timestamps
+
+### Error Handling
+- [ ] `INVALID_RANGE` errors display exact message from API
+- [ ] `BUSY` errors trigger retry with CB-TIMING backoff
+- [ ] `UNAVAILABLE` errors trigger retry with CB-TIMING backoff  
+- [ ] `INTERNAL` errors display generic error message
+- [ ] No polling loops - only event-driven updates
+
+### Timing & Backoff
+- [ ] All timing values loaded from CB-TIMING config
+- [ ] No hardcoded timeouts or delays in code
+- [ ] Retry backoff includes jitter per CB-TIMING
+- [ ] Command timeouts enforced per CB-TIMING values
+
+### Audit & Logging
+- [ ] All API calls logged with correlation ID
+- [ ] Audit entries include timestamp, actor, radioId, action, result, latency
+- [ ] Client audit logs sent to server `/audit` endpoint
+- [ ] Console logging for debugging and monitoring
+
+## Troubleshooting
+
+### Common Issues
+
+**"Failed to connect to RCC"**
+- Verify RCC container is running on `http://localhost:8080`
+- Check `config.json` has correct `rccBaseUrl`
+- Ensure no firewall blocking localhost connections
+
+**"No radios available"**
+- RCC container may not have radios configured
+- Check RCC container logs for radio discovery issues
+- Verify adapter configuration (Fake vs Real)
+
+**"Telemetry connection error"**
+- SSE endpoint may not be available on RCC
+- Check RCC container supports `/telemetry` endpoint
+- Verify CORS settings if accessing from different origin
+
+**"Power/Channel setting fails"**
+- Radio may be offline or busy
+- Check radio capabilities and power limits
+- Verify channel frequency is within radio's supported range
+
+### Debug Mode
+
+Enable debug logging by opening browser console. All API calls, telemetry events, and audit logs are displayed with full details.
+
+### Log Files
+
+- Server logs: Console output from `main.go`
+- Audit logs: `audit.log` file (if enabled)
+- Client logs: Browser console
+
+## Security Notes
+
+- UI binds to localhost only (`127.0.0.1:3000`)
+- No authentication required for this environment
+- All secrets excluded from audit logs
+- CORS handled via reverse proxy to avoid browser restrictions
+
+## Performance
+
+- 95th percentile command RTT < 100ms (local link)
+- SSE reconnect within 5 seconds
+- Event-driven updates only (no polling)
+- Telemetry log limited to 50 entries for memory efficiency
+
+## Browser Compatibility
+
+- Modern browsers with EventSource support
+- Keyboard navigation support
+- Responsive design for desktop-first usage
+- Accessibility features for screen readers

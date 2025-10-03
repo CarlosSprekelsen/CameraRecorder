@@ -4,14 +4,12 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
-	"github.com/natefinch/lumberjack"
 	"github.com/silvus-mock/internal/config"
 	"github.com/silvus-mock/internal/jsonrpc"
 	"github.com/silvus-mock/internal/maintenance"
@@ -19,20 +17,16 @@ import (
 )
 
 func main() {
+	log.Println("Starting Silvus Mock Radio Emulator...")
+
 	// Load configuration
 	cfg, err := config.Load()
 	if err != nil {
 		log.Fatalf("Failed to load configuration: %v", err)
 	}
 
-	// Setup logging
-	logger := &lumberjack.Logger{
-		Filename:   "/var/log/silvus-mock.log",
-		MaxSize:    100, // megabytes
-		MaxBackups: 3,
-		MaxAge:     28, // days
-	}
-	log.SetOutput(logger)
+	// Setup logging - use stdout for now
+	log.SetFlags(log.LstdFlags | log.Lshortfile)
 
 	log.Printf("Starting Silvus Mock Radio Emulator with config: %+v", cfg)
 
