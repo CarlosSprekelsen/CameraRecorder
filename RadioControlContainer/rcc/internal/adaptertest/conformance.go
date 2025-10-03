@@ -126,11 +126,11 @@ func runSetPowerTests(t *testing.T, newAdapter func() adapter.IRadioAdapter, cap
 	ctx := context.Background()
 
 	// Test valid power ranges
-	validPowers := []int{caps.MinPowerDbm, caps.MaxPowerDbm, (caps.MinPowerDbm + caps.MaxPowerDbm) / 2}
+	validPowers := []float64{float64(caps.MinPowerDbm), float64(caps.MaxPowerDbm), float64((caps.MinPowerDbm + caps.MaxPowerDbm) / 2)}
 
 	for _, power := range validPowers {
 		result := ConformanceResult{
-			TestName: fmt.Sprintf("SetPower_Valid_%d", power),
+			TestName: fmt.Sprintf("SetPower_Valid_%f", power),
 			Details:  make(map[string]interface{}),
 		}
 		start := time.Now()
@@ -140,7 +140,7 @@ func runSetPowerTests(t *testing.T, newAdapter func() adapter.IRadioAdapter, cap
 
 		if err != nil {
 			result.Passed = false
-			result.Error = fmt.Sprintf("SetPower(%d) failed: %v", power, err)
+			result.Error = fmt.Sprintf("SetPower(%f) failed: %v", power, err)
 		} else {
 			result.Passed = true
 			result.Details["power"] = power
@@ -150,11 +150,11 @@ func runSetPowerTests(t *testing.T, newAdapter func() adapter.IRadioAdapter, cap
 	}
 
 	// Test invalid power ranges
-	invalidPowers := []int{caps.MinPowerDbm - 1, caps.MaxPowerDbm + 1, -1, 100}
+	invalidPowers := []float64{float64(caps.MinPowerDbm - 1), float64(caps.MaxPowerDbm + 1), -1.0, 100.0}
 
 	for _, power := range invalidPowers {
 		result := ConformanceResult{
-			TestName: fmt.Sprintf("SetPower_Invalid_%d", power),
+			TestName: fmt.Sprintf("SetPower_Invalid_%f", power),
 			Details:  make(map[string]interface{}),
 		}
 		start := time.Now()
@@ -165,10 +165,10 @@ func runSetPowerTests(t *testing.T, newAdapter func() adapter.IRadioAdapter, cap
 		// Should return INVALID_RANGE error
 		if err == nil {
 			result.Passed = false
-			result.Error = fmt.Sprintf("SetPower(%d) should have failed but succeeded", power)
+			result.Error = fmt.Sprintf("SetPower(%f) should have failed but succeeded", power)
 		} else if !isInvalidRangeError(err) {
 			result.Passed = false
-			result.Error = fmt.Sprintf("SetPower(%d) should return INVALID_RANGE, got: %v", power, err)
+			result.Error = fmt.Sprintf("SetPower(%f) should return INVALID_RANGE, got: %v", power, err)
 		} else {
 			result.Passed = true
 			result.Details["expectedError"] = "INVALID_RANGE"
@@ -274,7 +274,7 @@ func runIdempotencyTests(t *testing.T, newAdapter func() adapter.IRadioAdapter, 
 	ctx := context.Background()
 
 	// Test idempotency with a valid power level
-	testPower := (caps.MinPowerDbm + caps.MaxPowerDbm) / 2
+	testPower := float64((caps.MinPowerDbm + caps.MaxPowerDbm) / 2)
 
 	result := ConformanceResult{
 		TestName: "Idempotency_SetSamePower",
@@ -289,10 +289,10 @@ func runIdempotencyTests(t *testing.T, newAdapter func() adapter.IRadioAdapter, 
 
 	if err1 != nil {
 		result.Passed = false
-		result.Error = fmt.Sprintf("First SetPower(%d) failed: %v", testPower, err1)
+		result.Error = fmt.Sprintf("First SetPower(%f) failed: %v", testPower, err1)
 	} else if err2 != nil {
 		result.Passed = false
-		result.Error = fmt.Sprintf("Second SetPower(%d) failed: %v", testPower, err2)
+		result.Error = fmt.Sprintf("Second SetPower(%f) failed: %v", testPower, err2)
 	} else {
 		result.Passed = true
 		result.Details["power"] = testPower

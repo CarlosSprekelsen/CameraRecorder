@@ -38,7 +38,6 @@ type Orchestrator struct {
 	radioManager RadioManager
 }
 
-
 // Compile-time assertion that radio.Manager implements RadioManager
 var _ RadioManager = (*radio.Manager)(nil)
 
