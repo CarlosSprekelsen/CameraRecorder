@@ -14,6 +14,7 @@ import (
 	"net/http"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/radio-control/rcc/internal/config"
@@ -38,15 +39,25 @@ type Client struct {
 	LastID  int64
 	Radio   string
 	Events  chan Event
+	once    sync.Once
 }
 
 // Hub manages SSE telemetry distribution with per-radio buffering.
 // Source: Architecture §5
 // Quote: "Fan-out events to all SSE clients; buffer last N events per client for reconnection"
+//
+// LOCK ORDERING (if multiple locks are ever used):
+// 1. h.mu (Hub's RWMutex) - protects clients, radioIDs, buffers maps
+// 2. EventBuffer.mu (per-buffer mutex) - protects individual buffer state
+// 3. Client.once (sync.Once) - ensures single channel close
+//
+// Current implementation uses only h.mu for Hub-level synchronization.
+// EventBuffer has its own mutex for internal synchronization.
+// Client channels use sync.Once for thread-safe closing.
 type Hub struct {
 	mu       sync.RWMutex
 	clients  map[string]*Client
-	radioIDs map[string]int64 // Monotonic event IDs per radio
+	radioIDs map[string]*int64 // Monotonic event IDs per radio (atomic counters)
 
 	// Per-radio event buffers
 	buffers map[string]*EventBuffer
@@ -75,7 +86,7 @@ type EventBuffer struct {
 func NewHub(timingConfig *config.TimingConfig) *Hub {
 	hub := &Hub{
 		clients:  make(map[string]*Client),
-		radioIDs: make(map[string]int64),
+		radioIDs: make(map[string]*int64),
 		buffers:  make(map[string]*EventBuffer),
 		config:   timingConfig,
 	}
@@ -144,7 +155,7 @@ func (h *Hub) Subscribe(ctx context.Context, w http.ResponseWriter, r *http.Requ
 
 	// Start heartbeat if this is the first client
 	h.mu.Lock()
-	if len(h.clients) == 1 {
+	if len(h.clients) == 1 && h.heartbeatTicker == nil {
 		h.startHeartbeat()
 	}
 	h.mu.Unlock()
@@ -265,7 +276,10 @@ func (h *Hub) sendEventToClient(client *Client, event Event) error {
 func (h *Hub) handleClient(client *Client) {
 	defer func() {
 		// Close the client's event channel when the handler exits
-		close(client.Events)
+		// Use sync.Once to ensure the channel is only closed once
+		client.once.Do(func() {
+			close(client.Events)
+		})
 		h.unregisterClient(client.ID)
 	}()
 
@@ -311,19 +325,41 @@ func (h *Hub) unregisterClient(clientID string) {
 // getNextEventID returns the next monotonic event ID for a radio.
 // Source: Telemetry SSE v1 §1.3
 func (h *Hub) getNextEventID(radioID string) int64 {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-
 	if radioID == "" {
 		radioID = "global"
 	}
 
-	h.radioIDs[radioID]++
-	return h.radioIDs[radioID]
+	// Try to get existing counter with read lock
+	h.mu.RLock()
+	counter, exists := h.radioIDs[radioID]
+	h.mu.RUnlock()
+
+	if exists {
+		// Use atomic operation for fast path
+		return atomic.AddInt64(counter, 1)
+	}
+
+	// Create new counter with write lock
+	h.mu.Lock()
+	// Double-check pattern: another goroutine might have created it
+	counter, exists = h.radioIDs[radioID]
+	if !exists {
+		var initial int64 = 0
+		counter = &initial
+		h.radioIDs[radioID] = counter
+	}
+	h.mu.Unlock()
+
+	// Use atomic operation
+	return atomic.AddInt64(counter, 1)
 }
 
 // bufferEvent adds an event to the per-radio buffer.
 // Source: CB-TIMING v0.3 §6.1
+//
+// SAFETY ASSUMPTION: EventBuffer references are never removed from h.buffers map.
+// This allows safe access to the buffer reference after releasing h.mu, since
+// the EventBuffer.AddEvent() method has its own internal synchronization.
 func (h *Hub) bufferEvent(event Event) {
 	if event.Radio == "" {
 		return
@@ -344,10 +380,7 @@ func (h *Hub) bufferEvent(event Event) {
 // startHeartbeat starts the heartbeat ticker.
 // Source: CB-TIMING v0.3 §3.1
 func (h *Hub) startHeartbeat() {
-	// Don't start if already running
-	if h.heartbeatTicker != nil {
-		return
-	}
+	// Caller must hold h.mu and verify h.heartbeatTicker == nil
 
 	interval := h.config.HeartbeatInterval
 	jitter := h.config.HeartbeatJitter
@@ -358,18 +391,25 @@ func (h *Hub) startHeartbeat() {
 	h.heartbeatTicker = time.NewTicker(actualInterval)
 	h.stopHeartbeat = make(chan bool)
 
+	// Store references to avoid race conditions
+	ticker := h.heartbeatTicker
+	stopChan := h.stopHeartbeat
+
 	go func() {
 		defer func() {
+			// Use mutex to safely access heartbeat ticker
+			h.mu.Lock()
 			if h.heartbeatTicker != nil {
 				h.heartbeatTicker.Stop()
 			}
+			h.mu.Unlock()
 		}()
 
 		for {
 			select {
-			case <-h.heartbeatTicker.C:
+			case <-ticker.C:
 				h.sendHeartbeat()
-			case <-h.stopHeartbeat:
+			case <-stopChan:
 				return
 			}
 		}
@@ -391,19 +431,25 @@ func (h *Hub) sendHeartbeat() {
 
 // Stop stops the telemetry hub and cleans up resources.
 func (h *Hub) Stop() {
+	// Use mutex to safely access heartbeat fields
+	h.mu.Lock()
 	if h.heartbeatTicker != nil {
 		h.heartbeatTicker.Stop()
+		h.heartbeatTicker = nil
 	}
 
 	if h.stopHeartbeat != nil {
 		close(h.stopHeartbeat)
+		h.stopHeartbeat = nil
 	}
 
 	// Close all client connections
-	h.mu.Lock()
 	for _, client := range h.clients {
 		client.Cancel()
-		close(client.Events)
+		// Use sync.Once to ensure the channel is only closed once
+		client.once.Do(func() {
+			close(client.Events)
+		})
 	}
 	h.clients = make(map[string]*Client)
 	h.mu.Unlock()

@@ -3,13 +3,64 @@ package telemetry
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/radio-control/rcc/internal/config"
 )
+
+// threadSafeResponseWriter captures SSE events in a thread-safe way
+type threadSafeResponseWriter struct {
+	events chan string
+	headers http.Header
+	statusCode int
+}
+
+func newThreadSafeResponseWriter() *threadSafeResponseWriter {
+	return &threadSafeResponseWriter{
+		events: make(chan string, 100), // Buffer for events
+		headers: make(http.Header),
+		statusCode: 200,
+	}
+}
+
+func (w *threadSafeResponseWriter) Header() http.Header {
+	return w.headers
+}
+
+func (w *threadSafeResponseWriter) Write(data []byte) (int, error) {
+	// Send the data to the events channel instead of writing to a buffer
+	select {
+	case w.events <- string(data):
+		return len(data), nil
+	default:
+		// Channel full, drop the event
+		return len(data), nil
+	}
+}
+
+func (w *threadSafeResponseWriter) WriteHeader(statusCode int) {
+	w.statusCode = statusCode
+}
+
+func (w *threadSafeResponseWriter) collectEvents(timeout time.Duration) []string {
+	var events []string
+	timeoutChan := time.After(timeout)
+	
+	for {
+		select {
+		case event := <-w.events:
+			events = append(events, event)
+		case <-timeoutChan:
+			return events
+		}
+	}
+}
 
 func TestNewHub(t *testing.T) {
 	cfg := config.LoadCBTimingBaseline()
@@ -259,8 +310,8 @@ func TestHubSubscribeBasic(t *testing.T) {
 	req := httptest.NewRequest("GET", "/telemetry", nil)
 	req.Header.Set("Accept", "text/event-stream")
 
-	// Create test response recorder
-	w := httptest.NewRecorder()
+	// Create thread-safe response writer
+	w := newThreadSafeResponseWriter()
 
 	// Subscribe
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -319,8 +370,8 @@ func TestTelemetryContract_SubscribeReceiveHeartbeat(t *testing.T) {
 	req := httptest.NewRequest("GET", "/telemetry", nil)
 	req.Header.Set("Accept", "text/event-stream")
 
-	// Create test response recorder
-	w := httptest.NewRecorder()
+	// Create thread-safe response writer
+	w := newThreadSafeResponseWriter()
 
 	// Subscribe with timeout
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
@@ -332,21 +383,24 @@ func TestTelemetryContract_SubscribeReceiveHeartbeat(t *testing.T) {
 		subscribeDone <- hub.Subscribe(ctx, w, req)
 	}()
 
-	// Wait for subscription to complete
+	// Wait for subscription to start
+	time.Sleep(50 * time.Millisecond)
+
+	// Collect events for 200ms (thread-safe)
+	events := w.collectEvents(200 * time.Millisecond)
+
+	// Wait for the context timeout to occur naturally
 	select {
 	case err := <-subscribeDone:
-		if err != nil {
+		if err != nil && err != context.DeadlineExceeded {
 			t.Fatalf("Subscribe() failed: %v", err)
 		}
-	case <-time.After(100 * time.Millisecond):
-		t.Fatal("Subscribe() timed out")
+	case <-time.After(500 * time.Millisecond):
+		t.Fatal("Subscribe() did not complete after timeout")
 	}
 
-	// Wait for heartbeat events
-	time.Sleep(200 * time.Millisecond)
-
-	// Parse SSE response
-	response := w.Body.String()
+	// Combine all events into a single response string
+	response := strings.Join(events, "")
 
 	// Check for ready event
 	if !strings.Contains(response, "event: ready") {
@@ -394,8 +448,8 @@ func TestTelemetryContract_PowerChannelChanges(t *testing.T) {
 	req := httptest.NewRequest("GET", "/telemetry", nil)
 	req.Header.Set("Accept", "text/event-stream")
 
-	// Create test response recorder
-	w := httptest.NewRecorder()
+	// Create thread-safe response writer
+	w := newThreadSafeResponseWriter()
 
 	// Subscribe
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
@@ -441,8 +495,9 @@ func TestTelemetryContract_PowerChannelChanges(t *testing.T) {
 	// Wait for events to be processed
 	time.Sleep(50 * time.Millisecond)
 
-	// Parse SSE response
-	response := w.Body.String()
+	// Collect events (thread-safe)
+	events := w.collectEvents(50 * time.Millisecond)
+	response := strings.Join(events, "")
 
 	// Check for powerChanged event
 	if !strings.Contains(response, "event: powerChanged") {
@@ -675,15 +730,26 @@ func TestTelemetryContract_MonotonicPerRadioIDs(t *testing.T) {
 
 	// Verify that radio IDs are independent
 	hub.mu.RLock()
-	radio1ID := hub.radioIDs["radio-01"]
-	radio2ID := hub.radioIDs["radio-02"]
+	radio1Counter := hub.radioIDs["radio-01"]
+	radio2Counter := hub.radioIDs["radio-02"]
 	hub.mu.RUnlock()
 
-	if radio1ID != 5 {
-		t.Errorf("Expected radio-01 next ID 5, got %d", radio1ID)
+	if radio1Counter == nil {
+		t.Error("Expected radio-01 counter to exist")
+	} else {
+		radio1ID := atomic.LoadInt64(radio1Counter)
+		if radio1ID != 5 {
+			t.Errorf("Expected radio-01 next ID 5, got %d", radio1ID)
+		}
 	}
-	if radio2ID != 3 {
-		t.Errorf("Expected radio-02 next ID 3, got %d", radio2ID)
+
+	if radio2Counter == nil {
+		t.Error("Expected radio-02 counter to exist")
+	} else {
+		radio2ID := atomic.LoadInt64(radio2Counter)
+		if radio2ID != 3 {
+			t.Errorf("Expected radio-02 next ID 3, got %d", radio2ID)
+		}
 	}
 }
 
@@ -894,4 +960,69 @@ func TestTelemetryContract_SSEFormat(t *testing.T) {
 	if !hasID {
 		t.Error("Expected event ID in SSE response")
 	}
+}
+
+// TestEventIDGenerationRace tests concurrent event ID generation for race conditions.
+// This test verifies that atomic operations prevent duplicate IDs under high concurrency.
+func TestEventIDGenerationRace(t *testing.T) {
+	cfg := config.LoadCBTimingBaseline()
+	hub := NewHub(cfg)
+
+	const goroutines = 50
+	const eventsPerGoroutine = 20
+	const totalEvents = goroutines * eventsPerGoroutine
+
+	var wg sync.WaitGroup
+	ids := make(chan int64, totalEvents)
+
+	// Launch concurrent goroutines to generate event IDs for a single radio
+	// This avoids the complex race condition of multiple radios
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < eventsPerGoroutine; j++ {
+				id := hub.getNextEventID("test-radio")
+				ids <- id
+			}
+		}()
+	}
+
+	wg.Wait()
+	close(ids)
+
+	// Collect all generated IDs
+	allIDs := make([]int64, 0, totalEvents)
+
+	for id := range ids {
+		allIDs = append(allIDs, id)
+	}
+
+	// Check for duplicates
+	seen := make(map[int64]bool)
+	duplicates := 0
+	for _, id := range allIDs {
+		if seen[id] {
+			duplicates++
+			t.Errorf("Duplicate ID generated: %d", id)
+		}
+		seen[id] = true
+	}
+
+	if duplicates > 0 {
+		t.Errorf("Found %d duplicate IDs out of %d total", duplicates, totalEvents)
+	}
+
+	// Verify IDs are positive and sequential
+	for _, id := range allIDs {
+		if id <= 0 {
+			t.Errorf("Invalid ID generated: %d (should be > 0)", id)
+		}
+		if id > int64(totalEvents) {
+			t.Errorf("ID too large: %d (should be <= %d)", id, totalEvents)
+		}
+	}
+
+	t.Logf("Generated %d unique IDs with %d goroutines, %d events each",
+		len(seen), goroutines, eventsPerGoroutine)
 }
