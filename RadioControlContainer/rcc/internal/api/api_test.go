@@ -286,7 +286,7 @@ func TestHandleSelectRadio(t *testing.T) {
 	server, _, _, _ := setupAPITest(t)
 
 	// Test POST /radios/select with valid radio ID
-	req := httptest.NewRequest("POST", "/api/v1/radios/select", strings.NewReader(`{"radioId":"radio-01"}`))
+	req := httptest.NewRequest("POST", "/api/v1/radios/select", strings.NewReader(`{"radioId":"silvus-001"}`))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
@@ -661,7 +661,7 @@ func TestAPIContract_JSONResponseEnvelope(t *testing.T) {
 		{
 			name:           "POST_SetPower_Valid",
 			method:         "POST",
-			path:           "/api/v1/radios/radio-01/power",
+			path:           "/api/v1/radios/silvus-001/power",
 			body:           `{"powerDbm":25}`,
 			expectedResult: "ok",
 			description:    "Set power with valid value should return success response",
@@ -669,7 +669,7 @@ func TestAPIContract_JSONResponseEnvelope(t *testing.T) {
 		{
 			name:           "POST_SetChannel_Valid",
 			method:         "POST",
-			path:           "/api/v1/radios/radio-01/channel",
+			path:           "/api/v1/radios/silvus-001/channel",
 			body:           `{"frequencyMhz":2412.0}`,
 			expectedResult: "ok",
 			description:    "Set channel with valid frequency should return success response",

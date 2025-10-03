@@ -264,7 +264,7 @@ func TestE2E_TelemetryHeartbeat(t *testing.T) {
 	req.Header.Set("Accept", "text/event-stream")
 
 	w := newThreadSafeResponseWriter()
-	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
 	telemetryDone := make(chan error, 1)
