@@ -90,5 +90,10 @@ func main() {
 		log.Printf("Maintenance server shutdown error: %v", err)
 	}
 
+	// Shutdown radio state
+	if err := radioState.Close(); err != nil {
+		log.Printf("Radio state shutdown error: %v", err)
+	}
+
 	log.Println("Servers stopped")
 }

@@ -1,7 +1,6 @@
 package maintenance
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -16,14 +15,14 @@ import (
 
 // Server handles maintenance TCP connections
 type Server struct {
-	config             *config.Config
-	state              *state.RadioState
-	listener           net.Listener
-	stopChan           chan struct{}
-	activeConnections  map[string]net.Conn
-	connectionsMutex   sync.RWMutex
-	maxConnections     int
-	connectionTimeout  time.Duration
+	config            *config.Config
+	state             *state.RadioState
+	listener          net.Listener
+	stopChan          chan struct{}
+	activeConnections map[string]net.Conn
+	connectionsMutex  sync.RWMutex
+	maxConnections    int
+	connectionTimeout time.Duration
 }
 
 // Request represents a JSON-RPC request over TCP
@@ -45,9 +44,12 @@ type Response struct {
 // NewServer creates a new maintenance server
 func NewServer(cfg *config.Config, radioState *state.RadioState) *Server {
 	return &Server{
-		config:   cfg,
-		state:    radioState,
-		stopChan: make(chan struct{}),
+		config:            cfg,
+		state:             radioState,
+		stopChan:          make(chan struct{}),
+		activeConnections: make(map[string]net.Conn),
+		maxConnections:    10, // Limit concurrent connections
+		connectionTimeout: 30 * time.Second,
 	}
 }
 

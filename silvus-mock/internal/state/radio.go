@@ -53,7 +53,7 @@ type CommandResponse struct {
 // NewRadioState creates a new radio state instance
 func NewRadioState(cfg *config.Config) *RadioState {
 	ctx, cancel := context.WithCancel(context.Background())
-	
+
 	rs := &RadioState{
 		currentFreq:       "4700.0", // Default frequency
 		currentPower:      30,       // Default power in dBm
@@ -82,7 +82,7 @@ func NewRadioState(cfg *config.Config) *RadioState {
 // commandWorker processes commands in FIFO order
 func (rs *RadioState) commandWorker() {
 	defer rs.wg.Done()
-	
+
 	for {
 		select {
 		case cmd := <-rs.commandQueue:
@@ -357,17 +357,17 @@ func (rs *RadioState) ExecuteCommand(cmdType string, params []string) CommandRes
 func (rs *RadioState) Close() error {
 	// Cancel context to stop all operations
 	rs.cancel()
-	
+
 	// Close stop channel
 	close(rs.stopChan)
-	
+
 	// Wait for goroutines to finish with timeout
 	done := make(chan struct{})
 	go func() {
 		rs.wg.Wait()
 		close(done)
 	}()
-	
+
 	select {
 	case <-done:
 		// Clean shutdown

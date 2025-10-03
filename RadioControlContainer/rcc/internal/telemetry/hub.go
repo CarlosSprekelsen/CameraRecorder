@@ -194,15 +194,23 @@ func (h *Hub) Publish(event Event) error {
 
 	// Send to all clients without holding the lock
 	for _, client := range clients {
+		// Check if client context is still alive first
+		select {
+		case <-client.Context.Done():
+			// Client context cancelled, skip this client
+			continue
+		default:
+		}
+		
 		select {
 		case <-h.done:
 			// Hub is shutting down, don't send
 			return nil
 		case client.Events <- event:
+		case <-time.After(100 * time.Millisecond):
+			// Drop event if client is slow to prevent blocking
 		case <-client.Context.Done():
-			// Client context cancelled, skip
-		default:
-			// Client buffer full, skip this event
+			// Client context cancelled during send, skip
 		}
 	}
 
@@ -303,6 +311,14 @@ func (h *Hub) handleClient(client *Client) {
 	defer timeout.Stop()
 
 	for {
+		// Prioritize context cancellation
+		select {
+		case <-client.Context.Done():
+			// Context cancelled, clean up and return immediately
+			return
+		default:
+		}
+		
 		select {
 		case <-client.Context.Done():
 			// Context cancelled, clean up and return
@@ -462,6 +478,13 @@ func (h *Hub) Stop() {
 	// Signal shutdown first
 	close(h.done)
 
+	// Force cancel all client contexts immediately
+	h.mu.Lock()
+	for _, client := range h.clients {
+		client.Cancel()
+	}
+	h.mu.Unlock()
+
 	// Stop heartbeat ticker
 	h.mu.Lock()
 	if h.heartbeatTicker != nil {
@@ -474,8 +497,19 @@ func (h *Hub) Stop() {
 	}
 	h.mu.Unlock()
 
-	// Wait for all goroutines to finish
-	h.wg.Wait()
+	// Wait for all goroutines to finish with timeout
+	done := make(chan struct{})
+	go func() {
+		h.wg.Wait()
+		close(done)
+	}()
+	
+	select {
+	case <-done:
+		// Clean shutdown
+	case <-time.After(5 * time.Second):
+		// Force cleanup after timeout - goroutines may be stuck
+	}
 
 	// Close all client connections
 	h.mu.Lock()
