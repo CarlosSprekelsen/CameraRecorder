@@ -48,12 +48,6 @@ func TestNewRadioState(t *testing.T) {
 }
 
 func TestExecuteCommandSetPower(t *testing.T) {
-	rs := createTestRadioState()
-	defer rs.Close()
-	
-	// Wait for any blackout to clear
-	time.Sleep(6 * time.Second)
-	
 	tests := []struct {
 		name     string
 		params   []string
@@ -94,6 +88,12 @@ func TestExecuteCommandSetPower(t *testing.T) {
 	
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			rs := createTestRadioState()
+			defer rs.Close()
+			
+			// Wait for any blackout to clear
+			time.Sleep(6 * time.Second)
+			
 			response := rs.ExecuteCommand("setPower", tt.params)
 			
 			if response.Error != tt.wantErr {
@@ -114,11 +114,9 @@ func TestExecuteCommandSetPower(t *testing.T) {
 					t.Errorf("Expected single power value, got %v", result)
 				} else {
 					power := result[0]
-					if power != "30" && tt.wantPower == 30 {
+					if tt.wantPower == 30 && power != "30" {
 						// Power should be unchanged for error cases
-						if power != "30" {
-							t.Errorf("Expected unchanged power 30, got %s", power)
-						}
+						t.Errorf("Expected unchanged power 30, got %s", power)
 					}
 				}
 			}
@@ -150,11 +148,6 @@ func TestExecuteCommandGetPower(t *testing.T) {
 }
 
 func TestExecuteCommandSetFreq(t *testing.T) {
-	rs := createTestRadioState()
-	defer rs.Close()
-	
-	// Wait for any blackout to clear
-	time.Sleep(6 * time.Second)
 	
 	tests := []struct {
 		name    string
@@ -185,6 +178,12 @@ func TestExecuteCommandSetFreq(t *testing.T) {
 	
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			rs := createTestRadioState()
+			defer rs.Close()
+			
+			// Wait for any blackout to clear
+			time.Sleep(6 * time.Second)
+			
 			response := rs.ExecuteCommand("setFreq", tt.params)
 			
 			if response.Error != tt.wantErr {

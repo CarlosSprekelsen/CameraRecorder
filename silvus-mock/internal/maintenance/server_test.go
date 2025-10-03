@@ -169,7 +169,7 @@ func TestServerClose(t *testing.T) {
 		t.Errorf("Close() returned error: %v", err)
 	}
 
-	// Test closing already closed server
+	// Test closing already closed server (should handle gracefully)
 	err = server.Close()
 	if err != nil {
 		t.Errorf("Close() on already closed server returned error: %v", err)

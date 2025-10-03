@@ -165,12 +165,8 @@ func (h *Hub) Subscribe(ctx context.Context, w http.ResponseWriter, r *http.Requ
 	}
 	h.mu.Unlock()
 
-	// Handle client events in a separate goroutine
-	h.wg.Add(1)
-	go func() {
-		defer h.wg.Done()
-		h.handleClient(client)
-	}()
+	// Handle client events (blocks until client disconnects)
+	h.handleClient(client)
 
 	return nil
 }

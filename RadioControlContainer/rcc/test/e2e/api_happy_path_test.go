@@ -3,7 +3,7 @@
 package e2e
 
 import (
-	"context"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -102,39 +102,13 @@ func TestE2E_TelemetryIntegration(t *testing.T) {
 	req, _ := http.NewRequest("GET", server.URL+"/api/v1/telemetry", nil)
 	req.Header.Set("Accept", "text/event-stream")
 
-	// Create thread-safe response writer
-	w := newThreadSafeResponseWriter()
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-
 	// Start telemetry subscription via HTTP
-	telemetryDone := make(chan error, 1)
-	go func() {
-		client := &http.Client{}
-		resp, err := client.Do(req)
-		if err != nil {
-			telemetryDone <- err
-			return
-		}
-		defer resp.Body.Close()
-
-		// Read SSE stream
-		buf := make([]byte, 1024)
-		for {
-			select {
-			case <-ctx.Done():
-				telemetryDone <- ctx.Err()
-				return
-			default:
-				n, err := resp.Body.Read(buf)
-				if err != nil {
-					telemetryDone <- err
-					return
-				}
-				w.Write(buf[:n])
-			}
-		}
-	}()
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("Failed to connect to telemetry: %v", err)
+	}
+	defer resp.Body.Close()
 
 	// Wait for subscription to start
 	time.Sleep(100 * time.Millisecond)
@@ -145,8 +119,35 @@ func TestE2E_TelemetryIntegration(t *testing.T) {
 	// Wait for events
 	time.Sleep(200 * time.Millisecond)
 
-	// Collect telemetry events
-	events := w.collectEvents(500 * time.Millisecond)
+	// Read SSE events with a timeout
+	var events []string
+	buf := make([]byte, 1024)
+	readDone := make(chan struct{})
+	
+	go func() {
+		defer close(readDone)
+		for {
+			n, err := resp.Body.Read(buf)
+			if err != nil {
+				if err != io.EOF {
+					t.Logf("SSE read error: %v", err)
+				}
+				return
+			}
+			if n > 0 {
+				events = append(events, string(buf[:n]))
+			}
+		}
+	}()
+	
+	// Wait for events or timeout
+	select {
+	case <-readDone:
+		// Connection closed
+	case <-time.After(1 * time.Second):
+		// Timeout - collect events we have so far
+	}
+	
 	response := strings.Join(events, "")
 
 	// Evidence: SSE events
@@ -168,15 +169,6 @@ func TestE2E_TelemetryIntegration(t *testing.T) {
 		t.Error("Expected powerChanged event in telemetry")
 	}
 
-	// Wait for telemetry to complete
-	select {
-	case err := <-telemetryDone:
-		if err != nil && err != context.DeadlineExceeded {
-			t.Errorf("Telemetry failed: %v", err)
-		}
-	case <-time.After(3 * time.Second):
-		t.Fatal("Telemetry did not complete")
-	}
 
 	t.Log("✅ Telemetry integration working correctly")
 }

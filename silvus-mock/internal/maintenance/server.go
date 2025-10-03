@@ -199,7 +199,14 @@ func (s *Server) writeErrorResponse(conn net.Conn, code int, message string, id 
 
 // Close shuts down the maintenance server
 func (s *Server) Close() error {
-	close(s.stopChan)
+	select {
+	case <-s.stopChan:
+		// Already closed
+		return nil
+	default:
+		close(s.stopChan)
+	}
+	
 	if s.listener != nil {
 		return s.listener.Close()
 	}

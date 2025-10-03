@@ -123,6 +123,13 @@ func (o *Orchestrator) SetPower(ctx context.Context, radioID string, dBm float64
 
 	// Publish power changed event
 	o.publishPowerChangedEvent(radioID, dBm)
+	
+	// Debug: log event publication
+	if o.telemetryHub != nil {
+		println("DEBUG: Published powerChanged event for", radioID, "power:", dBm)
+	} else {
+		println("DEBUG: No telemetry hub - skipping powerChanged event")
+	}
 
 	return nil
 }

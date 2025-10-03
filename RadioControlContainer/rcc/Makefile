@@ -164,6 +164,15 @@ integration-cover: ## Integration coverage with cross-package coverage
 	@go tool cover -func=coverage/integration.out | tail -1
 	@echo "$(GREEN)✅ Integration coverage report: coverage/integration.out$(NC)"
 
+coverage-integration-html: ## Generate HTML coverage report for integration tests
+	@echo "$(BLUE)Generating HTML coverage report for integration tests...$(NC)"
+	@mkdir -p coverage
+	@PKGS=$$(go list ./internal/... | tr '\n' ','); \
+	go test -tags=integration -coverpkg="$${PKGS%,}" -coverprofile=coverage/integration.out ./test/integration/... && \
+	go tool cover -html=coverage/integration.out -o coverage/integration.html
+	@echo "$(GREEN)✅ Integration HTML coverage report: coverage/integration.html$(NC)"
+	@echo "$(YELLOW)Open with: xdg-open coverage/integration.html || open coverage/integration.html$(NC)"
+
 # Team-specific test suites
 test-unit-team: ## Team 1: Unit tests (fast)
 	@echo "$(BLUE)Team 1: Running unit tests...$(NC)"
