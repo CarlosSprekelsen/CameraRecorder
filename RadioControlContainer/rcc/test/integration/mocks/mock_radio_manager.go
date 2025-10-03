@@ -5,6 +5,7 @@ package mocks
 import (
 	"time"
 
+	"github.com/radio-control/rcc/internal/adapter"
 	"github.com/radio-control/rcc/internal/command"
 	"github.com/radio-control/rcc/internal/radio"
 )
@@ -22,30 +23,44 @@ func NewMockRadioManager() *MockRadioManager {
 	}
 }
 
-// LoadCapabilities creates a radio with hardcoded channels for testing.
+// LoadCapabilities creates a radio with hardcoded channels from ICD for testing.
 func (m *MockRadioManager) LoadCapabilities(radioID string, adapter interface{}, timeout time.Duration) error {
 	m.activeRadioID = radioID
-	
-	// Create radio with minimal data for testing
+
+	// Create radio - capabilities will be populated in GetRadio method
 	r := &radio.Radio{
 		ID:     radioID,
 		Model:  "FakeModel",
 		Status: "online",
-		// Note: Capabilities will be nil, which will cause the test to fail
-		// This is intentional to demonstrate the bug
+		// Capabilities will be nil initially, populated in GetRadio
 	}
-	
+
 	m.radios[radioID] = r
-	
+
 	return nil
 }
 
-// GetRadio returns the radio with capabilities loaded from LoadCapabilities.
+// GetRadio returns the radio with hardcoded capabilities from ICD.
 func (m *MockRadioManager) GetRadio(radioID string) (*radio.Radio, error) {
 	radio, exists := m.radios[radioID]
 	if !exists {
 		return nil, command.ErrNotFound
 	}
+
+	// Create capabilities with hardcoded channels from ICD
+	// 2.4 GHz band, 5 MHz spacing, 1-based indexing
+	// Channel 1 = 2412 MHz, Channel 6 = 2437 MHz, Channel 11 = 2462 MHz
+	capabilities := &adapter.RadioCapabilities{
+		Channels: []adapter.Channel{
+			{Index: 1, FrequencyMhz: 2412.0},
+			{Index: 6, FrequencyMhz: 2437.0},
+			{Index: 11, FrequencyMhz: 2462.0},
+		},
+	}
+
+	// Set capabilities on the radio
+	radio.Capabilities = capabilities
+
 	return radio, nil
 }
 

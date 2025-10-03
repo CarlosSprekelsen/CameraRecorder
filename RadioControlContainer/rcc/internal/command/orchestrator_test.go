@@ -355,6 +355,14 @@ func (m *MockRadioManager) GetRadio(radioID string) (*radio.Radio, error) {
 	return radioObj, nil
 }
 
+func (m *MockRadioManager) SetActive(radioID string) error {
+	// Mock implementation - just verify radio exists
+	if _, exists := m.Radios[radioID]; !exists {
+		return fmt.Errorf("radio %s not found", radioID)
+	}
+	return nil
+}
+
 func TestSetChannelByIndex(t *testing.T) {
 	cfg := config.LoadCBTimingBaseline()
 

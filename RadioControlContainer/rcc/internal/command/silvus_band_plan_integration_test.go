@@ -29,6 +29,14 @@ func (m *SilvusTestRadioManager) GetRadio(radioID string) (*radio.Radio, error) 
 	return radioObj, nil
 }
 
+func (m *SilvusTestRadioManager) SetActive(radioID string) error {
+	// Mock implementation - just verify radio exists
+	if _, exists := m.radios[radioID]; !exists {
+		return fmt.Errorf("radio %s not found", radioID)
+	}
+	return nil
+}
+
 // TestOrchestrator_SilvusBandPlanIntegration tests orchestrator integration with Silvus band plans.
 // Source: PRE-INT-09
 // Quote: "orchestrator.SetChannel consults this when adapter capabilities carry a model that matches"

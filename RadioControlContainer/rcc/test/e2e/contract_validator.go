@@ -200,9 +200,9 @@ func (cv *ContractValidator) ValidateErrorResponse(t *testing.T, resp *http.Resp
 		t.Fatalf("Failed to parse error JSON response: %v", err)
 	}
 
-	// Check for error field
-	if _, ok := errorResp["error"]; !ok {
-		t.Error("Expected 'error' field in error response")
+	// Check for error response structure (result: "error")
+	if result, ok := errorResp["result"]; !ok || result != "error" {
+		t.Error("Expected 'result' field with value 'error' in error response")
 	}
 }
 

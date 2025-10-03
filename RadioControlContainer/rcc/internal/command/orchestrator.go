@@ -215,7 +215,7 @@ func (o *Orchestrator) SetChannelByIndex(ctx context.Context, radioID string, ch
 	frequencyMhz, err := o.resolveChannelIndex(ctx, radioID, channelIndex, radioManager)
 	if err != nil {
 		o.logAudit(ctx, "setChannel", radioID, "INVALID_RANGE", time.Since(start))
-		return err
+		return adapter.ErrInvalidRange
 	}
 
 	// Validate resolved frequency range

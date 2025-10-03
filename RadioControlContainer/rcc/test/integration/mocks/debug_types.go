@@ -12,11 +12,11 @@ func DebugTypes() {
 	var ch adapter.Channel
 	ch.Index = 1
 	ch.FrequencyMhz = 2412.0
-	
+
 	// Try to create capabilities
 	var caps adapter.RadioCapabilities
 	caps.Channels = []adapter.Channel{ch}
-	
+
 	// This should compile if types are accessible
 	_ = caps
 }
