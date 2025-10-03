@@ -1,15 +1,18 @@
 // Package e2e provides negative test cases for the Radio Control Container API.
+// This file implements black-box testing using only HTTP and contract validation.
 package e2e
 
 import (
-	"encoding/json"
-	"net/http"
 	"testing"
 
 	"github.com/radio-control/rcc/test/harness"
 )
 
 func TestE2E_ErrorHandling(t *testing.T) {
+	// Initialize contract validator
+	validator := NewContractValidator(t)
+	validator.PrintSpecVersion(t)
+
 	// Create test harness with seeded state
 	opts := harness.DefaultOptions()
 	server := harness.NewServer(t, opts)
@@ -23,23 +26,17 @@ func TestE2E_ErrorHandling(t *testing.T) {
 
 	// Test invalid radio ID
 	resp := httpGetWithStatus(t, server.URL+"/api/v1/radios/invalid-radio-id")
-	if resp.StatusCode != http.StatusNotFound {
-		t.Errorf("Expected status 404, got %d", resp.StatusCode)
-	}
+	validator.ValidateErrorResponse(t, resp, "NOT_FOUND")
 
 	// Test power out of range
 	payload := `{"powerDbm": 100}`
 	resp = httpPostWithStatus(t, server.URL+"/api/v1/radios/silvus-001/power", payload)
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", resp.StatusCode)
-	}
+	validator.ValidateErrorResponse(t, resp, "INVALID_RANGE")
 
 	// Test channel out of range
 	payload = `{"frequencyMhz": 10000.0}`
 	resp = httpPostWithStatus(t, server.URL+"/api/v1/radios/silvus-001/channel", payload)
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Errorf("Expected status 400, got %d", resp.StatusCode)
-	}
+	validator.ValidateErrorResponse(t, resp, "INVALID_RANGE")
 
 	// Evidence: Audit log for error cases
 	auditLines, err := server.GetAuditLogs(3)
@@ -57,6 +54,10 @@ func TestE2E_ErrorHandling(t *testing.T) {
 }
 
 func TestE2E_InvalidJSON(t *testing.T) {
+	// Initialize contract validator
+	validator := NewContractValidator(t)
+	validator.PrintSpecVersion(t)
+
 	opts := harness.DefaultOptions()
 	server := harness.NewServer(t, opts)
 	defer server.Shutdown()
@@ -64,21 +65,21 @@ func TestE2E_InvalidJSON(t *testing.T) {
 	// Test malformed JSON
 	payload := `{"powerDbm": invalid}`
 	resp := httpPostWithStatus(t, server.URL+"/api/v1/radios/silvus-001/power", payload)
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for malformed JSON, got %d", resp.StatusCode)
-	}
+	validator.ValidateHTTPResponse(t, resp, 400)
 
 	// Test missing required fields
 	payload = `{}`
 	resp = httpPostWithStatus(t, server.URL+"/api/v1/radios/silvus-001/power", payload)
-	if resp.StatusCode != http.StatusBadRequest {
-		t.Errorf("Expected status 400 for missing fields, got %d", resp.StatusCode)
-	}
+	validator.ValidateHTTPResponse(t, resp, 400)
 
 	t.Log("✅ Invalid JSON handling working correctly")
 }
 
 func TestE2E_RadioNotFound(t *testing.T) {
+	// Initialize contract validator
+	validator := NewContractValidator(t)
+	validator.PrintSpecVersion(t)
+
 	opts := harness.DefaultOptions()
 	server := harness.NewServer(t, opts)
 	defer server.Shutdown()
@@ -86,20 +87,20 @@ func TestE2E_RadioNotFound(t *testing.T) {
 	// Test operations on non-existent radio
 	payload := `{"powerDbm": 10.0}`
 	resp := httpPostWithStatus(t, server.URL+"/api/v1/radios/non-existent/power", payload)
-	if resp.StatusCode != http.StatusNotFound {
-		t.Errorf("Expected status 404 for non-existent radio, got %d", resp.StatusCode)
-	}
+	validator.ValidateErrorResponse(t, resp, "NOT_FOUND")
 
 	// Test getting state of non-existent radio
 	resp = httpGetWithStatus(t, server.URL+"/api/v1/radios/non-existent/power")
-	if resp.StatusCode != http.StatusNotFound {
-		t.Errorf("Expected status 404 for non-existent radio state, got %d", resp.StatusCode)
-	}
+	validator.ValidateErrorResponse(t, resp, "NOT_FOUND")
 
 	t.Log("✅ Radio not found handling working correctly")
 }
 
 func TestE2E_AdapterBusy(t *testing.T) {
+	// Initialize contract validator
+	validator := NewContractValidator(t)
+	validator.PrintSpecVersion(t)
+
 	opts := harness.DefaultOptions()
 	server := harness.NewServer(t, opts)
 	defer server.Shutdown()
@@ -115,21 +116,7 @@ func TestE2E_AdapterBusy(t *testing.T) {
 	// Test with valid power to trigger busy response
 	payload := `{"powerDbm": 10.0}`
 	resp := httpPostWithStatus(t, server.URL+"/api/v1/radios/silvus-001/power", payload)
-
-	if resp.StatusCode != http.StatusServiceUnavailable {
-		t.Errorf("Expected status 503 for busy adapter, got %d", resp.StatusCode)
-	}
-
-	// Verify error response format
-	var errorResp map[string]interface{}
-	if err := json.NewDecoder(resp.Body).Decode(&errorResp); err != nil {
-		t.Fatalf("Failed to decode error response: %v", err)
-	}
-
-	// Check that error response has expected structure
-	if _, ok := errorResp["error"]; !ok {
-		t.Error("Expected error response to have 'error' field")
-	}
+	validator.ValidateErrorResponse(t, resp, "BUSY")
 
 	// Evidence: Audit log for busy case
 	auditLines, err := server.GetAuditLogs(1)

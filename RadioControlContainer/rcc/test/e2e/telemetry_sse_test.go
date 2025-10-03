@@ -1,4 +1,5 @@
 // Package e2e provides telemetry SSE tests for the Radio Control Container API.
+// This file implements black-box testing using only HTTP/SSE and contract validation.
 package e2e
 
 import (
@@ -12,6 +13,10 @@ import (
 )
 
 func TestE2E_TelemetrySSEConnection(t *testing.T) {
+	// Initialize contract validator
+	validator := NewContractValidator(t)
+	validator.PrintSpecVersion(t)
+
 	opts := harness.DefaultOptions()
 	server := harness.NewServer(t, opts)
 	defer server.Shutdown()
@@ -53,6 +58,8 @@ func TestE2E_TelemetrySSEConnection(t *testing.T) {
 	t.Logf("Received %d events", len(events))
 	for i, event := range events {
 		t.Logf("Event %d: %s", i+1, strings.TrimSpace(event))
+		// Validate each event against contract
+		validator.ValidateSSEEvent(t, event)
 	}
 	t.Logf("===================")
 
@@ -79,6 +86,10 @@ func TestE2E_TelemetrySSEConnection(t *testing.T) {
 }
 
 func TestE2E_TelemetryLastEventID(t *testing.T) {
+	// Initialize contract validator
+	validator := NewContractValidator(t)
+	validator.PrintSpecVersion(t)
+
 	opts := harness.DefaultOptions()
 	server := harness.NewServer(t, opts)
 	defer server.Shutdown()
@@ -163,6 +174,10 @@ func TestE2E_TelemetryLastEventID(t *testing.T) {
 }
 
 func TestE2E_TelemetryHeartbeat(t *testing.T) {
+	// Initialize contract validator
+	validator := NewContractValidator(t)
+	validator.PrintSpecVersion(t)
+
 	opts := harness.DefaultOptions()
 	server := harness.NewServer(t, opts)
 	defer server.Shutdown()
@@ -203,6 +218,11 @@ func TestE2E_TelemetryHeartbeat(t *testing.T) {
 	t.Logf("Total events: %d", len(events))
 	t.Logf("Heartbeat events: %d", heartbeatCount)
 	t.Logf("=========================")
+
+	// Validate heartbeat timing against CB-TIMING
+	baseInterval := 15 * time.Second // From CB-TIMING §3
+	jitter := 2 * time.Second        // From CB-TIMING §3
+	validator.ValidateHeartbeatInterval(t, events, baseInterval, jitter)
 
 	// Verify heartbeat events
 	if heartbeatCount < 1 {

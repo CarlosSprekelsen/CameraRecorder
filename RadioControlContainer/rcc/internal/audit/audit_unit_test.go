@@ -1,8 +1,10 @@
 package audit
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
@@ -203,4 +205,28 @@ func TestAuditLogger_SchemaValidation(t *testing.T) {
 	if time.Since(entry.Timestamp) > time.Minute {
 		t.Errorf("Timestamp is too old: %v", entry.Timestamp)
 	}
+}
+
+// readLastNLines reads the last N lines from a file
+func readLastNLines(filename string, n int) ([]string, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+		if len(lines) > n {
+			lines = lines[1:] // Keep only the last n lines
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+
+	return lines, nil
 }

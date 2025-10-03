@@ -1,4 +1,5 @@
 // Package e2e provides end-to-end tests for the Radio Control Container API.
+// This file implements black-box testing using only HTTP/SSE and contract validation.
 package e2e
 
 import (
@@ -12,6 +13,10 @@ import (
 )
 
 func TestE2E_HappyPath(t *testing.T) {
+	// Initialize contract validator
+	validator := NewContractValidator(t)
+	validator.PrintSpecVersion(t)
+
 	// Create test harness with seeded state
 	opts := harness.DefaultOptions()
 	opts.ActiveRadioID = "silvus-001"
@@ -28,6 +33,9 @@ func TestE2E_HappyPath(t *testing.T) {
 	t.Logf("===================")
 
 	// 1) List radios - should return seeded radio
+	resp := httpGetWithStatus(t, server.URL+"/api/v1/radios")
+	validator.ValidateHTTPResponse(t, resp, 200)
+
 	body := httpGetJSON(t, server.URL+"/api/v1/radios")
 	mustHave(t, body, "result", "ok")
 
@@ -87,10 +95,20 @@ func TestE2E_HappyPath(t *testing.T) {
 }
 
 func TestE2E_TelemetryIntegration(t *testing.T) {
+	// Initialize contract validator
+	validator := NewContractValidator(t)
+	validator.PrintSpecVersion(t)
+
 	// Create test harness
 	opts := harness.DefaultOptions()
 	server := harness.NewServer(t, opts)
 	defer server.Shutdown()
+
+	// Evidence: Seeded state
+	t.Logf("=== TEST EVIDENCE ===")
+	t.Logf("Active Radio ID: %s", server.RadioManager.GetActive())
+	t.Logf("Telemetry Hub: %+v", server.TelemetryHub != nil)
+	t.Logf("===================")
 
 	// Subscribe to telemetry using the harness
 	req, _ := http.NewRequest("GET", server.URL+"/api/v1/telemetry", nil)
@@ -125,6 +143,8 @@ func TestE2E_TelemetryIntegration(t *testing.T) {
 	t.Logf("Received %d events", len(events))
 	for i, event := range events {
 		t.Logf("Event %d: %s", i+1, strings.TrimSpace(event))
+		// Validate each event against contract
+		validator.ValidateSSEEvent(t, event)
 	}
 	t.Logf("===================")
 

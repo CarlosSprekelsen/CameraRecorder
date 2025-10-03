@@ -104,7 +104,7 @@ func TestWriteSuccess(t *testing.T) {
 	WriteSuccess(w, data)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
+		t.Errorf("Expected status 200, got %d. Response: %s", w.Code, w.Body.String())
 	}
 
 	var response Response
@@ -229,7 +229,7 @@ func TestHandleCapabilities(t *testing.T) {
 	server.handleCapabilities(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
+		t.Errorf("Expected status 200, got %d. Response: %s", w.Code, w.Body.String())
 	}
 
 	var response Response
@@ -268,7 +268,7 @@ func TestHandleRadios(t *testing.T) {
 	server.handleRadios(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
+		t.Errorf("Expected status 200, got %d. Response: %s", w.Code, w.Body.String())
 	}
 
 	var response Response
@@ -293,7 +293,7 @@ func TestHandleSelectRadio(t *testing.T) {
 
 	// Should succeed with seeded radio
 	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
+		t.Errorf("Expected status 200, got %d. Response: %s", w.Code, w.Body.String())
 	}
 
 	var response Response
@@ -304,9 +304,7 @@ func TestHandleSelectRadio(t *testing.T) {
 	if response.Result != "ok" {
 		t.Errorf("Expected result 'ok', got '%s'", response.Result)
 	}
-	if response.Code != "ok" {
-		t.Errorf("Expected code 'ok', got '%s'", response.Code)
-	}
+	// Success responses don't have a Code field, only Result
 }
 
 func TestHandleRadioByID(t *testing.T) {
@@ -319,7 +317,7 @@ func TestHandleRadioByID(t *testing.T) {
 	server.handleRadioByID(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
+		t.Errorf("Expected status 200, got %d. Response: %s", w.Code, w.Body.String())
 	}
 
 	var response Response
@@ -342,7 +340,7 @@ func TestHandleGetPower(t *testing.T) {
 	server.handleGetPower(w, req, "silvus-001")
 
 	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
+		t.Errorf("Expected status 200, got %d. Response: %s", w.Code, w.Body.String())
 	}
 
 	var response Response
@@ -368,7 +366,7 @@ func TestHandleSetPower(t *testing.T) {
 
 	// Should succeed with seeded radio and active adapter
 	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
+		t.Errorf("Expected status 200, got %d. Response: %s", w.Code, w.Body.String())
 	}
 
 	// Test with invalid power (too high)
@@ -406,7 +404,7 @@ func TestHandleGetChannel(t *testing.T) {
 	server.handleGetChannel(w, req, "silvus-001")
 
 	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
+		t.Errorf("Expected status 200, got %d. Response: %s", w.Code, w.Body.String())
 	}
 
 	var response Response
@@ -420,57 +418,54 @@ func TestHandleGetChannel(t *testing.T) {
 }
 
 func TestHandleSetChannel(t *testing.T) {
-	cfg := config.LoadCBTimingBaseline()
-	hub := telemetry.NewHub(cfg)
-	defer hub.Stop()
-
-	rm := radio.NewManager()
-	orch := command.NewOrchestrator(hub, cfg)
-	server := NewServer(hub, orch, rm, 30*time.Second, 30*time.Second, 120*time.Second)
+	server, _, _, _ := setupAPITest(t)
 
 	// Test POST /radios/{id}/channel with channel index
-	req := httptest.NewRequest("POST", "/api/v1/radios/radio-01/channel",
-		strings.NewReader(`{"channelIndex":3}`))
+	req := httptest.NewRequest("POST", "/api/v1/radios/silvus-001/channel",
+		strings.NewReader(`{"channelIndex":1}`))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
-	server.handleSetChannel(w, req, "radio-01")
+	server.handleSetChannel(w, req, "silvus-001")
 
-	if w.Code != http.StatusNotImplemented {
-		t.Errorf("Expected status 501, got %d", w.Code)
+	// Should succeed with seeded radio and active adapter
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d. Response: %s", w.Code, w.Body.String())
 	}
 
 	// Test with frequency
-	req = httptest.NewRequest("POST", "/api/v1/radios/radio-01/channel",
+	req = httptest.NewRequest("POST", "/api/v1/radios/silvus-001/channel",
 		strings.NewReader(`{"frequencyMhz":2422.0}`))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
 
-	server.handleSetChannel(w, req, "radio-01")
+	server.handleSetChannel(w, req, "silvus-001")
 
-	if w.Code != http.StatusNotImplemented {
-		t.Errorf("Expected status 501, got %d", w.Code)
+	// Should succeed with seeded radio and active adapter
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d. Response: %s", w.Code, w.Body.String())
 	}
 
 	// Test with both parameters
-	req = httptest.NewRequest("POST", "/api/v1/radios/radio-01/channel",
-		strings.NewReader(`{"channelIndex":3,"frequencyMhz":2422.0}`))
+	req = httptest.NewRequest("POST", "/api/v1/radios/silvus-001/channel",
+		strings.NewReader(`{"channelIndex":1,"frequencyMhz":2422.0}`))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
 
-	server.handleSetChannel(w, req, "radio-01")
+	server.handleSetChannel(w, req, "silvus-001")
 
-	if w.Code != http.StatusNotImplemented {
-		t.Errorf("Expected status 501, got %d", w.Code)
+	// Should succeed with seeded radio and active adapter
+	if w.Code != http.StatusOK {
+		t.Errorf("Expected status 200, got %d. Response: %s", w.Code, w.Body.String())
 	}
 
 	// Test with no parameters
-	req = httptest.NewRequest("POST", "/api/v1/radios/radio-01/channel",
+	req = httptest.NewRequest("POST", "/api/v1/radios/silvus-001/channel",
 		strings.NewReader(`{}`))
 	req.Header.Set("Content-Type", "application/json")
 	w = httptest.NewRecorder()
 
-	server.handleSetChannel(w, req, "radio-01")
+	server.handleSetChannel(w, req, "silvus-001")
 
 	if w.Code != http.StatusBadRequest {
 		t.Errorf("Expected status 400, got %d", w.Code)
@@ -493,7 +488,7 @@ func TestHandleHealth(t *testing.T) {
 	server.handleHealth(w, req)
 
 	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
+		t.Errorf("Expected status 200, got %d. Response: %s", w.Code, w.Body.String())
 	}
 
 	var response Response
@@ -1187,7 +1182,7 @@ func TestHealthAndReadiness_HealthySystem(t *testing.T) {
 
 	// Should return 200 OK for healthy system
 	if w.Code != http.StatusOK {
-		t.Errorf("Expected status 200, got %d", w.Code)
+		t.Errorf("Expected status 200, got %d. Response: %s", w.Code, w.Body.String())
 	}
 
 	// Parse response
