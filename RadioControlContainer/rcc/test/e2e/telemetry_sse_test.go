@@ -165,19 +165,36 @@ func TestE2E_TelemetryLastEventID(t *testing.T) {
 		}
 		defer resp.Body.Close()
 
-		buf := make([]byte, 1024)
+		// Make reads interruptible
+		readChan := make(chan []byte, 1)
+		errChan := make(chan error, 1)
+
+		// Start a goroutine to handle reads
+		go func() {
+			buf := make([]byte, 1024)
+			for {
+				n, err := resp.Body.Read(buf)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				// Copy the data to avoid race conditions
+				data := make([]byte, n)
+				copy(data, buf[:n])
+				readChan <- data
+			}
+		}()
+
 		for {
 			select {
 			case <-ctx1.Done():
 				telemetryDone1 <- ctx1.Err()
 				return
-			default:
-				n, err := resp.Body.Read(buf)
-				if err != nil {
-					telemetryDone1 <- err
-					return
-				}
-				w1.Write(buf[:n])
+			case data := <-readChan:
+				w1.Write(data)
+			case err := <-errChan:
+				telemetryDone1 <- err
+				return
 			}
 		}
 	}()
@@ -219,19 +236,36 @@ func TestE2E_TelemetryLastEventID(t *testing.T) {
 		}
 		defer resp.Body.Close()
 
-		buf := make([]byte, 1024)
+		// Make reads interruptible
+		readChan := make(chan []byte, 1)
+		errChan := make(chan error, 1)
+
+		// Start a goroutine to handle reads
+		go func() {
+			buf := make([]byte, 1024)
+			for {
+				n, err := resp.Body.Read(buf)
+				if err != nil {
+					errChan <- err
+					return
+				}
+				// Copy the data to avoid race conditions
+				data := make([]byte, n)
+				copy(data, buf[:n])
+				readChan <- data
+			}
+		}()
+
 		for {
 			select {
 			case <-ctx2.Done():
 				telemetryDone2 <- ctx2.Err()
 				return
-			default:
-				n, err := resp.Body.Read(buf)
-				if err != nil {
-					telemetryDone2 <- err
-					return
-				}
-				w2.Write(buf[:n])
+			case data := <-readChan:
+				w2.Write(data)
+			case err := <-errChan:
+				telemetryDone2 <- err
+				return
 			}
 		}
 	}()
@@ -301,41 +335,36 @@ func TestE2E_TelemetryHeartbeat(t *testing.T) {
 		}
 		defer resp.Body.Close()
 
-		buf := make([]byte, 1024)
-		for {
-			// Check context first - this is the key fix
-			select {
-			case <-ctx.Done():
-				telemetryDone <- ctx.Err()
-				return
-			default:
-				// Only proceed if context is not done
-				if ctx.Err() != nil {
-					telemetryDone <- ctx.Err()
-					return
-				}
-			}
+		// Make reads interruptible
+		readChan := make(chan []byte, 1)
+		errChan := make(chan error, 1)
 
-			// Use a goroutine to make the read non-blocking
-			readDone := make(chan struct{})
-			var n int
-			var err error
-
-			go func() {
-				n, err = resp.Body.Read(buf)
-				close(readDone)
-			}()
-
-			select {
-			case <-ctx.Done():
-				telemetryDone <- ctx.Err()
-				return
-			case <-readDone:
+		// Start a goroutine to handle reads
+		go func() {
+			buf := make([]byte, 1024)
+			for {
+				n, err := resp.Body.Read(buf)
 				if err != nil {
-					telemetryDone <- err
+					errChan <- err
 					return
 				}
-				w.Write(buf[:n])
+				// Copy the data to avoid race conditions
+				data := make([]byte, n)
+				copy(data, buf[:n])
+				readChan <- data
+			}
+		}()
+
+		for {
+			select {
+			case <-ctx.Done():
+				telemetryDone <- ctx.Err()
+				return
+			case data := <-readChan:
+				w.Write(data)
+			case err := <-errChan:
+				telemetryDone <- err
+				return
 			}
 		}
 	}()

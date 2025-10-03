@@ -21,6 +21,52 @@ import (
 	"github.com/radio-control/rcc/internal/telemetry"
 )
 
+// Thread-safe response writer for SSE testing
+type threadSafeResponseWriter struct {
+	events     chan string
+	headers    http.Header
+	statusCode int
+}
+
+func newThreadSafeResponseWriter() *threadSafeResponseWriter {
+	return &threadSafeResponseWriter{
+		events:     make(chan string, 100),
+		headers:    make(http.Header),
+		statusCode: 200,
+	}
+}
+
+func (w *threadSafeResponseWriter) Header() http.Header {
+	return w.headers
+}
+
+func (w *threadSafeResponseWriter) Write(data []byte) (int, error) {
+	select {
+	case w.events <- string(data):
+		return len(data), nil
+	default:
+		return len(data), nil
+	}
+}
+
+func (w *threadSafeResponseWriter) WriteHeader(statusCode int) {
+	w.statusCode = statusCode
+}
+
+func (w *threadSafeResponseWriter) collectEvents(timeout time.Duration) []string {
+	var events []string
+	timeoutChan := time.After(timeout)
+
+	for {
+		select {
+		case event := <-w.events:
+			events = append(events, event)
+		case <-timeoutChan:
+			return events
+		}
+	}
+}
+
 // TestSilvusMock_E2E_Integration tests the complete integration of SilvusMock
 // with the API, including telemetry and audit observation.
 // Source: PRE-INT-08
@@ -127,10 +173,12 @@ func TestSilvusMock_E2E_Integration(t *testing.T) {
 		// Create telemetry subscription
 		req := httptest.NewRequest("GET", "/api/v1/telemetry?radio=silvus-radio-01", nil)
 		req.Header.Set("Accept", "text/event-stream")
-		w := httptest.NewRecorder()
+		w := newThreadSafeResponseWriter()
 
 		// Start telemetry subscription in background
+		done := make(chan struct{})
 		go func() {
+			defer close(done)
 			server.handleTelemetry(w, req)
 		}()
 
@@ -158,11 +206,23 @@ func TestSilvusMock_E2E_Integration(t *testing.T) {
 			}
 		}
 
-		// Wait for events to be processed
-		time.Sleep(50 * time.Millisecond)
+		// Wait for events to be processed and stream to complete
+		time.Sleep(100 * time.Millisecond)
+
+		// Wait for the SSE stream to complete
+		select {
+		case <-done:
+			// Stream completed, safe to read response
+		case <-time.After(1 * time.Second):
+			t.Error("Telemetry stream did not complete within timeout")
+			return
+		}
+
+		// Collect events from thread-safe response writer
+		eventStrings := w.collectEvents(100 * time.Millisecond)
+		response := strings.Join(eventStrings, "")
 
 		// Check that telemetry events were published
-		response := w.Body.String()
 		if !strings.Contains(response, "event: power_change") {
 			t.Error("Expected power_change event in telemetry response")
 		}

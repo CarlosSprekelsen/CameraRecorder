@@ -40,6 +40,7 @@ type Client struct {
 	Radio   string
 	Events  chan Event
 	once    sync.Once
+	mu      sync.Mutex // Protect Writer access
 }
 
 // Hub manages SSE telemetry distribution with per-radio buffering.
@@ -260,6 +261,10 @@ func (h *Hub) replayEvents(client *Client, lastEventID int64) error {
 
 // sendEventToClient sends a single event to a client via SSE.
 func (h *Hub) sendEventToClient(client *Client, event Event) error {
+	// Protect Writer access with mutex to prevent race conditions
+	client.mu.Lock()
+	defer client.mu.Unlock()
+
 	// Format as SSE
 	if event.ID > 0 {
 		if _, err := fmt.Fprintf(client.Writer, "id: %d\n", event.ID); err != nil {
