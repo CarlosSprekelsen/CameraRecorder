@@ -187,30 +187,6 @@ header h1 {
     border-color: #3498db;
 }
 
-.frequency-input {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.frequency-input label {
-    font-weight: 500;
-    color: #555;
-}
-
-.frequency-input input {
-    padding: 8px 12px;
-    border: 2px solid #ddd;
-    border-radius: 4px;
-    font-size: 1rem;
-    width: 120px;
-}
-
-.frequency-input input:focus {
-    outline: none;
-    border-color: #3498db;
-    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
-}
 
 .apply-btn {
     padding: 8px 16px;

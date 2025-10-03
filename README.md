@@ -1,12 +1,12 @@
 # RCC v1 Web UI
 
-A desktop-first, single-page Web UI for Silvus Radio Control Container (RCC) implementing OpenAPI v1 and Telemetry SSE v1 with CB-TIMING v0.3 conformance.
+A desktop-first, single-page Web UI for Radio Control Container (RCC) implementing OpenAPI v1 and Telemetry SSE v1 with CB-TIMING v0.3 conformance. Supports multiple radio types with abstract channel selection.
 
 ## Features
 
 - **Radio Selection**: List and select active radio from available radios
 - **Power Control**: Set power level (0-39 dBm) with real-time feedback
-- **Channel Control**: Set channel by index (1-based) or frequency (MHz) with precedence rules
+- **Channel Control**: Set channel by abstract index (1,2,3...) with frequency display for reference
 - **Live Telemetry**: Real-time SSE stream with event resume and buffering
 - **Error Handling**: Normalized error codes with CB-TIMING backoff policies
 - **Audit Logging**: Structured logs with correlation ID passthrough
@@ -76,7 +76,7 @@ The `config.json` file contains timing parameters from CB-TIMING v0.3:
 - `GET /radios/{id}/power` - Get current power level
 - `POST /radios/{id}/power` - Set power level
 - `GET /radios/{id}/channel` - Get current channel/frequency
-- `POST /radios/{id}/channel` - Set channel by index or frequency
+- `POST /radios/{id}/channel` - Set channel by abstract index (1,2,3...)
 
 ### Response Envelopes
 
@@ -127,12 +127,7 @@ curl -X POST http://localhost:3000/radios/radio-01/power \
   -H "Content-Type: application/json" \
   -d '{"powerDbm":30}'
 
-# Test channel setting by frequency
-curl -X POST http://localhost:3000/radios/radio-01/channel \
-  -H "Content-Type: application/json" \
-  -d '{"frequencyMhz":2437}'
-
-# Test channel setting by index (1-based)
+# Test channel setting by abstract index (1,2,3...)
 curl -X POST http://localhost:3000/radios/radio-01/channel \
   -H "Content-Type: application/json" \
   -d '{"channelIndex":6}'
@@ -163,8 +158,8 @@ curl -N http://localhost:3000/telemetry
 
 ### Channel Control
 - [ ] `GET /radios/{id}/channel` displays current frequency and index
-- [ ] `POST /radios/{id}/channel` accepts both index and frequency
-- [ ] Frequency precedence: MHz overrides index when both provided
+- [ ] `POST /radios/{id}/channel` accepts abstract channel index (1,2,3...)
+- [ ] Channel selection uses abstract numbers, frequency shown for reference only
 - [ ] Channel indices displayed as 1-based throughout UI
 - [ ] Channel changes trigger `channelChanged` telemetry events
 

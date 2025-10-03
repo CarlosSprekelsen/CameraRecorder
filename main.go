@@ -162,6 +162,11 @@ func main() {
 	fs := http.FileServer(http.Dir("./static"))
 	http.Handle("/", fs)
 
+	// Serve config.json
+	http.HandleFunc("/config.json", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "config.json")
+	})
+
 	// API reverse proxy routes
 	http.HandleFunc("/radios", reverseProxy)
 	http.HandleFunc("/radios/", reverseProxy)

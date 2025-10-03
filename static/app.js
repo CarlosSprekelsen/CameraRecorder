@@ -170,10 +170,11 @@ class RCCClient {
                 const freq = channelData.data.frequencyMhz;
                 const index = channelData.data.channelIndex;
                 
+                // Display frequency as read-only information
                 document.getElementById('currentChannel').textContent = `${freq} MHz`;
                 document.getElementById('currentChannelIndex').textContent = index ? `Ch ${index}` : 'Custom';
                 
-                // Update channel buttons
+                // Update channel buttons with abstract numbers (1,2,3...)
                 this.updateChannelButtons(channelData.data.capabilities);
             }
         } catch (error) {
@@ -213,9 +214,14 @@ class RCCClient {
         }
     }
     
-    async setChannel(channelIndex = null, frequencyMhz = null) {
+    async setChannel(channelIndex) {
         if (!this.activeRadioId) {
             this.showToast('No radio selected', 'warning');
+            return;
+        }
+        
+        if (!channelIndex) {
+            this.showToast('Channel index required', 'warning');
             return;
         }
         
@@ -227,14 +233,7 @@ class RCCClient {
         this.pendingOperations.set(operationKey, true);
         
         try {
-            const payload = {};
-            if (frequencyMhz !== null) {
-                payload.frequencyMhz = parseFloat(frequencyMhz);
-            } else if (channelIndex !== null) {
-                payload.channelIndex = parseInt(channelIndex);
-            } else {
-                throw new Error('Either channelIndex or frequencyMhz must be provided');
-            }
+            const payload = { channelIndex: parseInt(channelIndex) };
             
             const data = await this.apiCall(`/radios/${this.activeRadioId}/channel`, {
                 method: 'POST',
@@ -242,13 +241,13 @@ class RCCClient {
             });
             
             if (data.result === 'ok') {
-                this.showToast(`Channel set to ${frequencyMhz ? frequencyMhz + ' MHz' : 'Ch ' + channelIndex}`, 'success');
+                this.showToast(`Channel set to ${channelIndex}`, 'success');
                 await this.loadRadioState(); // Refresh display
             } else {
                 throw new Error(data.message || 'Failed to set channel');
             }
         } catch (error) {
-            this.handleApiError(error, 'setChannel', () => this.setChannel(channelIndex, frequencyMhz));
+            this.handleApiError(error, 'setChannel', () => this.setChannel(channelIndex));
         } finally {
             this.pendingOperations.delete(operationKey);
         }
@@ -328,7 +327,7 @@ class RCCClient {
                 const index = data.channelIndex;
                 document.getElementById('currentChannel').textContent = `${freq} MHz`;
                 document.getElementById('currentChannelIndex').textContent = index ? `Ch ${index}` : 'Custom';
-                this.addTelemetryLog(`Channel changed → ${freq} MHz (Ch ${index || 'Custom'})`, 'channelChanged');
+                this.addTelemetryLog(`Channel changed → Ch ${index || 'Custom'} (${freq} MHz)`, 'channelChanged');
             } catch (error) {
                 console.error('Failed to parse channelChanged event:', error);
             }
@@ -432,20 +431,7 @@ class RCCClient {
             this.setPower(power);
         });
         
-        // Channel control
-        document.getElementById('setFrequency').addEventListener('click', () => {
-            const frequency = document.getElementById('frequencyInput').value;
-            if (frequency) {
-                this.setChannel(null, frequency);
-            }
-        });
-        
-        // Enter key support
-        document.getElementById('frequencyInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                document.getElementById('setFrequency').click();
-            }
-        });
+        // Channel control - only abstract channel numbers (1,2,3...)
     }
 }
 

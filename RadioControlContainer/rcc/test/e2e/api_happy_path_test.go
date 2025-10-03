@@ -37,29 +37,30 @@ func TestE2E_HappyPath(t *testing.T) {
 	body := httpGetJSON(t, server.URL+"/api/v1/radios")
 	mustHave(t, body, "result", "ok")
 
-	// Normalize dynamic fields in assertions
-	// Check if data is a slice or map
+	// Check response structure: data.activeRadioId and data.items
 	data := body["data"]
 	if data == nil {
 		t.Fatal("Expected 'data' field in response")
 	}
 
-	// Handle different response structures
-	switch v := data.(type) {
-	case []interface{}:
-		if len(v) == 0 {
-			t.Fatal("Expected at least one radio")
-		}
-		radio := v[0].(map[string]interface{})
-		mustHave(t, radio, "id", "silvus-001")
-		mustHave(t, radio, "type", "Silvus")
-	case map[string]interface{}:
-		// Single radio response
-		mustHave(t, v, "id", "silvus-001")
-		mustHave(t, v, "type", "Silvus")
-	default:
-		t.Fatalf("Unexpected data type: %T", v)
+	dataMap, ok := data.(map[string]interface{})
+	if !ok {
+		t.Fatalf("Expected data to be a map, got %T", data)
 	}
+
+	// Check activeRadioId
+	mustHave(t, dataMap, "activeRadioId", "silvus-001")
+
+	// Check items list
+	items, ok := dataMap["items"].([]interface{})
+	if !ok || len(items) == 0 {
+		t.Fatal("Expected items to be a non-empty list")
+	}
+
+	// Check first radio
+	radio := items[0].(map[string]interface{})
+	mustHave(t, radio, "id", "silvus-001")
+	mustHave(t, radio, "model", "Unknown-Radio")
 
 	// 2) Select radio (should already be active)
 	httpPostJSON200(t, server.URL+"/api/v1/radios/select", map[string]any{"radioId": "silvus-001"})

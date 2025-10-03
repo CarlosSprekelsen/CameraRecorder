@@ -87,7 +87,7 @@ func (m *Manager) LoadCapabilities(radioID string, radioAdapter adapter.IRadioAd
 		Capabilities: &adapter.RadioCapabilities{
 			MinPowerDbm: m.getMinPowerFromCapabilities(capabilities),
 			MaxPowerDbm: m.getMaxPowerFromCapabilities(capabilities),
-			Channels:    m.getChannelsFromCapabilities(capabilities),
+			Channels:    m.getChannelsFromCapabilities(capabilities, radioAdapter),
 		},
 		State:    state,
 		LastSeen: time.Now(),
@@ -181,6 +181,18 @@ func (m *Manager) GetRadio(radioID string) (*Radio, error) {
 		return nil, fmt.Errorf("radio %s not found", radioID)
 	}
 
+	// Ensure capabilities are loaded from adapter if missing
+	if radio.Capabilities == nil && m.adapters[radioID] != nil {
+		radioAdapter := m.adapters[radioID]
+		// Try to get channels directly from adapter if it supports it
+		if bandPlanAdapter, ok := radioAdapter.(interface{ GetBandPlan() []adapter.Channel }); ok {
+			channels := bandPlanAdapter.GetBandPlan()
+			radio.Capabilities = &adapter.RadioCapabilities{
+				Channels: channels,
+			}
+		}
+	}
+
 	return radio, nil
 }
 
@@ -263,7 +275,7 @@ func (m *Manager) RefreshCapabilities(radioID string, timeout time.Duration) err
 	}
 
 	// Update capabilities
-	radio.Capabilities.Channels = m.getChannelsFromCapabilities(capabilities)
+	radio.Capabilities.Channels = m.getChannelsFromCapabilities(capabilities, radioAdapter)
 	radio.LastSeen = time.Now()
 
 	return nil
@@ -286,8 +298,13 @@ func (m *Manager) getMaxPowerFromCapabilities(capabilities []adapter.FrequencyPr
 	return 39
 }
 
-func (m *Manager) getChannelsFromCapabilities(capabilities []adapter.FrequencyProfile) []adapter.Channel {
-	// Convert frequency profiles to channels
+func (m *Manager) getChannelsFromCapabilities(capabilities []adapter.FrequencyProfile, radioAdapter adapter.IRadioAdapter) []adapter.Channel {
+	// Try to get channels directly from adapter if it supports it (e.g., SilvusMock)
+	if bandPlanAdapter, ok := radioAdapter.(interface{ GetBandPlan() []adapter.Channel }); ok {
+		return bandPlanAdapter.GetBandPlan()
+	}
+	
+	// Fallback: Convert frequency profiles to channels
 	// In real implementation, this would derive channels from frequency profiles
 	channels := make([]adapter.Channel, 0)
 	for i, profile := range capabilities {
