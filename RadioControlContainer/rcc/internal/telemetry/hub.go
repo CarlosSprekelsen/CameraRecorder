@@ -194,23 +194,16 @@ func (h *Hub) Publish(event Event) error {
 
 	// Send to all clients without holding the lock
 	for _, client := range clients {
-		// Check if client context is still alive first
 		select {
 		case <-client.Context.Done():
-			// Client context cancelled, skip this client
+			// Client context cancelled, skip this client - PRIORITY
 			continue
-		default:
-		}
-		
-		select {
 		case <-h.done:
 			// Hub is shutting down, don't send
 			return nil
 		case client.Events <- event:
 		case <-time.After(100 * time.Millisecond):
 			// Drop event if client is slow to prevent blocking
-		case <-client.Context.Done():
-			// Client context cancelled during send, skip
 		}
 	}
 
@@ -311,17 +304,9 @@ func (h *Hub) handleClient(client *Client) {
 	defer timeout.Stop()
 
 	for {
-		// Prioritize context cancellation
 		select {
 		case <-client.Context.Done():
-			// Context cancelled, clean up and return immediately
-			return
-		default:
-		}
-		
-		select {
-		case <-client.Context.Done():
-			// Context cancelled, clean up and return
+			// Context cancelled, clean up and return immediately - PRIORITY
 			return
 		case <-timeout.C:
 			// Force cleanup on timeout to prevent connection leaks
@@ -503,7 +488,7 @@ func (h *Hub) Stop() {
 		h.wg.Wait()
 		close(done)
 	}()
-	
+
 	select {
 	case <-done:
 		// Clean shutdown

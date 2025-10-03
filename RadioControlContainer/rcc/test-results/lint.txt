@@ -1,0 +1,1 @@
+[0;34mRunning golangci-lint...[0m 

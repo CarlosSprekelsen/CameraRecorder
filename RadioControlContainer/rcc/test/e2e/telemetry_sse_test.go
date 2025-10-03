@@ -54,12 +54,34 @@ func TestE2E_TelemetrySSEConnection(t *testing.T) {
 
 		buf := make([]byte, 1024)
 		for {
+			// Check context first - this is the key fix
 			select {
 			case <-ctx.Done():
 				telemetryDone <- ctx.Err()
 				return
 			default:
-				n, err := resp.Body.Read(buf)
+				// Only proceed if context is not done
+				if ctx.Err() != nil {
+					telemetryDone <- ctx.Err()
+					return
+				}
+			}
+
+			// Use a goroutine to make the read non-blocking
+			readDone := make(chan struct{})
+			var n int
+			var err error
+
+			go func() {
+				n, err = resp.Body.Read(buf)
+				close(readDone)
+			}()
+
+			select {
+			case <-ctx.Done():
+				telemetryDone <- ctx.Err()
+				return
+			case <-readDone:
 				if err != nil {
 					telemetryDone <- err
 					return
@@ -281,12 +303,34 @@ func TestE2E_TelemetryHeartbeat(t *testing.T) {
 
 		buf := make([]byte, 1024)
 		for {
+			// Check context first - this is the key fix
 			select {
 			case <-ctx.Done():
 				telemetryDone <- ctx.Err()
 				return
 			default:
-				n, err := resp.Body.Read(buf)
+				// Only proceed if context is not done
+				if ctx.Err() != nil {
+					telemetryDone <- ctx.Err()
+					return
+				}
+			}
+
+			// Use a goroutine to make the read non-blocking
+			readDone := make(chan struct{})
+			var n int
+			var err error
+
+			go func() {
+				n, err = resp.Body.Read(buf)
+				close(readDone)
+			}()
+
+			select {
+			case <-ctx.Done():
+				telemetryDone <- ctx.Err()
+				return
+			case <-readDone:
 				if err != nil {
 					telemetryDone <- err
 					return

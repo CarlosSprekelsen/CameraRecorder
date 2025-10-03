@@ -1,0 +1,17 @@
+goos: linux
+goarch: amd64
+pkg: github.com/radio-control/rcc/internal/command
+cpu: Intel(R) Core(TM) i5 CPU       M 480  @ 2.67GHz
+BenchmarkSetPower-4                   	   82993	     15026 ns/op	    1248 B/op	      15 allocs/op
+BenchmarkSetPowerWithoutTelemetry-4   	  109591	     12614 ns/op	     752 B/op	       9 allocs/op
+BenchmarkSetChannel-4                 	   65156	     16952 ns/op	    1247 B/op	      15 allocs/op
+BenchmarkGetState-4                   	  107617	      9923 ns/op	     768 B/op	      10 allocs/op
+BenchmarkOrchestratorConcurrent-4     	   89137	     15236 ns/op	    1247 B/op	      15 allocs/op
+PASS
+ok  	github.com/radio-control/rcc/internal/command	6.903s
+goos: linux
+goarch: amd64
+pkg: github.com/radio-control/rcc/internal/telemetry
+cpu: Intel(R) Core(TM) i5 CPU       M 480  @ 2.67GHz
+BenchmarkPublishWithSubscribers/Subscribers_1-4         	 1385274	       923.0 ns/op	     439 B/op	       3 allocs/op
+BenchmarkPublishWithSubscribers/Subscribers_10-4        	 1315579	       900.3 ns/op	     439 B/op	       3 allocs/op
