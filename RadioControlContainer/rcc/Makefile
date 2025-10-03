@@ -156,10 +156,13 @@ integration: ## Run integration tests (multi-component, no HTTP)
 	@echo "$(BLUE)Running integration tests...$(NC)"
 	@go test ./test/integration/... -count=1 -tags=integration -timeout=10m
 
-integration-cover: ## Integration coverage
-	@echo "$(BLUE)Running integration tests with coverage...$(NC)"
-	@go test -coverprofile=integration_coverage.out ./test/integration/... -tags=integration -count=1
-	@go tool cover -func=integration_coverage.out | grep total || true
+integration-cover: ## Integration coverage with cross-package coverage
+	@echo "$(BLUE)Running integration tests with cross-package coverage...$(NC)"
+	@mkdir -p coverage
+	@PKGS=$$(go list ./internal/... | tr '\n' ','); \
+	go test -tags=integration -coverpkg="$${PKGS%,}" -coverprofile=coverage/integration.out ./test/integration/...
+	@go tool cover -func=coverage/integration.out | tail -1
+	@echo "$(GREEN)✅ Integration coverage report: coverage/integration.out$(NC)"
 
 # Team-specific test suites
 test-unit-team: ## Team 1: Unit tests (fast)

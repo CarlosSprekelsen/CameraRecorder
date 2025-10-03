@@ -51,6 +51,9 @@ func TestExecuteCommandSetPower(t *testing.T) {
 	rs := createTestRadioState()
 	defer rs.Close()
 	
+	// Wait for any blackout to clear
+	time.Sleep(6 * time.Second)
+	
 	tests := []struct {
 		name     string
 		params   []string
@@ -149,6 +152,9 @@ func TestExecuteCommandGetPower(t *testing.T) {
 func TestExecuteCommandSetFreq(t *testing.T) {
 	rs := createTestRadioState()
 	defer rs.Close()
+	
+	// Wait for any blackout to clear
+	time.Sleep(6 * time.Second)
 	
 	tests := []struct {
 		name    string
@@ -376,6 +382,9 @@ func TestConcurrentAccess(t *testing.T) {
 func TestMaintenanceCommands(t *testing.T) {
 	rs := createTestRadioState()
 	defer rs.Close()
+	
+	// Wait for any blackout to clear
+	time.Sleep(6 * time.Second)
 	
 	// Test zeroize
 	response := rs.ExecuteCommand("zeroize", []string{})

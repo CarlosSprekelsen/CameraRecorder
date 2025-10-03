@@ -3,7 +3,6 @@ package config
 import (
 	"os"
 	"testing"
-	"time"
 )
 
 func TestGetDefaultConfig(t *testing.T) {
