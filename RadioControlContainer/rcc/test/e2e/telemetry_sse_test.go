@@ -43,7 +43,9 @@ func TestE2E_TelemetrySSEConnection(t *testing.T) {
 	telemetryDone := make(chan error, 1)
 	go func() {
 		client := &http.Client{}
-		resp, err := client.Do(req)
+		// Use context-aware request for automatic connection cleanup
+		reqWithCtx := req.WithContext(ctx)
+		resp, err := client.Do(reqWithCtx)
 		if err != nil {
 			telemetryDone <- err
 			return
@@ -132,7 +134,9 @@ func TestE2E_TelemetryLastEventID(t *testing.T) {
 	telemetryDone1 := make(chan error, 1)
 	go func() {
 		client := &http.Client{}
-		resp, err := client.Do(req1)
+		// Use context-aware request for automatic connection cleanup
+		req1WithCtx := req1.WithContext(ctx1)
+		resp, err := client.Do(req1WithCtx)
 		if err != nil {
 			telemetryDone1 <- err
 			return
@@ -184,7 +188,9 @@ func TestE2E_TelemetryLastEventID(t *testing.T) {
 	telemetryDone2 := make(chan error, 1)
 	go func() {
 		client := &http.Client{}
-		resp, err := client.Do(req2)
+		// Use context-aware request for automatic connection cleanup
+		req2WithCtx := req2.WithContext(ctx2)
+		resp, err := client.Do(req2WithCtx)
 		if err != nil {
 			telemetryDone2 <- err
 			return
@@ -264,7 +270,9 @@ func TestE2E_TelemetryHeartbeat(t *testing.T) {
 	telemetryDone := make(chan error, 1)
 	go func() {
 		client := &http.Client{}
-		resp, err := client.Do(req)
+		// Use context-aware request for automatic connection cleanup
+		reqWithCtx := req.WithContext(ctx)
+		resp, err := client.Do(reqWithCtx)
 		if err != nil {
 			telemetryDone <- err
 			return

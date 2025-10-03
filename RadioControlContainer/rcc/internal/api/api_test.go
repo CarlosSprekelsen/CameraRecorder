@@ -196,9 +196,9 @@ func TestExtractRadioID(t *testing.T) {
 		path     string
 		expected string
 	}{
-		{"/api/v1/radios/radio-01", "radio-01"},
-		{"/api/v1/radios/radio-01/power", "radio-01"},
-		{"/api/v1/radios/radio-01/channel", "radio-01"},
+		{"/api/v1/radios/silvus-001", "silvus-001"},
+		{"/api/v1/radios/silvus-001/power", "silvus-001"},
+		{"/api/v1/radios/silvus-001/channel", "silvus-001"},
 		{"/api/v1/radios/", ""},
 		{"/api/v1/radios", ""},
 		{"/invalid/path", ""},
@@ -286,7 +286,7 @@ func TestHandleSelectRadio(t *testing.T) {
 	server, _, _, _ := setupAPITest(t)
 
 	// Test POST /radios/select with valid radio ID
-	req := httptest.NewRequest("POST", "/api/v1/radios/select", strings.NewReader(`{"radioId":"silvus-001"}`))
+	req := httptest.NewRequest("POST", "/api/v1/radios/select", strings.NewReader(`{"radioId":"radio-01"}`))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
 
