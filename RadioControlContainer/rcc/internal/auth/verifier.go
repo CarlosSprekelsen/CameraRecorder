@@ -1,15 +1,9 @@
 // Package auth implements JWT token verification with RS256/PEM/JWKS support.
 //
-// Requirements:
-//   - Architecture §5: "Validate tokens; enforce role-based access control"
 //   - OpenAPI v1 §1.1: "Send Authorization: Bearer <token> header on every request (except /health)"
 //   - OpenAPI v1 §1.2: "viewer: read-only (list radios, get state, subscribe to telemetry)"
 //   - OpenAPI v1 §1.2: "controller: all viewer privileges plus control actions (select radio, set power, set channel)"
 //
-// Source: OpenAPI v1 §1.1 & §1.2
-// Quote: "Send Authorization: Bearer <token> header on every request (except /health)"
-// Quote: "viewer: read-only (list radios, get state, subscribe to telemetry)"
-// Quote: "controller: all viewer privileges plus control actions (select radio, set power, set channel)"
 package auth
 
 import (

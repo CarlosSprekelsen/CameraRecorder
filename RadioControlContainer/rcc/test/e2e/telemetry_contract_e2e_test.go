@@ -12,8 +12,6 @@ import (
 )
 
 // TestTelemetryContract_ReadyEvent tests the ready event structure per Telemetry SSE v1 §2.2a
-// Source: Telemetry SSE v1 §2.2a
-// Quote: "Emitted once per connection with a snapshot of current state"
 func TestTelemetryContract_ReadyEvent(t *testing.T) {
 	// Arrange: Use harness with telemetry hub
 	opts := harness.DefaultOptions()
@@ -59,8 +57,6 @@ func TestTelemetryContract_ReadyEvent(t *testing.T) {
 }
 
 // TestTelemetryContract_HeartbeatCadence tests heartbeat timing per CB-TIMING v0.3 §3.1
-// Source: CB-TIMING v0.3 §3.1
-// Quote: "Heartbeat Interval: 15 seconds (idle cap), Heartbeat Jitter: ±2 seconds"
 func TestTelemetryContract_HeartbeatCadence(t *testing.T) {
 	// Arrange: Use harness with telemetry hub
 	opts := harness.DefaultOptions()
@@ -92,8 +88,6 @@ func TestTelemetryContract_HeartbeatCadence(t *testing.T) {
 }
 
 // TestTelemetryContract_EventBuffering tests event buffering per CB-TIMING v0.3 §6.1
-// Source: CB-TIMING v0.3 §6.1
-// Quote: "Buffer size per radio: 50 events, Buffer retention: 1 hour"
 func TestTelemetryContract_EventBuffering(t *testing.T) {
 	// Arrange: Use harness with telemetry hub
 	opts := harness.DefaultOptions()
@@ -136,8 +130,6 @@ func TestTelemetryContract_EventBuffering(t *testing.T) {
 }
 
 // TestTelemetryContract_LastEventID tests Last-Event-ID replay per Telemetry SSE v1 §1.3
-// Source: Telemetry SSE v1 §1.3
-// Quote: "Clients should send Last-Event-ID on reconnect to resume from the last processed event ID"
 func TestTelemetryContract_LastEventID(t *testing.T) {
 	// Arrange: Use harness with telemetry hub
 	opts := harness.DefaultOptions()
@@ -175,7 +167,6 @@ func TestTelemetryContract_LastEventID(t *testing.T) {
 }
 
 // TestTelemetryContract_EventStructure tests event structure per Telemetry SSE v1 §3
-// Source: Telemetry SSE v1 §3 Data Model (Payload Schemas)
 func TestTelemetryContract_EventStructure(t *testing.T) {
 	// Arrange: Use harness with telemetry hub
 	opts := harness.DefaultOptions()
@@ -217,7 +208,6 @@ func TestTelemetryContract_EventStructure(t *testing.T) {
 }
 
 // TestTelemetryContract_ErrorNormalization tests fault event normalization per Telemetry SSE v1 §3.5
-// Source: Telemetry SSE v1 §3.5 fault Event, Architecture §8.5 Error Model & Normalization
 func TestTelemetryContract_ErrorNormalization(t *testing.T) {
 	// Arrange: Use harness with telemetry hub
 	opts := harness.DefaultOptions()

@@ -1,10 +1,5 @@
-// Package audit implements AuditLogger from Architecture §5.
 //
-// Requirements:
-//   - Architecture §5: "Append-only action log with user, radioId, params, outcome, timestamp"
 //
-// Source: Architecture §8.6
-// Quote: "Structured audit logs per Architecture §8.6 schema"
 package audit
 
 import (
@@ -19,7 +14,6 @@ import (
 )
 
 // AuditEntry represents a single audit log entry.
-// Source: Architecture §8.6
 type AuditEntry struct {
 	Timestamp time.Time              `json:"ts"`
 	User      string                 `json:"user"`
@@ -60,7 +54,6 @@ func NewLogger(logDir string) (*Logger, error) {
 }
 
 // LogAction logs an audit record for a command action.
-// Source: Architecture §8.6
 func (l *Logger) LogAction(ctx context.Context, action, radioID, result string, latency time.Duration) {
 	// Extract user from context (if available)
 	user := l.getUserFromContext(ctx)

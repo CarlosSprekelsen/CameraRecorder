@@ -1,10 +1,5 @@
-// Package telemetry implements TelemetryHub from Architecture §5.
 //
-// Requirements:
-//   - Architecture §5: "Fan-out events to all SSE clients; buffer last N events per client for reconnection (Last-Event-ID)."
 //
-// Source: Telemetry SSE v1
-// Quote: "Event IDs are monotonic per radio, starting from 1"
 package telemetry
 
 import (
@@ -21,7 +16,6 @@ import (
 )
 
 // Event represents a telemetry event with SSE formatting.
-// Source: Telemetry SSE v1 §2.1
 type Event struct {
 	ID    int64                  `json:"id,omitempty"`
 	Type  string                 `json:"type"`
@@ -44,8 +38,6 @@ type Client struct {
 }
 
 // Hub manages SSE telemetry distribution with per-radio buffering.
-// Source: Architecture §5
-// Quote: "Fan-out events to all SSE clients; buffer last N events per client for reconnection"
 //
 // LOCK ORDERING (if multiple locks are ever used):
 // 1. h.mu (Hub's RWMutex) - protects clients, radioIDs, buffers maps
@@ -76,7 +68,6 @@ type Hub struct {
 }
 
 // EventBuffer maintains a circular buffer of events for a specific radio.
-// Source: CB-TIMING v0.3 §6.1
 type EventBuffer struct {
 	mu       sync.RWMutex
 	events   []Event
@@ -86,8 +77,6 @@ type EventBuffer struct {
 }
 
 // NewHub creates a new telemetry hub with the specified configuration.
-// Source: CB-TIMING v0.3
-// Quote: "Buffer size per radio: 50 events, Buffer retention: 1 hour"
 func NewHub(timingConfig *config.TimingConfig) *Hub {
 	hub := &Hub{
 		clients:  make(map[string]*Client),
@@ -101,8 +90,6 @@ func NewHub(timingConfig *config.TimingConfig) *Hub {
 }
 
 // Subscribe handles SSE client subscription with Last-Event-ID resume support.
-// Source: Telemetry SSE v1 §1.3
-// Quote: "Clients should send Last-Event-ID on reconnect to resume from the last processed event ID"
 func (h *Hub) Subscribe(ctx context.Context, w http.ResponseWriter, r *http.Request) error {
 	// Set SSE headers
 	w.Header().Set("Content-Type", "text/event-stream; charset=utf-8")
@@ -173,7 +160,6 @@ func (h *Hub) Subscribe(ctx context.Context, w http.ResponseWriter, r *http.Requ
 }
 
 // Publish publishes an event to all connected clients.
-// Source: Telemetry SSE v1 §2.2
 func (h *Hub) Publish(event Event) error {
 	// Assign event ID if not set (needs write lock)
 	if event.ID == 0 {
@@ -212,14 +198,12 @@ func (h *Hub) Publish(event Event) error {
 }
 
 // PublishRadio publishes an event for a specific radio.
-// Source: Telemetry SSE v1 §2.2
 func (h *Hub) PublishRadio(radioID string, event Event) error {
 	event.Radio = radioID
 	return h.Publish(event)
 }
 
 // sendReadyEvent sends the initial ready event to a client.
-// Source: Telemetry SSE v1 §2.2a
 func (h *Hub) sendReadyEvent(client *Client) error {
 	readyEvent := Event{
 		ID:   h.getNextEventID(client.Radio),
@@ -236,7 +220,6 @@ func (h *Hub) sendReadyEvent(client *Client) error {
 }
 
 // replayEvents replays buffered events for a client based on Last-Event-ID.
-// Source: Telemetry SSE v1 §1.3
 func (h *Hub) replayEvents(client *Client, lastEventID int64) error {
 	h.mu.RLock()
 	buffer, exists := h.buffers[client.Radio]
@@ -357,7 +340,6 @@ func (h *Hub) unregisterClient(clientID string) {
 }
 
 // getNextEventID returns the next monotonic event ID for a radio.
-// Source: Telemetry SSE v1 §1.3
 func (h *Hub) getNextEventID(radioID string) int64 {
 	if radioID == "" {
 		radioID = "global"
@@ -389,7 +371,6 @@ func (h *Hub) getNextEventID(radioID string) int64 {
 }
 
 // bufferEvent adds an event to the per-radio buffer.
-// Source: CB-TIMING v0.3 §6.1
 //
 // SAFETY ASSUMPTION: EventBuffer references are never removed from h.buffers map.
 // This allows safe access to the buffer reference after releasing h.mu, since
@@ -412,7 +393,6 @@ func (h *Hub) bufferEvent(event Event) {
 }
 
 // startHeartbeat starts the heartbeat ticker.
-// Source: CB-TIMING v0.3 §3.1
 func (h *Hub) startHeartbeat() {
 	// Caller must hold h.mu and verify h.heartbeatTicker == nil
 
@@ -455,7 +435,6 @@ func (h *Hub) startHeartbeat() {
 }
 
 // sendHeartbeat sends a heartbeat event to all clients.
-// Source: Telemetry SSE v1 §2.2f
 func (h *Hub) sendHeartbeat() {
 	heartbeatEvent := Event{
 		Type: "heartbeat",

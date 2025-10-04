@@ -1,6 +1,5 @@
 // Package adapter defines IRadioAdapter interface from Architecture §5.
 //
-// Requirements:
 //   - Architecture §8.5: "Normalized error codes: INVALID_RANGE, BUSY, UNAVAILABLE, INTERNAL"
 //   - Architecture §8.5.1: "Deterministic mapping with diagnostic preservation"
 //
@@ -24,8 +23,6 @@ var (
 )
 
 // VendorMap defines the error token mapping for a specific vendor.
-// Source: PRE-INT-04
-// Quote: "table-driven matcher: map[vendorID]VendorMap{Range:[], Busy:[], Unavailable:[]}"
 type VendorMap struct {
 	Range       []string // Tokens that map to INVALID_RANGE
 	Busy        []string // Tokens that map to BUSY
@@ -33,8 +30,6 @@ type VendorMap struct {
 }
 
 // VendorErrorMappings contains the deterministic error mapping tables for all vendors.
-// Source: PRE-INT-04
-// Quote: "Extend internal/adapter/errors.go with table-driven matcher"
 //
 // README: Vendor Error Mapping Tables
 // ===================================
@@ -125,15 +120,11 @@ func (e *VendorError) Unwrap() error {
 }
 
 // NormalizeVendorError maps vendor errors to Architecture §8.5 codes using table-driven matching.
-// Source: PRE-INT-04
-// Quote: "Normalize Silvus-style vendor messages without heuristics"
 func NormalizeVendorError(vendorErr error, vendorPayload interface{}) error {
 	return NormalizeVendorErrorWithVendor(vendorErr, vendorPayload, "generic")
 }
 
 // NormalizeVendorErrorWithVendor maps vendor errors using specific vendor mapping tables.
-// Source: PRE-INT-04
-// Quote: "table-driven matcher: map[vendorID]VendorMap{Range:[], Busy:[], Unavailable:[]}"
 func NormalizeVendorErrorWithVendor(vendorErr error, vendorPayload interface{}, vendorID string) error {
 	if vendorErr == nil {
 		return nil
@@ -150,8 +141,6 @@ func NormalizeVendorErrorWithVendor(vendorErr error, vendorPayload interface{}, 
 }
 
 // mapVendorErrorToCode maps a vendor error message to normalized error code using table-driven matching.
-// Source: PRE-INT-04
-// Quote: "each token → exact normalized error; unknown → INTERNAL"
 func mapVendorErrorToCode(msg string, vendorID string) error {
 	// Get vendor mapping, fallback to generic if vendor not found
 	vendorMap, exists := VendorErrorMappings[vendorID]

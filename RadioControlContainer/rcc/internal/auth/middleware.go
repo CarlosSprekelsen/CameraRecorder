@@ -1,12 +1,5 @@
-// Package auth implements Auth from Architecture §5.
 //
-// Requirements:
-//   - Architecture §5: "Validate tokens; enforce role-based access control"
 //
-// Source: OpenAPI v1 §1.1 & §1.2
-// Quote: "Send Authorization: Bearer <token> header on every request (except /health)"
-// Quote: "viewer: read-only (list radios, get state, subscribe to telemetry)"
-// Quote: "controller: all viewer privileges plus control actions (select radio, set power, set channel)"
 package auth
 
 import (
@@ -63,7 +56,6 @@ func NewMiddlewareWithVerifier(verifier *Verifier) *Middleware {
 }
 
 // RequireAuth creates middleware that requires authentication.
-// Source: OpenAPI v1 §1.1
 func (m *Middleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Skip auth for health endpoint
@@ -95,7 +87,6 @@ func (m *Middleware) RequireAuth(next http.HandlerFunc) http.HandlerFunc {
 }
 
 // RequireScope creates middleware that requires specific scopes.
-// Source: OpenAPI v1 §1.2
 func (m *Middleware) RequireScope(requiredScopes ...string) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {
@@ -119,7 +110,6 @@ func (m *Middleware) RequireScope(requiredScopes ...string) func(http.HandlerFun
 }
 
 // RequireRole creates middleware that requires specific roles.
-// Source: OpenAPI v1 §1.2
 func (m *Middleware) RequireRole(requiredRoles ...string) func(http.HandlerFunc) http.HandlerFunc {
 	return func(next http.HandlerFunc) http.HandlerFunc {
 		return func(w http.ResponseWriter, r *http.Request) {

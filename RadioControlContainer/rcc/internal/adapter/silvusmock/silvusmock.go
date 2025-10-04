@@ -1,11 +1,7 @@
 // Package silvusmock provides a Silvus-like mock adapter for testing and development.
 //
-// Requirements:
-//   - Architecture §5: "IRadioAdapter: Stable API contract all adapters must implement"
 //   - PRE-INT-08: "Simulate Silvus-like behavior now"
 //
-// Source: PRE-INT-08
-// Quote: "Implement IRadioAdapter, in-memory state {powerDbm, frequencyMhz, channelIndex}"
 package silvusmock
 
 import (
@@ -18,8 +14,6 @@ import (
 )
 
 // SilvusMock implements IRadioAdapter with Silvus-like behavior for testing.
-// Source: PRE-INT-08
-// Quote: "Implement IRadioAdapter, in-memory state {powerDbm, frequencyMhz, channelIndex}"
 type SilvusMock struct {
 	adapter.AdapterBase
 
@@ -41,8 +35,6 @@ type SilvusMock struct {
 }
 
 // NewSilvusMock creates a new SilvusMock adapter.
-// Source: PRE-INT-08
-// Quote: "accept a band plan (slice of {index,freq}) for channel mapping tests"
 func NewSilvusMock(radioID string, bandPlan []adapter.Channel) *SilvusMock {
 	// Default band plan if none provided
 	if bandPlan == nil {
@@ -80,8 +72,6 @@ func NewSilvusMock(radioID string, bandPlan []adapter.Channel) *SilvusMock {
 }
 
 // GetState returns the current radio state.
-// Source: PRE-INT-08
-// Quote: "in-memory state {powerDbm, frequencyMhz, channelIndex}"
 func (s *SilvusMock) GetState(ctx context.Context) (*adapter.RadioState, error) {
 	// Check for context cancellation
 	select {
@@ -105,8 +95,6 @@ func (s *SilvusMock) GetState(ctx context.Context) (*adapter.RadioState, error) 
 }
 
 // SetPower sets the transmit power in dBm.
-// Source: PRE-INT-08
-// Quote: "Inject fault modes per call: ReturnBusy, ReturnUnavailable, ReturnInvalidRange"
 func (s *SilvusMock) SetPower(ctx context.Context, dBm float64) error {
 	// Check for context cancellation
 	select {
@@ -134,8 +122,6 @@ func (s *SilvusMock) SetPower(ctx context.Context, dBm float64) error {
 }
 
 // SetFrequency sets the transmit frequency in MHz.
-// Source: PRE-INT-08
-// Quote: "in-memory state {powerDbm, frequencyMhz, channelIndex}"
 func (s *SilvusMock) SetFrequency(ctx context.Context, frequencyMhz float64) error {
 	// Check for context cancellation
 	select {
@@ -220,8 +206,6 @@ func (s *SilvusMock) SupportedFrequencyProfiles(ctx context.Context) ([]adapter.
 // Fault injection methods
 
 // SetFaultMode sets the fault injection mode.
-// Source: PRE-INT-08
-// Quote: "Inject fault modes per call: ReturnBusy, ReturnUnavailable, ReturnInvalidRange"
 func (s *SilvusMock) SetFaultMode(mode string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

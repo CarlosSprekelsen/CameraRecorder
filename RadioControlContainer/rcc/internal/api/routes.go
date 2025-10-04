@@ -1,10 +1,5 @@
-// Package api implements ApiGateway from Architecture §5.
 //
-// Requirements:
-//   - Architecture §5: "Expose northbound HTTP/JSON commands and SSE endpoint; translate HTTP requests into orchestrator calls; throttle per client."
 //
-// Source: OpenAPI v1
-// Quote: "Minimal, stable contract for selecting a radio, setting channel and power, and receiving telemetry."
 package api
 
 import (
@@ -18,7 +13,6 @@ import (
 )
 
 // RegisterRoutes registers all OpenAPI v1 endpoints.
-// Source: OpenAPI v1 §3
 func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 	// API v1 base path
 	apiV1 := "/api/v1"
@@ -61,7 +55,6 @@ func (s *Server) RegisterRoutes(mux *http.ServeMux) {
 }
 
 // handleCapabilities handles GET /capabilities
-// Source: OpenAPI v1 §3.1
 func (s *Server) handleCapabilities(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		WriteError(w, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED",
@@ -80,7 +73,6 @@ func (s *Server) handleCapabilities(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleRadios handles GET /radios
-// Source: OpenAPI v1 §3.2
 func (s *Server) handleRadios(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		WriteError(w, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED",
@@ -100,7 +92,6 @@ func (s *Server) handleRadios(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleSelectRadio handles POST /radios/select
-// Source: OpenAPI v1 §3.3
 func (s *Server) handleSelectRadio(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		WriteError(w, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED",
@@ -196,7 +187,6 @@ func (s *Server) handleRadioEndpoints(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleRadioByID handles GET /radios/{id}
-// Source: OpenAPI v1 §3.4
 func (s *Server) handleRadioByID(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		WriteError(w, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED",
@@ -228,7 +218,6 @@ func (s *Server) handleRadioByID(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleRadioPower handles GET/POST /radios/{id}/power
-// Source: OpenAPI v1 §3.5 & §3.6
 func (s *Server) handleRadioPower(w http.ResponseWriter, r *http.Request) {
 	// Extract radio ID from path
 	radioID := s.extractRadioID(r.URL.Path)
@@ -250,7 +239,6 @@ func (s *Server) handleRadioPower(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleGetPower handles GET /radios/{id}/power
-// Source: OpenAPI v1 §3.5
 func (s *Server) handleGetPower(w http.ResponseWriter, r *http.Request, radioID string) {
 	if s.orchestrator == nil {
 		WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Service not available", nil)
@@ -268,7 +256,6 @@ func (s *Server) handleGetPower(w http.ResponseWriter, r *http.Request, radioID 
 }
 
 // handleSetPower handles POST /radios/{id}/power
-// Source: OpenAPI v1 §3.6
 func (s *Server) handleSetPower(w http.ResponseWriter, r *http.Request, radioID string) {
 	// Parse request body (strict JSON)
 	var request struct {
@@ -301,7 +288,6 @@ func (s *Server) handleSetPower(w http.ResponseWriter, r *http.Request, radioID 
 }
 
 // handleRadioChannel handles GET/POST /radios/{id}/channel
-// Source: OpenAPI v1 §3.7 & §3.8
 func (s *Server) handleRadioChannel(w http.ResponseWriter, r *http.Request) {
 	// Extract radio ID from path
 	radioID := s.extractRadioID(r.URL.Path)
@@ -323,7 +309,6 @@ func (s *Server) handleRadioChannel(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleGetChannel handles GET /radios/{id}/channel
-// Source: OpenAPI v1 §3.7
 func (s *Server) handleGetChannel(w http.ResponseWriter, r *http.Request, radioID string) {
 	if s.orchestrator == nil {
 		WriteError(w, http.StatusServiceUnavailable, "UNAVAILABLE", "Service not available", nil)
@@ -342,7 +327,6 @@ func (s *Server) handleGetChannel(w http.ResponseWriter, r *http.Request, radioI
 }
 
 // handleSetChannel handles POST /radios/{id}/channel
-// Source: OpenAPI v1 §3.8
 func (s *Server) handleSetChannel(w http.ResponseWriter, r *http.Request, radioID string) {
 	// Parse request body (strict JSON)
 	var request struct {
@@ -401,7 +385,6 @@ func (s *Server) handleSetChannel(w http.ResponseWriter, r *http.Request, radioI
 }
 
 // handleTelemetry handles GET /telemetry (SSE)
-// Source: OpenAPI v1 §3.9
 func (s *Server) handleTelemetry(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		WriteError(w, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED",
@@ -426,9 +409,6 @@ func (s *Server) handleTelemetry(w http.ResponseWriter, r *http.Request) {
 }
 
 // handleHealth handles GET /health
-// Source: OpenAPI v1 §3.10
-// Source: PRE-INT-07
-// Quote: "/health returns uptimeSec>0, subsystems booleans reflect init"
 func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		WriteError(w, http.StatusMethodNotAllowed, "METHOD_NOT_ALLOWED",
@@ -470,8 +450,6 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 }
 
 // checkSubsystemHealth checks the health of all subsystems.
-// Source: PRE-INT-07
-// Quote: "subsystems booleans reflect init"
 func (s *Server) checkSubsystemHealth() map[string]bool {
 	subsystems := make(map[string]bool)
 

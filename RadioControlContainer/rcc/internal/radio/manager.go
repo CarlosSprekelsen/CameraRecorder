@@ -1,10 +1,5 @@
-// Package radio implements RadioManager from Architecture §5.
 //
-// Requirements:
-//   - Architecture §5: "Track radio inventory, capabilities, and active selection"
 //
-// Source: OpenAPI v1 §3.2
-// Quote: "List known radios and current selection/state snapshot"
 package radio
 
 import (
@@ -17,7 +12,6 @@ import (
 )
 
 // Radio represents a single radio with its capabilities and current state.
-// Source: OpenAPI v1 §4.1
 type Radio struct {
 	ID           string                    `json:"id"`
 	Model        string                    `json:"model"`
@@ -28,14 +22,12 @@ type Radio struct {
 }
 
 // RadioList represents the response format for GET /radios.
-// Source: OpenAPI v1 §3.2
 type RadioList struct {
 	ActiveRadioID string  `json:"activeRadioId"`
 	Items         []Radio `json:"items"`
 }
 
 // Manager manages radio inventory, capabilities, and active selection.
-// Source: Architecture §5 (RadioManager)
 type Manager struct {
 	mu            sync.RWMutex
 	radios        map[string]*Radio
@@ -52,7 +44,6 @@ func NewManager() *Manager {
 }
 
 // LoadCapabilities loads capabilities from an adapter on startup.
-// Source: Architecture §5.6 & ICD §15
 func (m *Manager) LoadCapabilities(radioID string, radioAdapter adapter.IRadioAdapter, timeout time.Duration) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -104,7 +95,6 @@ func (m *Manager) LoadCapabilities(radioID string, radioAdapter adapter.IRadioAd
 }
 
 // SetActive sets the active radio with existence check.
-// Source: OpenAPI v1 §3.3
 func (m *Manager) SetActive(radioID string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -155,7 +145,6 @@ func (m *Manager) GetActiveAdapter() (adapter.IRadioAdapter, string, error) {
 }
 
 // List returns the radio list matching OpenAPI schema.
-// Source: OpenAPI v1 §3.2
 func (m *Manager) List() *RadioList {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -250,7 +239,6 @@ func (m *Manager) RemoveRadio(radioID string) error {
 }
 
 // RefreshCapabilities refreshes capabilities for a radio.
-// Source: Architecture §5.6 & ICD §15
 func (m *Manager) RefreshCapabilities(radioID string, timeout time.Duration) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()

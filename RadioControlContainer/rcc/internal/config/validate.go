@@ -1,10 +1,5 @@
-// Package config implements ConfigStore from Architecture §5.
 //
-// Requirements:
-//   - Architecture §5: "Channel maps per radio/band; power limits; hot-reload with signature verification."
 //
-// Source: CB-TIMING v0.3 §11
-// Quote: "Validation rules for timing parameters"
 package config
 
 import (
@@ -13,8 +8,6 @@ import (
 )
 
 // ValidateTiming enforces CB-TIMING v0.3 validation rules.
-// Source: CB-TIMING v0.3 §11
-// Quote: "Validation rules: positive durations, backoff ≥ 1.0, jitter ≤ 50%, max ≥ initial"
 func ValidateTiming(config *TimingConfig) error {
 	if config == nil {
 		return fmt.Errorf("config cannot be nil")
@@ -44,7 +37,6 @@ func ValidateTiming(config *TimingConfig) error {
 }
 
 // validateHeartbeat validates heartbeat timing parameters.
-// Source: CB-TIMING v0.3 §3.1
 func validateHeartbeat(config *TimingConfig) error {
 	// Heartbeat interval must be positive
 	if config.HeartbeatInterval <= 0 {
@@ -69,7 +61,6 @@ func validateHeartbeat(config *TimingConfig) error {
 }
 
 // validateProbes validates probe timing parameters.
-// Source: CB-TIMING v0.3 §4.1
 func validateProbes(config *TimingConfig) error {
 	// Normal probe interval must be positive
 	if config.ProbeNormalInterval <= 0 {
@@ -102,7 +93,6 @@ func validateProbes(config *TimingConfig) error {
 }
 
 // validateCommandTimeouts validates command timeout parameters.
-// Source: CB-TIMING v0.3 §5
 func validateCommandTimeouts(config *TimingConfig) error {
 	// All command timeouts must be positive
 	if config.CommandTimeoutSetPower <= 0 {
@@ -122,7 +112,6 @@ func validateCommandTimeouts(config *TimingConfig) error {
 }
 
 // validateEventBuffer validates event buffer parameters.
-// Source: CB-TIMING v0.3 §6.1
 func validateEventBuffer(config *TimingConfig) error {
 	// Event buffer size must be positive
 	if config.EventBufferSize <= 0 {
@@ -138,7 +127,6 @@ func validateEventBuffer(config *TimingConfig) error {
 }
 
 // ValidateTimingConstraints validates additional timing constraints.
-// Source: CB-TIMING v0.3 §11
 func ValidateTimingConstraints(config *TimingConfig) error {
 	// Check that backoff factors are reasonable (not too aggressive)
 	if config.ProbeRecoveringBackoff > 10.0 {

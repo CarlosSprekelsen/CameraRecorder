@@ -1,10 +1,3 @@
-// Package command implements CommandOrchestrator from Architecture §5.
-//
-// Requirements:
-//   - Architecture §5: "Route validated API intents to the active adapter; emit events; write audit records."
-//
-// Source: Architecture §5
-// Quote: "CommandOrchestrator: Route validated API intents to the active adapter; emit events; write audit records."
 package command
 
 import (
@@ -19,8 +12,6 @@ import (
 )
 
 // Orchestrator routes validated API intents to the active adapter.
-// Source: Architecture §5
-// Quote: "Route validated API intents to the active adapter; emit events; write audit records."
 type Orchestrator struct {
 	// Active radio adapter
 	activeAdapter adapter.IRadioAdapter
@@ -71,9 +62,7 @@ func (o *Orchestrator) SetActiveAdapter(adapter adapter.IRadioAdapter) {
 	o.activeAdapter = adapter
 }
 
-// SetPower sets the transmit power for the active radio.
-// Source: OpenAPI v1 §3.6
-// Quote: "Set TX power for a radio (dBm)"
+// SetPower sets the transmit power for the active radio in dBm.
 func (o *Orchestrator) SetPower(ctx context.Context, radioID string, dBm float64) error {
 	start := time.Now()
 
@@ -128,8 +117,6 @@ func (o *Orchestrator) SetPower(ctx context.Context, radioID string, dBm float64
 }
 
 // SetChannel sets the channel for the active radio by frequency or index.
-// Source: OpenAPI v1 §3.8
-// Quote: "Set radio channel by UI channel index or by frequency"
 func (o *Orchestrator) SetChannel(ctx context.Context, radioID string, frequencyMhz float64) error {
 	start := time.Now()
 
@@ -184,8 +171,6 @@ func (o *Orchestrator) SetChannel(ctx context.Context, radioID string, frequency
 }
 
 // SetChannelByIndex sets the channel for the active radio by channel index.
-// Source: OpenAPI v1 §3.8
-// Quote: "Set radio channel by UI channel index or by frequency"
 func (o *Orchestrator) SetChannelByIndex(ctx context.Context, radioID string, channelIndex int, radioManager RadioManager) error {
 	start := time.Now()
 
@@ -253,8 +238,6 @@ func (o *Orchestrator) SetChannelByIndex(ctx context.Context, radioID string, ch
 }
 
 // SelectRadio selects the active radio for subsequent operations.
-// Source: OpenAPI v1 §3.3
-// Quote: "Select the active radio for subsequent operations"
 func (o *Orchestrator) SelectRadio(ctx context.Context, radioID string) error {
 	start := time.Now()
 
@@ -316,7 +299,6 @@ func (o *Orchestrator) SelectRadio(ctx context.Context, radioID string) error {
 }
 
 // GetState retrieves the current state of the active radio.
-// Source: OpenAPI v1 §3.4
 func (o *Orchestrator) GetState(ctx context.Context, radioID string) (*adapter.RadioState, error) {
 	start := time.Now()
 
@@ -362,8 +344,6 @@ func (o *Orchestrator) GetState(ctx context.Context, radioID string) (*adapter.R
 }
 
 // validatePowerRange validates the power range.
-// Source: OpenAPI v1 §3.6
-// Quote: "Range: 0..39 (accuracy typically 10..39)"
 func (o *Orchestrator) validatePowerRange(dBm float64) error {
 	if dBm < 0 || dBm > 39 {
 		return adapter.ErrInvalidRange
@@ -372,8 +352,6 @@ func (o *Orchestrator) validatePowerRange(dBm float64) error {
 }
 
 // validateFrequencyRange validates the frequency range.
-// Source: OpenAPI v1 §3.8
-// Quote: "Frequency must be within the radio's allowed ranges"
 func (o *Orchestrator) validateFrequencyRange(frequencyMhz float64) error {
 	// Basic frequency validation - more sophisticated validation will be added later
 	// with derived channel maps
@@ -390,7 +368,6 @@ func (o *Orchestrator) validateFrequencyRange(frequencyMhz float64) error {
 }
 
 // publishPowerChangedEvent publishes a power changed event.
-// Source: Telemetry SSE v1 §2.2d
 func (o *Orchestrator) publishPowerChangedEvent(radioID string, powerDbm float64) {
 	if o.telemetryHub == nil {
 		return // Skip if no telemetry hub
@@ -409,7 +386,6 @@ func (o *Orchestrator) publishPowerChangedEvent(radioID string, powerDbm float64
 }
 
 // publishChannelChangedEvent publishes a channel changed event.
-// Source: Telemetry SSE v1 §2.2c
 func (o *Orchestrator) publishChannelChangedEvent(radioID string, frequencyMhz float64, channelIndex int) {
 	if o.telemetryHub == nil {
 		return // Skip if no telemetry hub
@@ -429,7 +405,6 @@ func (o *Orchestrator) publishChannelChangedEvent(radioID string, frequencyMhz f
 }
 
 // publishStateEvent publishes a state event.
-// Source: Telemetry SSE v1 §2.2b
 func (o *Orchestrator) publishStateEvent(radioID string) {
 	if o.telemetryHub == nil {
 		return // Skip if no telemetry hub
@@ -448,7 +423,6 @@ func (o *Orchestrator) publishStateEvent(radioID string) {
 }
 
 // publishFaultEvent publishes a fault event.
-// Source: Telemetry SSE v1 §2.2e
 func (o *Orchestrator) publishFaultEvent(radioID string, err error, message string) {
 	if o.telemetryHub == nil {
 		return // Skip if no telemetry hub
@@ -468,8 +442,6 @@ func (o *Orchestrator) publishFaultEvent(radioID string, err error, message stri
 }
 
 // logAudit logs an audit record for a command action.
-// Source: Architecture §8.6
-// Quote: "Structured audit logs per Architecture §8.6 schema"
 func (o *Orchestrator) logAudit(ctx context.Context, action, radioID, result string, latency time.Duration) {
 	if o.auditLogger != nil {
 		o.auditLogger.LogAction(ctx, action, radioID, result, latency)
@@ -487,8 +459,6 @@ func (o *Orchestrator) SetRadioManager(radioManager RadioManager) {
 }
 
 // resolveChannelIndex resolves a channel index to frequency via radio manager or Silvus band plan.
-// Source: PRE-INT-09
-// Quote: "orchestrator.SetChannel consults this when adapter capabilities carry a model that matches"
 func (o *Orchestrator) resolveChannelIndex(ctx context.Context, radioID string, channelIndex int, radioManager RadioManager) (float64, error) {
 	// First, try to resolve using Silvus band plan if available
 	if o.config != nil && o.config.SilvusBandPlan != nil {

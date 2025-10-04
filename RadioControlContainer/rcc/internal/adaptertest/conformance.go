@@ -1,11 +1,7 @@
 // Package adaptertest provides vendor-agnostic conformance testing for radio adapters.
 //
-// Requirements:
-//   - Architecture §5: "IRadioAdapter: Stable API contract all adapters must implement"
 //   - Architecture §8.5: "Error normalization to INVALID_RANGE, BUSY, UNAVAILABLE, INTERNAL"
 //
-// Source: RE-INT-03
-// Quote: "Any adapter (including Silvus) must pass a standard test suite"
 package adaptertest
 
 import (
@@ -56,8 +52,6 @@ type ConformanceReport struct {
 }
 
 // RunConformance runs the complete conformance test suite for an adapter.
-// Source: RE-INT-03
-// Quote: "Any adapter (including Silvus) must pass a standard test suite"
 func RunConformance(t *testing.T, newAdapter func() adapter.IRadioAdapter, caps Capabilities) {
 	startTime := time.Now()
 

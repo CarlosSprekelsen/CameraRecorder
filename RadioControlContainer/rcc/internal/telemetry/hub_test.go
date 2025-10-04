@@ -350,8 +350,6 @@ func TestHubSubscribeBasic(t *testing.T) {
 
 // TestTelemetryContract_SubscribeReceiveHeartbeat tests that subscribing to telemetry
 // receives heartbeat events as expected.
-// Source: PRE-INT-05
-// Quote: "Subscribe → receive heartbeat"
 func TestTelemetryContract_SubscribeReceiveHeartbeat(t *testing.T) {
 	cfg := config.LoadCBTimingBaseline()
 	// Use shorter heartbeat interval for testing (50ms instead of 15s)
@@ -432,8 +430,6 @@ func TestTelemetryContract_SubscribeReceiveHeartbeat(t *testing.T) {
 
 // TestTelemetryContract_PowerChannelChanges tests that power and channel changes
 // via orchestrator result in appropriate telemetry events.
-// Source: PRE-INT-05
-// Quote: "Perform power/channel via orchestrator → receive powerChanged/channelChanged"
 func TestTelemetryContract_PowerChannelChanges(t *testing.T) {
 	cfg := config.LoadCBTimingBaseline()
 	hub := NewHub(cfg)
@@ -527,8 +523,6 @@ func TestTelemetryContract_PowerChannelChanges(t *testing.T) {
 
 // TestTelemetryContract_DisconnectReconnectWithLastEventID tests that disconnecting
 // and reconnecting with Last-Event-ID header properly replays missed events.
-// Source: PRE-INT-05
-// Quote: "Disconnect/reconnect with Last-Event-ID → replay missed events up to buffer size"
 func TestTelemetryContract_DisconnectReconnectWithLastEventID(t *testing.T) {
 	cfg := config.LoadCBTimingBaseline()
 	hub := NewHub(cfg)
@@ -635,8 +629,6 @@ func TestTelemetryContract_DisconnectReconnectWithLastEventID(t *testing.T) {
 
 // TestTelemetryContract_MonotonicPerRadioIDs tests that event IDs are monotonic
 // per radio and that buffer bounds are respected.
-// Source: PRE-INT-05
-// Quote: "demonstrate monotonic per-radio IDs and buffer bounds"
 func TestTelemetryContract_MonotonicPerRadioIDs(t *testing.T) {
 	cfg := config.LoadCBTimingBaseline()
 	// Use small buffer size for testing
@@ -752,8 +744,6 @@ func TestTelemetryContract_MonotonicPerRadioIDs(t *testing.T) {
 
 // TestTelemetryContract_BufferBounds tests that the event buffer respects
 // capacity bounds and maintains proper circular buffer behavior.
-// Source: PRE-INT-05
-// Quote: "buffer bounds"
 func TestTelemetryContract_BufferBounds(t *testing.T) {
 	cfg := config.LoadCBTimingBaseline()
 	// Use small buffer size for testing
@@ -819,8 +809,6 @@ func TestTelemetryContract_BufferBounds(t *testing.T) {
 
 // TestTelemetryContract_NoSleepsGreaterThan100ms tests that no sleeps greater
 // than 100ms are used in the telemetry implementation.
-// Source: PRE-INT-05
-// Quote: "No sleeps > 100ms; use fake clock or tick injection if present"
 func TestTelemetryContract_NoSleepsGreaterThan100ms(t *testing.T) {
 	cfg := config.LoadCBTimingBaseline()
 	// Use very short intervals for testing

@@ -1,4 +1,3 @@
-// Package config implements ConfigStore from Architecture §5.
 package config
 
 import (
@@ -37,16 +36,12 @@ type TimingConfig struct {
 }
 
 // SilvusBandPlan represents Silvus radio band plan configuration.
-// Source: PRE-INT-09
-// Quote: "Add optional config.SilvusBandPlan (array of {channelIndex,frequencyMhz} per model/band)"
 type SilvusBandPlan struct {
 	// Band plans organized by model and band
 	Models map[string]map[string][]SilvusChannel `json:"models"`
 }
 
 // SilvusChannel represents a single channel in a Silvus band plan.
-// Source: PRE-INT-09
-// Quote: "array of {channelIndex,frequencyMhz} per model/band"
 type SilvusChannel struct {
 	ChannelIndex int     `json:"channelIndex"`
 	FrequencyMhz float64 `json:"frequencyMhz"`
@@ -82,8 +77,6 @@ func LoadCBTimingBaseline() *TimingConfig {
 }
 
 // GetSilvusChannelFrequency returns the frequency for a given channel index in a Silvus band plan.
-// Source: PRE-INT-09
-// Quote: "orchestrator.SetChannel consults this when adapter capabilities carry a model that matches"
 func (sbp *SilvusBandPlan) GetSilvusChannelFrequency(model, band string, channelIndex int) (float64, error) {
 	if sbp == nil || sbp.Models == nil {
 		return 0, fmt.Errorf("no Silvus band plan configured")

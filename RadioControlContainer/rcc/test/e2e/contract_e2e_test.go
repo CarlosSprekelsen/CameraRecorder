@@ -14,7 +14,6 @@ import (
 )
 
 // TestContractIntegration_SelectRadio tests the Api → Orchestrator → RadioManager flow
-// Source: Architecture §6.2 Choose Radio
 func TestContractIntegration_SelectRadio(t *testing.T) {
 	// Arrange: Use existing harness with proper RadioManager setup
 	opts := harness.DefaultOptions()
@@ -55,7 +54,6 @@ func TestContractIntegration_SelectRadio(t *testing.T) {
 }
 
 // TestContractIntegration_SetChannel tests the channel index mapping flow
-// Source: Architecture §6.4 Set Channel (Map 1..N → Frequencies)
 func TestContractIntegration_SetChannel(t *testing.T) {
 	// Arrange: Use harness with channel mapping
 	opts := harness.DefaultOptions()
@@ -104,7 +102,6 @@ func TestContractIntegration_SetChannel(t *testing.T) {
 }
 
 // TestContractIntegration_SetPower tests the power setting flow with error normalization
-// Source: Architecture §6.3 Set Power, §8.5 Error Model & Normalization
 func TestContractIntegration_SetPower(t *testing.T) {
 	// Arrange: Use harness with power validation
 	opts := harness.DefaultOptions()
@@ -233,7 +230,6 @@ func TestContractIntegration_ErrorNormalization(t *testing.T) {
 }
 
 // TestContractIntegration_TelemetryEvents tests telemetry event emission
-// Source: Telemetry SSE v1 §2.2 Core Event Types
 func TestContractIntegration_TelemetryEvents(t *testing.T) {
 	// Arrange: Use harness with telemetry hub
 	opts := harness.DefaultOptions()
@@ -271,7 +267,6 @@ func TestContractIntegration_TelemetryEvents(t *testing.T) {
 }
 
 // TestContractIntegration_TimingConstraints tests CB-TIMING compliance
-// Source: CB-TIMING v0.3 §5 Command Timeout Classes
 func TestContractIntegration_TimingConstraints(t *testing.T) {
 	// Arrange: Use harness with timing configuration
 	opts := harness.DefaultOptions()

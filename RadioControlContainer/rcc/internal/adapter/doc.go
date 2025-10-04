@@ -1,7 +1,9 @@
-// Package adapter defines IRadioAdapter interface from Architecture §5.
+// Package adapter defines the radio adapter interface for the Radio Control Container.
 //
-// Requirements:
-//   - Architecture §5: "Radio Adapters (per vendor): speak native IP protocols"
-//   - Architecture §5: "IRadioAdapter: Stable API contract all adapters must implement"
-//   - Architecture §8.5: "Error normalization to INVALID_RANGE, BUSY, UNAVAILABLE, INTERNAL"
+// Radio adapters implement vendor-specific protocols to communicate with radio hardware.
+// The IRadioAdapter interface provides a stable API contract that all adapters must implement.
+//
+// Architecture References:
+//   - Architecture §8.5: Error code normalization
+//   - ICD §4: Adapter interface specifications
 package adapter

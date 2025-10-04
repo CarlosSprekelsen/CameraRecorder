@@ -1,10 +1,5 @@
-// Package api implements ApiGateway from Architecture §5.
 //
-// Requirements:
-//   - Architecture §5: "Expose northbound HTTP/JSON commands and SSE endpoint; translate HTTP requests into orchestrator calls; throttle per client."
 //
-// Source: OpenAPI v1 §2
-// Quote: "All endpoints return 200 OK with a success body or an error body with an appropriate HTTP status."
 package api
 
 import (
@@ -15,7 +10,6 @@ import (
 )
 
 // Response represents the unified envelope format.
-// Source: OpenAPI v1 §2.1 & §2.2
 type Response struct {
 	Result        string      `json:"result"`
 	Data          interface{} `json:"data,omitempty"`
@@ -26,7 +20,6 @@ type Response struct {
 }
 
 // SuccessResponse creates a success response.
-// Source: OpenAPI v1 §2.1
 func SuccessResponse(data interface{}) *Response {
 	return &Response{
 		Result:        "ok",
@@ -36,7 +29,6 @@ func SuccessResponse(data interface{}) *Response {
 }
 
 // ErrorResponse creates an error response.
-// Source: OpenAPI v1 §2.2
 func ErrorResponse(code, message string, details interface{}) *Response {
 	return &Response{
 		Result:        "error",

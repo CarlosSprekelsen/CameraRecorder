@@ -1,5 +1,9 @@
-// Package api implements ApiGateway from Architecture §5.
+// Package api implements the HTTP API gateway for the Radio Control Container.
 //
-// Requirements:
-//   - Architecture §5: "Expose northbound HTTP/JSON commands and SSE endpoint; translate HTTP requests into orchestrator calls; throttle per client."
+// The API gateway exposes northbound HTTP/JSON commands and SSE endpoints,
+// translating HTTP requests into orchestrator calls with client throttling.
+//
+// Architecture References:
+//   - OpenAPI §2: HTTP/JSON API specification
+//   - Telemetry SSE §1: Server-Sent Events protocol
 package api

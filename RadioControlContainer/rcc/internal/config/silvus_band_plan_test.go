@@ -1,6 +1,5 @@
 // Package config provides tests for Silvus band plan configuration.
 //
-// Requirements:
 //   - PRE-INT-09: "Unit tests for mapping using SilvusBandPlan"
 //   - PRE-INT-09: "Negative test: missing index → INVALID_RANGE"
 package config
@@ -11,8 +10,6 @@ import (
 )
 
 // TestSilvusBandPlan_ChannelMapping tests channel mapping functionality.
-// Source: PRE-INT-09
-// Quote: "Unit tests for mapping using SilvusBandPlan"
 func TestSilvusBandPlan_ChannelMapping(t *testing.T) {
 	// Create test band plan
 	bandPlan := &SilvusBandPlan{
@@ -98,8 +95,6 @@ func TestSilvusBandPlan_ChannelMapping(t *testing.T) {
 }
 
 // TestSilvusBandPlan_MissingIndex tests negative cases for missing channel indices.
-// Source: PRE-INT-09
-// Quote: "Negative test: missing index → INVALID_RANGE"
 func TestSilvusBandPlan_MissingIndex(t *testing.T) {
 	bandPlan := &SilvusBandPlan{
 		Models: map[string]map[string][]SilvusChannel{

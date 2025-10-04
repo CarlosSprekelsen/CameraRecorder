@@ -1,10 +1,5 @@
-// Package config implements ConfigStore from Architecture §5.
 //
-// Requirements:
-//   - Architecture §5: "Channel maps per radio/band; power limits; hot-reload with signature verification."
 //
-// Source: CB-TIMING v0.3
-// Quote: "All timing values externalized to config"
 package config
 
 import (
@@ -16,8 +11,6 @@ import (
 )
 
 // Load merges defaults from LoadCBTimingBaseline() + env overrides (RCC_TIMING_*) + optional config.json.
-// Source: CB-TIMING v0.3
-// Quote: "Single source of truth for all timing, cadence, and buffer parameters"
 func Load() (*TimingConfig, error) {
 	// Start with CB-TIMING v0.3 baseline
 	config := LoadCBTimingBaseline()
@@ -56,8 +49,6 @@ func Load() (*TimingConfig, error) {
 }
 
 // applyEnvOverrides applies RCC_TIMING_* environment variables to the config.
-// Source: CB-TIMING v0.3
-// Quote: "All timing values externalized to config"
 func applyEnvOverrides(config *TimingConfig) error {
 	// Heartbeat configuration
 	if val := os.Getenv("RCC_TIMING_HEARTBEAT_INTERVAL"); val != "" {
@@ -284,8 +275,6 @@ func GetEnvInt(key string, defaultValue int) int {
 }
 
 // loadSilvusBandPlanFromJSON loads a Silvus band plan from JSON string.
-// Source: PRE-INT-09
-// Quote: "Load from JSON/env"
 func loadSilvusBandPlanFromJSON(jsonStr string) (*SilvusBandPlan, error) {
 	var bandPlan SilvusBandPlan
 	if err := json.Unmarshal([]byte(jsonStr), &bandPlan); err != nil {
@@ -295,8 +284,6 @@ func loadSilvusBandPlanFromJSON(jsonStr string) (*SilvusBandPlan, error) {
 }
 
 // loadSilvusBandPlanFromFile loads a Silvus band plan from a JSON file.
-// Source: PRE-INT-09
-// Quote: "Load from JSON/env"
 func loadSilvusBandPlanFromFile(filename string) (*SilvusBandPlan, error) {
 	file, err := os.Open(filename)
 	if err != nil {

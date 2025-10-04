@@ -1,7 +1,5 @@
 // Package fake provides a fake radio adapter implementation for testing.
 //
-// Requirements:
-//   - Architecture §5: "IRadioAdapter: Stable API contract all adapters must implement"
 //   - RE-INT-03: "Any adapter (including Silvus) must pass a standard test suite"
 package fake
 
@@ -13,8 +11,6 @@ import (
 )
 
 // FakeAdapter implements IRadioAdapter for testing purposes.
-// Source: RE-INT-03
-// Quote: "Any adapter (including Silvus) must pass a standard test suite"
 type FakeAdapter struct {
 	adapter.AdapterBase
 

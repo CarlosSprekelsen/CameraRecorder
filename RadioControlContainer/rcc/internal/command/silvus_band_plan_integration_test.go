@@ -1,6 +1,5 @@
 // Package command provides integration tests for Silvus band plan functionality.
 //
-// Requirements:
 //   - PRE-INT-09: "orchestrator.SetChannel consults this when adapter capabilities carry a model that matches"
 //go:build integration
 // +build integration
@@ -38,8 +37,6 @@ func (m *SilvusTestRadioManager) SetActive(radioID string) error {
 }
 
 // TestOrchestrator_SilvusBandPlanIntegration tests orchestrator integration with Silvus band plans.
-// Source: PRE-INT-09
-// Quote: "orchestrator.SetChannel consults this when adapter capabilities carry a model that matches"
 func TestOrchestrator_SilvusBandPlanIntegration(t *testing.T) {
 	// Create test configuration with Silvus band plan
 	cfg := &config.TimingConfig{

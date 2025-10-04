@@ -28,5 +28,4 @@ type RadioManager interface {
 var ErrNotFound = errors.New("NOT_FOUND")
 
 // ErrInvalidParameter indicates a required parameter is missing or structurally invalid.
-// Source: OpenAPI v1 §2.2 (BAD_REQUEST)
 var ErrInvalidParameter = errors.New("BAD_REQUEST")

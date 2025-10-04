@@ -591,8 +591,6 @@ func TestMethodNotAllowed(t *testing.T) {
 
 // TestAPIContract_JSONResponseEnvelope tests that all JSON responses have
 // result + correlationId fields as required by the API contract.
-// Source: PRE-INT-06
-// Quote: "All JSON responses have result + correlationId"
 func TestAPIContract_JSONResponseEnvelope(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -778,8 +776,6 @@ func TestAPIContract_JSONResponseEnvelope(t *testing.T) {
 
 // TestAPIContract_ErrorMapping tests that adapter errors are properly mapped
 // to HTTP status codes as required by the API contract.
-// Source: PRE-INT-06
-// Quote: "Error mapping: adapter INVALID_RANGE → 400, BUSY/UNAVAILABLE → 503, INTERNAL → 500, plus 401/403/404"
 func TestAPIContract_ErrorMapping(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -909,8 +905,6 @@ func TestAPIContract_ErrorMapping(t *testing.T) {
 
 // TestAPIContract_TelemetryContentType tests that the /telemetry endpoint
 // returns the correct content type for SSE.
-// Source: PRE-INT-06
-// Quote: "/telemetry has text/event-stream"
 func TestAPIContract_TelemetryContentType(t *testing.T) {
 	cfg := config.LoadCBTimingBaseline()
 	hub := telemetry.NewHub(cfg)
@@ -971,8 +965,6 @@ func TestAPIContract_TelemetryContentType(t *testing.T) {
 
 // TestAPIContract_RouteParity tests that all API routes are properly registered
 // and prints a route parity table.
-// Source: PRE-INT-06
-// Quote: "route parity table (spec path → handler name) printed by tests"
 func TestAPIContract_RouteParity(t *testing.T) {
 	// Define expected routes from OpenAPI v1 specification
 	expectedRoutes := []struct {
@@ -1206,8 +1198,6 @@ func TestAPIContract_ResponseConsistency(t *testing.T) {
 
 // TestHealthAndReadiness_HealthySystem tests that /health returns ok status
 // when all subsystems are healthy.
-// Source: PRE-INT-07
-// Quote: "/health returns uptimeSec>0, subsystems booleans reflect init"
 func TestHealthAndReadiness_HealthySystem(t *testing.T) {
 	cfg := config.LoadCBTimingBaseline()
 	hub := telemetry.NewHub(cfg)
@@ -1284,8 +1274,6 @@ func TestHealthAndReadiness_HealthySystem(t *testing.T) {
 
 // TestHealthAndReadiness_DegradedSystem tests that /health returns degraded status
 // when a subsystem is down.
-// Source: PRE-INT-07
-// Quote: "Fail one dependency in a unit test (e.g., telemetry nil) → /health is not ok"
 func TestHealthAndReadiness_DegradedSystem(t *testing.T) {
 	// Test with nil telemetry hub
 	server := &Server{
@@ -1417,8 +1405,6 @@ func TestHealthAndReadiness_PartialDegradation(t *testing.T) {
 }
 
 // TestHealthAndReadiness_UptimeIncreases tests that uptime increases over time.
-// Source: PRE-INT-07
-// Quote: "Two snapshots of /health with increasing uptimeSec"
 func TestHealthAndReadiness_UptimeIncreases(t *testing.T) {
 	cfg := config.LoadCBTimingBaseline()
 	hub := telemetry.NewHub(cfg)

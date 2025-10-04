@@ -1,10 +1,5 @@
-// Package api implements ApiGateway from Architecture §5.
 //
-// Requirements:
-//   - Architecture §5: "Expose northbound HTTP/JSON commands and SSE endpoint; translate HTTP requests into orchestrator calls; throttle per client."
 //
-// Source: OpenAPI v1 §2.2
-// Quote: "Error mapping normalizes vendor/adapter errors to the codes above. See Architecture §8.5 for normalization rules."
 package api
 
 import (
@@ -26,7 +21,6 @@ type APIError struct {
 }
 
 // API error codes for transport/security/lookup conditions
-// Source: OpenAPI v1 §2.2
 var (
 	ErrBadRequest        = errors.New("BAD_REQUEST")
 	ErrUnauthorizedError = errors.New("UNAUTHORIZED")
@@ -35,8 +29,6 @@ var (
 )
 
 // ToAPIError converts an error to an API error with HTTP status code and JSON body.
-// Source: OpenAPI v1 §2.2
-// Quote: "Error mapping normalizes vendor/adapter errors to the codes above"
 func ToAPIError(err error) (int, []byte) {
 	if err == nil {
 		return http.StatusOK, nil
@@ -96,7 +88,6 @@ func ToAPIError(err error) (int, []byte) {
 }
 
 // mapAdapterError maps adapter error codes to API error codes and HTTP status codes.
-// Source: OpenAPI v1 §2.2
 func mapAdapterError(adapterErr error) (string, int) {
 	switch {
 	case errors.Is(adapterErr, adapter.ErrInvalidRange):
@@ -138,7 +129,6 @@ func getErrorMessage(code error, original error) string {
 }
 
 // marshalErrorResponse creates a JSON error response with correlation ID.
-// Source: OpenAPI v1 §2.2
 func marshalErrorResponse(code, message string, details interface{}) []byte {
 	response := Response{
 		Result:        "error",

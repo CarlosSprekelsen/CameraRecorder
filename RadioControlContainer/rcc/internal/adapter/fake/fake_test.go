@@ -10,8 +10,6 @@ import (
 )
 
 // TestFakeAdapterConformance runs the complete conformance test suite on the fake adapter.
-// Source: RE-INT-03
-// Quote: "A single call in internal/adapter/fake/fake_test.go invoking adaptertest.RunConformance"
 func TestFakeAdapterConformance(t *testing.T) {
 	// Define capabilities for the fake adapter
 	capabilities := adaptertest.Capabilities{

@@ -1,6 +1,5 @@
 // Package silvusmock provides tests for the SilvusMock adapter.
 //
-// Requirements:
 //   - PRE-INT-08: "adaptertest.RunConformance passes with SilvusMock"
 //   - PRE-INT-08: "API e2e test: register SilvusMock, exercise select/power/channel, observe telemetry + audit"
 package silvusmock
@@ -62,8 +61,6 @@ func TestSilvusMock_BasicFunctionality(t *testing.T) {
 }
 
 // TestSilvusMock_FaultInjection tests fault injection modes.
-// Source: PRE-INT-08
-// Quote: "Inject fault modes per call: ReturnBusy, ReturnUnavailable, ReturnInvalidRange"
 func TestSilvusMock_FaultInjection(t *testing.T) {
 	mock := NewSilvusMock("test-radio-02", nil)
 	ctx := context.Background()
@@ -107,8 +104,6 @@ func TestSilvusMock_FaultInjection(t *testing.T) {
 }
 
 // TestSilvusMock_BandPlan tests band plan functionality.
-// Source: PRE-INT-08
-// Quote: "accept a band plan (slice of {index,freq}) for channel mapping tests"
 func TestSilvusMock_BandPlan(t *testing.T) {
 	// Create custom band plan
 	bandPlan := []adapter.Channel{
@@ -221,8 +216,6 @@ func TestSilvusMock_Concurrency(t *testing.T) {
 }
 
 // TestSilvusMock_Conformance tests that SilvusMock passes adapter conformance tests.
-// Source: PRE-INT-08
-// Quote: "adaptertest.RunConformance passes with SilvusMock"
 func TestSilvusMock_Conformance(t *testing.T) {
 	// Define capabilities for SilvusMock
 	capabilities := adaptertest.Capabilities{
@@ -254,8 +247,6 @@ func TestSilvusMock_Conformance(t *testing.T) {
 }
 
 // TestSilvusMock_StateManagement tests in-memory state management.
-// Source: PRE-INT-08
-// Quote: "in-memory state {powerDbm, frequencyMhz, channelIndex}"
 func TestSilvusMock_StateManagement(t *testing.T) {
 	mock := NewSilvusMock("test-radio-06", nil)
 	ctx := context.Background()

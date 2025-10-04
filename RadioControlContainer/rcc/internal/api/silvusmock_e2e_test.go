@@ -1,6 +1,5 @@
 // Package api provides end-to-end tests for SilvusMock integration.
 //
-// Requirements:
 //   - PRE-INT-08: "API e2e test: register SilvusMock, exercise select/power/channel, observe telemetry + audit"
 package api
 
@@ -70,8 +69,6 @@ func (w *threadSafeResponseWriter) collectEvents(timeout time.Duration) []string
 
 // TestSilvusMock_E2E_Integration tests the complete integration of SilvusMock
 // with the API, including telemetry and audit observation.
-// Source: PRE-INT-08
-// Quote: "API e2e test: register SilvusMock, exercise select/power/channel, observe telemetry + audit"
 func TestSilvusMock_E2E_Integration(t *testing.T) {
 	// Setup test environment
 	cfg := config.LoadCBTimingBaseline()

@@ -1,5 +1,9 @@
-// Package radio implements RadioManager from Architecture §5.
+// Package radio implements the radio manager for the Radio Control Container.
 //
-// Requirements:
-//   - Architecture §5: "Maintain inventory of radios (id, model, capabilities); discovery; hold active-radio state; provide adapters."
+// The radio manager maintains an inventory of radios with their capabilities,
+// handles radio discovery, manages active radio state, and provides adapters.
+//
+// Architecture References:
+//   - ICD §3: Radio interface definitions
+//   - Architecture §8.3: Radio discovery patterns
 package radio
