@@ -23,7 +23,6 @@ import (
 )
 
 // TestController_TakeSnapshot_ReqMTX002_Success_Refactored demonstrates snapshot testing with asserters
-// Original: 55+ lines → Refactored: 15 lines (73% reduction!)
 func TestController_TakeSnapshot_ReqMTX002_Success_Refactored(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 

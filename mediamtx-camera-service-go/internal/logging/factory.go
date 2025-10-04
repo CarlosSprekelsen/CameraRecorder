@@ -111,6 +111,6 @@ func ConfigureGlobalLogging(config *LoggingConfig) error {
 	// Configure the factory
 	ConfigureFactory(config)
 
-	// Also configure the global logger for backward compatibility
+	// Also configure the global logger
 	return SetupLogging(config)
 }

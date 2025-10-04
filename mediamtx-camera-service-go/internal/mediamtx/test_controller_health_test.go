@@ -24,7 +24,6 @@ import (
 )
 
 // TestController_GetHealth_ReqMTX004_Success_Refactored demonstrates health testing with asserters
-// Original: 50+ lines → Refactored: 15 lines (70% reduction!)
 func TestController_GetHealth_ReqMTX004_Success_Refactored(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 

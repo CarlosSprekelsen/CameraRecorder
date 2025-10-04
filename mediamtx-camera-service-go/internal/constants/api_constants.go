@@ -25,7 +25,7 @@ const (
 	API_DEPENDENCY_FAILED       = -32050 // Dependency Failed (MediaMTX/FFmpeg error)
 	API_NOT_FOUND               = -32010 // Not Found (recording/file/camera not found)
 
-	// Legacy constants for backward compatibility (deprecated)
+	// Legacy constants (deprecated)
 	API_INSUFFICIENT_PERMISSIONS = API_PERMISSION_DENIED
 	API_CAMERA_NOT_FOUND         = API_NOT_FOUND
 	API_RECORDING_IN_PROGRESS    = API_INVALID_STATE

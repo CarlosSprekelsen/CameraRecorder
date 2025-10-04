@@ -44,7 +44,7 @@ type JWTHandler struct {
 	algorithm string
 	logger    *logging.Logger
 
-	// Rate limiting extensions (Phase 1 enhancement)
+	// Rate limiting extensions
 	clientRates map[string]*ClientRateInfo
 	rateMutex   sync.RWMutex
 	rateLimit   int64         // Requests per window
@@ -70,7 +70,7 @@ func NewJWTHandler(secretKey string, logger *logging.Logger) (*JWTHandler, error
 		algorithm: "HS256",
 		logger:    logger,
 
-		// Rate limiting initialization (Phase 1 enhancement)
+		// Rate limiting initialization
 		clientRates: make(map[string]*ClientRateInfo),
 		rateLimit:   100,         // Default: 100 requests per window
 		rateWindow:  time.Minute, // Default: 1 minute window
@@ -133,7 +133,7 @@ func (h *JWTHandler) GenerateToken(userID, role string, expiryHours int) (string
 	return tokenString, nil
 }
 
-// Rate limiting methods (Phase 1 enhancement)
+// Rate limiting methods
 
 // CheckRateLimit checks if a client has exceeded the rate limit.
 // This method implements a sliding window rate limiter that tracks requests per client

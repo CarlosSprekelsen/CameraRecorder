@@ -373,7 +373,7 @@ func (r *RealDeviceInfoParser) parseMultiLineCapabilities(lines []string, capabi
 			if len(parts) == 2 {
 				hexValue := strings.TrimSpace(parts[1])
 				if hexValue != "" {
-					// Add the hex value as the first capability (for backward compatibility)
+					// Add the hex value as the first capability
 					capabilities = append(capabilities, hexValue)
 				}
 			}
@@ -404,10 +404,10 @@ func (r *RealDeviceInfoParser) parseMultiLineCapabilities(lines []string, capabi
 	return capabilities
 }
 
-// parseCapabilities is kept for backward compatibility but now delegates to parseMultiLineCapabilities
+// parseCapabilities is kept for compatibility but now delegates to parseMultiLineCapabilities
 func (r *RealDeviceInfoParser) parseCapabilities(line string) []string {
 	// This function is now deprecated in favor of parseMultiLineCapabilities
-	// but kept for backward compatibility
+	// but kept for compatibility
 	var capabilities []string
 
 	parts := strings.SplitN(line, ":", 2)

@@ -23,7 +23,6 @@ import (
 )
 
 // TestController_GetPaths_ReqMTX003_Success_Refactored demonstrates path listing
-// Original: 40+ lines → Refactored: 10 lines (75% reduction!)
 func TestController_GetPaths_ReqMTX003_Success_Refactored(t *testing.T) {
 	// REQ-MTX-003: Path management
 

@@ -29,7 +29,7 @@ const (
 	INSUFFICIENT_STORAGE     = -32007
 	CAPABILITY_NOT_SUPPORTED = -32008
 
-	// Legacy constants for backward compatibility (deprecated)
+	// Legacy constants (deprecated)
 	INSUFFICIENT_PERMISSIONS = constants.API_INSUFFICIENT_PERMISSIONS
 	CAMERA_NOT_FOUND         = constants.API_CAMERA_NOT_FOUND
 	RECORDING_IN_PROGRESS    = constants.API_RECORDING_IN_PROGRESS

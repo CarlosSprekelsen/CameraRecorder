@@ -352,7 +352,7 @@ func (sm *SnapshotManager) captureSnapshotV4L2Direct(ctx context.Context, device
 	}
 
 	// Use camera monitor's direct snapshot capability
-	// Convert SnapshotOptions to map for backward compatibility with camera monitor
+	// Convert SnapshotOptions to map for camera monitor
 	// BUT exclude file format since V4L2 doesn't understand file formats (jpg, png, etc.)
 	var optionsMap map[string]interface{}
 	if options != nil {

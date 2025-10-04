@@ -20,7 +20,6 @@ import (
 )
 
 // TestController_StartRecording_ReqMTX002_Success_Refactored demonstrates dramatic reduction
-// Original: 103 lines → Refactored: 15 lines (85% reduction!)
 func TestController_StartRecording_ReqMTX002_Success_Refactored(t *testing.T) {
 	// REQ-MTX-002: Stream management capabilities
 

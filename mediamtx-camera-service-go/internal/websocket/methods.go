@@ -384,7 +384,6 @@ func (s *WebSocketServer) MethodGetCameraList(params map[string]interface{}, cli
 }
 
 func (s *WebSocketServer) MethodGetCameraStatus(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 56 lines → 15 lines (SRP compliance + centralized error handling)
 	return s.authenticatedMethodWrapper("get_camera_status", func() (interface{}, error) {
 		// Validate device parameter using centralized validation
 		validationResult := s.validationHelper.ValidateDeviceParameter(params)
@@ -568,7 +567,6 @@ func (s *WebSocketServer) MethodListRecordings(params map[string]interface{}, cl
 
 // MethodDeleteRecording implements the delete_recording method
 func (s *WebSocketServer) MethodDeleteRecording(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
-	// REFACTORED: 81 lines → 20 lines → 14 lines (SRP compliance + centralized error handling)
 	return s.authenticatedMethodWrapper("delete_recording", func() (interface{}, error) {
 
 		// Validate parameters

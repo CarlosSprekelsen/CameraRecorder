@@ -106,7 +106,7 @@ type ConnectionPoolConfig struct {
 // This eliminates duplicate type definitions and schema drift issues
 
 // Note: MediaMTX API types are now defined in api_types.go for single source of truth
-// Legacy aliases are provided in api_types.go for backward compatibility
+// Legacy aliases are provided in api_types.go
 
 // HealthStatus represents MediaMTX service health status
 type HealthStatus struct {

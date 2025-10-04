@@ -18,7 +18,6 @@ import (
 )
 
 // TestConfigIntegration_GetRecordingConfig_ReqMTX001_Success_Refactored demonstrates config integration
-// Original: 18+ lines → Refactored: 8 lines (56% reduction!)
 func TestConfigIntegration_GetRecordingConfig_ReqMTX001_Success_Refactored(t *testing.T) {
 	// REQ-MTX-001: Configuration management
 

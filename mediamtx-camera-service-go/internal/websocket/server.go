@@ -166,7 +166,7 @@ func (s *WebSocketServer) checkRateLimit(client *ClientConnection) error {
 	return nil
 }
 
-// Real-time notification methods (Phase 3 enhancement)
+// Real-time notification methods
 
 // notifyRecordingStatusUpdate sends real-time recording status updates to clients
 func (s *WebSocketServer) notifyRecordingStatusUpdate(device, status, filename string, duration time.Duration) {
@@ -461,7 +461,7 @@ func NewWebSocketServer(
 		jwtHandler:         jwtHandler,
 		mediaMTXController: mediaMTXController,
 
-		// Security extensions initialization (Phase 1 enhancement)
+		// Security extensions initialization
 		permissionChecker: security.NewPermissionChecker(),
 
 		// Input validation initialization (wire real validator with config adapter)
@@ -1012,7 +1012,7 @@ func (s *WebSocketServer) handleMessage(conn *websocket.Conn, client *ClientConn
 
 // handleRequest processes JSON-RPC requests
 func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientConnection) (*JsonRpcResponse, error) {
-	// Security extensions: Rate limiting check (Phase 1 enhancement)
+	// Security extensions: Rate limiting check
 	if err := s.checkRateLimit(client); err != nil {
 		return &JsonRpcResponse{
 			JSONRPC: "2.0",
@@ -1053,7 +1053,7 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 		}, nil
 	}
 
-	// Security extensions: Authentication check (Phase 1 enhancement) - FIRST GATE
+	// Security extensions: Authentication check - FIRST GATE
 	// Authentication must happen before any other checks, including readiness
 	// ping method is the only exception - it works without authentication per API spec
 	if request.Method != "authenticate" && request.Method != "ping" {
@@ -1081,7 +1081,7 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 		"action":    "progressive_readiness_enabled",
 	}).Info("Progressive Readiness: Attempting operation with potential fallback")
 
-	// Security extensions: Permission check (Phase 1 enhancement)
+	// Security extensions: Permission check
 	// Skip permission check for authenticate and ping methods
 	if request.Method != "authenticate" && request.Method != "ping" {
 		s.logger.WithFields(logging.Fields{

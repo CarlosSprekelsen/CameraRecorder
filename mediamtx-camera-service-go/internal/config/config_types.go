@@ -79,11 +79,11 @@ type MediaMTXConfig struct {
 	// MediaMTX override configuration
 	OverrideMediaMTXPaths bool `mapstructure:"override_mediamtx_paths"` // Force MediaMTX to use our paths
 
-	// HTTP Client URLs (for backward compatibility)
+	// HTTP Client URLs
 	BaseURL        string `mapstructure:"base_url"`
 	HealthCheckURL string `mapstructure:"health_check_url"`
 
-	// FFmpeg and Performance Configuration (for backward compatibility)
+	// FFmpeg and Performance Configuration
 	FFmpeg      FFmpegConfig      `mapstructure:"ffmpeg"`
 	Performance PerformanceConfig `mapstructure:"performance"`
 
@@ -111,7 +111,7 @@ type MediaMTXConfig struct {
 	RecordSegmentDuration string `mapstructure:"record_segment_duration"`
 	RecordDeleteAfter     string `mapstructure:"record_delete_after"`
 
-	// HTTP Client Configuration (for backward compatibility)
+	// HTTP Client Configuration
 	Timeout        time.Duration        `mapstructure:"timeout"`
 	RetryAttempts  int                  `mapstructure:"retry_attempts"`
 	RetryDelay     time.Duration        `mapstructure:"retry_delay"`

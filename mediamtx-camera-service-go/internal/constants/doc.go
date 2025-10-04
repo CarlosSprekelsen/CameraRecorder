@@ -16,13 +16,13 @@
 //   - API Response Values: Exact string values for API responses
 //   - Configuration Defaults: Default values for service configuration
 //   - Test Constants: Shared values for testing scenarios
-//   - Legacy Support: Deprecated constants with backward compatibility
+//   - Legacy Support: Deprecated constants
 //
 // Design Principles:
 //   - Ground Truth: Constants based on API documentation specifications
 //   - Consistency: Eliminate magic number duplication across codebase
 //   - Maintainability: Clear organization and naming conventions
-//   - Backward Compatibility: Legacy constants maintained for compatibility
+//   - Legacy Support: Legacy constants maintained
 //
 // Usage Pattern:
 //   - Import constants: import "github.com/camerarecorder/mediamtx-camera-service-go/internal/constants"

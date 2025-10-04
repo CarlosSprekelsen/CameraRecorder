@@ -26,7 +26,6 @@ import (
 )
 
 // TestNewHealthMonitor_ReqMTX004_Refactored tests health monitor creation using asserters
-// Original: 20+ lines → Refactored: 5 lines (75% reduction!)
 func TestNewHealthMonitor_ReqMTX004_Refactored(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 
@@ -41,7 +40,6 @@ func TestNewHealthMonitor_ReqMTX004_Refactored(t *testing.T) {
 }
 
 // TestHealthMonitor_StartStop_ReqMTX004_Refactored tests health monitor start/stop using asserters
-// Original: 30+ lines → Refactored: 8 lines (73% reduction!)
 func TestHealthMonitor_StartStop_ReqMTX004_Refactored(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 
@@ -56,7 +54,6 @@ func TestHealthMonitor_StartStop_ReqMTX004_Refactored(t *testing.T) {
 }
 
 // TestHealthMonitor_GetStatus_ReqMTX004_Refactored tests health status retrieval using asserters
-// Original: 25+ lines → Refactored: 8 lines (68% reduction!)
 func TestHealthMonitor_GetStatus_ReqMTX004_Refactored(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 
@@ -71,7 +68,6 @@ func TestHealthMonitor_GetStatus_ReqMTX004_Refactored(t *testing.T) {
 }
 
 // TestHealthMonitor_GetMetrics_ReqMTX004_Refactored tests health metrics retrieval using asserters
-// Original: 30+ lines → Refactored: 8 lines (73% reduction!)
 func TestHealthMonitor_GetMetrics_ReqMTX004_Refactored(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 
@@ -86,7 +82,6 @@ func TestHealthMonitor_GetMetrics_ReqMTX004_Refactored(t *testing.T) {
 }
 
 // TestHealthMonitor_RecordSuccess_ReqMTX004_Refactored tests success recording using asserters
-// Original: 40+ lines → Refactored: 8 lines (80% reduction!)
 func TestHealthMonitor_RecordSuccess_ReqMTX004_Refactored(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 
@@ -101,7 +96,6 @@ func TestHealthMonitor_RecordSuccess_ReqMTX004_Refactored(t *testing.T) {
 }
 
 // TestHealthMonitor_RecordFailure_ReqMTX004_Refactored tests failure recording using asserters
-// Original: 50+ lines → Refactored: 8 lines (84% reduction!)
 func TestHealthMonitor_RecordFailure_ReqMTX004_Refactored(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 
@@ -116,7 +110,6 @@ func TestHealthMonitor_RecordFailure_ReqMTX004_Refactored(t *testing.T) {
 }
 
 // TestHealthMonitor_Configuration_ReqMTX004_Refactored tests configuration using asserters
-// Original: 60+ lines → Refactored: 8 lines (87% reduction!)
 func TestHealthMonitor_Configuration_ReqMTX004_Refactored(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 
@@ -131,7 +124,6 @@ func TestHealthMonitor_Configuration_ReqMTX004_Refactored(t *testing.T) {
 }
 
 // TestHealthMonitor_DebounceMechanism_ReqMTX004_Refactored tests debounce mechanism using asserters
-// Original: 70+ lines → Refactored: 8 lines (89% reduction!)
 func TestHealthMonitor_DebounceMechanism_ReqMTX004_Refactored(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 
@@ -146,7 +138,6 @@ func TestHealthMonitor_DebounceMechanism_ReqMTX004_Refactored(t *testing.T) {
 }
 
 // TestHealthMonitor_AtomicOperations_ReqMTX004_Refactored tests atomic operations using asserters
-// Original: 80+ lines → Refactored: 8 lines (90% reduction!)
 func TestHealthMonitor_AtomicOperations_ReqMTX004_Refactored(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 
@@ -161,7 +152,6 @@ func TestHealthMonitor_AtomicOperations_ReqMTX004_Refactored(t *testing.T) {
 }
 
 // TestHealthMonitor_StatusTransitions_ReqMTX004_Refactored tests status transitions using asserters
-// Original: 90+ lines → Refactored: 8 lines (91% reduction!)
 func TestHealthMonitor_StatusTransitions_ReqMTX004_Refactored(t *testing.T) {
 	// REQ-MTX-004: Health monitoring
 
@@ -176,7 +166,6 @@ func TestHealthMonitor_StatusTransitions_ReqMTX004_Refactored(t *testing.T) {
 }
 
 // TestHealthMonitor_GetHealthAPI_ReqMTX004_Refactored tests health API using asserters
-// Original: 100+ lines → Refactored: 8 lines (92% reduction!)
 func TestHealthMonitor_GetHealthAPI_ReqMTX004_Refactored(t *testing.T) {
 	// REQ-MTX-004: Health monitoring - API-ready health responses
 
@@ -191,7 +180,6 @@ func TestHealthMonitor_GetHealthAPI_ReqMTX004_Refactored(t *testing.T) {
 }
 
 // TestHealthMonitor_GetHealthAPI_APICompliance_ReqAPI001_Refactored tests API compliance using asserters
-// Original: 120+ lines → Refactored: 8 lines (93% reduction!)
 func TestHealthMonitor_GetHealthAPI_APICompliance_ReqAPI001_Refactored(t *testing.T) {
 	// REQ-API-001: JSON-RPC API compliance for health endpoints
 
@@ -206,7 +194,6 @@ func TestHealthMonitor_GetHealthAPI_APICompliance_ReqAPI001_Refactored(t *testin
 }
 
 // TestHealthMonitor_GetHealthAPI_ErrorScenarios_ReqMTX004_Refactored tests error scenarios using asserters
-// Original: 150+ lines → Refactored: 8 lines (95% reduction!)
 func TestHealthMonitor_GetHealthAPI_ErrorScenarios_ReqMTX004_Refactored(t *testing.T) {
 	// REQ-MTX-004: Health monitoring - error handling
 

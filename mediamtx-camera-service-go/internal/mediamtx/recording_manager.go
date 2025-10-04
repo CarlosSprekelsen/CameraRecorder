@@ -301,7 +301,7 @@ func (rm *RecordingManager) executeStartRecording(ctx context.Context, cameraID 
 	}
 
 	// Set up auto-stop timer if recordDeleteAfter is specified
-	// Note: Using recordDeleteAfter as the auto-stop duration for backward compatibility
+	// Note: Using recordDeleteAfter as the auto-stop duration
 	var recordingDuration time.Duration
 	if options != nil && options.RecordDeleteAfter != "" {
 		if duration, err := time.ParseDuration(options.RecordDeleteAfter); err == nil {

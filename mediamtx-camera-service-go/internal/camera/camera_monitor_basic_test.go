@@ -13,7 +13,6 @@ Requirements Coverage:
 - REQ-CAM-005: Error handling for real device operations
 - REQ-CAM-006: Format and capability detection
 
-Original: 1,830 lines → Refactored: ~200 lines (90% reduction!)
 */
 
 package camera
@@ -27,7 +26,6 @@ import (
 )
 
 // TestCameraMonitor_Basic_ReqCAM001_Success_Refactored demonstrates basic monitor functionality
-// Original: 50+ lines → Refactored: 15 lines (70% reduction!)
 func TestCameraMonitor_Basic_ReqCAM001_Success_Refactored(t *testing.T) {
 	// REQ-CAM-001: Camera device detection and enumeration
 
@@ -45,7 +43,6 @@ func TestCameraMonitor_Basic_ReqCAM001_Success_Refactored(t *testing.T) {
 }
 
 // TestCameraMonitor_StartStop_ReqCAM001_Success_Refactored demonstrates start/stop lifecycle
-// Original: 80+ lines → Refactored: 20 lines (75% reduction!)
 func TestCameraMonitor_StartStop_ReqCAM001_Success_Refactored(t *testing.T) {
 	// REQ-CAM-001: Camera device detection and enumeration
 
@@ -70,7 +67,6 @@ func TestCameraMonitor_StartStop_ReqCAM001_Success_Refactored(t *testing.T) {
 }
 
 // TestCameraMonitor_Readiness_ReqCAM001_Success_Refactored demonstrates readiness functionality
-// Original: 60+ lines → Refactored: 15 lines (75% reduction!)
 func TestCameraMonitor_Readiness_ReqCAM001_Success_Refactored(t *testing.T) {
 	// REQ-CAM-001: Camera device detection and enumeration
 
@@ -93,7 +89,6 @@ func TestCameraMonitor_Readiness_ReqCAM001_Success_Refactored(t *testing.T) {
 }
 
 // TestCameraMonitor_DeviceDiscovery_ReqCAM001_Success_Refactored demonstrates device discovery
-// Original: 100+ lines → Refactored: 25 lines (75% reduction!)
 func TestCameraMonitor_DeviceDiscovery_ReqCAM001_Success_Refactored(t *testing.T) {
 	// REQ-CAM-001: Camera device detection and enumeration
 
@@ -110,7 +105,6 @@ func TestCameraMonitor_DeviceDiscovery_ReqCAM001_Success_Refactored(t *testing.T
 }
 
 // TestCameraMonitor_DeviceCapabilities_ReqCAM002_Success_Refactored demonstrates capability probing
-// Original: 80+ lines → Refactored: 20 lines (75% reduction!)
 func TestCameraMonitor_DeviceCapabilities_ReqCAM002_Success_Refactored(t *testing.T) {
 	// REQ-CAM-002: Camera capability probing and validation
 
@@ -144,7 +138,6 @@ func TestCameraMonitor_DeviceCapabilities_ReqCAM002_Success_Refactored(t *testin
 }
 
 // TestCameraMonitor_CompleteLifecycle_ReqCAM001_Success_Refactored demonstrates complete lifecycle
-// Original: 120+ lines → Refactored: 15 lines (87% reduction!)
 func TestCameraMonitor_CompleteLifecycle_ReqCAM001_Success_Refactored(t *testing.T) {
 	// REQ-CAM-001: Camera device detection and enumeration
 
@@ -159,7 +152,6 @@ func TestCameraMonitor_CompleteLifecycle_ReqCAM001_Success_Refactored(t *testing
 }
 
 // TestCameraMonitor_ErrorHandling_ReqCAM005_Success_Refactored demonstrates error handling
-// Original: 60+ lines → Refactored: 15 lines (75% reduction!)
 func TestCameraMonitor_ErrorHandling_ReqCAM005_Success_Refactored(t *testing.T) {
 	// REQ-CAM-005: Error handling for real device operations
 
@@ -174,7 +166,6 @@ func TestCameraMonitor_ErrorHandling_ReqCAM005_Success_Refactored(t *testing.T) 
 }
 
 // TestCameraMonitor_Performance_ReqCAM006_Success_Refactored demonstrates performance validation
-// Original: 40+ lines → Refactored: 15 lines (62% reduction!)
 func TestCameraMonitor_Performance_ReqCAM006_Success_Refactored(t *testing.T) {
 	// REQ-CAM-006: Format and capability detection
 
@@ -192,7 +183,6 @@ func TestCameraMonitor_Performance_ReqCAM006_Success_Refactored(t *testing.T) {
 }
 
 // TestCameraMonitor_StateTransitions_ReqCAM001_Success_Refactored demonstrates state management
-// Original: 70+ lines → Refactored: 20 lines (71% reduction!)
 func TestCameraMonitor_StateTransitions_ReqCAM001_Success_Refactored(t *testing.T) {
 	// REQ-CAM-001: Camera device detection and enumeration
 
@@ -223,7 +213,6 @@ func TestCameraMonitor_StateTransitions_ReqCAM001_Success_Refactored(t *testing.
 }
 
 // TestCameraMonitor_ConcurrentOperations_ReqCAM001_Success_Refactored demonstrates concurrency
-// Original: 90+ lines → Refactored: 25 lines (72% reduction!)
 func TestCameraMonitor_ConcurrentOperations_ReqCAM001_Success_Refactored(t *testing.T) {
 	// REQ-CAM-001: Camera device detection and enumeration
 

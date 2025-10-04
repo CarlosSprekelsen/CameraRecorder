@@ -19,7 +19,6 @@ Requirements Coverage:
 - REQ-WS-004: Concurrent client support
 - REQ-WS-005: Session management
 
-Original: 1,827 lines → Refactored: ~300 lines (84% reduction!)
 */
 
 package websocket
@@ -32,7 +31,6 @@ import (
 )
 
 // TestWebSocket_CompleteRecordingWorkflow_ReqWS001_Success demonstrates complete recording workflow
-// Original: 150+ lines → Refactored: 20 lines (87% reduction!)
 func TestWebSocket_CompleteRecordingWorkflow_ReqWS001_Success(t *testing.T) {
 	// REQ-WS-001: WebSocket connection and authentication
 	// REQ-WS-002: Real-time camera operations
@@ -54,7 +52,6 @@ func TestWebSocket_CompleteRecordingWorkflow_ReqWS001_Success(t *testing.T) {
 }
 
 // TestWebSocket_SnapshotWorkflow_ReqWS002_Success demonstrates snapshot workflow
-// Original: 120+ lines → Refactored: 15 lines (87% reduction!)
 func TestWebSocket_SnapshotWorkflow_ReqWS002_Success(t *testing.T) {
 	// REQ-WS-002: Real-time camera operations
 
@@ -75,7 +72,6 @@ func TestWebSocket_SnapshotWorkflow_ReqWS002_Success(t *testing.T) {
 }
 
 // TestWebSocket_CameraManagementWorkflow_ReqWS001_Success demonstrates camera management
-// Original: 130+ lines → Refactored: 20 lines (85% reduction!)
 func TestWebSocket_CameraManagementWorkflow_ReqWS001_Success(t *testing.T) {
 	// REQ-WS-001: WebSocket connection and authentication
 	// REQ-WS-002: Real-time camera operations
@@ -94,7 +90,6 @@ func TestWebSocket_CameraManagementWorkflow_ReqWS001_Success(t *testing.T) {
 }
 
 // TestWebSocket_ErrorRecoveryWorkflow_ReqWS003_Success demonstrates error recovery
-// Original: 100+ lines → Refactored: 15 lines (85% reduction!)
 func TestWebSocket_ErrorRecoveryWorkflow_ReqWS003_Success(t *testing.T) {
 	// REQ-WS-003: Error handling and recovery
 
@@ -115,7 +110,6 @@ func TestWebSocket_ErrorRecoveryWorkflow_ReqWS003_Success(t *testing.T) {
 }
 
 // TestWebSocket_ConcurrentClientsWorkflow_ReqWS004_Success demonstrates concurrent clients
-// Original: 180+ lines → Refactored: 20 lines (89% reduction!)
 func TestWebSocket_ConcurrentClientsWorkflow_ReqWS004_Success(t *testing.T) {
 	// REQ-WS-004: Concurrent client support
 
@@ -138,7 +132,6 @@ func TestWebSocket_ConcurrentClientsWorkflow_ReqWS004_Success(t *testing.T) {
 }
 
 // TestWebSocket_SessionManagementWorkflow_ReqWS005_Success demonstrates session management
-// Original: 140+ lines → Refactored: 20 lines (86% reduction!)
 func TestWebSocket_SessionManagementWorkflow_ReqWS005_Success(t *testing.T) {
 	// REQ-WS-005: Session management
 
@@ -160,7 +153,6 @@ func TestWebSocket_SessionManagementWorkflow_ReqWS005_Success(t *testing.T) {
 }
 
 // TestWebSocket_IntegrationWorkflow_ReqWS001_Success demonstrates complete integration
-// Original: 200+ lines → Refactored: 25 lines (87% reduction!)
 func TestWebSocket_IntegrationWorkflow_ReqWS001_Success(t *testing.T) {
 	// REQ-WS-001: WebSocket connection and authentication
 	// REQ-WS-002: Real-time camera operations
@@ -190,7 +182,6 @@ func TestWebSocket_IntegrationWorkflow_ReqWS001_Success(t *testing.T) {
 }
 
 // TestWebSocket_PerformanceWorkflow_ReqWS002_Success demonstrates performance characteristics
-// Original: 80+ lines → Refactored: 15 lines (81% reduction!)
 func TestWebSocket_PerformanceWorkflow_ReqWS002_Success(t *testing.T) {
 	// REQ-WS-002: Real-time camera operations
 

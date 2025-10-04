@@ -484,7 +484,7 @@ func (h *MediaMTXTestHelper) GetConfig() *MediaMTXTestConfig {
 }
 
 // GetLogger returns the test logger
-// GetLogger returns module-specific logger (backward compatibility)
+// GetLogger returns module-specific logger
 func (h *MediaMTXTestHelper) GetLogger() *logging.Logger {
 	return h.logger
 }
