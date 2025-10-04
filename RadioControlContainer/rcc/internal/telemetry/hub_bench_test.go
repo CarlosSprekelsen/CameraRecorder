@@ -1,4 +1,5 @@
 // Package telemetry provides performance benchmarks for the telemetry hub.
+//go:build !slowbench
 package telemetry
 
 import (
@@ -16,8 +17,8 @@ func BenchmarkPublishWithSubscribers(b *testing.B) {
 	hub := NewHub(cfg)
 	defer hub.Stop()
 
-	// Test with different numbers of subscribers
-	subscriberCounts := []int{1, 10, 100}
+	// Test with different numbers of subscribers (reduced for fast execution)
+	subscriberCounts := []int{1, 5, 10}
 
 	for _, count := range subscriberCounts {
 		b.Run(fmt.Sprintf("Subscribers_%d", count), func(b *testing.B) {

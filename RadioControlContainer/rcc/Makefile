@@ -2,7 +2,7 @@
 # Source: PRE-INT-10
 # Quote: "Prevent backsliding before integration"
 
-.PHONY: help unit e2e race bench perf cover lint clean test-all integration test-unit-team test-integration-team test-e2e-team test-parallel integration-cover coverage-gaps coverage-diff test-quarantine
+.PHONY: help unit e2e e2e-cover race bench bench-fast bench-slow perf cover lint clean test-all integration test-unit-team test-integration-team test-e2e-team test-parallel integration-cover coverage-gaps coverage-diff test-quarantine
 .DEFAULT_GOAL := help
 
 # Configuration
@@ -41,6 +41,13 @@ e2e: ## Run end-to-end tests
 	@echo "$(BLUE)Running end-to-end tests...$(NC)"
 	@go test ./test/e2e -count=1 -v
 
+e2e-cover: ## Run end-to-end tests with coverage
+	@echo "$(BLUE)Running end-to-end tests with coverage...$(NC)"
+	@mkdir -p coverage
+	@COVERAGE_FILE=e2e.cover go test -race -coverprofile=coverage/e2e.cover ./test/e2e/... -coverpkg=./internal/... -count=1
+	@go tool cover -func=coverage/e2e.cover | tail -1
+	@echo "$(GREEN)✅ E2E coverage report: coverage/e2e.cover$(NC)"
+
 race: ## Run tests with race detection
 	@echo "$(BLUE)Running tests with race detection...$(NC)"
 	@go test -race ./... -count=1
@@ -48,6 +55,14 @@ race: ## Run tests with race detection
 bench: ## Run performance benchmarks
 	@echo "$(BLUE)Running performance benchmarks...$(NC)"
 	@go test -bench=. -benchmem ./internal/command ./internal/telemetry ./internal/adapter
+
+bench-fast: ## Run fast performance benchmarks (1s benchtime, 30s timeout)
+	@echo "$(BLUE)Running fast performance benchmarks...$(NC)"
+	@go test -bench=. -benchtime=1s -timeout=30s -benchmem ./internal/command ./internal/telemetry ./internal/adapter
+
+bench-slow: ## Run slow performance benchmarks (10s benchtime, 5m timeout)
+	@echo "$(BLUE)Running slow performance benchmarks...$(NC)"
+	@go test -bench=. -benchtime=10s -timeout=5m -run="^$$" -tags=slowbench -benchmem ./internal/command ./internal/telemetry ./internal/adapter
 
 perf: ## Run load testing scenarios
 	@echo "$(BLUE)Running load testing scenarios...$(NC)"
