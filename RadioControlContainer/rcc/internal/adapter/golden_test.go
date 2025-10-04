@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -149,7 +148,7 @@ func TestAdapterErrorEnvelopesGolden(t *testing.T) {
 				if err := os.MkdirAll(filepath.Dir(goldenPath), 0755); err != nil {
 					t.Fatalf("Failed to create testdata directory: %v", err)
 				}
-				if err := ioutil.WriteFile(goldenPath, jsonData, 0644); err != nil {
+				if err := os.WriteFile(goldenPath, jsonData, 0644); err != nil {
 					t.Fatalf("Failed to write golden file: %v", err)
 				}
 				t.Logf("Updated golden file: %s", goldenPath)
@@ -157,7 +156,7 @@ func TestAdapterErrorEnvelopesGolden(t *testing.T) {
 			}
 
 			// Read golden file
-			golden, err := ioutil.ReadFile(goldenPath)
+			golden, err := os.ReadFile(goldenPath)
 			if err != nil {
 				t.Fatalf("Failed to read golden file %s: %v", goldenPath, err)
 			}
@@ -261,7 +260,7 @@ func TestVendorErrorMappingsGolden(t *testing.T) {
 				if err := os.MkdirAll(filepath.Dir(goldenPath), 0755); err != nil {
 					t.Fatalf("Failed to create testdata directory: %v", err)
 				}
-				if err := ioutil.WriteFile(goldenPath, jsonData, 0644); err != nil {
+				if err := os.WriteFile(goldenPath, jsonData, 0644); err != nil {
 					t.Fatalf("Failed to write golden file: %v", err)
 				}
 				t.Logf("Updated golden file: %s", goldenPath)
@@ -269,7 +268,7 @@ func TestVendorErrorMappingsGolden(t *testing.T) {
 			}
 
 			// Read golden file
-			golden, err := ioutil.ReadFile(goldenPath)
+			golden, err := os.ReadFile(goldenPath)
 			if err != nil {
 				t.Fatalf("Failed to read golden file %s: %v", goldenPath, err)
 			}

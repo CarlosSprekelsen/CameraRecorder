@@ -405,7 +405,7 @@ func (o *Orchestrator) publishPowerChangedEvent(radioID string, powerDbm float64
 		},
 	}
 
-	o.telemetryHub.PublishRadio(radioID, event)
+	_ = o.telemetryHub.PublishRadio(radioID, event)
 }
 
 // publishChannelChangedEvent publishes a channel changed event.
@@ -425,7 +425,7 @@ func (o *Orchestrator) publishChannelChangedEvent(radioID string, frequencyMhz f
 		},
 	}
 
-	o.telemetryHub.PublishRadio(radioID, event)
+	_ = o.telemetryHub.PublishRadio(radioID, event)
 }
 
 // publishStateEvent publishes a state event.
@@ -444,7 +444,7 @@ func (o *Orchestrator) publishStateEvent(radioID string) {
 		},
 	}
 
-	o.telemetryHub.PublishRadio(radioID, event)
+	_ = o.telemetryHub.PublishRadio(radioID, event)
 }
 
 // publishFaultEvent publishes a fault event.
@@ -464,7 +464,7 @@ func (o *Orchestrator) publishFaultEvent(radioID string, err error, message stri
 		},
 	}
 
-	o.telemetryHub.PublishRadio(radioID, event)
+	_ = o.telemetryHub.PublishRadio(radioID, event)
 }
 
 // logAudit logs an audit record for a command action.

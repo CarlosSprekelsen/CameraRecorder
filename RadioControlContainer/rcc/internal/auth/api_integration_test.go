@@ -152,7 +152,7 @@ func TestAPIEndpointAuthentication(t *testing.T) {
 			// Create request
 			var body bytes.Buffer
 			if tt.method == "POST" {
-				json.NewEncoder(&body).Encode(map[string]string{"id": "test-radio"})
+				_ = json.NewEncoder(&body).Encode(map[string]string{"id": "test-radio"})
 			}
 
 			req := httptest.NewRequest(tt.method, tt.path, &body)
@@ -249,9 +249,9 @@ func TestScopeBasedAuthorization(t *testing.T) {
 			var body bytes.Buffer
 			if tt.method == "POST" {
 				if tt.path == "/api/v1/radios/test-radio/power" {
-					json.NewEncoder(&body).Encode(map[string]int{"powerDbm": 30})
+					_ = json.NewEncoder(&body).Encode(map[string]int{"powerDbm": 30})
 				} else if tt.path == "/api/v1/radios/test-radio/channel" {
-					json.NewEncoder(&body).Encode(map[string]int{"channelIndex": 1})
+					_ = json.NewEncoder(&body).Encode(map[string]int{"channelIndex": 1})
 				}
 			}
 
@@ -357,7 +357,7 @@ func createTestHandler(server *testServer, path string) http.HandlerFunc {
 		// Simulate health endpoint (no auth required)
 		if path == "/api/v1/health" {
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"status":"ok"}`))
+			_, _ = w.Write([]byte(`{"status":"ok"}`))
 			return
 		}
 
@@ -373,25 +373,26 @@ func createTestHandler(server *testServer, path string) http.HandlerFunc {
 		var authHandler http.HandlerFunc
 
 		// Determine required scope based on path and method
-		if strings.Contains(path, "/radios/select") ||
+		switch {
+		case strings.Contains(path, "/radios/select") ||
 			(strings.Contains(path, "/power") && r.Method == "POST") ||
-			(strings.Contains(path, "/channel") && r.Method == "POST") {
+			(strings.Contains(path, "/channel") && r.Method == "POST"):
 			// Control operations require control scope
 			authHandler = authMiddleware.RequireAuth(authMiddleware.RequireScope(ScopeControl)(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"result":"ok"}`))
+				_, _ = w.Write([]byte(`{"result":"ok"}`))
 			}))
-		} else if strings.Contains(path, "/telemetry") {
+		case strings.Contains(path, "/telemetry"):
 			// Telemetry requires telemetry scope
 			authHandler = authMiddleware.RequireAuth(authMiddleware.RequireScope(ScopeTelemetry)(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"result":"ok"}`))
+				_, _ = w.Write([]byte(`{"result":"ok"}`))
 			}))
-		} else {
+		default:
 			// Read operations require read scope
 			authHandler = authMiddleware.RequireAuth(authMiddleware.RequireScope(ScopeRead)(func(w http.ResponseWriter, r *http.Request) {
 				w.WriteHeader(http.StatusOK)
-				w.Write([]byte(`{"result":"ok"}`))
+				_, _ = w.Write([]byte(`{"result":"ok"}`))
 			}))
 		}
 

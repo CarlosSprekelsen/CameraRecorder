@@ -26,7 +26,7 @@ func BenchmarkSetPower(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Failed to create audit logger: %v", err)
 	}
-	defer aud.Close()
+	defer func() { _ = aud.Close() }()
 	rm := radio.NewManager()
 
 	// Register SilvusMock
@@ -72,7 +72,7 @@ func BenchmarkSetPowerWithoutTelemetry(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Failed to create audit logger: %v", err)
 	}
-	defer aud.Close()
+	defer func() { _ = aud.Close() }()
 	rm := radio.NewManager()
 
 	// Register SilvusMock
@@ -122,7 +122,7 @@ func BenchmarkSetChannel(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Failed to create audit logger: %v", err)
 	}
-	defer aud.Close()
+	defer func() { _ = aud.Close() }()
 	rm := radio.NewManager()
 
 	ctx := context.Background()
@@ -173,7 +173,7 @@ func BenchmarkGetState(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Failed to create audit logger: %v", err)
 	}
-	defer aud.Close()
+	defer func() { _ = aud.Close() }()
 	rm := radio.NewManager()
 
 	ctx := context.Background()
@@ -223,7 +223,7 @@ func BenchmarkOrchestratorConcurrent(b *testing.B) {
 	if err != nil {
 		b.Fatalf("Failed to create audit logger: %v", err)
 	}
-	defer aud.Close()
+	defer func() { _ = aud.Close() }()
 	rm := radio.NewManager()
 
 	ctx := context.Background()
@@ -258,14 +258,14 @@ func BenchmarkOrchestratorConcurrent(b *testing.B) {
 			// Mix of operations
 			switch b.N % 4 {
 			case 0:
-				orch.SetPower(ctx, "silvus-001", 10)
+				_ = orch.SetPower(ctx, "silvus-001", 10)
 			case 1:
-				orch.SetChannel(ctx, "silvus-001", 2412.0)
+				_ = orch.SetChannel(ctx, "silvus-001", 2412.0)
 			case 2:
-				orch.GetState(ctx, "silvus-001")
+				_, _ = orch.GetState(ctx, "silvus-001")
 			case 3:
 				// GetPower method doesn't exist, use GetState instead
-				orch.GetState(ctx, "silvus-001")
+				_, _ = orch.GetState(ctx, "silvus-001")
 			}
 		}
 	})

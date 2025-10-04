@@ -195,9 +195,9 @@ func TestSilvusMock_Concurrency(t *testing.T) {
 
 			// Mix of operations
 			if index%2 == 0 {
-				mock.SetPower(ctx, float64(20+index))
+				_ = mock.SetPower(ctx, float64(20+index))
 			} else {
-				mock.SetFrequency(ctx, 2412.0+float64(index))
+				_ = mock.SetFrequency(ctx, 2412.0+float64(index))
 			}
 		}(i)
 	}

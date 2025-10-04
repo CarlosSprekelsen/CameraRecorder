@@ -20,7 +20,7 @@ func TestJWKSFetch(t *testing.T) {
 		if r.URL.Path == "/.well-known/jwks.json" {
 			w.Header().Set("Content-Type", "application/json")
 			w.WriteHeader(http.StatusOK)
-			w.Write([]byte(`{"keys":[]}`))
+			_, _ = w.Write([]byte(`{"keys":[]}`))
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}

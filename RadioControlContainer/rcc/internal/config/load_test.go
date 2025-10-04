@@ -34,18 +34,18 @@ func TestLoad(t *testing.T) {
 
 func TestLoadWithEnvOverrides(t *testing.T) {
 	// Set environment variables
-	os.Setenv("RCC_TIMING_HEARTBEAT_INTERVAL", "20s")
-	os.Setenv("RCC_TIMING_HEARTBEAT_JITTER", "3s")
-	os.Setenv("RCC_TIMING_PROBE_NORMAL_INTERVAL", "45s")
-	os.Setenv("RCC_TIMING_COMMAND_SET_POWER", "15s")
-	os.Setenv("RCC_TIMING_EVENT_BUFFER_SIZE", "100")
+	_ = os.Setenv("RCC_TIMING_HEARTBEAT_INTERVAL", "20s")
+	_ = os.Setenv("RCC_TIMING_HEARTBEAT_JITTER", "3s")
+	_ = os.Setenv("RCC_TIMING_PROBE_NORMAL_INTERVAL", "45s")
+	_ = os.Setenv("RCC_TIMING_COMMAND_SET_POWER", "15s")
+	_ = os.Setenv("RCC_TIMING_EVENT_BUFFER_SIZE", "100")
 
 	defer func() {
-		os.Unsetenv("RCC_TIMING_HEARTBEAT_INTERVAL")
-		os.Unsetenv("RCC_TIMING_HEARTBEAT_JITTER")
-		os.Unsetenv("RCC_TIMING_PROBE_NORMAL_INTERVAL")
-		os.Unsetenv("RCC_TIMING_COMMAND_SET_POWER")
-		os.Unsetenv("RCC_TIMING_EVENT_BUFFER_SIZE")
+		_ = os.Unsetenv("RCC_TIMING_HEARTBEAT_INTERVAL")
+		_ = os.Unsetenv("RCC_TIMING_HEARTBEAT_JITTER")
+		_ = os.Unsetenv("RCC_TIMING_PROBE_NORMAL_INTERVAL")
+		_ = os.Unsetenv("RCC_TIMING_COMMAND_SET_POWER")
+		_ = os.Unsetenv("RCC_TIMING_EVENT_BUFFER_SIZE")
 	}()
 
 	config, err := Load()
@@ -96,22 +96,22 @@ func TestLoadWithConfigFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	if _, err := tmpFile.Write(configJSON); err != nil {
 		t.Fatalf("Failed to write config file: %v", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	// Change to the directory with the config file
 	oldDir, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("Failed to get current directory: %v", err)
 	}
-	defer os.Chdir(oldDir)
+	defer func() { _ = os.Chdir(oldDir) }()
 
 	configDir := tmpFile.Name()
-	os.Chdir(configDir)
+	_ = os.Chdir(configDir)
 
 	// Test loading with config file
 	config, err := Load()
@@ -231,8 +231,8 @@ func TestValidateTimingComplete(t *testing.T) {
 
 func TestGetEnvVar(t *testing.T) {
 	// Test with environment variable set
-	os.Setenv("TEST_VAR", "test_value")
-	defer os.Unsetenv("TEST_VAR")
+	_ = os.Setenv("TEST_VAR", "test_value")
+	defer func() { _ = os.Unsetenv("TEST_VAR") }()
 
 	value := GetEnvVar("TEST_VAR", "default")
 	if value != "test_value" {
@@ -248,8 +248,8 @@ func TestGetEnvVar(t *testing.T) {
 
 func TestGetEnvDuration(t *testing.T) {
 	// Test with environment variable set
-	os.Setenv("TEST_DURATION", "30s")
-	defer os.Unsetenv("TEST_DURATION")
+	_ = os.Setenv("TEST_DURATION", "30s")
+	defer func() { _ = os.Unsetenv("TEST_DURATION") }()
 
 	value := GetEnvDuration("TEST_DURATION", 10*time.Second)
 	if value != 30*time.Second {
@@ -263,8 +263,8 @@ func TestGetEnvDuration(t *testing.T) {
 	}
 
 	// Test with invalid duration
-	os.Setenv("INVALID_DURATION", "invalid")
-	defer os.Unsetenv("INVALID_DURATION")
+	_ = os.Setenv("INVALID_DURATION", "invalid")
+	defer func() { _ = os.Unsetenv("INVALID_DURATION") }()
 
 	value = GetEnvDuration("INVALID_DURATION", 10*time.Second)
 	if value != 10*time.Second {
@@ -274,8 +274,8 @@ func TestGetEnvDuration(t *testing.T) {
 
 func TestGetEnvFloat(t *testing.T) {
 	// Test with environment variable set
-	os.Setenv("TEST_FLOAT", "3.14")
-	defer os.Unsetenv("TEST_FLOAT")
+	_ = os.Setenv("TEST_FLOAT", "3.14")
+	defer func() { _ = os.Unsetenv("TEST_FLOAT") }()
 
 	value := GetEnvFloat("TEST_FLOAT", 1.0)
 	if value != 3.14 {
@@ -289,8 +289,8 @@ func TestGetEnvFloat(t *testing.T) {
 	}
 
 	// Test with invalid float
-	os.Setenv("INVALID_FLOAT", "invalid")
-	defer os.Unsetenv("INVALID_FLOAT")
+	_ = os.Setenv("INVALID_FLOAT", "invalid")
+	defer func() { _ = os.Unsetenv("INVALID_FLOAT") }()
 
 	value = GetEnvFloat("INVALID_FLOAT", 1.0)
 	if value != 1.0 {
@@ -300,8 +300,8 @@ func TestGetEnvFloat(t *testing.T) {
 
 func TestGetEnvInt(t *testing.T) {
 	// Test with environment variable set
-	os.Setenv("TEST_INT", "42")
-	defer os.Unsetenv("TEST_INT")
+	_ = os.Setenv("TEST_INT", "42")
+	defer func() { _ = os.Unsetenv("TEST_INT") }()
 
 	value := GetEnvInt("TEST_INT", 10)
 	if value != 42 {
@@ -315,8 +315,8 @@ func TestGetEnvInt(t *testing.T) {
 	}
 
 	// Test with invalid int
-	os.Setenv("INVALID_INT", "invalid")
-	defer os.Unsetenv("INVALID_INT")
+	_ = os.Setenv("INVALID_INT", "invalid")
+	defer func() { _ = os.Unsetenv("INVALID_INT") }()
 
 	value = GetEnvInt("INVALID_INT", 10)
 	if value != 10 {

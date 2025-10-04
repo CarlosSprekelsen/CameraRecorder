@@ -21,7 +21,7 @@ func TestAuditLogger_UnitTests(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create audit logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Test 1: Log successful action
 	t.Run("LogSuccessfulAction", func(t *testing.T) {
@@ -160,7 +160,7 @@ func TestAuditLogger_SchemaValidation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create audit logger: %v", err)
 	}
-	defer logger.Close()
+	defer func() { _ = logger.Close() }()
 
 	// Log a sample action
 	ctx := context.Background()
@@ -213,7 +213,7 @@ func readLastNLines(filename string, n int) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var lines []string
 	scanner := bufio.NewScanner(file)

@@ -298,12 +298,12 @@ func TestSilvusBandPlan_FileLoading(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to create temp file: %v", err)
 	}
-	defer os.Remove(tmpFile.Name())
+	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	if _, err := tmpFile.WriteString(jsonContent); err != nil {
 		t.Fatalf("Failed to write to temp file: %v", err)
 	}
-	tmpFile.Close()
+	_ = tmpFile.Close()
 
 	// Test loading from file
 	bandPlan, err := loadSilvusBandPlanFromFile(tmpFile.Name())
@@ -339,8 +339,8 @@ func TestSilvusBandPlan_EnvironmentVariable(t *testing.T) {
 			}
 		}
 	}`
-	os.Setenv("RCC_SILVUS_BAND_PLAN", jsonStr)
-	defer os.Unsetenv("RCC_SILVUS_BAND_PLAN")
+	_ = os.Setenv("RCC_SILVUS_BAND_PLAN", jsonStr)
+	defer func() { _ = os.Unsetenv("RCC_SILVUS_BAND_PLAN") }()
 
 	// Test loading from environment
 	bandPlan, err := loadSilvusBandPlanFromJSON(jsonStr)

@@ -176,7 +176,7 @@ func loadFromFile(filename string) (*TimingConfig, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var config TimingConfig
 	if err := json.NewDecoder(file).Decode(&config); err != nil {
@@ -302,7 +302,7 @@ func loadSilvusBandPlanFromFile(filename string) (*SilvusBandPlan, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	var bandPlan SilvusBandPlan
 	if err := json.NewDecoder(file).Decode(&bandPlan); err != nil {

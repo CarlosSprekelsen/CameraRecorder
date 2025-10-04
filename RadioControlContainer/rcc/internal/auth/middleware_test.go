@@ -18,15 +18,15 @@ func TestExtractBearerToken(t *testing.T) {
 	middleware := NewMiddleware()
 
 	tests := []struct {
-		name        string
-		authHeader  string
-		expectError bool
+		name          string
+		authHeader    string
+		expectError   bool
 		expectedToken string
 	}{
 		{
-			name:        "valid bearer token",
-			authHeader:  "Bearer test-token",
-			expectError: false,
+			name:          "valid bearer token",
+			authHeader:    "Bearer test-token",
+			expectError:   false,
 			expectedToken: "test-token",
 		},
 		{
@@ -80,9 +80,9 @@ func TestVerifyToken(t *testing.T) {
 	middleware := NewMiddleware()
 
 	tests := []struct {
-		name        string
-		token       string
-		expectError bool
+		name           string
+		token          string
+		expectError    bool
 		expectedClaims *Claims
 	}{
 		{
@@ -291,17 +291,17 @@ func TestRequireAuth(t *testing.T) {
 		claims := GetClaimsFromRequest(r)
 		if claims == nil {
 			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte("No claims in context"))
+			_, _ = w.Write([]byte("No claims in context"))
 			return
 		}
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}
 
 	// Simple test handler for health endpoint (no claims required)
 	healthHandler := func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}
 
 	tests := []struct {
@@ -372,7 +372,7 @@ func TestRequireScope(t *testing.T) {
 	// Test handler
 	testHandler := func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}
 
 	tests := []struct {
@@ -438,7 +438,7 @@ func TestRequireRole(t *testing.T) {
 	// Test handler
 	testHandler := func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
+		_, _ = w.Write([]byte("OK"))
 	}
 
 	tests := []struct {
@@ -504,7 +504,7 @@ func TestGetClaimsFromRequest(t *testing.T) {
 	// Test with claims in context
 	req := httptest.NewRequest("GET", "/test", nil)
 	req.Header.Set("Authorization", "Bearer viewer-token")
-	
+
 	// Process through auth middleware to add claims to context
 	w := httptest.NewRecorder()
 	handler := middleware.RequireAuth(func(w http.ResponseWriter, r *http.Request) {

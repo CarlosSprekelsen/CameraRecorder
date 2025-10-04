@@ -300,7 +300,7 @@ func writeError(w http.ResponseWriter, status int, code, message string, details
 		response["details"] = details
 	}
 
-	json.NewEncoder(w).Encode(response)
+	_ = json.NewEncoder(w).Encode(response)
 }
 
 // generateCorrelationID generates a simple correlation ID for request tracking.

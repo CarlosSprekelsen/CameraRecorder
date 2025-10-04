@@ -36,7 +36,7 @@ func TestJWKSWithEmptyKeys(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"keys": []}`))
+		_, _ = w.Write([]byte(`{"keys": []}`))
 	}))
 	defer server.Close()
 
@@ -64,7 +64,7 @@ func TestJWKSWithInvalidKey(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"keys": [
 				{
 					"kty": "RSA",
@@ -103,7 +103,7 @@ func TestJWKSWithWrongKeyType(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"keys": [
 				{
 					"kty": "EC",
@@ -143,7 +143,7 @@ func TestJWKSWithWrongUse(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"keys": [
 				{
 					"kty": "RSA",
@@ -182,7 +182,7 @@ func TestJWKSWithWrongAlg(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{
+		_, _ = w.Write([]byte(`{
 			"keys": [
 				{
 					"kty": "RSA",
@@ -309,7 +309,7 @@ func TestVerifierWithBothPEMAndJWKS(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"keys": []}`))
+		_, _ = w.Write([]byte(`{"keys": []}`))
 	}))
 	defer server.Close()
 
