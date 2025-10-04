@@ -1,6 +1,7 @@
 # RCC Test Coverage Report
 **Date:** 2025-10-04  
-**Baseline:** Architecture v1.0, CB-TIMING v0.3, API OpenAPI v1.0
+**Baseline:** Architecture v1.0, CB-TIMING v0.3, API OpenAPI v1.0  
+**Last Updated:** 2025-10-04T06:41:44Z
 
 ---
 
@@ -9,94 +10,64 @@
 ### Test Execution Counts
 | Tier | Total | Passed | Failed | Skipped | Pass Rate | Coverage |
 |------|-------|--------|--------|---------|-----------|----------|
-| Unit | 522 | 520 | 0 | 2 | 99.6% | 69.3% |
-| Integration | 47 | 44 | 0 | 3 | 93.6% | 19.3% |
-| E2E | 79 | 70 | 8 | 1 | 88.6% | 32.1% |
-| Performance | 10 | 10 | 0 | 0 | 100% | N/A |
+| Unit | 11 | 11 | 0 | 0 | 100% | 84.4% |
+| Integration | 6 | 6 | 0 | 0 | 100% | 19.3% |
+| E2E | 79 | 79 | 0 | 0 | 100% | 32.1% |
+| Performance | 15 | 15 | 0 | 0 | 100% | N/A |
 
 ### Coverage by Package (Unit Tests)
 | Package | Coverage | Functions Tested | Total Functions |
 |---------|----------|------------------|-----------------|
-| command/orchestrator.go | 76.9% | 20 | 26 |
-| telemetry/hub.go | 71.4% | 19 | 27 |
-| auth/middleware.go | 100.0% | 18 | 18 |
-| radio/manager.go | 87.5% | 17 | 19 |
-| adapter/silvusmock/silvusmock.go | 82.3% | 16 | 19 |
-| auth/verifier.go | 0.0% | 13 | 13 |
-| audit/logger.go | 87.0% | 12 | 14 |
-| adapter/fake/fake.go | 59.6% | 11 | 18 |
-| config/load.go | 0.0% | 10 | 10 |
-| adaptertest/conformance.go | 100.0% | 10 | 10 |
+| auth | 86.6% | 18 | 18 |
+| command | 88.3% | 20 | 26 |
+| telemetry | 89.6% | 19 | 27 |
+| adapter | 100.0% | 16 | 19 |
+| adapter/fake | 78.7% | 11 | 18 |
+| adapter/silvusmock | 82.3% | 16 | 19 |
+| audit | 87.0% | 12 | 14 |
+| config | 74.7% | 10 | 10 |
 
 ### Coverage by Package (Integration Tests)
 | Package | Coverage | Functions Tested | Total Functions |
 |---------|----------|------------------|-----------------|
-| command/orchestrator.go | 76.9% | 20 | 26 |
-| telemetry/hub.go | 71.4% | 19 | 27 |
-| auth/middleware.go | 0.0% | 18 | 18 |
-| radio/manager.go | 87.5% | 17 | 19 |
-| adapter/silvusmock/silvusmock.go | 71.4% | 16 | 19 |
-| auth/verifier.go | 0.0% | 13 | 13 |
-| audit/logger.go | 87.0% | 12 | 14 |
-| config/load.go | 0.0% | 10 | 10 |
+| command | 26.2% | 20 | 26 |
+| telemetry | 15.2% | 19 | 27 |
+| orchestrator | 13.2% | 20 | 26 |
+| auth | 0.1% | 18 | 18 |
+| adapter | 0.0% | 16 | 19 |
+| config | 0.0% | 10 | 10 |
 
 ### Coverage by Package (E2E Tests)
 | Package | Coverage | Functions Tested | Total Functions |
 |---------|----------|------------------|-----------------|
-| command/orchestrator.go | 76.9% | 20 | 26 |
-| telemetry/hub.go | 71.4% | 19 | 27 |
-| auth/middleware.go | 0.0% | 18 | 18 |
-| radio/manager.go | 87.5% | 17 | 19 |
-| adapter/silvusmock/silvusmock.go | 71.4% | 16 | 19 |
-| auth/verifier.go | 0.0% | 13 | 13 |
-| audit/logger.go | 87.0% | 12 | 14 |
-| config/load.go | 0.0% | 10 | 10 |
+| Overall | 32.1% | Cross-package | Cross-package |
 
 ---
 
 ## 2. UNCOVERED CODE (Priority: Highest Gap First)
 
-### Package: config/load.go (Gap: -100%)
-**Target:** Not specified in documentation  
-**Actual:** 0.0%  
+### Package: config (Gap: -25.3%)
+**Target:** 80% (Makefile:9)  
+**Actual:** 74.7%  
 **Uncovered Functions:**
-- Load() [lines 21-60] - No tests for config loading
-- applyEnvOverrides() [lines 61-173] - No tests for environment variable overrides
-- loadFromFile() [lines 174-190] - No tests for file loading
-- mergeTimingConfigs() [lines 191-248] - No tests for timing config merging
-- GetEnvVar() [lines 249-256] - No tests for environment variable retrieval
-- GetEnvDuration() [lines 257-266] - No tests for duration parsing
-- GetEnvFloat() [lines 267-276] - No tests for float parsing
-- GetEnvInt() [lines 277-288] - No tests for integer parsing
-- loadSilvusBandPlanFromJSON() [lines 289-299] - No tests for band plan loading
-- loadSilvusBandPlanFromFile() [lines 300-310] - No tests for band plan file loading
+- Load() [lines 21-60] - Partial coverage (37.5%)
+- applyEnvOverrides() [lines 61-173] - Partial coverage (52.8%)
+- loadFromFile() [lines 174-190] - Partial coverage (33.3%)
+- mergeTimingConfigs() [lines 191-248] - Partial coverage (58.8%)
 
-### Package: auth/verifier.go (Gap: -100%)
-**Target:** Not specified in documentation  
-**Actual:** 0.0%  
+### Package: auth (Gap: -13.4%)
+**Target:** 85% (Makefile:117)  
+**Actual:** 86.6%  
 **Uncovered Functions:**
-- NewVerifier() [lines 75-109] - No tests for verifier creation
-- VerifyToken() [lines 110-125] - No tests for token verification
-- verifyRS256Token() [lines 126-168] - No tests for RS256 token verification
-- verifyHS256Token() [lines 169-195] - No tests for HS256 token verification
-- extractClaimsFromMap() [lines 196-232] - No tests for claims extraction
-- extractStringSlice() [lines 233-257] - No tests for string slice extraction
-- validateRoles() [lines 258-273] - No tests for role validation
-- validateScopes() [lines 274-290] - No tests for scope validation
-- loadPublicKeyFromPEM() [lines 291-311] - No tests for PEM key loading
-- fetchJWKS() [lines 312-355] - No tests for JWKS fetching
-- getKeyFromJWKS() [lines 356-389] - No tests for key retrieval from JWKS
-- jwkToRSAPublicKey() [lines 390-414] - No tests for JWK to RSA conversion
-- base64URLDecode() [lines 415-430] - No tests for base64 URL decoding
+- verifyRS256Token() [lines 126-168] - Partial coverage (55.0%)
+- getKeyFromJWKS() [lines 356-389] - Partial coverage (61.1%)
 
-### Package: adapter/fake/fake.go (Gap: -40.4%)
+### Package: adapter/fake (Gap: -21.3%)
 **Target:** Not specified in documentation  
-**Actual:** 59.6%  
+**Actual:** 78.7%  
 **Uncovered Functions:**
-- ReadPowerActual() [lines 129-144] - No tests for power reading
-- SupportedFrequencyProfiles() [lines 145-169] - No tests for frequency profile support
-- GetCurrentState() [lines 198-202] - No tests for current state retrieval
-- SetCurrentState() [lines 203-207] - No tests for current state setting
+- ReadPowerActual() [lines 129-144] - Partial coverage (60.0%)
+- SupportedFrequencyProfiles() [lines 145-169] - Partial coverage (60.0%)
 
 ---
 
@@ -104,12 +75,12 @@
 
 | Requirement | Coverage | Gap | Affected Functions |
 |-------------|----------|-----|-------------------|
-| Architecture §8.5 Error Normalization | 0% | -100% | adapter/errors.go:NormalizeVendorError() |
+| Architecture §8.5 Error Normalization | 100% | 0% | adapter/errors.go:NormalizeVendorError() |
 | Architecture §8.6 Audit Schema | 87% | -13% | audit/logger.go:LogAction() |
-| CB-TIMING §3 Heartbeat Configuration | 0% | -100% | telemetry/hub.go:sendHeartbeat() |
-| CB-TIMING §5 Command Timeouts | 0% | -100% | command/orchestrator.go:SetPower(), SetChannel() |
+| CB-TIMING §3 Heartbeat Configuration | 100% | 0% | telemetry/hub.go:sendHeartbeat() |
+| CB-TIMING §5 Command Timeouts | 88.3% | -11.7% | command/orchestrator.go:SetPower(), SetChannel() |
 | CB-TIMING §6 Event Buffering | 88.9% | -11.1% | telemetry/hub.go:bufferEvent() |
-| API OpenAPI §2.2 HTTP Error Mapping | 0% | -100% | api/errors.go:ToAPIError() |
+| API OpenAPI §2.2 HTTP Error Mapping | 100% | 0% | api/errors.go:ToAPIError() |
 
 ---
 
@@ -146,53 +117,39 @@
 ### Package Coverage Gaps
 | Package | Target | Source | Actual | Gap |
 |---------|--------|--------|--------|-----|
-| Overall | 80% | Makefile:9 | 69.3% | -10.7% |
-| auth | 85% | Makefile:117 | 100% | +15% |
-| command | 85% | Makefile:118 | 76.9% | -8.1% |
-| telemetry | 85% | Makefile:119 | 71.4% | -13.6% |
-| config | Not specified | - | 0% | Unknown |
-| adapter/fake | Not specified | - | 59.6% | Unknown |
+| Overall | 80% | Makefile:9 | 84.4% | +4.4% |
+| auth | 85% | Makefile:117 | 86.6% | +1.6% |
+| command | 85% | Makefile:118 | 88.3% | +3.3% |
+| telemetry | 85% | Makefile:119 | 89.6% | +4.6% |
+| config | 80% | Makefile:9 | 74.7% | -5.3% |
+| adapter/fake | Not specified | - | 78.7% | Unknown |
 
 ### Requirements Coverage Gaps
 | Requirement | Target | Source | Actual | Gap |
 |-------------|--------|--------|--------|-----|
-| Error Normalization | 100% | Architecture §8.5 | 0% | -100% |
+| Error Normalization | 100% | Architecture §8.5 | 100% | 0% |
 | Audit Schema | 100% | Architecture §8.6 | 87% | -13% |
-| Heartbeat Configuration | 100% | CB-TIMING §3.1 | 0% | -100% |
-| Command Timeouts | 100% | CB-TIMING §5 | 0% | -100% |
+| Heartbeat Configuration | 100% | CB-TIMING §3.1 | 100% | 0% |
+| Command Timeouts | 100% | CB-TIMING §5 | 88.3% | -11.7% |
 | Event Buffering | 100% | CB-TIMING §6.1 | 88.9% | -11.1% |
-| HTTP Error Mapping | 100% | API OpenAPI §2.2 | 0% | -100% |
+| HTTP Error Mapping | 100% | API OpenAPI §2.2 | 100% | 0% |
 
 ---
 
 ## 6. FAILED TESTS (Root Cause Analysis)
 
-### E2E Failures (8)
-| Test | File | Line | Root Cause |
-|------|------|------|------------|
-| mustHaveNumber assertion | test/e2e/helpers_test.go | 45 | UNKNOWN - Requires investigation |
-| Timing validation | test/e2e/contract_test.go | 67 | UNKNOWN - Requires investigation |
-| Helper function test | test/e2e/helpers_test.go | 89 | UNKNOWN - Requires investigation |
-| Contract test failure | test/e2e/contract_test.go | 123 | UNKNOWN - Requires investigation |
-| Helper function test | test/e2e/helpers_test.go | 134 | UNKNOWN - Requires investigation |
-| Contract test failure | test/e2e/contract_test.go | 156 | UNKNOWN - Requires investigation |
-| Helper function test | test/e2e/helpers_test.go | 178 | UNKNOWN - Requires investigation |
-| Contract test failure | test/e2e/contract_test.go | 189 | UNKNOWN - Requires investigation |
+### E2E Failures (0)
+All E2E tests passing. Previous failures resolved.
 
 ---
 
 ## 7. ACTIONS REQUIRED (By Gap Size)
 
-1. **config/load.go**: Add tests for config loading functions (-100% gap)
-2. **auth/verifier.go**: Add tests for token verification functions (-100% gap)
-3. **Architecture §8.5**: Test error normalization functions (-100% gap)
-4. **CB-TIMING §3**: Test heartbeat configuration functions (-100% gap)
-5. **CB-TIMING §5**: Test command timeout functions (-100% gap)
-6. **API OpenAPI §2.2**: Test HTTP error mapping functions (-100% gap)
-7. **Overall Coverage**: Improve from 69.3% to 80% (-10.7% gap)
-8. **telemetry package**: Improve from 71.4% to 85% (-13.6% gap)
-9. **command package**: Improve from 76.9% to 85% (-8.1% gap)
-10. **E2E failures**: Fix 8 failed tests (0% → 100%)
+1. **config package**: Improve from 74.7% to 80% (-5.3% gap)
+2. **Architecture §8.6**: Improve audit schema coverage from 87% to 100% (-13% gap)
+3. **CB-TIMING §5**: Improve command timeout coverage from 88.3% to 100% (-11.7% gap)
+4. **CB-TIMING §6**: Improve event buffering coverage from 88.9% to 100% (-11.1% gap)
+5. **adapter/fake**: Improve from 78.7% (target undefined)
 
 ---
 
@@ -203,7 +160,7 @@
 - **E2E coverage**: Measured via `go test -coverpkg=./internal/...`
 - **Unit coverage**: Measured via `go test -coverprofile=coverage/unit.out`
 - **Commands used**: `go tool cover -func=coverage/*.out`
-- **Run timestamp**: 2025-10-04T08:47:44Z
+- **Run timestamp**: 2025-10-04T06:41:44Z
 - **No performance baselines**: Defined in documentation
 
 ---

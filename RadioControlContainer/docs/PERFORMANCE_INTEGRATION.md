@@ -66,7 +66,6 @@ jobs:
 #### **Gap 3: No Load Testing in CI/CD**
 **BEFORE:**
 - Vegeta scenarios exist but not automated
-- k6 scenarios exist but not needed (Vegeta sufficient)
 - Performance testing requires manual execution
 
 **AFTER:**

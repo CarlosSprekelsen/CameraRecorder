@@ -225,14 +225,12 @@ This audit evaluates the Radio Control Container (RCC) implementation against ar
 
 **Findings**:
 - ✅ **Vegeta installed** - Performance testing available
-- ❌ **k6 scenarios exist** but not needed (Vegeta sufficient)
 - ✅ **Performance baseline established** - Fast/slow benchmarks implemented
 - ✅ **P95 latency known** - <100ms requirement validated
 - ✅ **Error rate known** - <10% requirement validated
 
 **Evidence**:
 - `test/perf/vegeta_scenarios.sh` working with PATH fix
-- `test/perf/k6_scenarios.js` available but unnecessary (Vegeta covers all needs)
 - Performance requirements validated with Go benchmarks + Vegeta load testing
 
 ---

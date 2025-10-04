@@ -29,16 +29,6 @@ go install github.com/tsenart/vegeta@latest
 bash test/perf/vegeta_scenarios.sh
 ```
 
-### k6 (JavaScript-based Load Testing) - NOT NEEDED
-
-```bash
-# k6 scenarios exist but are NOT needed
-# Vegeta covers all HTTP load testing requirements
-# k6 adds unnecessary complexity for this Go project
-
-# k6 scenarios available but not recommended:
-# k6 run test/perf/k6_scenarios.js
-```
 
 ## Performance Targets
 
@@ -61,5 +51,5 @@ Expected performance characteristics:
 1. **List Radios**: GET /api/v1/radios (100 req/s for 30s)
 2. **Set Power**: POST /api/v1/radios/{id}/power (50 req/s for 30s)
 3. **Set Channel**: POST /api/v1/radios/{id}/channel (25 req/s for 30s)
-4. **Telemetry**: GET /api/v1/telemetry (10 concurrent connections for 60s)
-5. **Mixed Workload**: Combination of all operations (100 req/s for 60s)
+4. **Mixed Workload**: Combination of all operations (100 req/s for 60s)
+5. **High Load**: 200 req/s for 30s
