@@ -1,5 +1,6 @@
-// Package telemetry provides slow performance benchmarks for deep profiling.
 //go:build slowbench
+
+// Package telemetry provides slow performance benchmarks for deep profiling.
 package telemetry
 
 import (
@@ -165,11 +166,11 @@ func BenchmarkMemoryIntensive(b *testing.B) {
 			Radio: "silvus-001",
 			Type:  "powerChanged",
 			Data: map[string]interface{}{
-				"powerDbm":    10.0 + float64(i%10),
-				"frequency":   2412.0 + float64(i%100),
-				"timestamp":   time.Now().Unix(),
-				"metadata":    fmt.Sprintf("large_metadata_string_%d", i),
-				"additional":  make([]interface{}, 100), // Large data payload
+				"powerDbm":   10.0 + float64(i%10),
+				"frequency":  2412.0 + float64(i%100),
+				"timestamp":  time.Now().Unix(),
+				"metadata":   fmt.Sprintf("large_metadata_string_%d", i),
+				"additional": make([]interface{}, 100), // Large data payload
 			},
 		}
 

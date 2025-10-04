@@ -1,4 +1,7 @@
 // Performance testing scenarios using k6
+// NOTE: This script exists but is NOT needed for this project
+// Vegeta covers all HTTP load testing requirements
+// k6 adds unnecessary complexity for this Go project
 // Install: https://k6.io/docs/getting-started/installation/
 
 import http from 'k6/http';

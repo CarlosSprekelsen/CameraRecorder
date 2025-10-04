@@ -2,7 +2,7 @@
 # Source: PRE-INT-10
 # Quote: "Prevent backsliding before integration"
 
-.PHONY: help unit e2e e2e-cover race bench bench-fast bench-slow perf cover lint clean test-all integration test-unit-team test-integration-team test-e2e-team test-parallel integration-cover coverage-gaps coverage-diff test-quarantine
+.PHONY: help unit e2e e2e-cover race bench bench-fast bench-slow perf vegeta-env cover lint clean test-all integration test-unit-team test-integration-team test-e2e-team test-parallel integration-cover coverage-gaps coverage-diff test-quarantine
 .DEFAULT_GOAL := help
 
 # Configuration
@@ -66,7 +66,11 @@ bench-slow: ## Run slow performance benchmarks (10s benchtime, 5m timeout)
 
 perf: ## Run load testing scenarios
 	@echo "$(BLUE)Running load testing scenarios...$(NC)"
-	@bash test/perf/vegeta_scenarios.sh || true
+	@export PATH=$$PATH:$$(go env GOPATH)/bin && bash test/perf/vegeta_scenarios.sh || true
+
+vegeta-env: ## Setup Vegeta environment
+	@echo "$(BLUE)Setting up Vegeta environment...$(NC)"
+	@export PATH=$$PATH:$$(go env GOPATH)/bin && vegeta -version
 
 cover: ## Run tests with coverage and enforce thresholds
 	@echo "$(BLUE)Running tests with coverage...$(NC)"

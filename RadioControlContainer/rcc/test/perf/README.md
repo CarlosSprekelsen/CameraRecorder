@@ -29,14 +29,15 @@ go install github.com/tsenart/vegeta@latest
 bash test/perf/vegeta_scenarios.sh
 ```
 
-### k6 (JavaScript-based Load Testing)
+### k6 (JavaScript-based Load Testing) - NOT NEEDED
 
 ```bash
-# Install k6
-# See: https://k6.io/docs/getting-started/installation/
+# k6 scenarios exist but are NOT needed
+# Vegeta covers all HTTP load testing requirements
+# k6 adds unnecessary complexity for this Go project
 
-# Run k6 scenarios
-k6 run test/perf/k6_scenarios.js
+# k6 scenarios available but not recommended:
+# k6 run test/perf/k6_scenarios.js
 ```
 
 ## Performance Targets

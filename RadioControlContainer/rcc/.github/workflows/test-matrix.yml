@@ -108,9 +108,43 @@ jobs:
           flags: e2e
           fail_ci_if_error: false
 
+  performance:
+    name: Performance Benchmarks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+          
+      - name: Cache Go modules
+        uses: actions/cache@v3
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+            
+      - name: Run fast benchmarks
+        run: make bench-fast
+        
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-results
+          path: |
+            benchmark-results/
+            coverage/
+          retention-days: 30
+
   gate:
     name: Quality Gate
-    needs: [unit, integration, e2e]
+    needs: [unit, integration, e2e, performance]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -140,6 +174,7 @@ jobs:
           echo "✅ Unit tests: $(make test-unit-team 2>&1 | grep -c 'PASS' || echo '0') tests passed"
           echo "✅ Integration tests: $(make test-integration-team 2>&1 | grep -c 'PASS' || echo '0') tests passed"
           echo "✅ E2E tests: $(make test-e2e-team 2>&1 | grep -c 'PASS' || echo '0') tests passed"
+          echo "✅ Performance benchmarks: PASS"
           echo "✅ Anti-peek enforcement: PASS"
           echo "✅ Coverage thresholds: PASS"
           echo "✅ Lint check: PASS"

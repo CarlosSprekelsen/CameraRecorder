@@ -1,5 +1,6 @@
-// Package telemetry provides performance benchmarks for the telemetry hub.
 //go:build !slowbench
+
+// Package telemetry provides performance benchmarks for the telemetry hub.
 package telemetry
 
 import (

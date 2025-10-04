@@ -159,3 +159,143 @@ func TestFakeAdapterValidation(t *testing.T) {
 		t.Error("Expected error for invalid frequency (10000)")
 	}
 }
+
+// TestFakeAdapterReadPowerActual tests ReadPowerActual functionality.
+func TestFakeAdapterReadPowerActual(t *testing.T) {
+	adapter := NewFakeAdapter("test-radio")
+	ctx := context.Background()
+
+	// Test initial power reading
+	power, err := adapter.ReadPowerActual(ctx)
+	if err != nil {
+		t.Fatalf("ReadPowerActual failed: %v", err)
+	}
+
+	if power != 20.0 {
+		t.Errorf("Expected initial power 20.0, got %f", power)
+	}
+
+	// Test power reading after setting power
+	err = adapter.SetPower(ctx, 35.0)
+	if err != nil {
+		t.Fatalf("SetPower failed: %v", err)
+	}
+
+	power, err = adapter.ReadPowerActual(ctx)
+	if err != nil {
+		t.Fatalf("ReadPowerActual after SetPower failed: %v", err)
+	}
+
+	if power != 35.0 {
+		t.Errorf("Expected power 35.0 after SetPower, got %f", power)
+	}
+}
+
+// TestFakeAdapterSupportedFrequencyProfiles tests SupportedFrequencyProfiles functionality.
+func TestFakeAdapterSupportedFrequencyProfiles(t *testing.T) {
+	adapter := NewFakeAdapter("test-radio")
+	ctx := context.Background()
+
+	profiles, err := adapter.SupportedFrequencyProfiles(ctx)
+	if err != nil {
+		t.Fatalf("SupportedFrequencyProfiles failed: %v", err)
+	}
+
+	// Check that we get expected profiles - the fake adapter returns one profile with validFreqs
+	if len(profiles) != 1 {
+		t.Errorf("Expected 1 profile, got %d", len(profiles))
+	}
+
+	profile := profiles[0]
+	if profile.Bandwidth != 20.0 {
+		t.Errorf("Expected Bandwidth 20.0, got %f", profile.Bandwidth)
+	}
+	if profile.AntennaMask != 1 {
+		t.Errorf("Expected AntennaMask 1, got %d", profile.AntennaMask)
+	}
+	// Check that we have some frequencies
+	if len(profile.Frequencies) == 0 {
+		t.Errorf("Expected at least one frequency, got %d", len(profile.Frequencies))
+	}
+}
+
+// TestFakeAdapterGetSetCurrentState tests GetCurrentState and SetCurrentState functionality.
+func TestFakeAdapterGetSetCurrentState(t *testing.T) {
+	adapter := NewFakeAdapter("test-radio")
+
+	// Test initial state
+	power, frequency := adapter.GetCurrentState()
+
+	expectedPower := 20.0
+	expectedFrequency := 2412.0
+
+	if power != expectedPower {
+		t.Errorf("Expected initial power %f, got %f", expectedPower, power)
+	}
+	if frequency != expectedFrequency {
+		t.Errorf("Expected initial frequency %f, got %f", expectedFrequency, frequency)
+	}
+
+	// Test setting new state
+	newPower := 25.0
+	newFrequency := 2420.0
+
+	adapter.SetCurrentState(newPower, newFrequency)
+
+	// Test getting the updated state
+	updatedPower, updatedFrequency := adapter.GetCurrentState()
+
+	if updatedPower != newPower {
+		t.Errorf("Expected updated power %f, got %f", newPower, updatedPower)
+	}
+	if updatedFrequency != newFrequency {
+		t.Errorf("Expected updated frequency %f, got %f", newFrequency, updatedFrequency)
+	}
+}
+
+// TestFakeAdapterStatePersistence tests that state changes persist across operations.
+func TestFakeAdapterStatePersistence(t *testing.T) {
+	adapter := NewFakeAdapter("test-radio")
+	ctx := context.Background()
+
+	// Set power and frequency
+	err := adapter.SetPower(ctx, 30.0)
+	if err != nil {
+		t.Fatalf("SetPower failed: %v", err)
+	}
+
+	err = adapter.SetFrequency(ctx, 2425.0)
+	if err != nil {
+		t.Fatalf("SetFrequency failed: %v", err)
+	}
+
+	// Verify ReadPowerActual reflects the change
+	power, err := adapter.ReadPowerActual(ctx)
+	if err != nil {
+		t.Fatalf("ReadPowerActual failed: %v", err)
+	}
+	if power != 30.0 {
+		t.Errorf("Expected ReadPowerActual to return 30.0, got %f", power)
+	}
+
+	// Verify GetState reflects the changes
+	state, err := adapter.GetState(ctx)
+	if err != nil {
+		t.Fatalf("GetState failed: %v", err)
+	}
+	if state.PowerDbm != 30.0 {
+		t.Errorf("Expected GetState PowerDbm 30.0, got %f", state.PowerDbm)
+	}
+	if state.FrequencyMhz != 2425.0 {
+		t.Errorf("Expected GetState FrequencyMhz 2425.0, got %f", state.FrequencyMhz)
+	}
+
+	// Verify GetCurrentState reflects the changes
+	currentPower, currentFrequency := adapter.GetCurrentState()
+	if currentPower != 30.0 {
+		t.Errorf("Expected GetCurrentState power 30.0, got %f", currentPower)
+	}
+	if currentFrequency != 2425.0 {
+		t.Errorf("Expected GetCurrentState frequency 2425.0, got %f", currentFrequency)
+	}
+}
