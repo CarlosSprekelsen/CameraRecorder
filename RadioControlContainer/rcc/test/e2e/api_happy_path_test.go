@@ -120,7 +120,7 @@ func TestE2E_TelemetryIntegration(t *testing.T) {
 	time.Sleep(200 * time.Millisecond)
 
 	// Read SSE events with a timeout
-	var events []string
+	eventsChan := make(chan string, 100)
 	buf := make([]byte, 1024)
 	readDone := make(chan struct{})
 
@@ -135,17 +135,26 @@ func TestE2E_TelemetryIntegration(t *testing.T) {
 				return
 			}
 			if n > 0 {
-				events = append(events, string(buf[:n]))
+				eventsChan <- string(buf[:n])
 			}
 		}
 	}()
 
-	// Wait for events or timeout
-	select {
-	case <-readDone:
-		// Connection closed
-	case <-time.After(1 * time.Second):
-		// Timeout - collect events we have so far
+	// Collect events for test duration
+	timeout := time.After(1 * time.Second)
+	var events []string
+	collecting:
+	for {
+		select {
+		case event := <-eventsChan:
+			events = append(events, event)
+		case <-readDone:
+			// Connection closed
+			break collecting
+		case <-timeout:
+			// Timeout - collect events we have so far
+			break collecting
+		}
 	}
 
 	response := strings.Join(events, "")

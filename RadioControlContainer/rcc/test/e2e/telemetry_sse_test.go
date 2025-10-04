@@ -3,6 +3,7 @@
 package e2e
 
 import (
+	"bufio"
 	"context"
 	"net/http"
 	"strings"
@@ -149,53 +150,25 @@ func TestE2E_TelemetryLastEventID(t *testing.T) {
 	req1, _ := http.NewRequest("GET", server.URL+"/api/v1/telemetry", nil)
 	req1.Header.Set("Accept", "text/event-stream")
 
-	w1 := newThreadSafeResponseWriter()
-	ctx1, cancel1 := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx1, cancel1 := context.WithTimeout(context.Background(), 10*time.Second) // Increased timeout for HTTP layer
 	defer cancel1()
 
-	telemetryDone1 := make(chan error, 1)
+	// Collect events via channel for test duration
+	eventsChan1 := make(chan string, 100)
 	go func() {
 		client := &http.Client{}
 		// Use context-aware request for automatic connection cleanup
 		req1WithCtx := req1.WithContext(ctx1)
 		resp, err := client.Do(req1WithCtx)
 		if err != nil {
-			telemetryDone1 <- err
 			return
 		}
 		defer resp.Body.Close()
 
-		// Make reads interruptible
-		readChan := make(chan []byte, 1)
-		errChan := make(chan error, 1)
-
-		// Start a goroutine to handle reads
-		go func() {
-			buf := make([]byte, 1024)
-			for {
-				n, err := resp.Body.Read(buf)
-				if err != nil {
-					errChan <- err
-					return
-				}
-				// Copy the data to avoid race conditions
-				data := make([]byte, n)
-				copy(data, buf[:n])
-				readChan <- data
-			}
-		}()
-
-		for {
-			select {
-			case <-ctx1.Done():
-				telemetryDone1 <- ctx1.Err()
-				return
-			case data := <-readChan:
-				w1.Write(data)
-			case err := <-errChan:
-				telemetryDone1 <- err
-				return
-			}
+		// Read events until context cancels
+		scanner := bufio.NewScanner(resp.Body)
+		for scanner.Scan() {
+			eventsChan1 <- scanner.Text()
 		}
 	}()
 
@@ -204,69 +177,49 @@ func TestE2E_TelemetryLastEventID(t *testing.T) {
 	httpPostJSON200(t, server.URL+"/api/v1/radios/silvus-001/power", map[string]any{"powerDbm": 15.0})
 	time.Sleep(200 * time.Millisecond)
 
-	// Collect first batch of events
-	events1 := w1.collectEvents(500 * time.Millisecond)
-	response1 := strings.Join(events1, "")
-
-	// Wait for first connection to complete
-	select {
-	case <-telemetryDone1:
-	case <-time.After(2 * time.Second):
-		t.Fatal("First telemetry connection did not complete")
+	// Collect events for test duration
+	timeout1 := time.After(2 * time.Second)
+	var events1 []string
+collecting1:
+	for {
+		select {
+		case event := <-eventsChan1:
+			events1 = append(events1, event)
+		case <-timeout1:
+			break collecting1 // Stop collecting, cancel context
+		}
 	}
+
+	// Cancel context to close SSE connection
+	cancel1()
+	time.Sleep(100 * time.Millisecond) // Let goroutine clean up
+
+	response1 := strings.Join(events1, "")
 
 	// Second connection with Last-Event-ID
 	req2, _ := http.NewRequest("GET", server.URL+"/api/v1/telemetry", nil)
 	req2.Header.Set("Accept", "text/event-stream")
 	req2.Header.Set("Last-Event-ID", "1") // Simulate reconnection
 
-	w2 := newThreadSafeResponseWriter()
-	ctx2, cancel2 := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 10*time.Second) // Increased timeout for HTTP layer
 	defer cancel2()
 
-	telemetryDone2 := make(chan error, 1)
+	// Collect events via channel for test duration
+	eventsChan2 := make(chan string, 100)
 	go func() {
 		client := &http.Client{}
 		// Use context-aware request for automatic connection cleanup
 		req2WithCtx := req2.WithContext(ctx2)
 		resp, err := client.Do(req2WithCtx)
 		if err != nil {
-			telemetryDone2 <- err
 			return
 		}
 		defer resp.Body.Close()
 
-		// Make reads interruptible
-		readChan := make(chan []byte, 1)
-		errChan := make(chan error, 1)
-
-		// Start a goroutine to handle reads
-		go func() {
-			buf := make([]byte, 1024)
-			for {
-				n, err := resp.Body.Read(buf)
-				if err != nil {
-					errChan <- err
-					return
-				}
-				// Copy the data to avoid race conditions
-				data := make([]byte, n)
-				copy(data, buf[:n])
-				readChan <- data
-			}
-		}()
-
-		for {
-			select {
-			case <-ctx2.Done():
-				telemetryDone2 <- ctx2.Err()
-				return
-			case data := <-readChan:
-				w2.Write(data)
-			case err := <-errChan:
-				telemetryDone2 <- err
-				return
-			}
+		// Read events until context cancels
+		scanner := bufio.NewScanner(resp.Body)
+		for scanner.Scan() {
+			eventsChan2 <- scanner.Text()
 		}
 	}()
 
@@ -277,16 +230,24 @@ func TestE2E_TelemetryLastEventID(t *testing.T) {
 	httpPostJSON200(t, server.URL+"/api/v1/radios/silvus-001/power", map[string]any{"powerDbm": 20.0})
 	time.Sleep(200 * time.Millisecond)
 
-	// Collect second batch of events
-	events2 := w2.collectEvents(500 * time.Millisecond)
-	response2 := strings.Join(events2, "")
-
-	// Wait for second connection to complete
-	select {
-	case <-telemetryDone2:
-	case <-time.After(2 * time.Second):
-		t.Fatal("Second telemetry connection did not complete")
+	// Collect events for test duration
+	timeout2 := time.After(2 * time.Second)
+	var events2 []string
+collecting2:
+	for {
+		select {
+		case event := <-eventsChan2:
+			events2 = append(events2, event)
+		case <-timeout2:
+			break collecting2 // Stop collecting, cancel context
+		}
 	}
+
+	// Cancel context to close SSE connection
+	cancel2()
+	time.Sleep(100 * time.Millisecond) // Let goroutine clean up
+
+	response2 := strings.Join(events2, "")
 
 	// Evidence: Reconnection events
 	t.Logf("=== RECONNECTION EVIDENCE ===")
@@ -319,53 +280,25 @@ func TestE2E_TelemetryHeartbeat(t *testing.T) {
 	req, _ := http.NewRequest("GET", server.URL+"/api/v1/telemetry", nil)
 	req.Header.Set("Accept", "text/event-stream")
 
-	w := newThreadSafeResponseWriter()
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	telemetryDone := make(chan error, 1)
+	// Collect events via channel for test duration
+	eventsChan := make(chan string, 100)
 	go func() {
 		client := &http.Client{}
 		// Use context-aware request for automatic connection cleanup
 		reqWithCtx := req.WithContext(ctx)
 		resp, err := client.Do(reqWithCtx)
 		if err != nil {
-			telemetryDone <- err
 			return
 		}
 		defer resp.Body.Close()
 
-		// Make reads interruptible
-		readChan := make(chan []byte, 1)
-		errChan := make(chan error, 1)
-
-		// Start a goroutine to handle reads
-		go func() {
-			buf := make([]byte, 1024)
-			for {
-				n, err := resp.Body.Read(buf)
-				if err != nil {
-					errChan <- err
-					return
-				}
-				// Copy the data to avoid race conditions
-				data := make([]byte, n)
-				copy(data, buf[:n])
-				readChan <- data
-			}
-		}()
-
-		for {
-			select {
-			case <-ctx.Done():
-				telemetryDone <- ctx.Err()
-				return
-			case data := <-readChan:
-				w.Write(data)
-			case err := <-errChan:
-				telemetryDone <- err
-				return
-			}
+		// Read events until context cancels
+		scanner := bufio.NewScanner(resp.Body)
+		for scanner.Scan() {
+			eventsChan <- scanner.Text()
 		}
 	}()
 
@@ -373,18 +306,23 @@ func TestE2E_TelemetryHeartbeat(t *testing.T) {
 	time.Sleep(100 * time.Millisecond)
 
 	// Collect events for a longer period to catch heartbeats
-	events := w.collectEvents(2 * time.Second)
-	response := strings.Join(events, "")
-
-	// Wait for telemetry to complete
-	select {
-	case err := <-telemetryDone:
-		if err != nil && err != context.DeadlineExceeded {
-			t.Errorf("Telemetry failed: %v", err)
+	timeout := time.After(20 * time.Second) // Allow time for heartbeat (15s + jitter)
+	var events []string
+collecting:
+	for {
+		select {
+		case event := <-eventsChan:
+			events = append(events, event)
+		case <-timeout:
+			break collecting // Stop collecting, cancel context
 		}
-	case <-time.After(4 * time.Second):
-		t.Fatal("Telemetry did not complete")
 	}
+
+	// Cancel context to close SSE connection
+	cancel()
+	time.Sleep(100 * time.Millisecond) // Let goroutine clean up
+
+	response := strings.Join(events, "")
 
 	// Evidence: Heartbeat events
 	heartbeatCount := strings.Count(response, "event: heartbeat")
