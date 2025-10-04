@@ -14,3 +14,4 @@ goarch: amd64
 pkg: github.com/radio-control/rcc/internal/telemetry
 cpu: Intel(R) Core(TM) i5 CPU       M 480  @ 2.67GHz
 BenchmarkPublishWithSubscribers/Subscribers_1-4         	 1314921	       791.0 ns/op	     439 B/op	       3 allocs/op
+BenchmarkPublishWithSubscribers/Subscribers_10-4        	
