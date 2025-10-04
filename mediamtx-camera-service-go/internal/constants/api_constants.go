@@ -1,21 +1,3 @@
-/*
-Common API Constants - Shared between implementation and tests
-
-Provides shared constants for API error codes, timeouts, and response values
-to eliminate magic numbers and ensure consistency across the entire project.
-
-Design Principles:
-- Single source of truth for API constants
-- Shared between implementation and tests
-- Based on API documentation (ground truth)
-- Eliminates magic number duplication
-
-Requirements Coverage:
-- REQ-API-001: JSON-RPC 2.0 protocol constants
-- REQ-API-002: Standardized error codes
-- REQ-TEST-001: Shared test constants
-*/
-
 package constants
 
 import "time"

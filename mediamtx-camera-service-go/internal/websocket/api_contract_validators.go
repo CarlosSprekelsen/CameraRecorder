@@ -1,11 +1,3 @@
-// Package websocket implements API contract validation helpers
-//
-// This file contains validation helpers that ensure API responses match
-// the documented contracts in docs/api/json_rpc_methods.md
-//
-// These validators enforce strict API compliance and prevent accommodation
-// of incorrect responses in tests.
-
 package websocket
 
 import (
@@ -102,7 +94,7 @@ func validateRecordingSpecificError(t *testing.T, errorCode int, method string) 
 // validatePingResponse validates ping API response structure using existing test patterns
 func validatePingResponse(t *testing.T, result interface{}) {
 	require.NotNil(t, result, "Ping result cannot be nil")
-	
+
 	// Ping should return "pong" string
 	assert.Equal(t, "pong", result, "Ping should return 'pong'")
 }
@@ -696,7 +688,6 @@ func validateGetStreamStatusResponse(t *testing.T, result interface{}) {
 	validStatuses := []string{"ACTIVE", "INACTIVE", "ERROR", "STARTING", "STOPPING"}
 	assert.Contains(t, validStatuses, status, "Status must be valid")
 }
-
 
 // validateAPICompliantError validates error follows JSON-RPC 2.0 and API specification
 func validateAPICompliantError(t *testing.T, err *JsonRpcError) {

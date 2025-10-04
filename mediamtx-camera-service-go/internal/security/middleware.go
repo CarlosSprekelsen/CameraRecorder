@@ -6,7 +6,10 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
-// ClientConnection represents a client connection interface
+// ClientConnection represents a client connection interface for authentication.
+//
+// Implementations must provide client identification, user information,
+// and authentication status for security middleware enforcement.
 type ClientConnection interface {
 	GetClientID() string
 	GetUserID() string
@@ -40,7 +43,7 @@ type SecurityConfig interface {
 // MethodHandler represents a method handler function
 type MethodHandler func(params map[string]interface{}, client ClientConnection) (JsonRpcResponse, error)
 
-// AuthMiddleware provides centralized authentication enforcement
+// AuthMiddleware provides centralized authentication enforcement for method handlers.
 type AuthMiddleware struct {
 	logger *logging.Logger
 	config SecurityConfig
@@ -82,7 +85,7 @@ func (am *AuthMiddleware) RequireAuth(handler MethodHandler) MethodHandler {
 	}
 }
 
-// RBACMiddleware provides centralized role-based access control
+// RBACMiddleware provides centralized role-based access control for method handlers.
 type RBACMiddleware struct {
 	permissionChecker *PermissionChecker
 	logger            *logging.Logger

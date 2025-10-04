@@ -35,9 +35,10 @@ type ClientRateInfo struct {
 	WindowStart  time.Time
 }
 
-// JWTHandler manages JWT token generation and validation.
+// JWTHandler manages JWT token generation and validation with rate limiting.
+//
 // Implements JWT authentication with HS256 algorithm, configurable expiry,
-// role-based access control, and rate limiting as specified in Architecture Decision AD-7.
+// and sliding window rate limiting for abuse prevention.
 type JWTHandler struct {
 	secretKey string
 	algorithm string

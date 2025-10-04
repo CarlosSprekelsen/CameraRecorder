@@ -1,17 +1,3 @@
-/*
-HTTP Health Server Implementation
-
-Requirements Coverage:
-- REQ-HEALTH-001: Health Monitoring
-- REQ-HEALTH-002: HTTP Health Endpoints
-
-Test Categories: Unit/Integration
-API Documentation Reference: docs/api/health-endpoints.md
-
-Implements HTTP health endpoints with thin delegation pattern.
-Follows canonical configuration, logging, and event-based progressive readiness architecture.
-*/
-
 package health
 
 import (
@@ -25,8 +11,7 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
-// HTTPHealthServer implements HTTP health endpoints with thin delegation pattern
-// Contains NO business logic - delegates all operations to HealthAPI
+// HTTPHealthServer implements HTTP health endpoints with thin delegation pattern.
 type HTTPHealthServer struct {
 	config    *config.HTTPHealthConfig
 	logger    *logging.Logger

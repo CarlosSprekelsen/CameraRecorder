@@ -1,33 +1,3 @@
-// Package websocket implements JSON-RPC 2.0 method registration and core API methods.
-//
-// This package provides the method registration system and implements all
-// JSON-RPC 2.0 API methods defined in the API documentation. All methods
-// follow the delegation pattern, forwarding business logic to the MediaMTX
-// controller while handling protocol-level concerns.
-//
-// Architecture Compliance:
-//   - Delegation Pattern: All business logic forwarded to MediaMTX controller
-//   - No Business Logic: Methods contain only protocol handling and validation
-//   - Consistent Error Handling: Structured JSON-RPC 2.0 error responses
-//   - Security Integration: Authentication and authorization enforcement
-//   - Performance Monitoring: Request/response metrics collection
-//
-// Method Categories:
-//   - Core Methods: ping, authenticate, system status
-//   - Camera Methods: get_camera_list, get_camera_status, camera operations
-//   - Recording Methods: start_recording, stop_recording, recording management
-//   - Snapshot Methods: take_snapshot with multi-tier fallback
-//   - File Methods: list_recordings, list_snapshots, file operations
-//   - Health Methods: get_system_health, component status
-//
-// Requirements Coverage:
-//   - REQ-API-002: Complete JSON-RPC 2.0 protocol implementation
-//   - REQ-API-003: Request/response message handling with proper error codes
-//   - REQ-API-004: All core method implementations with controller delegation
-//
-// Test Categories: Unit/Integration
-// API Documentation Reference: docs/api/json_rpc_methods.md
-
 package websocket
 
 import (
@@ -41,9 +11,7 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 )
 
-// methodWrapper provides common method execution pattern with structured logging
-// and consistent error handling. This centralizes cross-cutting concerns for
-// all JSON-RPC method implementations.
+// methodWrapper provides common method execution pattern with logging and error handling.
 func (s *WebSocketServer) methodWrapper(methodName string, handler func() (interface{}, error)) func(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 	return func(params map[string]interface{}, client *ClientConnection) (*JsonRpcResponse, error) {
 		s.logger.WithFields(logging.Fields{

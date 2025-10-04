@@ -1,17 +1,3 @@
-/*
-HealthAPI Interface Implementation
-
-Requirements Coverage:
-- REQ-HEALTH-001: Health Monitoring
-- REQ-HEALTH-002: HTTP Health Endpoints
-
-Test Categories: Unit/Integration
-API Documentation Reference: docs/api/health-endpoints.md
-
-Defines the HealthAPI interface for component integration.
-Follows canonical interface patterns and thin delegation architecture.
-*/
-
 package health
 
 import (
@@ -70,19 +56,15 @@ type LivenessResponse struct {
 	Message   string    `json:"message,omitempty"`
 }
 
-// HealthAPI defines the interface for health monitoring components
-// This interface enables thin delegation pattern - HTTP server delegates all operations
+// HealthAPI defines the interface for health monitoring components.
+//
+// Implementations must provide health status, readiness, and liveness checks
+// with context cancellation support. Used for thin delegation pattern where
+// HTTP server delegates all operations to this interface.
 type HealthAPI interface {
-	// GetHealth returns basic health status
 	GetHealth(ctx context.Context) (*HealthResponse, error)
-
-	// GetDetailedHealth returns comprehensive health status
 	GetDetailedHealth(ctx context.Context) (*DetailedHealthResponse, error)
-
-	// IsReady checks if the system is ready to accept requests
 	IsReady(ctx context.Context) (*ReadinessResponse, error)
-
-	// IsAlive checks if the system is alive and responsive
 	IsAlive(ctx context.Context) (*LivenessResponse, error)
 }
 

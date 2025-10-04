@@ -1,23 +1,3 @@
-/*
-Universal Test Utilities - Domain-Agnostic Test Infrastructure
-
-Provides common test utilities that can be used across all modules,
-inspired by the best patterns from MediaMTX helpers but without
-module-specific dependencies.
-
-Requirements Coverage:
-- REQ-TEST-001: Universal test setup and teardown
-- REQ-TEST-002: Configuration-driven directory management
-- REQ-TEST-003: Standardized fixture loading
-- REQ-TEST-004: Domain-agnostic assertion utilities
-
-Design Principles:
-- No module-specific dependencies
-- Configuration-driven (no hardcoded paths)
-- Fixture-based (edit fixture → all tests react)
-- Progressive migration support
-*/
-
 package testutils
 
 import (

@@ -32,8 +32,7 @@ import (
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 )
 
-// HybridCameraMonitor provides hybrid camera discovery and monitoring
-// Enhanced to support USB cameras, IP cameras, RTSP cameras, and other camera types
+// HybridCameraMonitor provides hybrid camera discovery and monitoring.
 type HybridCameraMonitor struct {
 	// Configuration
 	deviceRange               []int
@@ -131,8 +130,7 @@ type CameraSource struct {
 	Description string            `json:"description"` // Human-readable description
 }
 
-// NewHybridCameraMonitor creates a new hybrid camera monitor with proper dependency injection
-// Enhanced to support multiple camera types beyond USB cameras
+// NewHybridCameraMonitor creates a new hybrid camera monitor with dependency injection.
 func NewHybridCameraMonitor(
 	configManager *config.ConfigManager,
 	logger *logging.Logger,
@@ -338,7 +336,7 @@ func (m *HybridCameraMonitor) handleConfigurationUpdate(newConfig *config.Config
 	}
 }
 
-// Start begins camera discovery and monitoring
+// Start begins camera discovery and monitoring.
 func (m *HybridCameraMonitor) Start(ctx context.Context) error {
 	// Acquire mutex to prevent concurrent start/stop operations
 	m.startStopMutex.Lock()
@@ -535,7 +533,7 @@ func (m *HybridCameraMonitor) monitorLoop(ctx context.Context, monStartID string
 	}
 }
 
-// Stop stops camera discovery and monitoring with context-aware cancellation
+// Stop stops camera discovery and monitoring with graceful shutdown.
 func (m *HybridCameraMonitor) Stop(ctx context.Context) error {
 	// Acquire mutex to prevent concurrent start/stop operations
 	m.startStopMutex.Lock()
@@ -606,17 +604,17 @@ func (m *HybridCameraMonitor) Stop(ctx context.Context) error {
 	return nil
 }
 
-// IsRunning returns whether the monitor is currently running
+// IsRunning returns whether the monitor is currently running.
 func (m *HybridCameraMonitor) IsRunning() bool {
 	return atomic.LoadInt32(&m.running) == 1
 }
 
-// IsReady returns whether the monitor has completed initial discovery and is ready
+// IsReady returns whether the monitor has completed initial discovery and is ready.
 func (m *HybridCameraMonitor) IsReady() bool {
 	return atomic.LoadInt32(&m.ready) == 1
 }
 
-// GetConnectedCameras returns all currently connected cameras
+// GetConnectedCameras returns all currently connected camera devices.
 func (m *HybridCameraMonitor) GetConnectedCameras() map[string]*CameraDevice {
 	m.stateLock.RLock()
 	defer m.stateLock.RUnlock()
@@ -631,7 +629,7 @@ func (m *HybridCameraMonitor) GetConnectedCameras() map[string]*CameraDevice {
 	return connected
 }
 
-// GetDevice returns a specific device by path
+// GetDevice returns a specific device by path.
 func (m *HybridCameraMonitor) GetDevice(devicePath string) (*CameraDevice, bool) {
 	m.stateLock.RLock()
 	defer m.stateLock.RUnlock()
@@ -640,7 +638,7 @@ func (m *HybridCameraMonitor) GetDevice(devicePath string) (*CameraDevice, bool)
 	return device, exists
 }
 
-// GetMonitorStats returns current monitoring statistics
+// GetMonitorStats returns current monitoring statistics.
 func (m *HybridCameraMonitor) GetMonitorStats() *MonitorStats {
 	// Create a copy using atomic operations to avoid race conditions
 	stats := MonitorStats{

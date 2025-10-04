@@ -4,60 +4,56 @@ import "time"
 
 // ServerConfig represents WebSocket server configuration settings.
 type ServerConfig struct {
-	Host                 string        `mapstructure:"host"`
-	Port                 int           `mapstructure:"port"`
-	WebSocketPath        string        `mapstructure:"websocket_path"`
-	MaxConnections       int           `mapstructure:"max_connections"`
-	ReadTimeout          time.Duration `mapstructure:"read_timeout"`
-	WriteTimeout         time.Duration `mapstructure:"write_timeout"`
-	PingInterval         time.Duration `mapstructure:"ping_interval"`
-	PongWait             time.Duration `mapstructure:"pong_wait"`
-	MaxMessageSize       int64         `mapstructure:"max_message_size"`
-	ReadBufferSize       int           `mapstructure:"read_buffer_size"`
-	WriteBufferSize      int           `mapstructure:"write_buffer_size"`
-	ShutdownTimeout      time.Duration `mapstructure:"shutdown_timeout"`
-	ClientCleanupTimeout time.Duration `mapstructure:"client_cleanup_timeout"`
-	AutoCloseAfter       time.Duration `mapstructure:"auto_close_after"`
+	Host                 string
+	Port                 int
+	WebSocketPath        string
+	MaxConnections       int
+	ReadTimeout          time.Duration
+	WriteTimeout         time.Duration
+	PingInterval         time.Duration
+	PongWait             time.Duration
+	MaxMessageSize       int64
+	ReadBufferSize       int
+	WriteBufferSize      int
+	ShutdownTimeout      time.Duration
+	ClientCleanupTimeout time.Duration
+	AutoCloseAfter       time.Duration
 }
 
 // CodecConfig represents STANAG 4406 codec configuration settings.
 type CodecConfig struct {
-	VideoProfile string `mapstructure:"video_profile"`
-	VideoLevel   string `mapstructure:"video_level"`
-	PixelFormat  string `mapstructure:"pixel_format"`
-	Bitrate      string `mapstructure:"bitrate"`
-	Preset       string `mapstructure:"preset"`
+	VideoProfile string
+	VideoLevel   string
+	PixelFormat  string
+	Bitrate      string
+	Preset       string
 }
 
 // StreamReadinessConfig represents stream readiness configuration.
 type StreamReadinessConfig struct {
-	Timeout                     float64 `mapstructure:"timeout"`                       // Default: 15.0 seconds
-	RetryAttempts               int     `mapstructure:"retry_attempts"`                // Default: 3
-	RetryDelay                  float64 `mapstructure:"retry_delay"`                   // Default: 1.0 second
-	CheckInterval               float64 `mapstructure:"check_interval"`                // Default: 0.5 seconds (500ms)
-	EnableProgressNotifications bool    `mapstructure:"enable_progress_notifications"` // Default: false
-	GracefulFallback            bool    `mapstructure:"graceful_fallback"`             // Default: true
-	MaxCheckInterval            float64 `mapstructure:"max_check_interval"`            // Default: 2.0 seconds (max polling interval)
-	InitialCheckInterval        float64 `mapstructure:"initial_check_interval"`        // Default: 0.2 seconds (200ms)
-
-	// Performance fine-tuning options
-	ControllerTickerInterval    float64   `mapstructure:"controller_ticker_interval"`     // Default: 0.1 seconds (100ms) - Fast controller readiness
-	StreamManagerTickerInterval float64   `mapstructure:"stream_manager_ticker_interval"` // Default: 0.1 seconds (100ms) - Fast stream readiness
-	PathManagerRetryIntervals   []float64 `mapstructure:"path_manager_retry_intervals"`   // Default: [0.1, 0.2, 0.4, 0.8] seconds - Retry backoffs
+	Timeout                     float64
+	RetryAttempts               int
+	RetryDelay                  float64
+	CheckInterval               float64
+	EnableProgressNotifications bool
+	GracefulFallback            bool
+	MaxCheckInterval            float64
+	InitialCheckInterval        float64
+	ControllerTickerInterval    float64
+	StreamManagerTickerInterval float64
+	PathManagerRetryIntervals   []float64
 }
 
 // SecurityConfig represents security configuration settings.
 type SecurityConfig struct {
-	RateLimitRequests int           `mapstructure:"rate_limit_requests"` // Default: 100 requests per window
-	RateLimitWindow   time.Duration `mapstructure:"rate_limit_window"`   // Default: 1 minute
-	JWTSecretKey      string        `mapstructure:"jwt_secret_key"`
-	JWTExpiryHours    int           `mapstructure:"jwt_expiry_hours"` // Default: 24 hours
-
-	// CORS configuration for WebSocket security
-	CORSOrigins     []string `mapstructure:"cors_origins"`     // Allowed origins for CORS
-	CORSMethods     []string `mapstructure:"cors_methods"`     // Allowed HTTP methods
-	CORSHeaders     []string `mapstructure:"cors_headers"`     // Allowed headers
-	CORSCredentials bool     `mapstructure:"cors_credentials"` // Allow credentials
+	RateLimitRequests int
+	RateLimitWindow   time.Duration
+	JWTSecretKey      string
+	JWTExpiryHours    int
+	CORSOrigins       []string
+	CORSMethods       []string
+	CORSHeaders       []string
+	CORSCredentials   bool
 }
 
 // StorageConfig represents storage configuration settings.

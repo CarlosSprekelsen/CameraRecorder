@@ -6,7 +6,10 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// LoggerFactory provides centralized logger creation with consistent configuration
+// LoggerFactory provides centralized logger creation with consistent configuration.
+//
+// The factory ensures all loggers created share the same global configuration
+// for level, format, and output destinations. Thread-safe for concurrent access.
 type LoggerFactory struct {
 	config *LoggingConfig
 	mu     sync.RWMutex
@@ -44,8 +47,7 @@ func ConfigureFactory(config *LoggingConfig) {
 	}
 }
 
-// CreateLogger creates a new logger instance for the specified component
-// All loggers created through the factory respect the global configuration
+// CreateLogger creates a new logger instance for the specified component.
 func (f *LoggerFactory) CreateLogger(component string) *Logger {
 	f.mu.RLock()
 	config := f.config

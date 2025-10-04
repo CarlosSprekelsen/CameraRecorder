@@ -1,23 +1,3 @@
-/*
-Universal Test Constants - Project-Wide Test Infrastructure
-
-Provides universal constants for timeouts, security, and common test values
-that can be shared across all modules. This eliminates magic numbers and
-ensures consistency across the entire test suite.
-
-Design Principles:
-- Values derived from canonical configuration fixtures
-- Follows established MediaMTX test pattern
-- Cross-module consistency and maintainability
-- Configuration-driven (not hardcoded)
-
-Requirements Coverage:
-- REQ-TEST-001: Universal test constants
-- REQ-TEST-002: Cross-module consistency
-- REQ-TEST-003: Magic number elimination
-- REQ-TEST-004: Configuration-driven testing
-*/
-
 package testutils
 
 import (

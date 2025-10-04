@@ -10,17 +10,19 @@ import (
 	"strings"
 )
 
-// RealDeviceChecker implements DeviceChecker for real file system
+// RealDeviceChecker implements DeviceChecker for real file system operations.
 type RealDeviceChecker struct{}
 
+// Exists checks if a device path exists on the file system.
 func (r *RealDeviceChecker) Exists(path string) bool {
 	_, err := os.Stat(path)
 	return err == nil
 }
 
-// RealV4L2CommandExecutor implements V4L2CommandExecutor for real V4L2 commands
+// RealV4L2CommandExecutor implements V4L2CommandExecutor for real V4L2 commands.
 type RealV4L2CommandExecutor struct{}
 
+// ExecuteCommand executes v4l2-ctl commands with enhanced error handling.
 func (r *RealV4L2CommandExecutor) ExecuteCommand(ctx context.Context, devicePath, args string) (string, error) {
 	cmd := exec.CommandContext(ctx, "v4l2-ctl", "--device", devicePath)
 	cmd.Args = append(cmd.Args, strings.Fields(args)...)
@@ -64,9 +66,10 @@ func (r *RealV4L2CommandExecutor) ExecuteCommand(ctx context.Context, devicePath
 	return string(output), nil
 }
 
-// RealDeviceInfoParser implements DeviceInfoParser for real V4L2 output parsing
+// RealDeviceInfoParser implements DeviceInfoParser for real V4L2 output parsing.
 type RealDeviceInfoParser struct{}
 
+// ParseDeviceInfo parses device information from v4l2-ctl --info output.
 func (r *RealDeviceInfoParser) ParseDeviceInfo(output string) (V4L2Capabilities, error) {
 	capabilities := V4L2Capabilities{
 		Capabilities: []string{},
@@ -105,6 +108,7 @@ func (r *RealDeviceInfoParser) ParseDeviceInfo(output string) (V4L2Capabilities,
 	return capabilities, nil
 }
 
+// ParseDeviceFormats parses supported formats from v4l2-ctl --list-formats-ext output.
 func (r *RealDeviceInfoParser) ParseDeviceFormats(output string) ([]V4L2Format, error) {
 	var formats []V4L2Format
 
@@ -281,6 +285,7 @@ func (r *RealDeviceInfoParser) ParseDeviceFormats(output string) ([]V4L2Format, 
 	return formats, nil
 }
 
+// ParseDeviceFrameRates extracts frame rates from V4L2 command output.
 func (r *RealDeviceInfoParser) ParseDeviceFrameRates(output string) ([]string, error) {
 	var frameRates []string
 

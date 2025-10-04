@@ -1,32 +1,3 @@
-// Package mediamtx defines types and interfaces for MediaMTX integration.
-//
-// This package contains all type definitions, interfaces, and data structures
-// used throughout the MediaMTX controller and its components. It serves as the
-// central type registry for the MediaMTX integration layer.
-//
-// Architecture Compliance:
-//   - Interface-Based Design: All major components defined as interfaces
-//   - Dependency Inversion: High-level interfaces for low-level implementations
-//   - Event-Driven Architecture: Event notification interfaces for real-time updates
-//   - API Abstraction: DeviceToCameraIDMapper for camera0 ↔ /dev/video0 mapping
-//   - Optional Components: Interfaces support nil implementations
-//
-// Key Interface Categories:
-//   - MediaMTX Integration: Client, PathManager, StreamManager interfaces
-//   - Event Notification: MediaMTXEventNotifier, SystemEventNotifier for real-time updates
-//   - Business Logic: RecordingManager, SnapshotManager for high-level operations
-//   - Health Monitoring: HealthMonitor interface with circuit breaker support
-//   - Configuration: ConfigIntegration for centralized configuration access
-//
-// Requirements Coverage:
-//   - REQ-MTX-001: MediaMTX service integration via client interfaces
-//   - REQ-MTX-002: Stream management through manager interfaces
-//   - REQ-MTX-003: Path creation and deletion via PathManager interface
-//   - REQ-MTX-004: Health monitoring via HealthMonitor interface
-//
-// Test Categories: Unit/Integration
-// API Documentation Reference: docs/api/json_rpc_methods.md
-
 package mediamtx
 
 import (
@@ -37,38 +8,41 @@ import (
 )
 
 // DeviceToCameraIDMapper provides API abstraction layer mapping between
-// internal device paths (/dev/videoN) and external camera identifiers (camera0).
-// This interface ensures consistent abstraction across the system.
+// internal device paths and external camera identifiers.
+//
+// Implementations must provide bidirectional mapping between device paths
+// (/dev/videoN) and camera IDs (camera0). Returns false if mapping not found.
 type DeviceToCameraIDMapper interface {
-	GetCameraForDevicePath(devicePath string) (string, bool) // Maps /dev/video0 → camera0
-	GetDevicePathForCamera(cameraID string) (string, bool)   // Maps camera0 → /dev/video0
+	GetCameraForDevicePath(devicePath string) (string, bool)
+	GetDevicePathForCamera(cameraID string) (string, bool)
 }
 
 // MediaMTXEventNotifier defines the interface for real-time event notifications
-// to WebSocket clients. This allows the controller to publish events without
-// direct dependencies on the WebSocket layer, following dependency inversion.
+// to WebSocket clients.
+//
+// Implementations must handle event publishing without blocking the caller.
+// Used for dependency inversion to avoid direct WebSocket layer dependencies.
 type MediaMTXEventNotifier interface {
-	NotifyRecordingStarted(device, filename string)                         // Recording start events
-	NotifyRecordingStopped(device, filename string, duration time.Duration) // Recording completion events
-	NotifyRecordingFailed(device, reason string)                            // Recording failure events (device disconnect, etc.)
-	NotifyStreamStarted(device, streamID, streamType string)                // Stream activation events
-	NotifyStreamStopped(device, streamID, streamType string)                // Stream deactivation events
+	NotifyRecordingStarted(device, filename string)
+	NotifyRecordingStopped(device, filename string, duration time.Duration)
+	NotifyRecordingFailed(device, reason string)
+	NotifyStreamStarted(device, streamID, streamType string)
+	NotifyStreamStopped(device, streamID, streamType string)
 }
 
-// FFmpegConfig represents FFmpeg-specific configuration settings
+// FFmpegConfig represents FFmpeg-specific configuration settings.
 type FFmpegConfig struct {
-	Snapshot  SnapshotConfig  `mapstructure:"snapshot"`
-	Recording RecordingConfig `mapstructure:"recording"`
-	// Fallback defaults for when configuration is missing
-	FallbackDefaults FFmpegFallbackDefaults `mapstructure:"fallback_defaults"`
+	Snapshot         SnapshotConfig
+	Recording        RecordingConfig
+	FallbackDefaults FFmpegFallbackDefaults
 }
 
-// FFmpegFallbackDefaults represents fallback defaults for FFmpeg operations
+// FFmpegFallbackDefaults represents fallback defaults for FFmpeg operations.
 type FFmpegFallbackDefaults struct {
-	RetryDelay             time.Duration `mapstructure:"retry_delay"`              // Default: 1.0 second
-	ProcessCreationTimeout time.Duration `mapstructure:"process_creation_timeout"` // Default: 10.0 seconds
-	ExecutionTimeout       time.Duration `mapstructure:"execution_timeout"`        // Default: 30.0 seconds
-	MaxBackoffDelay        time.Duration `mapstructure:"max_backoff_delay"`        // Default: 30.0 seconds
+	RetryDelay             time.Duration
+	ProcessCreationTimeout time.Duration
+	ExecutionTimeout       time.Duration
+	MaxBackoffDelay        time.Duration
 }
 
 // SnapshotConfig represents snapshot operation configuration

@@ -1,15 +1,3 @@
-/*
-Common Stoppable Interface for Graceful Shutdown
-
-This package provides a common interface for all services that need graceful shutdown
-capabilities. This ensures consistent shutdown behavior across the entire system.
-
-Architecture Compliance:
-- AD-GO-007: Use context.Context for cancellation
-- Quality Attributes: Graceful Degradation
-- Concurrency Design: Context Cancellation for graceful operation termination
-*/
-
 package common
 
 import (
@@ -17,16 +5,12 @@ import (
 	"time"
 )
 
-// Stoppable defines the interface for services that can be gracefully stopped
-// with context-aware cancellation and timeout enforcement.
+// Stoppable defines the interface for services that can be gracefully stopped.
+//
+// Implementations must handle context cancellation and timeout enforcement.
+// The context should be used for timeout enforcement, cancellation propagation,
+// and resource cleanup coordination. Returns an error if shutdown fails.
 type Stoppable interface {
-	// Stop gracefully stops the service with context-aware cancellation.
-	// The context should be used for:
-	// - Timeout enforcement
-	// - Cancellation propagation
-	// - Resource cleanup coordination
-	//
-	// Returns an error if the service fails to stop within the context timeout.
 	Stop(ctx context.Context) error
 }
 

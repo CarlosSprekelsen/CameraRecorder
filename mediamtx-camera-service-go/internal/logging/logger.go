@@ -14,7 +14,9 @@ import (
 )
 
 // Logger represents the main logging interface with correlation ID support.
-// It wraps logrus.Logger and adds correlation ID tracking and component identification.
+//
+// Wraps logrus.Logger and adds correlation ID tracking and component identification
+// for structured logging across service boundaries.
 type Logger struct {
 	*logrus.Logger
 	correlationID string

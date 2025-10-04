@@ -1,34 +1,3 @@
-// Package mediamtx implements the MediaMTX controller as the single source of truth
-// for all video operations and business logic coordination.
-//
-// The controller serves as Layer 5 (Orchestration) in the component hierarchy,
-// coordinating all managers and providing API abstraction between external
-// identifiers (camera0, camera1) and internal device paths (/dev/videoN).
-//
-// Architecture Compliance:
-//   - Single Source of Truth: All business logic resides in the controller
-//   - No Business Logic in WebSocket: Server delegates all operations to controller
-//   - Interface-based Design: Uses dependency injection for all components
-//   - Optional Component Pattern: Some components may be nil based on configuration
-//   - Stateless Recording: MediaMTX API is the source of truth for recording state
-//
-// Key Responsibilities:
-//   - Camera operations coordination and abstraction layer management
-//   - Stream lifecycle management with path reuse optimization
-//   - Recording orchestration using stateless MediaMTX API queries
-//   - Snapshot capture with multi-tier fallback (V4L2 → FFmpeg → RTSP)
-//   - Health monitoring and system readiness coordination
-//   - Event notification for real-time client updates
-//
-// Requirements Coverage:
-//   - REQ-MTX-001: MediaMTX service integration with REST API
-//   - REQ-MTX-002: Stream management with on-demand FFmpeg processes
-//   - REQ-MTX-003: Path creation, deletion, and lifecycle management
-//   - REQ-MTX-004: Health monitoring with circuit breaker pattern
-//
-// Test Categories: Unit/Integration
-// API Documentation Reference: docs/api/json_rpc_methods.md
-
 package mediamtx
 
 import (

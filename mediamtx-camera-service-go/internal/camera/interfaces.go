@@ -23,29 +23,49 @@ type CameraEventData struct {
 	DeviceInfo *CameraDevice `json:"device_info,omitempty"`
 }
 
-// CameraEventHandler interface for handling camera events
+// CameraEventHandler handles camera events asynchronously.
+//
+// Implementations must handle context cancellation and return errors for
+// failed event processing. Event handlers are called concurrently via
+// a bounded worker pool to prevent blocking the main monitoring loop.
 type CameraEventHandler interface {
 	HandleCameraEvent(ctx context.Context, eventData CameraEventData) error
 }
 
-// DeviceChecker interface for device existence checking
+// DeviceChecker validates device file existence on the file system.
+//
+// Implementations must return true if the device path exists and is accessible,
+// false otherwise. Used for USB camera device validation before capability probing.
 type DeviceChecker interface {
 	Exists(path string) bool
 }
 
-// V4L2CommandExecutor interface for V4L2 command execution
+// V4L2CommandExecutor executes V4L2 commands on camera devices.
+//
+// Implementations must handle command execution with proper context cancellation
+// and timeout handling. Commands are executed via v4l2-ctl or equivalent tools.
+// Returns the command output or an error if execution fails, device is unavailable,
+// or context is canceled.
 type V4L2CommandExecutor interface {
 	ExecuteCommand(ctx context.Context, devicePath, args string) (string, error)
 }
 
-// DeviceInfoParser interface for parsing device information
+// DeviceInfoParser parses V4L2 command output into structured device information.
+//
+// Implementations must handle malformed input gracefully and return meaningful
+// errors for parsing failures. Parses device capabilities, supported formats,
+// and frame rates from v4l2-ctl command output.
 type DeviceInfoParser interface {
 	ParseDeviceInfo(output string) (V4L2Capabilities, error)
 	ParseDeviceFormats(output string) ([]V4L2Format, error)
 	ParseDeviceFrameRates(output string) ([]string, error)
 }
 
-// EventNotifier interface for sending camera events to external systems
+// EventNotifier sends camera events to external event systems.
+//
+// Implementations must handle notification failures gracefully and not block
+// the main monitoring loop. Used for integrating with external event systems
+// like WebSocket APIs or message queues.
 type EventNotifier interface {
 	NotifyCameraConnected(device *CameraDevice)
 	NotifyCameraDisconnected(devicePath string)
@@ -54,7 +74,11 @@ type EventNotifier interface {
 	NotifyCapabilityError(devicePath string, error string)
 }
 
-// DeviceEventSource interface for device event discovery (udev/fsnotify abstraction)
+// DeviceEventSource provides device connection/disconnection events.
+//
+// Implementations must support graceful startup/shutdown and return a channel
+// of device events. Used for event-driven device discovery via udev or fsnotify.
+// EventsSupported() returns false if falling back to polling-only mode.
 type DeviceEventSource interface {
 	Start(ctx context.Context) error
 	Events() <-chan DeviceEvent
@@ -82,7 +106,11 @@ const (
 	DeviceEventChange DeviceEventType = "change"
 )
 
-// CameraMonitor interface for camera discovery and monitoring
+// CameraMonitor manages camera discovery, monitoring, and lifecycle.
+//
+// Implementations must support concurrent access, graceful shutdown, and
+// event-driven device discovery. Provides unified interface for camera
+// management across USB, IP, and RTSP camera types.
 type CameraMonitor interface {
 	Start(ctx context.Context) error
 	Stop(ctx context.Context) error

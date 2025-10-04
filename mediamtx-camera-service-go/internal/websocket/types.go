@@ -1,18 +1,3 @@
-/*
-WebSocket JSON-RPC 2.0 types and structures.
-
-Provides JSON-RPC 2.0 request, response, and notification structures
-following the Python WebSocketJsonRpcServer patterns and project architecture standards.
-
-Requirements Coverage:
-- REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
-- REQ-API-002: JSON-RPC 2.0 protocol implementation
-- REQ-API-003: Request/response message handling
-
-Test Categories: Unit/Integration
-API Documentation Reference: docs/api/json_rpc_methods.md
-*/
-
 package websocket
 
 import (
