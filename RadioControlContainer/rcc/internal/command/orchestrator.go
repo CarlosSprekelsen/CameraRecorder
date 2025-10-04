@@ -382,7 +382,10 @@ func (o *Orchestrator) publishPowerChangedEvent(radioID string, powerDbm float64
 		},
 	}
 
-	_ = o.telemetryHub.PublishRadio(radioID, event)
+	if err := o.telemetryHub.PublishRadio(radioID, event); err != nil {
+		// Publish fault event for telemetry failure
+		o.publishFaultEvent(radioID, err, "Failed to publish power changed event")
+	}
 }
 
 // publishChannelChangedEvent publishes a channel changed event.
@@ -401,7 +404,10 @@ func (o *Orchestrator) publishChannelChangedEvent(radioID string, frequencyMhz f
 		},
 	}
 
-	_ = o.telemetryHub.PublishRadio(radioID, event)
+	if err := o.telemetryHub.PublishRadio(radioID, event); err != nil {
+		// Publish fault event for telemetry failure
+		o.publishFaultEvent(radioID, err, "Failed to publish channel changed event")
+	}
 }
 
 // publishStateEvent publishes a state event.
@@ -419,7 +425,10 @@ func (o *Orchestrator) publishStateEvent(radioID string) {
 		},
 	}
 
-	_ = o.telemetryHub.PublishRadio(radioID, event)
+	if err := o.telemetryHub.PublishRadio(radioID, event); err != nil {
+		// Publish fault event for telemetry failure
+		o.publishFaultEvent(radioID, err, "Failed to publish state event")
+	}
 }
 
 // publishFaultEvent publishes a fault event.
@@ -438,7 +447,10 @@ func (o *Orchestrator) publishFaultEvent(radioID string, err error, message stri
 		},
 	}
 
-	_ = o.telemetryHub.PublishRadio(radioID, event)
+	if err := o.telemetryHub.PublishRadio(radioID, event); err != nil {
+		// Silently log telemetry failure to avoid infinite recursion
+		// This is a fault event itself, so we don't publish another fault
+	}
 }
 
 // logAudit logs an audit record for a command action.

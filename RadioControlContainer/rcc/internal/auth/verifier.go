@@ -3,7 +3,6 @@
 //   - OpenAPI v1 §1.1: "Send Authorization: Bearer <token> header on every request (except /health)"
 //   - OpenAPI v1 §1.2: "viewer: read-only (list radios, get state, subscribe to telemetry)"
 //   - OpenAPI v1 §1.2: "controller: all viewer privileges plus control actions (select radio, set power, set channel)"
-//
 package auth
 
 import (
@@ -55,11 +54,17 @@ type JWKSet struct {
 	Keys []JWK `json:"keys"`
 }
 
+// JWKSCacheEntry represents a cached JWKS key with timestamp.
+type JWKSCacheEntry struct {
+	Key       *rsa.PublicKey
+	Timestamp time.Time
+}
+
 // Verifier handles JWT token verification with support for RS256 and HS256.
 type Verifier struct {
 	config     VerifierConfig
 	publicKey  *rsa.PublicKey
-	jwksCache  map[string]*rsa.PublicKey
+	jwksCache  map[string]*JWKSCacheEntry
 	jwksMutex  sync.RWMutex
 	lastFetch  time.Time
 	httpClient *http.Client
@@ -69,7 +74,7 @@ type Verifier struct {
 func NewVerifier(config VerifierConfig) (*Verifier, error) {
 	v := &Verifier{
 		config:    config,
-		jwksCache: make(map[string]*rsa.PublicKey),
+		jwksCache: make(map[string]*JWKSCacheEntry),
 		httpClient: &http.Client{
 			Timeout: 10 * time.Second,
 		},
@@ -332,13 +337,17 @@ func (v *Verifier) fetchJWKS() error {
 	v.jwksMutex.Lock()
 	defer v.jwksMutex.Unlock()
 
+	now := time.Now()
 	for _, key := range jwks.Keys {
 		if key.Kty == "RSA" && key.Use == "sig" && key.Alg == "RS256" {
 			pubKey, err := v.jwkToRSAPublicKey(key)
 			if err != nil {
 				continue // Skip invalid keys
 			}
-			v.jwksCache[key.Kid] = pubKey
+			v.jwksCache[key.Kid] = &JWKSCacheEntry{
+				Key:       pubKey,
+				Timestamp: now,
+			}
 		}
 	}
 
@@ -349,11 +358,15 @@ func (v *Verifier) fetchJWKS() error {
 // getKeyFromJWKS gets a public key from the JWKS cache.
 func (v *Verifier) getKeyFromJWKS(kid string) (*rsa.PublicKey, error) {
 	v.jwksMutex.RLock()
-	key, exists := v.jwksCache[kid]
+	entry, exists := v.jwksCache[kid]
 	v.jwksMutex.RUnlock()
 
 	if exists {
-		return key, nil
+		// Check if cache entry is still valid
+		if time.Since(entry.Timestamp) < v.config.JWKSCacheTimeout {
+			return entry.Key, nil
+		}
+		// Entry expired, will need refresh
 	}
 
 	// Check if we need to refresh JWKS
@@ -369,11 +382,11 @@ func (v *Verifier) getKeyFromJWKS(kid string) (*rsa.PublicKey, error) {
 
 		// Try again after refresh
 		v.jwksMutex.RLock()
-		key, exists = v.jwksCache[kid]
+		entry, exists = v.jwksCache[kid]
 		v.jwksMutex.RUnlock()
 
 		if exists {
-			return key, nil
+			return entry.Key, nil
 		}
 	}
 
@@ -415,5 +428,5 @@ func base64URLDecode(data string) ([]byte, error) {
 		data += "="
 	}
 
-	return base64.StdEncoding.DecodeString(data)
+	return base64.RawURLEncoding.DecodeString(data)
 }
