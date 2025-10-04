@@ -21,30 +21,36 @@ func BenchmarkPublishWithSubscribers(b *testing.B) {
 
 	for _, count := range subscriberCounts {
 		b.Run(fmt.Sprintf("Subscribers_%d", count), func(b *testing.B) {
+			// Add timeout to prevent 11-minute hangs
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+
 			// Create subscribers
-			subscribers := make([]*Client, count)
 			for i := 0; i < count; i++ {
 				req := httptest.NewRequest("GET", "/telemetry", nil)
 				req.Header.Set("Accept", "text/event-stream")
 				w := httptest.NewRecorder()
 
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				defer cancel()
+				// Run Subscribe in goroutine to avoid blocking
+				go func() {
+					hub.Subscribe(ctx, w, req)
+				}()
 
-				client := &Client{
-					ID:      fmt.Sprintf("client-%d", i),
-					Context: ctx,
-					Events:  make(chan Event, 100),
-				}
-
-				subscribers[i] = client
-				hub.Subscribe(ctx, w, req)
+				// Give Subscribe time to register the client
+				time.Sleep(10 * time.Millisecond)
 			}
 
 			b.ResetTimer()
 
-			// Run b.N iterations of Publish
+			// Run b.N iterations of Publish with timeout protection
 			for i := 0; i < b.N; i++ {
+				// Check for timeout
+				select {
+				case <-ctx.Done():
+					b.Fatal("Benchmark timed out - deadlock suspected")
+				default:
+				}
+
 				event := Event{
 					ID:    int64(i),
 					Radio: "silvus-001",
@@ -66,10 +72,21 @@ func BenchmarkPublishWithoutSubscribers(b *testing.B) {
 	hub := NewHub(cfg)
 	defer hub.Stop()
 
+	// Add timeout to prevent hangs
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	b.ResetTimer()
 
 	// Run b.N iterations of Publish without subscribers
 	for i := 0; i < b.N; i++ {
+		// Check for timeout
+		select {
+		case <-ctx.Done():
+			b.Fatal("Benchmark timed out - deadlock suspected")
+		default:
+		}
+
 		event := Event{
 			ID:    int64(i),
 			Radio: "silvus-001",
@@ -89,18 +106,29 @@ func BenchmarkSubscribe(b *testing.B) {
 	hub := NewHub(cfg)
 	defer hub.Stop()
 
+	// Add timeout to prevent hangs
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	b.ResetTimer()
 
 	// Run b.N iterations of Subscribe
 	for i := 0; i < b.N; i++ {
+		// Check for timeout
+		select {
+		case <-ctx.Done():
+			b.Fatal("Benchmark timed out - deadlock suspected")
+		default:
+		}
+
 		req := httptest.NewRequest("GET", "/telemetry", nil)
 		req.Header.Set("Accept", "text/event-stream")
 
-		ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
-		defer cancel()
+		subscribeCtx, subscribeCancel := context.WithTimeout(ctx, 100*time.Millisecond)
+		defer subscribeCancel()
 
 		w := httptest.NewRecorder()
-		hub.Subscribe(ctx, w, req)
+		hub.Subscribe(subscribeCtx, w, req)
 	}
 }
 
@@ -109,10 +137,21 @@ func BenchmarkEventIDGeneration(b *testing.B) {
 	hub := NewHub(cfg)
 	defer hub.Stop()
 
+	// Add timeout to prevent hangs
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	b.ResetTimer()
 
 	// Run b.N iterations of getNextEventID
 	for i := 0; i < b.N; i++ {
+		// Check for timeout
+		select {
+		case <-ctx.Done():
+			b.Fatal("Benchmark timed out - deadlock suspected")
+		default:
+		}
+
 		radioID := fmt.Sprintf("radio-%d", i%10) // Cycle through 10 radios
 		hub.getNextEventID(radioID)
 	}
@@ -123,10 +162,21 @@ func BenchmarkBufferEvent(b *testing.B) {
 	hub := NewHub(cfg)
 	defer hub.Stop()
 
+	// Add timeout to prevent hangs
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	b.ResetTimer()
 
 	// Run b.N iterations of bufferEvent
 	for i := 0; i < b.N; i++ {
+		// Check for timeout
+		select {
+		case <-ctx.Done():
+			b.Fatal("Benchmark timed out - deadlock suspected")
+		default:
+		}
+
 		event := Event{
 			ID:    int64(i),
 			Radio: fmt.Sprintf("radio-%d", i%10),
@@ -143,11 +193,22 @@ func BenchmarkHubConcurrent(b *testing.B) {
 	hub := NewHub(cfg)
 	defer hub.Stop()
 
+	// Add timeout to prevent hangs
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	b.ResetTimer()
 
 	// Run b.N iterations with concurrent operations
 	b.RunParallel(func(pb *testing.PB) {
 		for pb.Next() {
+			// Check for timeout
+			select {
+			case <-ctx.Done():
+				b.Fatal("Benchmark timed out - deadlock suspected")
+			default:
+			}
+
 			// Mix of operations
 			switch b.N % 3 {
 			case 0:
@@ -188,10 +249,21 @@ func BenchmarkHeartbeat(b *testing.B) {
 	// Start heartbeat
 	hub.startHeartbeat()
 
+	// Add timeout to prevent hangs
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
 	b.ResetTimer()
 
 	// Run b.N iterations of sendHeartbeat
 	for i := 0; i < b.N; i++ {
+		// Check for timeout
+		select {
+		case <-ctx.Done():
+			b.Fatal("Benchmark timed out - deadlock suspected")
+		default:
+		}
+
 		hub.sendHeartbeat()
 	}
 }
