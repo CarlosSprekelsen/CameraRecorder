@@ -139,7 +139,7 @@ func TestWebSocket_ConcurrentClients_Integration(t *testing.T) {
 	// Create multiple concurrent clients
 	for i := 0; i < numClients; i++ {
 		go func(clientID int) {
-			client := NewWebSocketTestClient(t, asserter.helper.GetServerURL())
+			client := testutils.NewWebSocketTestClient(t, asserter.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -191,7 +191,7 @@ func TestWebSocket_SessionManagement_Integration(t *testing.T) {
 	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test session management workflow
-	client := NewWebSocketTestClient(t, asserter.helper.GetServerURL())
+	client := testutils.NewWebSocketTestClient(t, asserter.helper.GetServerURL())
 	defer client.Close()
 
 	// Connect and authenticate
@@ -226,7 +226,7 @@ func TestWebSocket_OpenRPCCompliance_Integration(t *testing.T) {
 	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test OpenRPC API compliance
-	client := NewWebSocketTestClient(t, asserter.helper.GetServerURL())
+	client := testutils.NewWebSocketTestClient(t, asserter.helper.GetServerURL())
 	defer client.Close()
 
 	// Connect and authenticate
@@ -279,7 +279,7 @@ func TestWebSocket_ProgressiveReadiness_Performance(t *testing.T) {
 	for i := 0; i < numConnections; i++ {
 		go func() {
 			start := time.Now()
-			client := NewWebSocketTestClient(t, helper.GetServerURL())
+			client := testutils.NewWebSocketTestClient(t, helper.GetServerURL())
 			defer client.Close()
 
 			err := client.Connect()

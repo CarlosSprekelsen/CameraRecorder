@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+	"github.com/stretchr/testify/require"
 )
 
 // JSONRPCRequest represents a JSON-RPC 2.0 request
@@ -253,4 +254,30 @@ func (c *WebSocketTestClient) Close() {
 		c.conn.Close()
 		c.conn = nil
 	}
+}
+
+// AssertJSONRPCResponse validates JSON-RPC 2.0 response structure
+func (c *WebSocketTestClient) AssertJSONRPCResponse(response *JSONRPCResponse, expectError bool) {
+	require.Equal(c.t, "2.0", response.JSONRPC, "Response should have correct JSON-RPC version")
+	require.NotNil(c.t, response.ID, "Response should have ID")
+
+	if expectError {
+		require.NotNil(c.t, response.Error, "Response should have error")
+		require.Nil(c.t, response.Result, "Error response should not have result")
+	} else {
+		require.Nil(c.t, response.Error, "Response should not have error")
+	}
+}
+
+// AssertCameraListResult validates camera list result structure
+func (c *WebSocketTestClient) AssertCameraListResult(result interface{}) {
+	require.NotNil(c.t, result, "Camera list result should not be nil")
+	
+	resultMap, ok := result.(map[string]interface{})
+	require.True(c.t, ok, "Camera list result should be a map")
+	require.Contains(c.t, resultMap, "cameras", "Camera list should contain 'cameras' field")
+	
+	cameras, ok := resultMap["cameras"].([]interface{})
+	require.True(c.t, ok, "Cameras field should be an array")
+	require.NotEmpty(c.t, cameras, "Camera list should not be empty")
 }

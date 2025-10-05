@@ -15,6 +15,7 @@ package integration
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
@@ -76,10 +77,10 @@ func (a *SecurityIntegrationAsserter) AssertJWTAuthentication(ctx context.Contex
 
 	// Verify auth state established
 	if claims.UserID != userID {
-		return "", assert.AnError
+		return "", fmt.Errorf("user ID mismatch: expected %s, got %s", userID, claims.UserID)
 	}
 	if claims.Role != role {
-		return "", assert.AnError
+		return "", fmt.Errorf("role mismatch: expected %s, got %s", role, claims.Role)
 	}
 
 	return token, nil
@@ -105,7 +106,7 @@ func (a *SecurityIntegrationAsserter) AssertAuthorizationBoundary(ctx context.Co
 	}
 
 	if !hasAccess {
-		return assert.AnError // Simulate authorization failure
+		return fmt.Errorf("authorization failed: role %s cannot access %s resources", claims.Role, requiredRole)
 	}
 
 	return nil
@@ -127,7 +128,7 @@ func (a *SecurityIntegrationAsserter) AssertSessionLifecycle(ctx context.Context
 
 	// Verify session state tracked
 	if claims.UserID != userID {
-		return assert.AnError
+		return fmt.Errorf("session user ID mismatch: expected %s, got %s", userID, claims.UserID)
 	}
 
 	return nil

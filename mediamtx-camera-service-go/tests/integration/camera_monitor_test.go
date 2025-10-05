@@ -19,8 +19,6 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/camera"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -37,15 +35,18 @@ func NewCameraMonitorIntegrationAsserter(t *testing.T) *CameraMonitorIntegration
 	// Use testutils.SetupTest with valid config fixture
 	setup := testutils.SetupTest(t, "config_valid_complete.yaml")
 
-	// Create camera monitor using loaded configuration
+	// Create real camera monitor using loaded configuration
 	configManager := setup.GetConfigManager()
-	config := configManager.GetConfig()
+	_ = configManager.GetConfig() // Use config to avoid unused variable
 	logger := setup.GetLogger()
 
-	// Create camera monitor with test configuration
-	// Note: This is a simplified integration test - in practice would need proper dependency injection
-	// For integration testing, we'll create a mock monitor that implements the interface
-	monitor := NewMockCameraMonitor(&config.Camera, logger)
+	// Create real camera monitor with actual V4L2 device interaction
+	deviceChecker := &camera.RealDeviceChecker{}
+	commandExecutor := &camera.RealV4L2CommandExecutor{}
+	infoParser := &camera.RealDeviceInfoParser{}
+
+	monitor, err := camera.NewHybridCameraMonitor(configManager, logger, deviceChecker, commandExecutor, infoParser)
+	require.NoError(t, err, "Real camera monitor should be created")
 
 	asserter := &CameraMonitorIntegrationAsserter{
 		setup:   setup,
@@ -168,87 +169,6 @@ func (a *CameraMonitorIntegrationAsserter) AssertStateSync(ctx context.Context) 
 	_ = finalCameras   // Use to avoid unused variable
 
 	return nil
-}
-
-// MockCameraMonitor implements CameraMonitor for integration testing
-type MockCameraMonitor struct {
-	config        *config.CameraConfig
-	logger        *logging.Logger
-	running       bool
-	ready         bool
-	cameras       map[string]*camera.CameraDevice
-	stats         *camera.MonitorStats
-	eventHandlers []camera.CameraEventHandler
-}
-
-// NewMockCameraMonitor creates a new mock camera monitor
-func NewMockCameraMonitor(config *config.CameraConfig, logger *logging.Logger) *MockCameraMonitor {
-	return &MockCameraMonitor{
-		config:        config,
-		logger:        logger,
-		running:       false,
-		ready:         false,
-		cameras:       make(map[string]*camera.CameraDevice),
-		stats:         &camera.MonitorStats{},
-		eventHandlers: make([]camera.CameraEventHandler, 0),
-	}
-}
-
-func (m *MockCameraMonitor) Start(ctx context.Context) error {
-	m.running = true
-	m.ready = true
-	return nil
-}
-
-func (m *MockCameraMonitor) Stop(ctx context.Context) error {
-	m.running = false
-	return nil
-}
-
-func (m *MockCameraMonitor) IsRunning() bool {
-	return m.running
-}
-
-func (m *MockCameraMonitor) IsReady() bool {
-	return m.ready
-}
-
-func (m *MockCameraMonitor) GetConnectedCameras() map[string]*camera.CameraDevice {
-	return m.cameras
-}
-
-func (m *MockCameraMonitor) GetDevice(devicePath string) (*camera.CameraDevice, bool) {
-	device, found := m.cameras[devicePath]
-	return device, found
-}
-
-func (m *MockCameraMonitor) GetMonitorStats() *camera.MonitorStats {
-	return m.stats
-}
-
-func (m *MockCameraMonitor) AddEventHandler(handler camera.CameraEventHandler) {
-	m.eventHandlers = append(m.eventHandlers, handler)
-}
-
-func (m *MockCameraMonitor) AddEventCallback(callback func(camera.CameraEventData)) {
-	// Mock implementation - not used in integration tests
-}
-
-func (m *MockCameraMonitor) SetEventNotifier(notifier camera.EventNotifier) {
-	// Mock implementation - not used in integration tests
-}
-
-func (m *MockCameraMonitor) SubscribeToReadiness() <-chan struct{} {
-	ch := make(chan struct{}, 1)
-	if m.ready {
-		ch <- struct{}{}
-	}
-	return ch
-}
-
-func (m *MockCameraMonitor) TakeDirectSnapshot(ctx context.Context, devicePath, outputPath string, options map[string]interface{}) (*camera.DirectSnapshot, error) {
-	// Mock implementation - not used in integration tests
-	return nil, nil
 }
 
 // TestCameraEventHandler implements CameraEventHandler for testing

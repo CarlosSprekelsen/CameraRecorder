@@ -42,7 +42,7 @@ func TestErrorHandling_InvalidToken_Integration(t *testing.T) {
 	defer asserter.Cleanup()
 
 	serverURL := asserter.helper.GetServerURL()
-	client := NewWebSocketTestClient(t)
+	client := testutils.NewWebSocketTestClient(t)
 	defer client.Close()
 	
 	err := client.Connect(serverURL)
@@ -78,7 +78,7 @@ func TestErrorHandling_MalformedToken_Integration(t *testing.T) {
 	defer asserter.Cleanup()
 
 	serverURL := asserter.helper.GetServerURL()
-	client := NewWebSocketTestClient(t)
+	client := testutils.NewWebSocketTestClient(t)
 	defer client.Close()
 	
 	err := client.Connect(serverURL)
@@ -116,7 +116,7 @@ func TestErrorHandling_InsufficientPermissions_Integration(t *testing.T) {
 	defer asserter.Cleanup()
 
 	serverURL := asserter.helper.GetServerURL()
-	client := NewWebSocketTestClient(t)
+	client := testutils.NewWebSocketTestClient(t)
 	defer client.Close()
 	
 	err := client.Connect(serverURL)
@@ -164,7 +164,7 @@ func TestErrorHandling_InvalidMethod_Integration(t *testing.T) {
 	defer asserter.Cleanup()
 
 	serverURL := asserter.helper.GetServerURL()
-	client := NewWebSocketTestClient(t)
+	client := testutils.NewWebSocketTestClient(t)
 	defer client.Close()
 	
 	err := client.Connect(serverURL)
@@ -199,7 +199,7 @@ func TestErrorHandling_InvalidParameters_Integration(t *testing.T) {
 	defer asserter.Cleanup()
 
 	serverURL := asserter.helper.GetServerURL()
-	client := NewWebSocketTestClient(t)
+	client := testutils.NewWebSocketTestClient(t)
 	defer client.Close()
 	
 	err := client.Connect(serverURL)
@@ -251,7 +251,7 @@ func TestErrorHandling_ConnectionTimeout_Integration(t *testing.T) {
 	defer asserter.Cleanup()
 
 	// Test connection timeout by using a very short timeout
-	client := NewWebSocketTestClient(t)
+	client := testutils.NewWebSocketTestClient(t)
 	defer client.Close()
 	
 	// This test is more about ensuring the client handles timeouts gracefully
@@ -278,7 +278,7 @@ func TestErrorHandling_RequestTimeout_Integration(t *testing.T) {
 	defer asserter.Cleanup()
 
 	serverURL := asserter.helper.GetServerURL()
-	client := NewWebSocketTestClient(t)
+	client := testutils.NewWebSocketTestClient(t)
 	defer client.Close()
 	
 	err := client.Connect(serverURL)
@@ -324,7 +324,7 @@ func TestErrorHandling_ConcurrentErrors_Integration(t *testing.T) {
 	
 	for i := 0; i < numClients; i++ {
 		t.Run("ConcurrentError_"+string(rune(i)), func(t *testing.T) {
-			client := NewWebSocketTestClient(t)
+			client := testutils.NewWebSocketTestClient(t)
 			defer client.Close()
 			
 			err := client.Connect(serverURL)
@@ -357,7 +357,7 @@ func TestErrorHandling_JSONRPCErrorFormat_Integration(t *testing.T) {
 	defer asserter.Cleanup()
 
 	serverURL := asserter.helper.GetServerURL()
-	client := NewWebSocketTestClient(t)
+	client := testutils.NewWebSocketTestClient(t)
 	defer client.Close()
 	
 	err := client.Connect(serverURL)
@@ -406,7 +406,7 @@ func TestErrorHandling_EmptyRequest_Integration(t *testing.T) {
 	defer asserter.Cleanup()
 
 	serverURL := asserter.helper.GetServerURL()
-	client := NewWebSocketTestClient(t)
+	client := testutils.NewWebSocketTestClient(t)
 	defer client.Close()
 	
 	err := client.Connect(serverURL)
@@ -430,7 +430,7 @@ func TestErrorHandling_LargeRequest_Integration(t *testing.T) {
 	defer asserter.Cleanup()
 
 	serverURL := asserter.helper.GetServerURL()
-	client := NewWebSocketTestClient(t)
+	client := testutils.NewWebSocketTestClient(t)
 	defer client.Close()
 	
 	err := client.Connect(serverURL)

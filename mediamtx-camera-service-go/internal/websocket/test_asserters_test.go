@@ -39,7 +39,7 @@ import (
 type WebSocketIntegrationAsserter struct {
 	t      *testing.T
 	helper *WebSocketTestHelper
-	client *WebSocketTestClient
+	client *testutils.WebSocketTestClient
 }
 
 // NewWebSocketIntegrationAsserter creates a new WebSocket integration asserter
@@ -51,7 +51,7 @@ func GetSharedWebSocketAsserter(t *testing.T) *WebSocketIntegrationAsserter {
 	require.NoError(t, err, "Failed to create real WebSocket server")
 
 	// Create WebSocket client
-	client := NewWebSocketTestClient(t, helper.GetServerURL())
+	client := testutils.testutils.NewWebSocketTestClient(t, helper.GetServerURL())
 
 	asserter := &WebSocketIntegrationAsserter{
 		t:      t,
@@ -471,7 +471,7 @@ func (a *WebSocketIntegrationAsserter) AssertFileLifecycleWorkflow() error {
 	}, 5*time.Second, 500*time.Millisecond, "StopRecording should complete within timeout")
 
 	// Step 4: List recordings and validate it appears (with retry logic)
-	var listResponse *JSONRPCResponse
+	var listResponse *testutils.JSONRPCResponse
 	var listErr error
 	for i := 0; i < 3; i++ {
 		listResponse, listErr = a.client.ListRecordings(50, 0)
@@ -820,7 +820,7 @@ func (a *WebSocketIntegrationAsserter) AssertConcurrentSnapshotCaptures() error 
 	// Test multiple concurrent snapshot captures with SEPARATE WebSocket connections
 	// CRITICAL: Each goroutine needs its own WebSocket connection to avoid concurrent write panic
 	const numConcurrent = 3
-	responses := make(chan *JSONRPCResponse, numConcurrent)
+	responses := make(chan *testutils.JSONRPCResponse, numConcurrent)
 	errors := make(chan error, numConcurrent)
 
 	// Use WaitGroup to ensure all goroutines complete before returning
@@ -832,7 +832,7 @@ func (a *WebSocketIntegrationAsserter) AssertConcurrentSnapshotCaptures() error 
 			defer wg.Done()
 
 			// Create dedicated WebSocket client for this goroutine
-			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate this client
@@ -1045,7 +1045,7 @@ func (a *WebSocketIntegrationAsserter) AssertSnapshotPerformanceBenchmarks() err
 func (a *WebSocketIntegrationAsserter) AssertSnapshotLoadTesting() error {
 	// Test snapshot operations under load with SERIALIZED access (V4L2 limitation)
 	const numLoadTests = 5 // Reduced for serialized testing
-	responses := make(chan *JSONRPCResponse, numLoadTests)
+	responses := make(chan *testutils.JSONRPCResponse, numLoadTests)
 	errors := make(chan error, numLoadTests)
 
 	start := time.Now()
@@ -1055,7 +1055,7 @@ func (a *WebSocketIntegrationAsserter) AssertSnapshotLoadTesting() error {
 	for i := 0; i < numLoadTests; i++ {
 		go func(index int) {
 			// Create dedicated WebSocket client for this goroutine
-			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate this client
@@ -1312,7 +1312,7 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingStatus() error {
 	// CRITICAL: Use Progressive Readiness to handle MediaMTX API race condition
 	// The issue is that MediaMTX API state changes are not immediately consistent
 	// Use require.Eventually to wait for API to be ready instead of fixed retry loop
-	var startResponse *JSONRPCResponse
+	var startResponse *testutils.JSONRPCResponse
 	require.Eventually(a.t, func() bool {
 		var err error
 		startResponse, err = a.client.StartRecording("camera0", 30, "fmp4")
@@ -1555,7 +1555,7 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingFileCleanup() error {
 func (a *WebSocketIntegrationAsserter) AssertConcurrentRecordings() error {
 	// Test concurrent recordings with SERIALIZED access (MediaMTX/V4L2 limitation)
 	const numConcurrent = 3
-	responses := make(chan *JSONRPCResponse, numConcurrent)
+	responses := make(chan *testutils.JSONRPCResponse, numConcurrent)
 	errors := make(chan error, numConcurrent)
 
 	// Use WaitGroup to ensure all goroutines complete before returning
@@ -1567,7 +1567,7 @@ func (a *WebSocketIntegrationAsserter) AssertConcurrentRecordings() error {
 			defer wg.Done()
 
 			// Create dedicated WebSocket client for this goroutine
-			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate this client
@@ -1664,7 +1664,7 @@ func (a *WebSocketIntegrationAsserter) AssertConcurrentRecordings() error {
 	// Cleanup - stop all recordings using dedicated clients
 	for i := 0; i < numConcurrent; i++ {
 		// Create cleanup client for each recording
-		cleanupClient := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+		cleanupClient := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 		defer cleanupClient.Close()
 
 		err := cleanupClient.Connect()
@@ -1842,7 +1842,7 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingPerformanceTargets() error
 func (a *WebSocketIntegrationAsserter) AssertRecordingLoadTesting() error {
 	// Test recording operations under load with SERIALIZED access (MediaMTX limitation)
 	const numLoadTests = 3 // Reduced for serialized testing
-	responses := make(chan *JSONRPCResponse, numLoadTests)
+	responses := make(chan *testutils.JSONRPCResponse, numLoadTests)
 	errors := make(chan error, numLoadTests)
 
 	start := time.Now()
@@ -1852,7 +1852,7 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingLoadTesting() error {
 	for i := 0; i < numLoadTests; i++ {
 		go func(index int) {
 			// Create dedicated WebSocket client for this goroutine
-			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate this client
@@ -2376,11 +2376,11 @@ func (a *WebSocketIntegrationAsserter) AssertErrorRecoveryPatterns() error {
 func (a *WebSocketIntegrationAsserter) AssertConcurrentClientPerformance() error {
 	// Test concurrent client performance
 	const numClients = 5
-	clients := make([]*WebSocketTestClient, numClients)
+	clients := make([]*testutils.WebSocketTestClient, numClients)
 
 	// Create multiple clients
 	for i := 0; i < numClients; i++ {
-		clients[i] = NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+		clients[i] = testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 		defer clients[i].Close()
 
 		err := clients[i].Connect()
@@ -2431,7 +2431,7 @@ func (a *WebSocketIntegrationAsserter) AssertLoadTestingPerformance() error {
 	a.t.Log("Testing concurrent load performance...")
 
 	const numConcurrent = 10
-	responses := make(chan *JSONRPCResponse, numConcurrent)
+	responses := make(chan *testutils.JSONRPCResponse, numConcurrent)
 	errors := make(chan error, numConcurrent)
 
 	concurrentStart := time.Now()
@@ -2440,7 +2440,7 @@ func (a *WebSocketIntegrationAsserter) AssertLoadTestingPerformance() error {
 	for i := 0; i < numConcurrent; i++ {
 		go func(index int) {
 			// Create dedicated client for this goroutine
-			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -2546,7 +2546,7 @@ func (a *WebSocketIntegrationAsserter) AssertStressTestingPerformance() error {
 	a.t.Log("Testing extreme concurrent load...")
 
 	const numStressClients = 20
-	responses := make(chan *JSONRPCResponse, numStressClients)
+	responses := make(chan *testutils.JSONRPCResponse, numStressClients)
 	errors := make(chan error, numStressClients)
 
 	stressStart := time.Now()
@@ -2555,7 +2555,7 @@ func (a *WebSocketIntegrationAsserter) AssertStressTestingPerformance() error {
 	for i := 0; i < numStressClients; i++ {
 		go func(index int) {
 			// Create dedicated client for this goroutine
-			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -2759,7 +2759,7 @@ func (a *WebSocketIntegrationAsserter) AssertThroughputBenchmarks() error {
 	a.t.Log("Testing concurrent throughput...")
 
 	const numConcurrent = 15
-	responses := make(chan *JSONRPCResponse, numConcurrent)
+	responses := make(chan *testutils.JSONRPCResponse, numConcurrent)
 	errors := make(chan error, numConcurrent)
 
 	concurrentStart := time.Now()
@@ -2768,7 +2768,7 @@ func (a *WebSocketIntegrationAsserter) AssertThroughputBenchmarks() error {
 	for i := 0; i < numConcurrent; i++ {
 		go func(index int) {
 			// Create dedicated client for this goroutine
-			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -2869,7 +2869,7 @@ func (a *WebSocketIntegrationAsserter) AssertScalabilityTesting() error {
 	for _, numClients := range scalabilityLevels {
 		a.t.Logf("Testing scalability with %d concurrent clients...", numClients)
 
-		responses := make(chan *JSONRPCResponse, numClients)
+		responses := make(chan *testutils.JSONRPCResponse, numClients)
 		errors := make(chan error, numClients)
 
 		levelStart := time.Now()
@@ -2878,7 +2878,7 @@ func (a *WebSocketIntegrationAsserter) AssertScalabilityTesting() error {
 		for i := 0; i < numClients; i++ {
 			go func(index int) {
 				// Create dedicated client for this goroutine
-				client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+				client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 				defer client.Close()
 
 				// Connect and authenticate
@@ -3045,7 +3045,7 @@ func (a *WebSocketIntegrationAsserter) AssertResourceUtilizationValidation() err
 	a.t.Log("Testing resource utilization under concurrent load...")
 
 	const numConcurrent = 12
-	responses := make(chan *JSONRPCResponse, numConcurrent)
+	responses := make(chan *testutils.JSONRPCResponse, numConcurrent)
 	errors := make(chan error, numConcurrent)
 
 	concurrentStart := time.Now()
@@ -3054,7 +3054,7 @@ func (a *WebSocketIntegrationAsserter) AssertResourceUtilizationValidation() err
 	for i := 0; i < numConcurrent; i++ {
 		go func(index int) {
 			// Create dedicated client for this goroutine
-			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -3251,7 +3251,7 @@ func (a *WebSocketIntegrationAsserter) AssertPerformanceRegressionTesting() erro
 	a.t.Log("Testing concurrent performance regression...")
 
 	const numConcurrent = 8
-	responses := make(chan *JSONRPCResponse, numConcurrent)
+	responses := make(chan *testutils.JSONRPCResponse, numConcurrent)
 	errors := make(chan error, numConcurrent)
 
 	concurrentStart := time.Now()
@@ -3260,7 +3260,7 @@ func (a *WebSocketIntegrationAsserter) AssertPerformanceRegressionTesting() erro
 	for i := 0; i < numConcurrent; i++ {
 		go func(index int) {
 			// Create dedicated client for this goroutine
-			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -3430,7 +3430,7 @@ func (a *WebSocketIntegrationAsserter) AssertPerformanceBaselineEstablishment() 
 	a.t.Log("Establishing concurrent performance baseline...")
 
 	const numConcurrent = 10
-	responses := make(chan *JSONRPCResponse, numConcurrent)
+	responses := make(chan *testutils.JSONRPCResponse, numConcurrent)
 	errors := make(chan error, numConcurrent)
 
 	concurrentStart := time.Now()
@@ -3439,7 +3439,7 @@ func (a *WebSocketIntegrationAsserter) AssertPerformanceBaselineEstablishment() 
 	for i := 0; i < numConcurrent; i++ {
 		go func(index int) {
 			// Create dedicated client for this goroutine
-			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -3565,10 +3565,10 @@ func (a *WebSocketIntegrationAsserter) AssertResourceCleanup() error {
 func (a *WebSocketIntegrationAsserter) AssertConcurrentSessionHandling() error {
 	// Test concurrent session handling
 	const numSessions = 3
-	clients := make([]*WebSocketTestClient, numSessions)
+	clients := make([]*testutils.WebSocketTestClient, numSessions)
 
 	for i := 0; i < numSessions; i++ {
-		clients[i] = NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+		clients[i] = testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 		defer clients[i].Close()
 
 		err := clients[i].Connect()
@@ -3647,13 +3647,13 @@ func (a *WebSocketIntegrationAsserter) AssertSessionTimeoutHandling() error {
 
 	// Create multiple clients to simulate concurrent sessions
 	const numConcurrentSessions = 5
-	responses := make(chan *JSONRPCResponse, numConcurrentSessions)
+	responses := make(chan *testutils.JSONRPCResponse, numConcurrentSessions)
 	errors := make(chan error, numConcurrentSessions)
 
 	for i := 0; i < numConcurrentSessions; i++ {
 		go func(index int) {
 			// Create dedicated client for this session
-			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -3772,13 +3772,13 @@ func (a *WebSocketIntegrationAsserter) AssertIdleTimeoutHandling() error {
 
 	// Create multiple clients to simulate concurrent idle sessions
 	const numConcurrentIdleSessions = 4
-	responses := make(chan *JSONRPCResponse, numConcurrentIdleSessions)
+	responses := make(chan *testutils.JSONRPCResponse, numConcurrentIdleSessions)
 	errors := make(chan error, numConcurrentIdleSessions)
 
 	for i := 0; i < numConcurrentIdleSessions; i++ {
 		go func(index int) {
 			// Create dedicated client for this idle session
-			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -3910,13 +3910,13 @@ func (a *WebSocketIntegrationAsserter) AssertReconnectionHandling() error {
 
 	// Create multiple clients to simulate concurrent reconnections
 	const numConcurrentReconnections = 6
-	responses := make(chan *JSONRPCResponse, numConcurrentReconnections)
+	responses := make(chan *testutils.JSONRPCResponse, numConcurrentReconnections)
 	errors := make(chan error, numConcurrentReconnections)
 
 	for i := 0; i < numConcurrentReconnections; i++ {
 		go func(index int) {
 			// Create dedicated client for this reconnection
-			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -4026,8 +4026,8 @@ func (a *WebSocketIntegrationAsserter) AssertComprehensiveSessionManagement() er
 	a.t.Log("Testing session establishment and authentication persistence...")
 
 	// Create multiple clients to simulate different sessions
-	client1 := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
-	client2 := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+	client1 := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+	client2 := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 
 	// Establish session 1
 	err := client1.Connect()

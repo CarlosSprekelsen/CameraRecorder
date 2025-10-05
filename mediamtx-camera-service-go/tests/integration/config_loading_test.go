@@ -14,6 +14,7 @@ Test Organization:
 package integration
 
 import (
+	"fmt"
 	"os"
 	"testing"
 	"time"
@@ -25,6 +26,110 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+// ConfigLoadingIntegrationAsserter handles configuration loading integration validation
+type ConfigLoadingIntegrationAsserter struct {
+	setup *testutils.UniversalTestSetup
+}
+
+// NewConfigLoadingIntegrationAsserter creates a new config loading integration asserter
+func NewConfigLoadingIntegrationAsserter(t *testing.T) *ConfigLoadingIntegrationAsserter {
+	// Use testutils.SetupTest with valid config fixture
+	setup := testutils.SetupTest(t, "config_valid_complete.yaml")
+
+	asserter := &ConfigLoadingIntegrationAsserter{
+		setup: setup,
+	}
+
+	// Register cleanup
+	t.Cleanup(func() {
+		asserter.Cleanup()
+	})
+
+	return asserter
+}
+
+// Cleanup performs cleanup of all resources
+func (a *ConfigLoadingIntegrationAsserter) Cleanup() {
+	a.setup.Cleanup()
+}
+
+// AssertConfigLoadedCorrectly validates that configuration loads successfully
+func (a *ConfigLoadingIntegrationAsserter) AssertConfigLoadedCorrectly(fixtureName string) error {
+	configManager := a.setup.GetConfigManager()
+	loadedConfig := configManager.GetConfig()
+
+	if loadedConfig == nil {
+		return fmt.Errorf("config should not be nil")
+	}
+
+	// Validate that config sections are properly initialized (not zero values)
+	if loadedConfig.Server.Host == "" {
+		return fmt.Errorf("server config should have host configured")
+	}
+
+	if loadedConfig.MediaMTX.Host == "" {
+		return fmt.Errorf("mediamtx config should have host configured")
+	}
+
+	if loadedConfig.Camera.PollInterval <= 0 {
+		return fmt.Errorf("camera config should have poll interval configured")
+	}
+
+	return nil
+}
+
+// AssertValidationErrorsCorrect validates that configuration validation errors are correct
+func (a *ConfigLoadingIntegrationAsserter) AssertValidationErrorsCorrect(t *testing.T, fixtureName string, expectError bool) error {
+	configManager := config.CreateConfigManager()
+	fixtureLoader := testutils.NewFixtureLoader(t)
+
+	fixturePath := fixtureLoader.ResolveFixturePath(fixtureName)
+
+	err := configManager.LoadConfig(fixturePath)
+
+	if expectError {
+		if err == nil {
+			return fmt.Errorf("expected error for invalid config %s", fixtureName)
+		}
+	} else {
+		if err != nil {
+			return fmt.Errorf("unexpected error for valid config %s: %w", fixtureName, err)
+		}
+	}
+
+	return nil
+}
+
+// AssertEnvOverridesApplied validates that environment variable overrides work correctly
+func (a *ConfigLoadingIntegrationAsserter) AssertEnvOverridesApplied(envKey, expectedValue string) error {
+	configManager := a.setup.GetConfigManager()
+	loadedConfig := configManager.GetConfig()
+
+	if loadedConfig == nil {
+		return fmt.Errorf("config should not be nil")
+	}
+
+	// Validate specific environment override based on envKey
+	switch envKey {
+	case "CAMERA_SERVICE_SERVER_PORT":
+		// Convert expected string to int for comparison
+		if fmt.Sprintf("%d", loadedConfig.Server.Port) != expectedValue {
+			return fmt.Errorf("server port override failed: expected %s, got %d", expectedValue, loadedConfig.Server.Port)
+		}
+	case "CAMERA_SERVICE_LOG_LEVEL":
+		// Log level is in ServerConfig but may need to check logging package
+		return fmt.Errorf("log level override test not implemented - check logging configuration")
+	case "CAMERA_SERVICE_MEDIAMTX_HOST":
+		if loadedConfig.MediaMTX.Host != expectedValue {
+			return fmt.Errorf("mediamtx host override failed: expected %s, got %s", expectedValue, loadedConfig.MediaMTX.Host)
+		}
+	default:
+		return fmt.Errorf("unknown environment variable: %s", envKey)
+	}
+
+	return nil
+}
 
 // TestConfigLoading_FixtureVariations_ReqCFG001 validates different config fixtures
 // REQ-CFG-001: Configuration file loading

@@ -21,6 +21,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -57,7 +58,7 @@ func createSharedWebSocketAsserter(t *testing.T) *WebSocketIntegrationAsserter {
 	require.NoError(t, err, "Failed to create real WebSocket server")
 
 	// Create WebSocket client
-	client := NewWebSocketTestClient(t, helper.GetServerURL())
+	client := testutils.NewWebSocketTestClient(t, helper.GetServerURL())
 
 	asserter := &WebSocketIntegrationAsserter{
 		t:      t,

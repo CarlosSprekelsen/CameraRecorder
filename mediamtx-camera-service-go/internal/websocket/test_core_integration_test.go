@@ -61,7 +61,7 @@ func TestProgressiveReadiness_Performance_Integration(t *testing.T) {
 	serverURL := asserter.helper.GetServerURL()
 
 	start := time.Now()
-	client := NewWebSocketTestClient(t, serverURL)
+	client := testutils.NewWebSocketTestClient(t, serverURL)
 	err := client.Connect()
 	connectionTime := time.Since(start)
 
@@ -90,7 +90,7 @@ func TestProgressiveReadiness_ConcurrentConnections_Integration(t *testing.T) {
 		wg.Add(1)
 		go func(clientID int) {
 			defer wg.Done()
-			client := NewWebSocketTestClient(t, serverURL)
+			client := testutils.NewWebSocketTestClient(t, serverURL)
 			defer client.Close()
 
 			err := client.Connect()
@@ -134,7 +134,7 @@ func TestAuthentication_ValidToken_Integration(t *testing.T) {
 	for _, role := range roles {
 		t.Run("Role_"+role, func(t *testing.T) {
 			serverURL := asserter.helper.GetServerURL()
-			client := NewWebSocketTestClient(t, serverURL)
+			client := testutils.NewWebSocketTestClient(t, serverURL)
 			defer client.Close()
 
 			err := client.Connect()
@@ -159,7 +159,7 @@ func TestAuthentication_InvalidToken_Integration(t *testing.T) {
 
 	// Test invalid authentication
 	serverURL := asserter.helper.GetServerURL()
-	client := NewWebSocketTestClient(t, serverURL)
+	client := testutils.NewWebSocketTestClient(t, serverURL)
 	defer client.Close()
 
 	err := client.Connect()
@@ -181,7 +181,7 @@ func TestAuthentication_ExpiredToken_Integration(t *testing.T) {
 	// Test expired token (if we can create one)
 	// For now, test with invalid token as proxy
 	serverURL := asserter.helper.GetServerURL()
-	client := NewWebSocketTestClient(t, serverURL)
+	client := testutils.NewWebSocketTestClient(t, serverURL)
 	defer client.Close()
 
 	err := client.Connect()
@@ -201,7 +201,7 @@ func TestAuthentication_NoToken_Integration(t *testing.T) {
 	asserter := GetSharedWebSocketAsserter(t)
 
 	serverURL := asserter.helper.GetServerURL()
-	client := NewWebSocketTestClient(t, serverURL)
+	client := testutils.NewWebSocketTestClient(t, serverURL)
 	defer client.Close()
 
 	err := client.Connect()
@@ -227,7 +227,7 @@ func TestPing_Unauthenticated_Integration(t *testing.T) {
 	asserter := GetSharedWebSocketAsserter(t)
 
 	serverURL := asserter.helper.GetServerURL()
-	client := NewWebSocketTestClient(t, serverURL)
+	client := testutils.NewWebSocketTestClient(t, serverURL)
 	defer client.Close()
 
 	err := client.Connect()
@@ -247,7 +247,7 @@ func TestPing_Authenticated_Integration(t *testing.T) {
 	asserter := GetSharedWebSocketAsserter(t)
 
 	serverURL := asserter.helper.GetServerURL()
-	client := NewWebSocketTestClient(t, serverURL)
+	client := testutils.NewWebSocketTestClient(t, serverURL)
 	defer client.Close()
 
 	err := client.Connect()
@@ -276,7 +276,7 @@ func TestConnection_Reconnection_Integration(t *testing.T) {
 	serverURL := asserter.helper.GetServerURL()
 
 	// First connection
-	client1 := NewWebSocketTestClient(t, serverURL)
+	client1 := testutils.NewWebSocketTestClient(t, serverURL)
 	err := client1.Connect()
 	require.NoError(t, err, "First connection should succeed")
 
@@ -288,7 +288,7 @@ func TestConnection_Reconnection_Integration(t *testing.T) {
 	client1.Close()
 
 	// Second connection
-	client2 := NewWebSocketTestClient(t, serverURL)
+	client2 := testutils.NewWebSocketTestClient(t, serverURL)
 	defer client2.Close()
 
 	err = client2.Connect()
@@ -313,7 +313,7 @@ func TestJSONRPC_ProtocolCompliance_Integration(t *testing.T) {
 
 	// Test JSON-RPC protocol compliance
 	serverURL := asserter.helper.GetServerURL()
-	client := NewWebSocketTestClient(t, serverURL)
+	client := testutils.NewWebSocketTestClient(t, serverURL)
 	defer client.Close()
 
 	err := client.Connect()
@@ -333,7 +333,7 @@ func TestJSONRPC_ErrorHandling_Integration(t *testing.T) {
 	asserter := GetSharedWebSocketAsserter(t)
 
 	serverURL := asserter.helper.GetServerURL()
-	client := NewWebSocketTestClient(t, serverURL)
+	client := testutils.NewWebSocketTestClient(t, serverURL)
 	defer client.Close()
 
 	err := client.Connect()
@@ -361,7 +361,7 @@ func TestPerformance_BasicOperations_Integration(t *testing.T) {
 
 	// Test performance metrics
 	serverURL := asserter.helper.GetServerURL()
-	client := NewWebSocketTestClient(t, serverURL)
+	client := testutils.NewWebSocketTestClient(t, serverURL)
 	defer client.Close()
 
 	err := client.Connect()
@@ -395,7 +395,7 @@ func TestPerformance_ConcurrentOperations_Integration(t *testing.T) {
 		wg.Add(1)
 		go func(clientID int) {
 			defer wg.Done()
-			client := NewWebSocketTestClient(t, serverURL)
+			client := testutils.NewWebSocketTestClient(t, serverURL)
 			defer client.Close()
 
 			err := client.Connect()
@@ -495,7 +495,7 @@ func TestServerManagement_EventBroadcasting_Integration(t *testing.T) {
 	require.NotNil(t, eventManager, "Event manager should be available")
 
 	// Test event subscription
-	client := NewWebSocketTestClient(t, asserter.helper.GetServerURL())
+	client := testutils.NewWebSocketTestClient(t, asserter.helper.GetServerURL())
 	err := client.Connect()
 	require.NoError(t, err, "Client should connect")
 
@@ -517,7 +517,7 @@ func TestServerManagement_ErrorHandling_Integration(t *testing.T) {
 	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test error handling by sending invalid requests
-	client := NewWebSocketTestClient(t, asserter.helper.GetServerURL())
+	client := testutils.NewWebSocketTestClient(t, asserter.helper.GetServerURL())
 	err := client.Connect()
 	require.NoError(t, err, "Client should connect")
 
@@ -654,7 +654,7 @@ func TestWebSocket_ConnectionStability_Integration(t *testing.T) {
 	// Test 2: Connection timeout handling
 	t.Run("ConnectionTimeoutHandling", func(t *testing.T) {
 		// Create new client for timeout testing
-		client := NewWebSocketTestClient(t, asserter.helper.GetServerURL())
+		client := testutils.NewWebSocketTestClient(t, asserter.helper.GetServerURL())
 		defer client.Close()
 
 		// Connect
@@ -690,7 +690,7 @@ func TestWebSocket_ConnectionStability_Integration(t *testing.T) {
 		// Launch concurrent connections
 		for i := 0; i < numConcurrentClients; i++ {
 			go func(clientID int) {
-				client := NewWebSocketTestClient(t, asserter.helper.GetServerURL())
+				client := testutils.NewWebSocketTestClient(t, asserter.helper.GetServerURL())
 				defer client.Close()
 
 				// Connect and authenticate
@@ -756,7 +756,7 @@ func TestWebSocket_ConnectionStability_Integration(t *testing.T) {
 	// Test 4: Connection error recovery
 	t.Run("ConnectionErrorRecovery", func(t *testing.T) {
 		// Test connection recovery after various error scenarios
-		client := NewWebSocketTestClient(t, asserter.helper.GetServerURL())
+		client := testutils.NewWebSocketTestClient(t, asserter.helper.GetServerURL())
 		defer client.Close()
 
 		// Connect and authenticate
@@ -840,7 +840,7 @@ func TestWebSocket_StabilityPerformance_Integration(t *testing.T) {
 		// Launch load test clients
 		for i := 0; i < numClients; i++ {
 			go func(clientID int) {
-				client := NewWebSocketTestClient(t, asserter.helper.GetServerURL())
+				client := testutils.NewWebSocketTestClient(t, asserter.helper.GetServerURL())
 				defer client.Close()
 
 				start := time.Now()
@@ -920,7 +920,7 @@ func TestWebSocket_ErrorHandling_Integration(t *testing.T) {
 		var lastErr error
 
 		for attempt := 1; attempt <= maxRetries; attempt++ {
-			client := NewWebSocketTestClient(t, asserter.helper.GetServerURL())
+			client := testutils.NewWebSocketTestClient(t, asserter.helper.GetServerURL())
 			defer client.Close()
 
 			err := client.Connect()
@@ -1047,7 +1047,7 @@ func TestWebSocket_ErrorHandling_Integration(t *testing.T) {
 	// Test 4: Error logging with context
 	t.Run("ErrorLoggingWithContext", func(t *testing.T) {
 		// Test that errors are properly logged with context
-		client := NewWebSocketTestClient(t, asserter.helper.GetServerURL())
+		client := testutils.NewWebSocketTestClient(t, asserter.helper.GetServerURL())
 		defer client.Close()
 
 		// Connect without authentication
@@ -1070,7 +1070,7 @@ func TestWebSocket_ErrorHandling_Integration(t *testing.T) {
 	// Test 5: Graceful error recovery
 	t.Run("GracefulErrorRecovery", func(t *testing.T) {
 		// Test graceful recovery from various error states
-		client := NewWebSocketTestClient(t, asserter.helper.GetServerURL())
+		client := testutils.NewWebSocketTestClient(t, asserter.helper.GetServerURL())
 		defer client.Close()
 
 		// Test recovery from connection errors

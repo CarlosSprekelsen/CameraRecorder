@@ -224,7 +224,7 @@ func TestEventSystem_ProgressiveReadiness_Integration(t *testing.T) {
 
 	// Test Progressive Readiness: event system should be available immediately
 	serverURL := asserter.helper.GetServerURL()
-	client := NewWebSocketTestClient(t, serverURL)
+	client := testutils.NewWebSocketTestClient(t, serverURL)
 	defer client.Close()
 
 	err := client.Connect()

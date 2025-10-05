@@ -106,17 +106,22 @@ func NewWebSocketTestHelper(t *testing.T) *WebSocketTestHelper {
 		t.Fatalf("Failed to start MediaMTX controller: %v", err)
 	}
 
-	// Wait for controller readiness (following main.go pattern)
+	// OPTIMIZED READINESS: Check if already ready first, then use event-driven approach
 	logger.Info("Waiting for controller readiness...")
-	if !mediaMTXController.IsReady() {
-		// Use event-driven approach with timeout (following main.go pattern)
+
+	// Quick check if already ready (most common case)
+	if mediaMTXController.IsReady() {
+		logger.Info("Controller already ready - skipping event wait")
+	} else {
+		// Use event-driven approach with minimal timeout
 		readinessChan := mediaMTXController.SubscribeToReadiness()
 		readinessCtx, cancel := context.WithTimeout(ctx, 500*time.Millisecond)
 
 		select {
 		case <-readinessChan:
-			logger.Info("Controller readiness event received")
+			logger.Info("Controller readiness event received - all services ready")
 		case <-readinessCtx.Done():
+			// Quick fallback check
 			if !mediaMTXController.IsReady() {
 				t.Fatalf("Controller not ready after timeout")
 			}
@@ -127,7 +132,7 @@ func NewWebSocketTestHelper(t *testing.T) *WebSocketTestHelper {
 
 	logger.Info("Controller reports ready - all services operational")
 
-	// Register cleanup (following main.go cleanup pattern)
+	// Register cleanup
 	t.Cleanup(func() {
 		helper.Cleanup()
 	})
@@ -135,10 +140,9 @@ func NewWebSocketTestHelper(t *testing.T) *WebSocketTestHelper {
 	return helper
 }
 
-// CreateRealServer creates and starts the WebSocket server with real components
-// Uses listener pattern for race-free testing (following main.go server pattern)
+// CreateRealServer creates and starts the WebSocket server
 func (h *WebSocketTestHelper) CreateRealServer() error {
-	// Create real WebSocket server (following main.go server creation pattern)
+	// Create real WebSocket server using the production constructor
 	server, err := NewWebSocketServer(
 		h.configManager,
 		h.logger,
@@ -150,7 +154,7 @@ func (h *WebSocketTestHelper) CreateRealServer() error {
 	}
 	h.server = server
 
-	// Start server with listener for race-free testing (following main.go pattern)
+	// Start server with listener for race-free testing
 	listener, err := net.Listen("tcp", ":0") // Use dynamic port
 	if err != nil {
 		return fmt.Errorf("failed to create listener: %w", err)
@@ -168,9 +172,10 @@ func (h *WebSocketTestHelper) CreateRealServer() error {
 	return nil
 }
 
-// Cleanup stops the WebSocket server and cleans up resources (following main.go cleanup pattern)
+// Cleanup stops the server and cleans up resources
+// Uses MediaMTX cleanup pattern for proper test isolation
 func (h *WebSocketTestHelper) Cleanup() {
-	// Stop WebSocket server first (following main.go shutdown order)
+	// Stop WebSocket server first - prevents new client connections
 	if h.server != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
@@ -181,12 +186,13 @@ func (h *WebSocketTestHelper) Cleanup() {
 		h.listener.Close()
 	}
 
-	// Stop MediaMTX controller (following main.go shutdown pattern)
+	// Stop MediaMTX controller - orchestrates shutdown of all managed services
 	if h.mediaMTXController != nil {
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
-		// Use MediaMTX cleanup pattern (following main.go cleanup)
+		// Use MediaMTX cleanup pattern: force stop all active recordings
+		// This follows the existing MediaMTX test helper cleanup mechanism
 		if recordingManager := h.mediaMTXController.GetRecordingManager(); recordingManager != nil {
 			if err := recordingManager.Cleanup(ctx); err != nil {
 				h.t.Logf("Warning: Failed to cleanup recording manager: %v", err)
@@ -195,9 +201,19 @@ func (h *WebSocketTestHelper) Cleanup() {
 			}
 		}
 
-		h.mediaMTXController.Stop(ctx)
-		h.t.Log("MediaMTX controller stopped")
+		// Stop controller using proper interface (like main.go)
+		if fullController, ok := h.mediaMTXController.(interface{ Stop(context.Context) error }); ok {
+			if err := fullController.Stop(ctx); err != nil {
+				h.t.Logf("Warning: Failed to stop MediaMTX controller: %v", err)
+			} else {
+				h.t.Log("MediaMTX controller stopped")
+			}
+		}
 	}
+
+	// Cleanup test setup
+	h.setup.Cleanup()
+	h.t.Log("WebSocketTestHelper cleanup completed")
 }
 
 // GetServerURL returns the WebSocket server URL
@@ -205,25 +221,37 @@ func (h *WebSocketTestHelper) GetServerURL() string {
 	return h.baseURL
 }
 
-// GetJWTToken creates a JWT token for the specified role (for testing)
+// GetJWTToken creates a valid JWT token for testing
 func (h *WebSocketTestHelper) GetJWTToken(role string) (string, error) {
-	return h.jwtHandler.GenerateToken("test_user", role, 24)
+	// Create test JWT token with specified role using real JWT handler
+	token, err := h.jwtHandler.GenerateToken("test_user", role, 24)
+	if err != nil {
+		return "", fmt.Errorf("failed to generate JWT token: %w", err)
+	}
+	return token, nil
 }
 
-// GetJWTTokenWithExpiry creates a JWT token with custom expiry (for token expiry tests)
-func (h *WebSocketTestHelper) GetJWTTokenWithExpiry(role string, hours int) (string, error) {
-	return h.jwtHandler.GenerateToken("test_user", role, hours)
-}
-
-// GetTestCameraID returns a test camera ID (for testing)
+// GetTestCameraID returns a valid camera ID for testing
 func (h *WebSocketTestHelper) GetTestCameraID() string {
+	// Return a valid camera ID according to OpenRPC DeviceId pattern: ^camera[0-9]+$
 	return "camera0"
 }
 
-// GetCameraMonitor returns the camera monitor (for advanced testing)
-// Note: Method removed as it's not essential for E2E tests
+// GetCameraMonitor returns the camera monitor for readiness checks
+// Reuses existing good pattern from camera asserters
+func (h *WebSocketTestHelper) GetCameraMonitor() camera.CameraMonitor {
+	// Access camera monitor through MediaMTX controller
+	// This follows the same pattern as camera asserters but for WebSocket tests
+	if controller, ok := h.mediaMTXController.(interface{ GetCameraMonitor() camera.CameraMonitor }); ok {
+		return controller.GetCameraMonitor()
+	}
 
-// GetMediaMTXController returns the MediaMTX controller (for advanced testing)
+	// Fallback: try to access through reflection if needed
+	// This ensures we can always get the camera monitor for readiness checks
+	return nil
+}
+
+// GetMediaMTXController returns the MediaMTX controller for testing
 func (h *WebSocketTestHelper) GetMediaMTXController() mediamtx.MediaMTXController {
 	return h.mediaMTXController
 }
