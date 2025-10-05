@@ -33,6 +33,7 @@ import (
 )
 
 func TestAuthenticationSuccessWorkflow(t *testing.T) {
+    t.Parallel()
 	fixture := NewE2EFixture(t)
 
 	// Connect and authenticate using proven flow
@@ -50,6 +51,7 @@ func TestAuthenticationSuccessWorkflow(t *testing.T) {
 }
 
 func TestAuthenticationFailureWorkflow(t *testing.T) {
+    t.Parallel()
 	fixture := NewE2EFixture(t)
 
 	// Connect but don't authenticate
@@ -67,6 +69,7 @@ func TestAuthenticationFailureWorkflow(t *testing.T) {
 }
 
 func TestRoleBasedAuthorizationWorkflow(t *testing.T) {
+    t.Parallel()
 	fixture := NewE2EFixture(t)
 
 	// Test viewer role
@@ -128,6 +131,7 @@ func TestRoleBasedAuthorizationWorkflow(t *testing.T) {
 }
 
 func TestSessionManagementWorkflow(t *testing.T) {
+    t.Parallel()
 	fixture := NewE2EFixture(t)
 
 	// Create first session

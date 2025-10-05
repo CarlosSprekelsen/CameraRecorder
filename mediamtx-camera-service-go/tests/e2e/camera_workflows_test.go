@@ -27,6 +27,7 @@ import (
 )
 
 func TestCompleteCameraDiscoveryWorkflow(t *testing.T) {
+    t.Parallel()
 	fixture := NewE2EFixture(t)
 
 	// Connect and authenticate using proven flow
@@ -54,6 +55,7 @@ func TestCompleteCameraDiscoveryWorkflow(t *testing.T) {
 }
 
 func TestCameraStatusQueryWorkflow(t *testing.T) {
+    t.Parallel()
 	fixture := NewE2EFixture(t)
 
 	// Connect and authenticate
@@ -86,6 +88,7 @@ func TestCameraStatusQueryWorkflow(t *testing.T) {
 }
 
 func TestCameraCapabilitiesWorkflow(t *testing.T) {
+    t.Parallel()
 	fixture := NewE2EFixture(t)
 
 	// Connect and authenticate

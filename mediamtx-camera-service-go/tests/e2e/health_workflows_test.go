@@ -28,6 +28,7 @@ import (
 )
 
 func TestSystemHealthCheckWorkflow(t *testing.T) {
+    t.Parallel()
 	fixture := NewE2EFixture(t)
 
 	// Connect and authenticate
@@ -65,6 +66,7 @@ func TestSystemHealthCheckWorkflow(t *testing.T) {
 }
 
 func TestMetricsCollectionWorkflow(t *testing.T) {
+    t.Parallel()
 	fixture := NewE2EFixture(t)
 
 	// Connect and authenticate
@@ -110,6 +112,7 @@ func TestMetricsCollectionWorkflow(t *testing.T) {
 }
 
 func TestHealthMonitoringOverTime(t *testing.T) {
+    t.Parallel()
 	fixture := NewE2EFixture(t)
 
 	// Connect and authenticate
@@ -158,6 +161,7 @@ func TestHealthMonitoringOverTime(t *testing.T) {
 }
 
 func TestHealthWithStressTest(t *testing.T) {
+    t.Parallel()
 	fixture := NewE2EFixture(t)
 
 	// Connect and authenticate
