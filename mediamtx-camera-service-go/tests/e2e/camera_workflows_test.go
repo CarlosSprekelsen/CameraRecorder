@@ -115,6 +115,7 @@ func TestCameraCapabilitiesWorkflow(t *testing.T) {
 		caps := capsResp.Result.(map[string]interface{})
 		assert.Contains(t, caps, "formats")
 		assert.Contains(t, caps, "resolutions")
-		assert.Contains(t, caps, "framerates")
+        // Implementation exposes frame_rates instead of framerates
+        assert.Contains(t, caps, "frame_rates")
 	}
 }

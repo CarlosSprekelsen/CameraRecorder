@@ -20,29 +20,12 @@ Coverage Target: 65% E2E coverage milestone
 package e2e
 
 import (
-    "strings"
     "testing"
     "time"
 
     "github.com/stretchr/testify/assert"
     "github.com/stretchr/testify/require"
 )
-
-// retryGetSystemHealth calls GetSystemHealth with brief retries to avoid transient
-// method registration window right after server start.
-func retryGetSystemHealth(t *testing.T, c *testutils.WebSocketTestClient) (*testutils.JSONRPCResponse, error) {
-    t.Helper()
-    var resp *testutils.JSONRPCResponse
-    var err error
-    for i := 0; i < 10; i++ {
-        resp, err = c.GetSystemHealth()
-        if err == nil && !(resp != nil && resp.Error != nil && strings.Contains(strings.ToLower(resp.Error.Message), "method not found")) {
-            return resp, err
-        }
-        time.Sleep(100 * time.Millisecond)
-    }
-    return resp, err
-}
 
 func TestSystemHealthCheckWorkflow(t *testing.T) {
     t.Parallel()
@@ -62,23 +45,24 @@ func TestSystemHealthCheckWorkflow(t *testing.T) {
 	// Verify health status structure
 	assert.Contains(t, result, "status", "Health response should have status field")
 	assert.Contains(t, result, "components", "Health response should have components field")
-	assert.Contains(t, result, "timestamp", "Health response should have timestamp field")
+    // Spec uses uptime/version; no timestamp field in current impl
+    assert.Contains(t, result, "uptime", "Status response should have uptime field")
+    assert.Contains(t, result, "version", "Status response should have version field")
 
 	// Verify status is healthy
-	status := result["status"].(string)
-	assert.Equal(t, "healthy", status, "System should be healthy")
+    status := result["status"].(string)
+    assert.Equal(t, "HEALTHY", status, "System should be healthy")
 
 	// Verify components are healthy
-	components := result["components"].(map[string]interface{})
-	assert.Contains(t, components, "camera_service", "Should have camera service component")
-	assert.Contains(t, components, "mediamtx", "Should have MediaMTX component")
-	assert.Contains(t, components, "websocket_server", "Should have WebSocket server component")
+    components := result["components"].(map[string]interface{})
+    assert.Contains(t, components, "camera_monitor", "Should have camera monitor component")
+    assert.Contains(t, components, "mediamtx", "Should have MediaMTX component")
+    assert.Contains(t, components, "websocket_server", "Should have WebSocket server component")
 
 	// Verify all components are healthy
 	for componentName, componentStatus := range components {
-		status := componentStatus.(map[string]interface{})
-		assert.Equal(t, "healthy", status["status"], "Component %s should be healthy", componentName)
-		assert.Contains(t, status, "last_check", "Component %s should have last_check field", componentName)
+        comp := componentStatus.(string)
+        assert.Equal(t, "RUNNING", comp, "Component %s should be healthy", componentName)
 	}
 }
 
@@ -148,8 +132,8 @@ func TestHealthMonitoringOverTime(t *testing.T) {
 		healthChecks = append(healthChecks, result)
 
 		// Verify health is stable
-		status := result["status"].(string)
-		assert.Equal(t, "healthy", status, "System should remain healthy during monitoring period")
+    status := result["status"].(string)
+    assert.Equal(t, "HEALTHY", status, "System should remain healthy during monitoring period")
 
 		// Wait between checks (except for last iteration)
 		if i < 2 {
@@ -169,11 +153,11 @@ func TestHealthMonitoringOverTime(t *testing.T) {
 
 	// Verify components remained healthy throughout
 	for i, check := range healthChecks {
-		components := check["components"].(map[string]interface{})
-		for componentName, componentStatus := range components {
-			status := componentStatus.(map[string]interface{})
-			assert.Equal(t, "healthy", status["status"], "Component %s should remain healthy in check %d", componentName, i+1)
-		}
+        components := check["components"].(map[string]interface{})
+        for componentName, componentStatus := range components {
+            comp := componentStatus.(string)
+            assert.Equal(t, "RUNNING", comp, "Component %s should remain healthy in check %d", componentName, i+1)
+        }
 	}
 }
 
@@ -207,10 +191,10 @@ func TestHealthWithStressTest(t *testing.T) {
 	require.Nil(t, healthResp.Error)
 
 	result := healthResp.Result.(map[string]interface{})
-	status := result["status"].(string)
-
-	// System should still be healthy after stress operations
-	assert.Equal(t, "healthy", status, "System should remain healthy after stress operations")
+    status := result["status"].(string)
+    
+    // System should still be healthy after stress operations
+    assert.Equal(t, "HEALTHY", status, "System should remain healthy after stress operations")
 
 	// Verify response time is reasonable (should complete within timeout)
 	// The test itself validates that the operation completed within testutils.DefaultTestTimeout

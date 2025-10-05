@@ -282,7 +282,7 @@ func (c *WebSocketTestClient) GetSystemHealth() (*JSONRPCResponse, error) {
 
 // GetSystemMetrics gets system metrics
 func (c *WebSocketTestClient) GetSystemMetrics() (*JSONRPCResponse, error) {
-	return c.SendJSONRPC("get_system_metrics", nil)
+    return c.SendJSONRPC("get_metrics", nil)
 }
 
 // GetStatus gets full system status (admin)
