@@ -227,13 +227,6 @@ func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, ver
 		return response, err
 	}
 
-	// Store method handler in mutex-protected map
-	s.logger.WithFields(logging.Fields{
-		"method":       name,
-		"handler_type": fmt.Sprintf("%T", wrappedHandler),
-		"action":       "storing_method",
-	}).Info("Storing method handler in map")
-
 	s.methodsMutex.Lock()
 	s.methods[name] = wrappedHandler
 	s.methodsMutex.Unlock()
@@ -243,11 +236,6 @@ func (s *WebSocketServer) registerMethod(name string, handler MethodHandler, ver
 	s.methodVersions[name] = version
 	s.methodVersionsMutex.Unlock()
 
-	s.logger.WithFields(logging.Fields{
-		"method":  name,
-		"version": version,
-		"action":  "register_method",
-	}).Debug("Method registered with security and metrics wrapper")
 }
 
 // MethodPing implements the ping method

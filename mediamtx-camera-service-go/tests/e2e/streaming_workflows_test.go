@@ -15,7 +15,7 @@ func TestGetStreamURL_ViewerContract(t *testing.T) {
 	fixture := NewE2EFixture(t)
 	require.NoError(t, fixture.ConnectAndAuthenticate(RoleViewer))
 
-	resp, err := fixture.client.GetStreamURL(DefaultCameraID)
+	resp, err := fixture.client.SendJSONRPC("get_stream_url", map[string]interface{}{"device": DefaultCameraID})
 	require.NoError(t, err)
 	require.Nil(t, resp.Error)
 
@@ -60,7 +60,7 @@ func TestGetStreamStatus_ViewerContract(t *testing.T) {
 	fixture := NewE2EFixture(t)
 	require.NoError(t, fixture.ConnectAndAuthenticate(RoleViewer))
 
-	resp, err := fixture.client.GetStreamStatus(DefaultCameraID)
+	resp, err := fixture.client.SendJSONRPC("get_stream_status", map[string]interface{}{"device": DefaultCameraID})
 	require.NoError(t, err)
 	// May be active or not; still validate envelope
 	if resp.Error != nil {
@@ -80,7 +80,7 @@ func TestGetStreams_List(t *testing.T) {
 	fixture := NewE2EFixture(t)
 	require.NoError(t, fixture.ConnectAndAuthenticate(RoleViewer))
 
-	resp, err := fixture.client.GetStreams()
+	resp, err := fixture.client.SendJSONRPC("get_streams", nil)
 	require.NoError(t, err)
 	if resp.Error != nil {
 		// MediaMTX unavailable yields Dependency Failed (-32050)

@@ -77,7 +77,7 @@ func TestGetStorageInfo_AdminOnly(t *testing.T) {
 
 	// Viewer denied
 	require.NoError(t, fixture.ConnectAndAuthenticate(RoleViewer))
-	denied, err := fixture.client.GetStorageInfo()
+	denied, err := fixture.client.SendJSONRPC("get_storage_info", nil)
 	require.NoError(t, err)
 	require.NotNil(t, denied.Error)
 	ValidateJSONRPCError(t, denied.Error, -32002, "Permission")
@@ -85,7 +85,7 @@ func TestGetStorageInfo_AdminOnly(t *testing.T) {
 
 	// Admin allowed
 	require.NoError(t, fixture.ConnectAndAuthenticate(RoleAdmin))
-	resp, err := fixture.client.GetStorageInfo()
+	resp, err := fixture.client.SendJSONRPC("get_storage_info", nil)
 	require.NoError(t, err)
 	require.Nil(t, resp.Error)
 
@@ -102,7 +102,7 @@ func TestGetServerInfo_AdminContract(t *testing.T) {
 
 	// Viewer denied
 	require.NoError(t, fixture.ConnectAndAuthenticate(RoleViewer))
-	denied, err := fixture.client.GetServerInfo()
+	denied, err := fixture.client.SendJSONRPC("get_server_info", nil)
 	require.NoError(t, err)
 	require.NotNil(t, denied.Error)
 	ValidateJSONRPCError(t, denied.Error, -32002, "Permission")
@@ -110,7 +110,7 @@ func TestGetServerInfo_AdminContract(t *testing.T) {
 
 	// Admin allowed
 	require.NoError(t, fixture.ConnectAndAuthenticate(RoleAdmin))
-	resp, err := fixture.client.GetServerInfo()
+	resp, err := fixture.client.SendJSONRPC("get_server_info", nil)
 	require.NoError(t, err)
 	require.Nil(t, resp.Error)
 
@@ -125,7 +125,11 @@ func TestRetentionPolicyAndCleanup_AdminOnly(t *testing.T) {
 
 	// Operator denied
 	require.NoError(t, fixture.ConnectAndAuthenticate(RoleOperator))
-	deniedSet, err := fixture.client.SetRetentionPolicy("age", 30, 0, true)
+	deniedSet, err := fixture.client.SendJSONRPC("set_retention_policy", map[string]interface{}{
+		"policy_type":  "age",
+		"max_age_days": 30,
+		"enabled":      true,
+	})
 	require.NoError(t, err)
 	require.NotNil(t, deniedSet.Error)
 	ValidateJSONRPCError(t, deniedSet.Error, -32002, "Permission")
@@ -133,7 +137,11 @@ func TestRetentionPolicyAndCleanup_AdminOnly(t *testing.T) {
 
 	// Admin allowed: set policy
 	require.NoError(t, fixture.ConnectAndAuthenticate(RoleAdmin))
-	setResp, err := fixture.client.SetRetentionPolicy("age", 30, 0, true)
+	setResp, err := fixture.client.SendJSONRPC("set_retention_policy", map[string]interface{}{
+		"policy_type":  "age",
+		"max_age_days": 30,
+		"enabled":      true,
+	})
 	require.NoError(t, err)
 	if setResp.Error != nil {
 		// Validate documented error codes if unsupported
@@ -145,7 +153,7 @@ func TestRetentionPolicyAndCleanup_AdminOnly(t *testing.T) {
 	}
 
 	// Admin allowed: cleanup
-	cleanupResp, err := fixture.client.CleanupOldFiles()
+	cleanupResp, err := fixture.client.SendJSONRPC("cleanup_old_files", nil)
 	require.NoError(t, err)
 	if cleanupResp.Error != nil {
 		ValidateJSONRPCError(t, cleanupResp.Error, -32603, "")

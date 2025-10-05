@@ -17,8 +17,13 @@ func TestHealthHTTP_Liveness(t *testing.T) {
 	fixture := NewE2EFixture(t)
 
 	// Health port comes from config; reuse setup config
-	port := fixture.config.Server.HealthPort
-	url := fmt.Sprintf("http://127.0.0.1:%d/health", port)
+	cfg := fixture.setup.GetConfigManager().GetConfig()
+	port := cfg.HTTPHealth.Port
+	path := cfg.HTTPHealth.LiveEndpoint
+	if path == "" {
+		path = "/health"
+	}
+	url := fmt.Sprintf("http://127.0.0.1:%d%s", port, path)
 
 	resp, err := http.Get(url)
 	require.NoError(t, err)
@@ -33,8 +38,13 @@ func TestHealthHTTP_Liveness(t *testing.T) {
 func TestHealthHTTP_Readiness(t *testing.T) {
 	t.Parallel()
 	fixture := NewE2EFixture(t)
-	port := fixture.config.Server.HealthPort
-	url := fmt.Sprintf("http://127.0.0.1:%d/health/ready", port)
+	cfg := fixture.setup.GetConfigManager().GetConfig()
+	port := cfg.HTTPHealth.Port
+	path := cfg.HTTPHealth.ReadyEndpoint
+	if path == "" {
+		path = "/health/ready"
+	}
+	url := fmt.Sprintf("http://127.0.0.1:%d%s", port, path)
 
 	resp, err := http.Get(url)
 	require.NoError(t, err)
@@ -45,8 +55,13 @@ func TestHealthHTTP_Readiness(t *testing.T) {
 func TestHealthHTTP_Detailed(t *testing.T) {
 	t.Parallel()
 	fixture := NewE2EFixture(t)
-	port := fixture.config.Server.HealthPort
-	url := fmt.Sprintf("http://127.0.0.1:%d/health/detailed", port)
+	cfg := fixture.setup.GetConfigManager().GetConfig()
+	port := cfg.HTTPHealth.Port
+	path := cfg.HTTPHealth.DetailedEndpoint
+	if path == "" {
+		path = "/health/detailed"
+	}
+	url := fmt.Sprintf("http://127.0.0.1:%d%s", port, path)
 
 	resp, err := http.Get(url)
 	require.NoError(t, err)

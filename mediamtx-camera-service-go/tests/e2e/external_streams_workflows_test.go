@@ -8,14 +8,14 @@ import (
 )
 
 // Ground truth: docs/api/json_rpc_methods.md §External Stream Discovery Methods
-// Reuse client methods: DiscoverExternalStreams, AddExternalStream, RemoveExternalStream, GetExternalStreams, SetDiscoveryInterval
+// Reuse client by calling SendJSONRPC directly for methods without wrappers
 
 func TestExternalStreams_DiscoveryOperatorOnly(t *testing.T) {
 	fixture := NewE2EFixture(t)
 
 	// Viewer denied
 	require.NoError(t, fixture.ConnectAndAuthenticate(RoleViewer))
-	denied, err := fixture.client.DiscoverExternalStreams()
+	denied, err := fixture.client.SendJSONRPC("discover_external_streams", map[string]interface{}{})
 	require.NoError(t, err)
 	require.NotNil(t, denied.Error)
 	ValidateJSONRPCError(t, denied.Error, -32002, "Permission")
@@ -23,7 +23,7 @@ func TestExternalStreams_DiscoveryOperatorOnly(t *testing.T) {
 
 	// Operator allowed
 	require.NoError(t, fixture.ConnectAndAuthenticate(RoleOperator))
-	resp, err := fixture.client.DiscoverExternalStreams()
+	resp, err := fixture.client.SendJSONRPC("discover_external_streams", map[string]interface{}{})
 	require.NoError(t, err)
 	// If feature disabled, expect Unsupported (-32030). Otherwise result schema.
 	if resp.Error != nil {
@@ -58,7 +58,7 @@ func TestExternalStreams_GetAndInterval(t *testing.T) {
 
 	// Viewer can list
 	require.NoError(t, fixture.ConnectAndAuthenticate(RoleViewer))
-	getResp, err := fixture.client.GetExternalStreams()
+	getResp, err := fixture.client.SendJSONRPC("get_external_streams", nil)
 	require.NoError(t, err)
 	if getResp.Error == nil {
 		_, ok := getResp.Result.(map[string]interface{})
@@ -68,7 +68,7 @@ func TestExternalStreams_GetAndInterval(t *testing.T) {
 
 	// Admin can set interval
 	require.NoError(t, fixture.ConnectAndAuthenticate(RoleAdmin))
-	updResp, err := fixture.client.SetDiscoveryInterval(0)
+	updResp, err := fixture.client.SendJSONRPC("set_discovery_interval", map[string]interface{}{"scan_interval": 0})
 	require.NoError(t, err)
 	if updResp.Error != nil {
 		ValidateJSONRPCError(t, updResp.Error, -32030, "Unsupported")

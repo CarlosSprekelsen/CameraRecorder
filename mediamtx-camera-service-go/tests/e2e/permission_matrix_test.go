@@ -45,16 +45,16 @@ func TestPermissionMatrix_CoreSubset(t *testing.T) {
 			switch c.method {
 			case "get_metrics":
 				r, e := fixture.client.GetSystemMetrics()
-				resp, err = (*JSONRPCResponseAlias)(r), e
+				resp, err = &JSONRPCResponseAlias{Error: r.Error}, e
 			case "get_status":
 				r, e := fixture.client.GetStatus()
-				resp, err = (*JSONRPCResponseAlias)(r), e
+				resp, err = &JSONRPCResponseAlias{Error: r.Error}, e
 			case "get_system_status":
 				r, e := fixture.client.GetSystemStatus()
-				resp, err = (*JSONRPCResponseAlias)(r), e
+				resp, err = &JSONRPCResponseAlias{Error: r.Error}, e
 			case "delete_recording":
 				r, e := fixture.client.DeleteRecording("nonexistent_recording")
-				resp, err = (*JSONRPCResponseAlias)(r), e
+				resp, err = &JSONRPCResponseAlias{Error: r.Error}, e
 			default:
 				t.Fatalf("unhandled method in matrix: %s", c.method)
 			}

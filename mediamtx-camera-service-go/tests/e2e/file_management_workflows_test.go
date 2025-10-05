@@ -64,7 +64,7 @@ func TestGetRecordingInfo_Schema(t *testing.T) {
 	fixture := NewE2EFixture(t)
 	require.NoError(t, fixture.ConnectAndAuthenticate(RoleViewer))
 
-	resp, err := fixture.client.GetRecordingInfo("nonexistent_recording")
+	resp, err := fixture.client.SendJSONRPC("get_recording_info", map[string]interface{}{"filename": "nonexistent_recording"})
 	require.NoError(t, err)
 	if resp.Error != nil {
 		// Validate correct error contract when not found
@@ -84,7 +84,7 @@ func TestGetSnapshotInfo_Schema(t *testing.T) {
 	fixture := NewE2EFixture(t)
 	require.NoError(t, fixture.ConnectAndAuthenticate(RoleViewer))
 
-	resp, err := fixture.client.GetSnapshotInfo("nonexistent_snapshot.jpg")
+	resp, err := fixture.client.SendJSONRPC("get_snapshot_info", map[string]interface{}{"filename": "nonexistent_snapshot.jpg"})
 	require.NoError(t, err)
 	if resp.Error != nil {
 		ValidateJSONRPCError(t, resp.Error, -32010, "not found")
