@@ -18,34 +18,31 @@ import (
 	"testing"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
-	"github.com/stretchr/testify/require"
 )
 
-// E2EWorkflowAsserter adapts WebSocket test infrastructure for E2E workflows
-// This is a thin wrapper - all real work delegated to proven infrastructure
+// E2EWorkflowAsserter provides E2E workflow testing using shared infrastructure
+// Uses tests/testutils/websocket_server.go for server creation
 type E2EWorkflowAsserter struct {
-	t      *testing.T
-	helper *websocket.WebSocketTestHelper
-	client *testutils.WebSocketTestClient
+	t            *testing.T
+	setup        *testutils.UniversalTestSetup
+	serverHelper *sharedutils.WebSocketServerHelper
+	client       *testutils.WebSocketTestClient
 }
 
-// NewE2EWorkflowAsserter creates E2E workflow asserter using proven infrastructure
+// NewE2EWorkflowAsserter creates E2E workflow asserter using shared infrastructure
 func NewE2EWorkflowAsserter(t *testing.T) *E2EWorkflowAsserter {
-	// Use proven WebSocket test infrastructure
-	helper := websocket.NewWebSocketTestHelper(t)
+	// Use shared test infrastructure from tests/testutils/
+	setup := testutils.SetupTest(t, "config_valid_complete.yaml")
+	serverHelper := sharedutils.NewWebSocketServerHelper(t, setup)
 
-	// Create real WebSocket server
-	err := helper.CreateRealServer()
-	require.NoError(t, err, "Failed to create real WebSocket server")
-
-	// Create WebSocket client using proven testutils client
-	client := testutils.NewWebSocketTestClient(t, helper.GetServerURL())
+	// Create WebSocket client using the shared server URL
+	client := testutils.NewWebSocketTestClient(t, serverHelper.GetServerURL())
 
 	asserter := &E2EWorkflowAsserter{
-		t:      t,
-		helper: helper,
-		client: client,
+		t:            t,
+		setup:        setup,
+		serverHelper: serverHelper,
+		client:       client,
 	}
 
 	t.Cleanup(func() { asserter.Cleanup() })
