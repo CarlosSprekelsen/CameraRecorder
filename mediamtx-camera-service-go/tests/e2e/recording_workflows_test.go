@@ -33,64 +33,47 @@ import (
 )
 
 func TestBasicRecordingLifecycle(t *testing.T) {
-	asserter := NewE2EWorkflowAsserter(t)
+	fixture := NewE2EFixture(t)
 	dvh := testutils.NewDataValidationHelper(t)
 
 	// Connect and authenticate
-	err := asserter.ConnectAndAuthenticate("operator")
+	err := fixture.ConnectAndAuthenticate(RoleOperator)
 	require.NoError(t, err)
 
-	// Start recording using proven client method
-	startResp, err := asserter.StartRecording("camera0")
+	// Start recording (domain helper)
+	rec, err := fixture.StartRecording(DefaultCameraID)
 	require.NoError(t, err)
-	require.Nil(t, startResp.Error)
-
-	result := startResp.Result.(map[string]interface{})
-	basename := result["filename"].(string)
-	cfg := asserter.setup.GetConfigManager().GetConfig()
-	base := cfg.MediaMTX.RecordingsPath
-	if base == "" {
-		base = cfg.Storage.DefaultPath
-	}
-	format := cfg.Recording.RecordFormat
-	useSubdirs := cfg.Recording.UseDeviceSubdirs
-	recordingPath := testutils.BuildRecordingFilePath(base, "camera0", basename, useSubdirs, format)
 
 	// Wait for file creation using testutils
-	success := dvh.WaitForFileCreation(recordingPath, testutils.DefaultTestTimeout, "recording file")
+	success := dvh.WaitForFileCreation(rec.FilePath(), testutils.DefaultTestTimeout, "recording file")
 	require.True(t, success, "Recording file should be created")
 
 	// Verify file growing
-	initialSize := getRecordingFileSize(t, recordingPath)
-	time.Sleep(testutils.UniversalTimeoutShort)
-	finalSize := getRecordingFileSize(t, recordingPath)
-	assert.Greater(t, finalSize, initialSize, "File should be growing")
+	rec.AssertGrowing()
 
-	// Stop recording using proven client method
-	stopResp, err := asserter.StopRecording("camera0")
-	require.NoError(t, err)
-	require.Nil(t, stopResp.Error)
+	// Stop recording
+	require.NoError(t, rec.Stop())
 
 	// Verify final file
-	dvh.AssertFileExists(recordingPath, testutils.UniversalMinRecordingFileSize, "final recording")
+	rec.AssertFileExists(dvh)
 }
 
 func TestRecordingWithDurationParameter(t *testing.T) {
-	asserter := NewE2EWorkflowAsserter(t)
+	fixture := NewE2EFixture(t)
 	dvh := testutils.NewDataValidationHelper(t)
 
 	// Connect and authenticate
-	err := asserter.ConnectAndAuthenticate("operator")
+	err := fixture.ConnectAndAuthenticate(RoleOperator)
 	require.NoError(t, err)
 
-	// Start recording with 5 second duration using proven client method
-	startResp, err := asserter.StartRecordingWithDuration("camera0", 5)
+	// Start recording with 5 second duration
+	startResp, err := fixture.client.StartRecordingWithDuration(DefaultCameraID, 5)
 	require.NoError(t, err)
 	require.Nil(t, startResp.Error)
 
 	result := startResp.Result.(map[string]interface{})
 	basename := result["filename"].(string)
-	cfg := asserter.setup.GetConfigManager().GetConfig()
+	cfg := fixture.setup.GetConfigManager().GetConfig()
 	base := cfg.MediaMTX.RecordingsPath
 	if base == "" {
 		base = cfg.Storage.DefaultPath
@@ -107,7 +90,7 @@ func TestRecordingWithDurationParameter(t *testing.T) {
 	time.Sleep(testutils.UniversalTimeoutVeryLong)
 
 	// Verify recording stopped automatically
-	stopResp, err := asserter.StopRecording("camera0")
+	stopResp, err := fixture.client.StopRecording(DefaultCameraID)
 	require.NoError(t, err)
 	// If already stopped, server may return an error; log and proceed
 	if stopResp.Error != nil {
@@ -119,22 +102,22 @@ func TestRecordingWithDurationParameter(t *testing.T) {
 }
 
 func TestMultipleCameraRecording(t *testing.T) {
-	asserter := NewE2EWorkflowAsserter(t)
+	fixture := NewE2EFixture(t)
 	dvh := testutils.NewDataValidationHelper(t)
 
 	// Connect and authenticate
-	err := asserter.ConnectAndAuthenticate("operator")
+	err := fixture.ConnectAndAuthenticate(RoleOperator)
 	require.NoError(t, err)
 
 	// Start recording from camera0
-	startResp0, err := asserter.StartRecording("camera0")
+	startResp0, err := fixture.client.StartRecording(DefaultCameraID)
 	require.NoError(t, err)
 	require.Nil(t, startResp0.Error)
 	var recordingPath0 string
 	{
 		r0 := startResp0.Result.(map[string]interface{})
 		basename0 := r0["filename"].(string)
-		cfg := asserter.setup.GetConfigManager().GetConfig()
+		cfg := fixture.setup.GetConfigManager().GetConfig()
 		base := cfg.MediaMTX.RecordingsPath
 		if base == "" {
 			base = cfg.Storage.DefaultPath
@@ -145,14 +128,14 @@ func TestMultipleCameraRecording(t *testing.T) {
 	}
 
 	// Start recording from camera1
-	startResp1, err := asserter.StartRecording("camera1")
+	startResp1, err := fixture.client.StartRecording("camera1")
 	require.NoError(t, err)
 	require.Nil(t, startResp1.Error)
 	var recordingPath1 string
 	{
 		r1 := startResp1.Result.(map[string]interface{})
 		basename1 := r1["filename"].(string)
-		cfg := asserter.setup.GetConfigManager().GetConfig()
+		cfg := fixture.setup.GetConfigManager().GetConfig()
 		base := cfg.MediaMTX.RecordingsPath
 		if base == "" {
 			base = cfg.Storage.DefaultPath
@@ -175,8 +158,8 @@ func TestMultipleCameraRecording(t *testing.T) {
 	assert.Greater(t, size1, int64(0), "Camera1 recording should have content")
 
 	// Stop both recordings
-	asserter.StopRecording("camera0")
-	asserter.StopRecording("camera1")
+	fixture.client.StopRecording("camera0")
+	fixture.client.StopRecording("camera1")
 
 	// Verify final files
 	dvh.AssertFileExists(recordingPath0, testutils.UniversalMinRecordingFileSize, "final recording 0")
@@ -184,25 +167,25 @@ func TestMultipleCameraRecording(t *testing.T) {
 }
 
 func TestRecordingListWorkflow(t *testing.T) {
-	asserter := NewE2EWorkflowAsserter(t)
+	fixture := NewE2EFixture(t)
 
 	// Connect and authenticate
-	err := asserter.ConnectAndAuthenticate("operator")
+	err := fixture.ConnectAndAuthenticate(RoleOperator)
 	require.NoError(t, err)
 
 	// Create a recording first
-	startResp, err := asserter.StartRecording("camera0")
+	startResp, err := fixture.client.StartRecording(DefaultCameraID)
 	require.NoError(t, err)
 	require.Nil(t, startResp.Error)
 
 	// Wait a moment then stop
 	time.Sleep(testutils.UniversalTimeoutShort)
-	stopResp, err := asserter.StopRecording("camera0")
+	stopResp, err := fixture.client.StopRecording(DefaultCameraID)
 	require.NoError(t, err)
 	require.Nil(t, stopResp.Error)
 
 	// List recordings using proven client method
-	listResp, err := asserter.ListRecordings()
+	listResp, err := fixture.client.ListRecordings()
 	require.NoError(t, err)
 	require.Nil(t, listResp.Error)
 

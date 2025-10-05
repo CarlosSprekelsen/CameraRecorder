@@ -27,23 +27,23 @@ import (
 )
 
 func TestCompleteCameraDiscoveryWorkflow(t *testing.T) {
-	asserter := NewE2EWorkflowAsserter(t)
-	
+	fixture := NewE2EFixture(t)
+
 	// Connect and authenticate using proven flow
-	err := asserter.ConnectAndAuthenticate("admin")
+	err := fixture.ConnectAndAuthenticate(RoleAdmin)
 	require.NoError(t, err, "Authentication should succeed")
-	
+
 	// Get camera list using proven client method
-	response, err := asserter.GetCameraList()
+	response, err := fixture.client.GetCameraList()
 	require.NoError(t, err, "Get camera list should succeed")
 	require.Nil(t, response.Error, "Should not have error")
-	
+
 	// Verify response structure
 	result := response.Result.(map[string]interface{})
 	require.Contains(t, result, "cameras")
 	cameras := result["cameras"].([]interface{})
 	assert.NotEmpty(t, cameras, "Should have at least one camera")
-	
+
 	// Verify camera structure
 	for _, camera := range cameras {
 		cam := camera.(map[string]interface{})
@@ -54,30 +54,30 @@ func TestCompleteCameraDiscoveryWorkflow(t *testing.T) {
 }
 
 func TestCameraStatusQueryWorkflow(t *testing.T) {
-	asserter := NewE2EWorkflowAsserter(t)
-	
+	fixture := NewE2EFixture(t)
+
 	// Connect and authenticate
-	err := asserter.ConnectAndAuthenticate("admin")
+	err := fixture.ConnectAndAuthenticate(RoleAdmin)
 	require.NoError(t, err)
-	
+
 	// Get camera list first
-	listResp, err := asserter.GetCameraList()
+	listResp, err := fixture.client.GetCameraList()
 	require.NoError(t, err)
 	require.Nil(t, listResp.Error)
-	
+
 	result := listResp.Result.(map[string]interface{})
 	cameras := result["cameras"].([]interface{})
 	require.NotEmpty(t, cameras)
-	
+
 	// Get first camera ID
 	firstCamera := cameras[0].(map[string]interface{})
 	deviceID := firstCamera["device"].(string)
-	
+
 	// Query camera status using proven client method
-	statusResp, err := asserter.GetCameraStatus(deviceID)
+	statusResp, err := fixture.client.GetCameraStatus(deviceID)
 	require.NoError(t, err)
 	require.Nil(t, statusResp.Error)
-	
+
 	// Verify status response
 	status := statusResp.Result.(map[string]interface{})
 	assert.Equal(t, deviceID, status["device"])
@@ -86,29 +86,29 @@ func TestCameraStatusQueryWorkflow(t *testing.T) {
 }
 
 func TestCameraCapabilitiesWorkflow(t *testing.T) {
-	asserter := NewE2EWorkflowAsserter(t)
-	
+	fixture := NewE2EFixture(t)
+
 	// Connect and authenticate
-	err := asserter.ConnectAndAuthenticate("admin")
+	err := fixture.ConnectAndAuthenticate(RoleAdmin)
 	require.NoError(t, err)
-	
+
 	// Get cameras and query capabilities
-	listResp, err := asserter.GetCameraList()
+	listResp, err := fixture.client.GetCameraList()
 	require.NoError(t, err)
 	require.Nil(t, listResp.Error)
-	
+
 	result := listResp.Result.(map[string]interface{})
 	cameras := result["cameras"].([]interface{})
-	
+
 	for _, camera := range cameras {
 		cam := camera.(map[string]interface{})
 		deviceID := cam["device"].(string)
-		
+
 		// Get capabilities using proven client method
-		capsResp, err := asserter.GetCameraCapabilities(deviceID)
+		capsResp, err := fixture.client.GetCameraCapabilities(deviceID)
 		require.NoError(t, err)
 		require.Nil(t, capsResp.Error)
-		
+
 		caps := capsResp.Result.(map[string]interface{})
 		assert.Contains(t, caps, "formats")
 		assert.Contains(t, caps, "resolutions")

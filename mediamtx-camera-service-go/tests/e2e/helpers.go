@@ -22,9 +22,9 @@ import (
 	testutilsshared "github.com/camerarecorder/mediamtx-camera-service-go/tests/testutils"
 )
 
-// E2EWorkflowAsserter provides E2E workflow testing using shared infrastructure
+// E2EFixture provides E2E testing utilities backed by real server and clients
 // Uses tests/testutils/websocket_server.go for server creation
-type E2EWorkflowAsserter struct {
+type E2EFixture struct {
 	t            *testing.T
 	setup        *testutils.UniversalTestSetup
 	serverHelper *testutilsshared.WebSocketServerHelper
@@ -32,8 +32,15 @@ type E2EWorkflowAsserter struct {
 	secHelper    *testutils.SecurityHelper
 }
 
-// NewE2EWorkflowAsserter creates E2E workflow asserter using shared infrastructure
-func NewE2EWorkflowAsserter(t *testing.T) *E2EWorkflowAsserter {
+const (
+	DefaultCameraID = "camera0"
+	RoleViewer      = "viewer"
+	RoleOperator    = "operator"
+	RoleAdmin       = "admin"
+)
+
+// NewE2EFixture creates the E2E fixture using shared infrastructure
+func NewE2EFixture(t *testing.T) *E2EFixture {
 	// Use shared test infrastructure from tests/testutils/
 	setup := testutils.SetupTest(t, "config_valid_complete.yaml")
 	serverHelper := testutilsshared.NewWebSocketServerHelper(t, setup)
@@ -42,7 +49,7 @@ func NewE2EWorkflowAsserter(t *testing.T) *E2EWorkflowAsserter {
 	client := testutils.NewWebSocketTestClient(t, serverHelper.GetServerURL())
 	secHelper := testutils.NewSecurityHelper(t, setup)
 
-	asserter := &E2EWorkflowAsserter{
+	asserter := &E2EFixture{
 		t:            t,
 		setup:        setup,
 		serverHelper: serverHelper,
@@ -55,7 +62,7 @@ func NewE2EWorkflowAsserter(t *testing.T) *E2EWorkflowAsserter {
 }
 
 // ConnectAndAuthenticate establishes connection and authenticates
-func (a *E2EWorkflowAsserter) ConnectAndAuthenticate(role string) error {
+func (a *E2EFixture) ConnectAndAuthenticate(role string) error {
 	// Connect using proven client
 	err := a.client.Connect()
 	if err != nil {
@@ -72,73 +79,40 @@ func (a *E2EWorkflowAsserter) ConnectAndAuthenticate(role string) error {
 	return a.client.Authenticate(token)
 }
 
-// SendJSONRPC delegates to proven client implementation
-func (a *E2EWorkflowAsserter) SendJSONRPC(method string, params interface{}) (*testutils.JSONRPCResponse, error) {
-	return a.client.SendJSONRPC(method, params)
+// RecordingPath builds the absolute expected recording path from config
+func (a *E2EFixture) RecordingPath(cameraID, basename string) string {
+	cfg := a.setup.GetConfigManager().GetConfig()
+	base := cfg.MediaMTX.RecordingsPath
+	if base == "" {
+		base = cfg.Storage.DefaultPath
+	}
+	return testutils.BuildRecordingFilePath(
+		base,
+		cameraID,
+		basename,
+		cfg.Recording.UseDeviceSubdirs,
+		cfg.Recording.RecordFormat,
+	)
 }
 
-// GetCameraList workflow helper
-func (a *E2EWorkflowAsserter) GetCameraList() (*testutils.JSONRPCResponse, error) {
-	return a.client.GetCameraList()
-}
-
-// GetCameraStatus workflow helper
-func (a *E2EWorkflowAsserter) GetCameraStatus(device string) (*testutils.JSONRPCResponse, error) {
-	return a.client.GetCameraStatus(device)
-}
-
-// GetCameraCapabilities workflow helper
-func (a *E2EWorkflowAsserter) GetCameraCapabilities(device string) (*testutils.JSONRPCResponse, error) {
-	return a.client.GetCameraCapabilities(device)
-}
-
-// StartRecording workflow helper
-func (a *E2EWorkflowAsserter) StartRecording(device string) (*testutils.JSONRPCResponse, error) {
-	return a.client.StartRecording(device)
-}
-
-// StartRecordingWithDuration workflow helper
-func (a *E2EWorkflowAsserter) StartRecordingWithDuration(device string, duration int) (*testutils.JSONRPCResponse, error) {
-	return a.client.StartRecordingWithDuration(device, duration)
-}
-
-// StopRecording workflow helper
-func (a *E2EWorkflowAsserter) StopRecording(device string) (*testutils.JSONRPCResponse, error) {
-	return a.client.StopRecording(device)
-}
-
-// ListRecordings workflow helper
-func (a *E2EWorkflowAsserter) ListRecordings() (*testutils.JSONRPCResponse, error) {
-	return a.client.ListRecordings()
-}
-
-// TakeSnapshot workflow helper
-func (a *E2EWorkflowAsserter) TakeSnapshot(device string) (*testutils.JSONRPCResponse, error) {
-	return a.client.TakeSnapshot(device)
-}
-
-// TakeSnapshotWithFormat workflow helper
-func (a *E2EWorkflowAsserter) TakeSnapshotWithFormat(device string, format string, quality int) (*testutils.JSONRPCResponse, error) {
-	return a.client.TakeSnapshotWithFormat(device, format, quality)
-}
-
-// ListSnapshots workflow helper
-func (a *E2EWorkflowAsserter) ListSnapshots() (*testutils.JSONRPCResponse, error) {
-	return a.client.ListSnapshots()
-}
-
-// GetSystemHealth workflow helper
-func (a *E2EWorkflowAsserter) GetSystemHealth() (*testutils.JSONRPCResponse, error) {
-	return a.client.GetSystemHealth()
-}
-
-// GetSystemMetrics workflow helper
-func (a *E2EWorkflowAsserter) GetSystemMetrics() (*testutils.JSONRPCResponse, error) {
-	return a.client.GetSystemMetrics()
+// SnapshotPath builds the absolute expected snapshot path from config
+func (a *E2EFixture) SnapshotPath(cameraID, basename string) string {
+	cfg := a.setup.GetConfigManager().GetConfig()
+	base := cfg.MediaMTX.SnapshotsPath
+	if base == "" {
+		base = cfg.Storage.DefaultPath
+	}
+	return testutils.BuildSnapshotFilePath(
+		base,
+		cameraID,
+		basename,
+		cfg.Snapshots.UseDeviceSubdirs,
+		cfg.Snapshots.Format,
+	)
 }
 
 // Cleanup delegates to helper cleanup
-func (a *E2EWorkflowAsserter) Cleanup() {
+func (a *E2EFixture) Cleanup() {
 	if a.client != nil {
 		a.client.Close()
 	}
