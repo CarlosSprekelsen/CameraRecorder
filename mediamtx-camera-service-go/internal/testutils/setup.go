@@ -29,6 +29,11 @@ type UniversalTestSetup struct {
 
 // SetupTest creates universal test setup (inspired by MediaMTX helper)
 func SetupTest(t *testing.T, fixtureName string) *UniversalTestSetup {
+	// Load test environment variables from .test_env file
+	// This must happen before any configuration loading to ensure
+	// CAMERA_SERVICE_* environment variables are available for Viper
+	LoadDotTestEnvOnce(t)
+
 	// Create logger using standardized pattern
 	logger := logging.GetLogger("test-universal")
 

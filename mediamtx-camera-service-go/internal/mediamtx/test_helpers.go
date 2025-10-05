@@ -131,6 +131,9 @@ type MediaMTXTestHelper struct {
 // SetupMediaMTXTest - UNIVERSAL TEST SETUP FUNCTION
 // This function eliminates boilerplate setup code across all MediaMTX tests.
 //
+// DEPRECATED: use testutils.SetupTest(t, "config_valid_complete.yaml") instead.
+// This function will be removed in a future version.
+//
 // REPLACES these 5 lines of repetitive code:
 //
 //	helper := NewMediaMTXTestHelper(t, nil)
@@ -156,6 +159,8 @@ func SetupMediaMTXTest(t *testing.T) (*MediaMTXTestHelper, context.Context) {
 }
 
 // SetupMediaMTXTestHelperOnly - For tests that don't need context
+// DEPRECATED: use testutils.SetupTest(t, "config_valid_complete.yaml") instead.
+// This function will be removed in a future version.
 // Returns only the helper for tests that don't use context operations
 func SetupMediaMTXTestHelperOnly(t *testing.T) *MediaMTXTestHelper {
 	helper := NewMediaMTXTestHelper(t, nil)
@@ -273,16 +278,16 @@ func NewMediaMTXTestHelper(t *testing.T, testConfig *MediaMTXTestConfig) *MediaM
 
 	// CRITICAL: Create directories BEFORE config validation (fixes permission issues)
 	dirManager := testutils.NewDirectoryManager(t)
-	dirManager.CreateDirectoriesFromFixture("config_clean_minimal.yaml")
+	dirManager.CreateDirectoriesFromFixture("config_valid_complete.yaml")
 
 	// Create config manager for centralized configuration using working validated fixture
-	// ⚠️  MANDATORY: Use ONLY config_clean_minimal.yaml for testing - SINGLE SOURCE OF TRUTH
-	// ❌ DO NOT USE: config_test_minimal.yaml (NOT FOR TESTING - production/other uses)
-	configManager := CreateConfigManagerWithFixture(t, "config_clean_minimal.yaml")
+	// ⚠️  MANDATORY: Use ONLY config_valid_complete.yaml for testing - SINGLE SOURCE OF TRUTH
+	// ❌ DO NOT USE: config_valid_complete.yaml (NOT FOR TESTING - production/other uses)
+	configManager := CreateConfigManagerWithFixture(t, "config_valid_complete.yaml")
 
 	// Load configuration
-	// ⚠️  MANDATORY: Use ONLY config_clean_minimal.yaml for testing - SINGLE SOURCE OF TRUTH
-	configPath := "../../tests/fixtures/config_clean_minimal.yaml"
+	// ⚠️  MANDATORY: Use ONLY config_valid_complete.yaml for testing - SINGLE SOURCE OF TRUTH
+	configPath := "../../tests/fixtures/config_valid_complete.yaml"
 	logger.Info("Loading test configuration", "config_path", configPath)
 	err := configManager.LoadConfig(configPath)
 	if err != nil {
@@ -582,8 +587,8 @@ func (h *MediaMTXTestHelper) GetCameraMonitor() camera.CameraMonitor {
 	h.cameraMonitorOnce.Do(func() {
 		// Create real camera monitor with SAME configuration as controller (test fixture)
 		// This ensures configuration consistency between camera monitor and controller
-		// ⚠️  MANDATORY: Use ONLY config_clean_minimal.yaml for testing - SINGLE SOURCE OF TRUTH
-		configManager := CreateConfigManagerWithFixture(nil, "config_clean_minimal.yaml")
+		// ⚠️  MANDATORY: Use ONLY config_valid_complete.yaml for testing - SINGLE SOURCE OF TRUTH
+		configManager := CreateConfigManagerWithFixture(nil, "config_valid_complete.yaml")
 		logger := logging.GetLogger("mediamtx.camera_monitor") // Component-specific logger
 
 		// Use real implementations for camera hardware
@@ -904,8 +909,8 @@ func (h *MediaMTXTestHelper) GetReadyController(t *testing.T) (MediaMTXControlle
 
 // GetConfiguredSnapshotPath returns the snapshot path from the fixture configuration
 // This follows the architecture principle of using configured paths instead of hardcoded paths
-// ⚠️  MANDATORY: Uses config_clean_minimal.yaml fixture - SINGLE SOURCE OF TRUTH for testing
-// ❌ DO NOT USE: config_test_minimal.yaml (NOT FOR TESTING - production/other uses)
+// ⚠️  MANDATORY: Uses config_valid_complete.yaml fixture - SINGLE SOURCE OF TRUTH for testing
+// ❌ DO NOT USE: config_valid_complete.yaml (NOT FOR TESTING - production/other uses)
 func (h *MediaMTXTestHelper) GetConfiguredSnapshotPath() string {
 	configManager := h.GetConfigManager()
 	if configManager == nil {
@@ -929,7 +934,7 @@ func (h *MediaMTXTestHelper) GetConfiguredSnapshotPath() string {
 }
 
 // GetRecordingConfig returns the recording configuration from the fixture
-// ⚠️  MANDATORY: Uses config_clean_minimal.yaml fixture - SINGLE SOURCE OF TRUTH for testing
+// ⚠️  MANDATORY: Uses config_valid_complete.yaml fixture - SINGLE SOURCE OF TRUTH for testing
 func (h *MediaMTXTestHelper) GetRecordingConfig() *configpkg.RecordingConfig {
 	configManager := h.GetConfigManager()
 	if configManager == nil {
@@ -986,8 +991,8 @@ func (h *MediaMTXTestHelper) GetConfiguredRecordingFormat() string {
 }
 
 // GetConfiguredRecordingPath returns the recording path from the fixture configuration
-// ⚠️  MANDATORY: Uses config_clean_minimal.yaml fixture - SINGLE SOURCE OF TRUTH for testing
-// ❌ DO NOT USE: config_test_minimal.yaml (NOT FOR TESTING - production/other uses)
+// ⚠️  MANDATORY: Uses config_valid_complete.yaml fixture - SINGLE SOURCE OF TRUTH for testing
+// ❌ DO NOT USE: config_valid_complete.yaml (NOT FOR TESTING - production/other uses)
 func (h *MediaMTXTestHelper) GetConfiguredRecordingPath() string {
 	configManager := h.GetConfigManager()
 	if configManager == nil {

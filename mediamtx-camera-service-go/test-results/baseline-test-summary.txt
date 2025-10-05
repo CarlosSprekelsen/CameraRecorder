@@ -1,0 +1,32 @@
+BASELINE TEST RESULTS - Test Setup Consolidation Migration
+================================================================
+
+Date: 2025-10-04 22:12:06
+Command: go test ./... -v
+
+SUMMARY:
+- Total test lines: 542
+- Failed packages: Multiple (websocket module has config validation failures)
+- Main failure pattern: Configuration validation errors for config_valid_complete.yaml
+
+FAILURE PATTERN:
+- Error: configuration validation failed: validation error for field 'config': 
+  configuration validation failed: [validation error for field 'server.websocket_path': 
+  websocket path cannot be empty failed to validate codec configuration: 
+  validation error for field 'mediamtx.codec.video_profile': 
+  video profile must be one of [baseline main high high422 high444], got  
+  validation error for field 'security.jwt_secret_key': JWT secret key cannot be empty]
+
+AFFECTED MODULES:
+- internal/websocket: Multiple integration tests failing
+- Tests using testutils.SetupTest(t, "config_valid_complete.yaml") are failing
+- Tests using testutils.SetupTest(t, "config_websocket_test.yaml") are failing
+
+ROOT CAUSE:
+- Fixture files (config_valid_complete.yaml, config_websocket_test.yaml) have validation issues
+- Missing required fields: websocket_path, video_profile, jwt_secret_key
+
+MIGRATION APPROACH:
+- Need to fix fixture validation issues before proceeding with setup consolidation
+- This baseline shows the current state with existing test setup helpers
+- After migration, we need to ensure same test results (or better if we fix fixtures)

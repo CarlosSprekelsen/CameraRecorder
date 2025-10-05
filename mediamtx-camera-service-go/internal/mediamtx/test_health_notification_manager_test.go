@@ -28,7 +28,7 @@ import (
 // createHealthNotificationManagerFromFixture creates a health notification manager using test fixture
 func createHealthNotificationManagerFromFixture(t *testing.T) (*HealthNotificationManager, *MockSystemEventNotifier) {
 	// Use proper test fixture instead of hardcoding configuration
-	configManager := CreateConfigManagerWithFixture(t, "config_clean_minimal.yaml")
+	configManager := CreateConfigManagerWithFixture(t, "config_valid_complete.yaml")
 	require.NotNil(t, configManager, "Config manager should not be nil")
 
 	// Get the actual configuration from the fixture

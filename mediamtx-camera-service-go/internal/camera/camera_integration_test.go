@@ -223,28 +223,12 @@ func TestCameraMonitor_Integration_EdgeCases(t *testing.T) {
 		asserter.AssertMonitorStart()
 		asserter.AssertMonitorReadiness()
 
-		// Test V4L2 snapshot args with different parameters
-		testCases := []struct {
-			name   string
-			device string
-			output string
-			format string
-			width  int
-			height int
-		}{
-			{"default_params", "/dev/video0", "/tmp/test1.jpg", "mjpeg", 640, 480},
-			{"high_res", "/dev/video0", "/tmp/test2.jpg", "mjpeg", 1920, 1080},
-			{"low_res", "/dev/video0", "/tmp/test3.jpg", "mjpeg", 320, 240},
-			{"different_format", "/dev/video0", "/tmp/test4.jpg", "yuyv", 640, 480},
-		}
+		// Test V4L2 snapshot args with different parameters using centralized cases
+		standardCases := MakeStandardCases(t)
 
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				args := asserter.GetMonitor().buildV4L2SnapshotArgs(tc.device, tc.output, tc.format, tc.width, tc.height)
-				assert.NotEmpty(t, args, "Snapshot args should not be empty")
-				assert.Contains(t, args, tc.device, "Args should contain device path")
-				assert.Contains(t, args, tc.output, "Args should contain output path")
-				assert.Contains(t, args, tc.format, "Args should contain format")
+		for _, tc := range standardCases {
+			t.Run(tc.Name, func(t *testing.T) {
+				AssertSnapshotArgs(t, asserter.GetMonitor(), tc)
 			})
 		}
 

@@ -58,7 +58,7 @@ type WebSocketTestHelper struct {
 func NewWebSocketTestHelper(t *testing.T) *WebSocketTestHelper {
 	// REMOVED: Global mutex - each test gets isolated controller instance
 	// Use testutils.UniversalTestSetup for fixture-based configuration
-	setup := testutils.SetupTest(t, "config_clean_minimal.yaml")
+	setup := testutils.SetupTest(t, "config_valid_complete.yaml")
 	configManager := setup.GetConfigManager()
 	logger := setup.GetLogger()
 

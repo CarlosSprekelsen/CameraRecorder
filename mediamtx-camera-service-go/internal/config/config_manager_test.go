@@ -38,7 +38,7 @@ func TestConfigManager_LoadConfig(t *testing.T) {
 	}{
 		{
 			name:        "Valid YAML",
-			fixture:     "config_test_minimal.yaml",
+			fixture:     "config_valid_complete.yaml",
 			expectError: false,
 			description: "Should load valid configuration successfully",
 		},
@@ -117,7 +117,7 @@ func TestConfigManager_EnvironmentOverrides(t *testing.T) {
 
 	// Create test directories and config
 	helper.CreateTestDirectories()
-	configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+	configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 	cm := CreateConfigManager()
 	err := cm.LoadConfig(configPath)
@@ -135,7 +135,7 @@ func TestConfigManager_ThreadSafeAccess(t *testing.T) {
 	defer helper.CleanupEnvironment()
 
 	helper.CreateTestDirectories()
-	configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+	configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 	cm := CreateConfigManager()
 	err := cm.LoadConfig(configPath)
@@ -169,7 +169,7 @@ func TestConfigManager_HotReload(t *testing.T) {
 	helper.SetEnvironmentVariable("CAMERA_SERVICE_ENABLE_HOT_RELOAD", "true")
 
 	helper.CreateTestDirectories()
-	configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+	configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 	cm := CreateConfigManager()
 	err := cm.LoadConfig(configPath)
@@ -188,7 +188,7 @@ func TestConfigManager_UpdateCallbacks(t *testing.T) {
 	defer helper.CleanupEnvironment()
 
 	helper.CreateTestDirectories()
-	configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+	configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 	cm := CreateConfigManager()
 
@@ -224,7 +224,7 @@ func TestConfigManager_LoggingConfigurationUpdates(t *testing.T) {
 	helper := NewTestConfigHelper(t)
 	defer helper.CleanupEnvironment()
 	helper.CreateTestDirectories()
-	configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+	configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 	err := cm.LoadConfig(configPath)
 	require.NoError(t, err)
@@ -243,7 +243,7 @@ func TestConfigManager_LoggingConfigurationUpdates(t *testing.T) {
 	})
 
 	// Create a new config file with debug level by copying the existing fixture
-	debugConfigPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+	debugConfigPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 	// Read the existing config and modify just the logging level
 	configContent, err := os.ReadFile(debugConfigPath)
@@ -285,7 +285,7 @@ func TestConfigManager_SaveConfig(t *testing.T) {
 	defer helper.CleanupEnvironment()
 
 	helper.CreateTestDirectories()
-	configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+	configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 	cm := CreateConfigManager()
 	err := cm.LoadConfig(configPath)
@@ -305,7 +305,7 @@ func TestConfigManager_ReloadConfiguration(t *testing.T) {
 	helper.CreateTestDirectories()
 
 	// Create initial config
-	configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+	configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 	cm := CreateConfigManager()
 	err := cm.LoadConfig(configPath)
@@ -339,7 +339,7 @@ func TestConfigManager_Stop(t *testing.T) {
 	helper.CreateTestDirectories()
 
 	// Create config with hot reload enabled
-	configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+	configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 	// Enable hot reload
 	helper.SetEnvironmentVariable("CAMERA_SERVICE_ENABLE_HOT_RELOAD", "true")
@@ -374,7 +374,7 @@ func TestConfigManager_FileWatching(t *testing.T) {
 	defer helper.CleanupEnvironment()
 
 	helper.CreateTestDirectories()
-	configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+	configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 	// Enable hot reload
 	helper.SetEnvironmentVariable("CAMERA_SERVICE_ENABLE_HOT_RELOAD", "true")
@@ -415,7 +415,7 @@ func TestConfigManager_ContextAwareShutdown(t *testing.T) {
 		}()
 
 		// Load config to start file watching
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 		err := cm.LoadConfig(configPath)
 		require.NoError(t, err, "Config should load successfully")
 
@@ -441,7 +441,7 @@ func TestConfigManager_ContextAwareShutdown(t *testing.T) {
 		}()
 
 		// Load config to start file watching
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 		err := cm.LoadConfig(configPath)
 		require.NoError(t, err, "Config should load successfully")
 
@@ -470,7 +470,7 @@ func TestConfigManager_ContextAwareShutdown(t *testing.T) {
 		}()
 
 		// Load config to start file watching
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 		err := cm.LoadConfig(configPath)
 		require.NoError(t, err, "Config should load successfully")
 
@@ -495,7 +495,7 @@ func TestConfigManager_ContextAwareShutdown(t *testing.T) {
 		cm := CreateConfigManager()
 
 		// Load config to start file watching
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 		err := cm.LoadConfig(configPath)
 		require.NoError(t, err, "Config should load successfully")
 
@@ -570,7 +570,7 @@ func TestConfigManager_GetLogger(t *testing.T) {
 		defer helper.CleanupEnvironment()
 
 		helper.CreateTestDirectories()
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
@@ -591,7 +591,7 @@ func TestConfigManager_ValidateFinalConfiguration_EdgeCases(t *testing.T) {
 	defer helper.CleanupEnvironment()
 
 	// Create base valid config
-	baseConfig := helper.LoadFixtureConfig("config_test_minimal.yaml")
+	baseConfig := helper.LoadFixtureConfig("config_valid_complete.yaml")
 
 	testCases := []struct {
 		name          string
@@ -928,7 +928,7 @@ func TestConfigManager_WatchFileChanges_EnterpriseGrade(t *testing.T) {
 
 	t.Run("file_watching_lifecycle_management", func(t *testing.T) {
 		// Test the complete lifecycle of file watching
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
@@ -947,7 +947,7 @@ func TestConfigManager_WatchFileChanges_EnterpriseGrade(t *testing.T) {
 
 	t.Run("file_modification_detection", func(t *testing.T) {
 		// Test that file modifications are detected and trigger reload
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
@@ -987,7 +987,7 @@ func TestConfigManager_WatchFileChanges_EnterpriseGrade(t *testing.T) {
 
 	t.Run("file_removal_handling", func(t *testing.T) {
 		// Test that file removal is handled gracefully
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
@@ -1023,7 +1023,7 @@ func TestConfigManager_WatchFileChanges_EnterpriseGrade(t *testing.T) {
 
 	t.Run("multiple_rapid_changes_debouncing", func(t *testing.T) {
 		// Test that rapid file changes are debounced properly
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
@@ -1072,7 +1072,7 @@ func TestConfigManager_WatchFileChanges_EnterpriseGrade(t *testing.T) {
 
 	t.Run("watcher_error_handling", func(t *testing.T) {
 		// Test that watcher errors are handled gracefully
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
@@ -1112,7 +1112,7 @@ func TestConfigManager_WatchFileChanges_EnterpriseGrade(t *testing.T) {
 
 	t.Run("concurrent_access_safety", func(t *testing.T) {
 		// Test that file watching is thread-safe
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
@@ -1167,7 +1167,7 @@ func TestConfigManager_WatchFileChanges_EnterpriseGrade(t *testing.T) {
 
 	t.Run("stop_signal_handling", func(t *testing.T) {
 		// Test that stop signals are handled properly
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
@@ -1230,7 +1230,7 @@ func TestConfigManager_StartFileWatching_EnterpriseGrade(t *testing.T) {
 
 	t.Run("successful_file_watching_startup", func(t *testing.T) {
 		// Test successful file watching startup
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
@@ -1261,7 +1261,7 @@ func TestConfigManager_StartFileWatching_EnterpriseGrade(t *testing.T) {
 		defer os.RemoveAll(nonexistentDir) // Cleanup
 
 		// Create config file
-		configContent := helper.LoadFixtureConfig("config_test_minimal.yaml")
+		configContent := helper.LoadFixtureConfig("config_valid_complete.yaml")
 		err = os.WriteFile(configPath, []byte(configContent), 0644)
 		require.NoError(t, err, "Should create config file")
 
@@ -1290,7 +1290,7 @@ func TestConfigManager_StartFileWatching_EnterpriseGrade(t *testing.T) {
 
 		// Create config file in readonly directory
 		configPath := filepath.Join(readonlyDir, "config.yaml")
-		configContent := helper.LoadFixtureConfig("config_test_minimal.yaml")
+		configContent := helper.LoadFixtureConfig("config_valid_complete.yaml")
 		err = os.WriteFile(configPath, []byte(configContent), 0644)
 
 		// This might fail due to readonly directory, which is expected
@@ -1319,7 +1319,7 @@ func TestConfigManager_StartFileWatching_EnterpriseGrade(t *testing.T) {
 
 	t.Run("multiple_start_file_watching_calls", func(t *testing.T) {
 		// Test multiple calls to startFileWatching (should be idempotent)
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
@@ -1345,7 +1345,7 @@ func TestConfigManager_StartFileWatching_EnterpriseGrade(t *testing.T) {
 		// This tests the directory resolution and watching logic
 
 		// Create original config file
-		originalPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		originalPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		// Create symlink
 		symlinkPath := filepath.Join(helper.tempDir, "config_symlink.yaml")
@@ -1373,7 +1373,7 @@ func TestConfigManager_StartFileWatching_EnterpriseGrade(t *testing.T) {
 
 		// Create config file in deep directory
 		configPath := filepath.Join(deepDir, "config.yaml")
-		configContent := helper.LoadFixtureConfig("config_test_minimal.yaml")
+		configContent := helper.LoadFixtureConfig("config_valid_complete.yaml")
 		err = os.WriteFile(configPath, []byte(configContent), 0644)
 		require.NoError(t, err, "Should create config file in deep directory")
 
@@ -1398,7 +1398,7 @@ func TestConfigManager_StartFileWatching_EnterpriseGrade(t *testing.T) {
 
 		// Create config file
 		configPath := filepath.Join(specialDir, "config.yaml")
-		configContent := helper.LoadFixtureConfig("config_test_minimal.yaml")
+		configContent := helper.LoadFixtureConfig("config_valid_complete.yaml")
 		err = os.WriteFile(configPath, []byte(configContent), 0644)
 		require.NoError(t, err, "Should create config file with special path")
 
@@ -1416,7 +1416,7 @@ func TestConfigManager_StartFileWatching_EnterpriseGrade(t *testing.T) {
 		// Test rapid start/stop cycles of file watching
 		// This tests the lifecycle management and cleanup
 
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		// Perform multiple rapid start/stop cycles
 		for i := 0; i < 3; i++ {
@@ -1460,7 +1460,7 @@ func TestConfigManager_StartFileWatching_ErrorScenarios(t *testing.T) {
 		}
 
 		longConfigPath := filepath.Join(longPathDir, "config.yaml")
-		configContent := helper.LoadFixtureConfig("config_test_minimal.yaml")
+		configContent := helper.LoadFixtureConfig("config_valid_complete.yaml")
 		err = os.WriteFile(longConfigPath, []byte(configContent), 0644)
 		require.NoError(t, err, "Should create config file in long path")
 
@@ -1495,7 +1495,7 @@ func TestConfigManager_StartFileWatching_ErrorScenarios(t *testing.T) {
 
 	t.Run("watcher_cleanup_on_failure", func(t *testing.T) {
 		// Test that watcher cleanup happens properly on failure
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
@@ -1524,7 +1524,7 @@ func TestConfigManager_ReloadConfiguration_ErrorScenarios(t *testing.T) {
 
 	t.Run("reload_with_file_removal", func(t *testing.T) {
 		// Test reload when file is removed during operation
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
@@ -1545,7 +1545,7 @@ func TestConfigManager_ReloadConfiguration_ErrorScenarios(t *testing.T) {
 
 	t.Run("reload_with_invalid_config", func(t *testing.T) {
 		// Test reload with invalid configuration
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
@@ -1567,7 +1567,7 @@ func TestConfigManager_ReloadConfiguration_ErrorScenarios(t *testing.T) {
 
 	t.Run("reload_with_permission_denied", func(t *testing.T) {
 		// Test reload when file becomes unreadable
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
@@ -1589,7 +1589,7 @@ func TestConfigManager_ReloadConfiguration_ErrorScenarios(t *testing.T) {
 
 	t.Run("reload_with_corrupted_config", func(t *testing.T) {
 		// Test reload with corrupted configuration
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
@@ -1621,7 +1621,7 @@ func TestConfigManager_StopFileWatching_EdgeCases(t *testing.T) {
 
 	t.Run("stop_file_watching_multiple_times", func(t *testing.T) {
 		// Test calling stopFileWatching multiple times (should be idempotent)
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
@@ -1641,7 +1641,7 @@ func TestConfigManager_StopFileWatching_EdgeCases(t *testing.T) {
 
 	t.Run("stop_file_watching_with_timeout", func(t *testing.T) {
 		// Test stop with very short timeout
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
@@ -1661,7 +1661,7 @@ func TestConfigManager_StopFileWatching_EdgeCases(t *testing.T) {
 
 	t.Run("stop_file_watching_with_cancelled_context", func(t *testing.T) {
 		// Test stop with already cancelled context
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		cm := CreateConfigManager()
 		err := cm.LoadConfig(configPath)
@@ -1731,7 +1731,7 @@ func TestConfigManager_ValidateFinalConfiguration_AdvancedEdgeCases(t *testing.T
 
 	t.Run("validation_with_extreme_values", func(t *testing.T) {
 		// Test validation with extreme but valid values
-		configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+		configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 		// Modify config with extreme values
 		modifyConfig := func(config *Config) {

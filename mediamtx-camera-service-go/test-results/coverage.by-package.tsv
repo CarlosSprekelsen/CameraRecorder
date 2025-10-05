@@ -1,0 +1,13 @@
+github.com/camerarecorder/mediamtx-camera-service-go/internal/camera	71.2%
+github.com/camerarecorder/mediamtx-camera-service-go/internal/common	100.0%
+github.com/camerarecorder/mediamtx-camera-service-go/internal/config	55.0%
+github.com/camerarecorder/mediamtx-camera-service-go/internal/constants	100.0%
+github.com/camerarecorder/mediamtx-camera-service-go/internal/health	53.6%
+github.com/camerarecorder/mediamtx-camera-service-go/internal/logging	0.0%
+github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx	4.9%
+github.com/camerarecorder/mediamtx-camera-service-go/internal/security	33.1%
+github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils	0.0%
+github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket	0.0%
+github.com/camerarecorder/mediamtx-camera-service-go/cmd/cli	0.0%
+github.com/camerarecorder/mediamtx-camera-service-go/cmd/jwt-generator	0.0%
+github.com/camerarecorder/mediamtx-camera-service-go/cmd/server	0.0%

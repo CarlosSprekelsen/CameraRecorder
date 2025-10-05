@@ -1,4 +1,7 @@
 # WebSocket Test Configuration - Optimized for Unit Testing
+# DEPRECATED: This fixture is being phased out in favor of config_valid_complete.yaml
+# TODO: Remove this file after all tests migrate to the canonical fixture
+# All tests should use config_valid_complete.yaml with environment variable overrides
 # This configuration is specifically designed for WebSocket unit tests
 # with minimal validation requirements and proper test paths
 

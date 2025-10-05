@@ -353,35 +353,12 @@ func TestCameraMonitor_SnapshotFunctionality_Comprehensive(t *testing.T) {
 
 	// Test 1: buildV4L2SnapshotArgs with various parameters
 	t.Run("buildV4L2SnapshotArgs_various_parameters", func(t *testing.T) {
-		testCases := []struct {
-			name   string
-			device string
-			output string
-			format string
-			width  int
-			height int
-		}{
-			{"default_params", "/dev/video0", "/tmp/test1.jpg", "mjpeg", 640, 480},
-			{"high_res", "/dev/video0", "/tmp/test2.jpg", "mjpeg", 1920, 1080},
-			{"low_res", "/dev/video0", "/tmp/test3.jpg", "mjpeg", 320, 240},
-			{"different_format", "/dev/video0", "/tmp/test4.jpg", "yuyv", 640, 480},
-			{"zero_dimensions", "/dev/video0", "/tmp/test5.jpg", "mjpeg", 0, 0},
-			{"negative_dimensions", "/dev/video0", "/tmp/test6.jpg", "mjpeg", -1, -1},
-			{"very_large_dimensions", "/dev/video0", "/tmp/test7.jpg", "mjpeg", 10000, 10000},
-			{"empty_format", "/dev/video0", "/tmp/test8.jpg", "", 640, 480},
-			{"empty_output", "/dev/video0", "", "mjpeg", 640, 480},
-			{"empty_device", "", "/tmp/test9.jpg", "mjpeg", 640, 480},
-		}
+		// Test only standard cases here - edge and extreme cases are tested elsewhere
+		standardCases := MakeStandardCases(t)
 
-		for _, tc := range testCases {
-			t.Run(tc.name, func(t *testing.T) {
-				args := asserter.GetMonitor().buildV4L2SnapshotArgs(tc.device, tc.output, tc.format, tc.width, tc.height)
-				assert.NotEmpty(t, args, "Snapshot args should not be empty for %s", tc.name)
-				assert.Contains(t, args, tc.device, "Args should contain device path for %s", tc.name)
-				assert.Contains(t, args, tc.output, "Args should contain output path for %s", tc.name)
-				if tc.format != "" {
-					assert.Contains(t, args, tc.format, "Args should contain format for %s", tc.name)
-				}
+		for _, tc := range standardCases {
+			t.Run(tc.Name, func(t *testing.T) {
+				AssertSnapshotArgs(t, asserter.GetMonitor(), tc)
 			})
 		}
 
@@ -399,28 +376,12 @@ func TestCameraMonitor_SnapshotFunctionality_Comprehensive(t *testing.T) {
 		asserter.AssertMonitorStart()
 		asserter.AssertMonitorReadiness()
 
-		// Test snapshot args with extreme values
-		extremeCases := []struct {
-			name   string
-			device string
-			output string
-			format string
-			width  int
-			height int
-		}{
-			{"maximum_int32", "/dev/video0", "/tmp/test1.jpg", "mjpeg", 2147483647, 2147483647},
-			{"minimum_int32", "/dev/video0", "/tmp/test2.jpg", "mjpeg", -2147483648, -2147483648},
-			{"very_long_device_path", string(make([]byte, 1000)), "/tmp/test3.jpg", "mjpeg", 640, 480},
-			{"very_long_output_path", "/dev/video0", string(make([]byte, 1000)), "mjpeg", 640, 480},
-			{"unicode_characters", "/dev/video0", "/tmp/测试.jpg", "mjpeg", 640, 480},
-		}
+		// Test snapshot args with extreme values using centralized cases
+		extremeCases := MakeExtremeCases(t)
 
 		for _, tc := range extremeCases {
-			t.Run(tc.name, func(t *testing.T) {
-				args := asserter.GetMonitor().buildV4L2SnapshotArgs(tc.device, tc.output, tc.format, tc.width, tc.height)
-				assert.NotEmpty(t, args, "Snapshot args should not be empty even with extreme values")
-				assert.Contains(t, args, tc.device, "Args should contain device path")
-				assert.Contains(t, args, tc.output, "Args should contain output path")
+			t.Run(tc.Name, func(t *testing.T) {
+				AssertSnapshotArgs(t, asserter.GetMonitor(), tc)
 			})
 		}
 

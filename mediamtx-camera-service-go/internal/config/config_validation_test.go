@@ -31,7 +31,7 @@ func TestValidateConfig_ValidConfiguration(t *testing.T) {
 	helper.CreateTestDirectories()
 
 	// Load valid config from fixture and create a ConfigManager to load it
-	configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+	configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 	cm := CreateConfigManager()
 	err := cm.LoadConfig(configPath)
@@ -148,7 +148,7 @@ func TestValidateConfig_BoundaryValues(t *testing.T) {
 	helper.CreateTestDirectories()
 
 	// Load valid config from fixture and create a ConfigManager to load it
-	configPath := helper.CreateTempConfigFromFixture("config_test_minimal.yaml")
+	configPath := helper.CreateTempConfigFromFixture("config_valid_complete.yaml")
 
 	cm := CreateConfigManager()
 	err := cm.LoadConfig(configPath)

@@ -21,7 +21,7 @@ func TestConfigTypes_LoadFromFixtures(t *testing.T) {
 	}{
 		{
 			name:    "Minimal Config",
-			fixture: "config_test_minimal.yaml",
+			fixture: "config_valid_complete.yaml",
 		},
 		// Note: Other fixtures use production paths that don't exist in tests
 		// If we need to test other configs, we should create test-friendly versions

@@ -1,0 +1,13 @@
+github.com/camerarecorder/mediamtx-camera-service-go/internal/camera
+github.com/camerarecorder/mediamtx-camera-service-go/internal/common
+github.com/camerarecorder/mediamtx-camera-service-go/internal/config
+github.com/camerarecorder/mediamtx-camera-service-go/internal/constants
+github.com/camerarecorder/mediamtx-camera-service-go/internal/health
+github.com/camerarecorder/mediamtx-camera-service-go/internal/logging
+github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx
+github.com/camerarecorder/mediamtx-camera-service-go/internal/security
+github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils
+github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket
+github.com/camerarecorder/mediamtx-camera-service-go/cmd/cli
+github.com/camerarecorder/mediamtx-camera-service-go/cmd/jwt-generator
+github.com/camerarecorder/mediamtx-camera-service-go/cmd/server

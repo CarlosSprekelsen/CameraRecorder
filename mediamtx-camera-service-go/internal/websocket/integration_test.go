@@ -264,7 +264,7 @@ func TestWebSocket_OpenRPCCompliance_Integration(t *testing.T) {
 // TestWebSocket_ProgressiveReadiness_Performance validates Progressive Readiness performance
 func TestWebSocket_ProgressiveReadiness_Performance(t *testing.T) {
 	// Use testutils for performance testing
-	setup := testutils.SetupTest(t, "config_clean_minimal.yaml")
+	setup := testutils.SetupTest(t, "config_valid_complete.yaml")
 	defer setup.Cleanup()
 
 	// Create helper and server

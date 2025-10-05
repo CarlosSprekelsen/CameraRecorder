@@ -23,14 +23,11 @@ func TestHybridCameraMonitor_SnapshotFunctionality_ReqCAM001_Success(t *testing.
 	assert.NotEmpty(t, snapshotID, "Snapshot ID should not be empty")
 	assert.Contains(t, snapshotID, "v4l2_direct", "Snapshot ID should contain prefix")
 
-	// Test V4L2 snapshot args building
-	outputPath := "/tmp/test_snapshot.jpg"
-	args := asserter.GetMonitor().buildV4L2SnapshotArgs(devicePath, outputPath, "mjpeg", 640, 480)
-
-	assert.NotEmpty(t, args, "V4L2 snapshot args should not be empty")
-	assert.Contains(t, args, devicePath, "Args should contain device path")
-	assert.Contains(t, args, outputPath, "Args should contain output path")
-	assert.Contains(t, args, "mjpeg", "Args should contain format")
+	// Test V4L2 snapshot args building using centralized test case
+	standardCases := MakeStandardCases(t)
+	// Use the first standard case for this test
+	tc := standardCases[0] // "default_params" case
+	AssertSnapshotArgs(t, asserter.GetMonitor(), tc)
 
 	asserter.t.Log("✅ Snapshot functionality validated")
 }

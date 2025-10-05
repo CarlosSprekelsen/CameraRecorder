@@ -4,29 +4,29 @@ import "time"
 
 // ServerConfig represents WebSocket server configuration settings.
 type ServerConfig struct {
-	Host                 string
-	Port                 int
-	WebSocketPath        string
-	MaxConnections       int
-	ReadTimeout          time.Duration
-	WriteTimeout         time.Duration
-	PingInterval         time.Duration
-	PongWait             time.Duration
-	MaxMessageSize       int64
-	ReadBufferSize       int
-	WriteBufferSize      int
-	ShutdownTimeout      time.Duration
-	ClientCleanupTimeout time.Duration
-	AutoCloseAfter       time.Duration
+	Host                 string        `mapstructure:"host"`
+	Port                 int           `mapstructure:"port"`
+	WebSocketPath        string        `mapstructure:"websocket_path"`
+	MaxConnections       int           `mapstructure:"max_connections"`
+	ReadTimeout          time.Duration `mapstructure:"read_timeout"`
+	WriteTimeout         time.Duration `mapstructure:"write_timeout"`
+	PingInterval         time.Duration `mapstructure:"ping_interval"`
+	PongWait             time.Duration `mapstructure:"pong_wait"`
+	MaxMessageSize       int64         `mapstructure:"max_message_size"`
+	ReadBufferSize       int           `mapstructure:"read_buffer_size"`
+	WriteBufferSize      int           `mapstructure:"write_buffer_size"`
+	ShutdownTimeout      time.Duration `mapstructure:"shutdown_timeout"`
+	ClientCleanupTimeout time.Duration `mapstructure:"client_cleanup_timeout"`
+	AutoCloseAfter       time.Duration `mapstructure:"auto_close_after"`
 }
 
 // CodecConfig represents STANAG 4406 codec configuration settings.
 type CodecConfig struct {
-	VideoProfile string
-	VideoLevel   string
-	PixelFormat  string
-	Bitrate      string
-	Preset       string
+	VideoProfile string `mapstructure:"video_profile"`
+	VideoLevel   string `mapstructure:"video_level"`
+	PixelFormat  string `mapstructure:"pixel_format"`
+	Bitrate      string `mapstructure:"bitrate"`
+	Preset       string `mapstructure:"preset"`
 }
 
 // StreamReadinessConfig represents stream readiness configuration.
@@ -46,14 +46,14 @@ type StreamReadinessConfig struct {
 
 // SecurityConfig represents security configuration settings.
 type SecurityConfig struct {
-	RateLimitRequests int
-	RateLimitWindow   time.Duration
-	JWTSecretKey      string
-	JWTExpiryHours    int
-	CORSOrigins       []string
-	CORSMethods       []string
-	CORSHeaders       []string
-	CORSCredentials   bool
+	RateLimitRequests int           `mapstructure:"rate_limit_requests"`
+	RateLimitWindow   time.Duration `mapstructure:"rate_limit_window"`
+	JWTSecretKey      string        `mapstructure:"jwt_secret_key"`
+	JWTExpiryHours    int           `mapstructure:"jwt_expiry_hours"`
+	CORSOrigins       []string      `mapstructure:"cors_origins"`
+	CORSMethods       []string      `mapstructure:"cors_methods"`
+	CORSHeaders       []string      `mapstructure:"cors_headers"`
+	CORSCredentials   bool          `mapstructure:"cors_credentials"`
 }
 
 // StorageConfig represents storage configuration settings.

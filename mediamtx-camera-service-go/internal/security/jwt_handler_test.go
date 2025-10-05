@@ -22,7 +22,7 @@ import (
 
 // TestJWTHandler_TokenGeneration tests JWT token generation functionality
 func TestJWTHandler_TokenGeneration(t *testing.T) {
-	t.Parallel()
+	// Configuration-dependent test - cannot run in parallel
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Use test helper for consistent JWT handler creation
@@ -100,7 +100,7 @@ func TestJWTHandler_CheckRateLimit(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+			// Configuration-dependent test - cannot run in parallel
 			// Create a separate JWT handler for each test case to avoid interference
 			jwtHandler := TestJWTHandler(t)
 
@@ -121,7 +121,7 @@ func TestJWTHandler_CheckRateLimit(t *testing.T) {
 }
 
 func TestJWTHandler_RecordRequest(t *testing.T) {
-	t.Parallel()
+	// Configuration-dependent test - cannot run in parallel
 	jwtHandler := TestJWTHandler(t)
 
 	clientID := "test_client"
@@ -139,7 +139,7 @@ func TestJWTHandler_RecordRequest(t *testing.T) {
 }
 
 func TestJWTHandler_GetClientRateInfo(t *testing.T) {
-	t.Parallel()
+	// Configuration-dependent test - cannot run in parallel
 	jwtHandler := TestJWTHandler(t)
 
 	clientID := "test_client"
@@ -156,7 +156,7 @@ func TestJWTHandler_GetClientRateInfo(t *testing.T) {
 }
 
 func TestJWTHandler_SetRateLimit(t *testing.T) {
-	t.Parallel()
+	// Configuration-dependent test - cannot run in parallel
 	jwtHandler := TestJWTHandler(t)
 
 	// Set custom rate limit
@@ -176,7 +176,7 @@ func TestJWTHandler_SetRateLimit(t *testing.T) {
 }
 
 func TestJWTHandler_CleanupExpiredClients(t *testing.T) {
-	t.Parallel()
+	// Configuration-dependent test - cannot run in parallel
 	jwtHandler := TestJWTHandler(t)
 
 	clientID := "test_client"
@@ -194,7 +194,7 @@ func TestJWTHandler_CleanupExpiredClients(t *testing.T) {
 }
 
 func TestJWTHandler_IsTokenExpired(t *testing.T) {
-	t.Parallel()
+	// Configuration-dependent test - cannot run in parallel
 	jwtHandler := TestJWTHandler(t)
 
 	tests := []struct {
@@ -221,7 +221,7 @@ func TestJWTHandler_IsTokenExpired(t *testing.T) {
 }
 
 func TestJWTHandler_GetSecretKey(t *testing.T) {
-	t.Parallel()
+	// Configuration-dependent test - cannot run in parallel
 	jwtHandler := TestJWTHandler(t)
 
 	secretKey := jwtHandler.GetSecretKey()
@@ -230,7 +230,7 @@ func TestJWTHandler_GetSecretKey(t *testing.T) {
 }
 
 func TestJWTHandler_GetAlgorithm(t *testing.T) {
-	t.Parallel()
+	// Configuration-dependent test - cannot run in parallel
 	jwtHandler := TestJWTHandler(t)
 
 	algorithm := jwtHandler.GetAlgorithm()
@@ -240,7 +240,7 @@ func TestJWTHandler_GetAlgorithm(t *testing.T) {
 
 // TestJWTHandler_TokenValidation tests JWT token validation functionality
 func TestJWTHandler_TokenValidation(t *testing.T) {
-	t.Parallel()
+	// Configuration-dependent test - cannot run in parallel
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Use test helper for consistent JWT handler creation
@@ -276,7 +276,7 @@ func TestJWTHandler_TokenValidation(t *testing.T) {
 
 // TestJWTHandler_ExpiryHandling tests JWT token expiry functionality
 func TestJWTHandler_ExpiryHandling(t *testing.T) {
-	t.Parallel()
+	// Configuration-dependent test - cannot run in parallel
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Create JWT handler directly for unit testing
@@ -306,7 +306,7 @@ func TestJWTHandler_ExpiryHandling(t *testing.T) {
 
 // TestJWTHandler_ClaimsValidation tests JWT claims validation functionality
 func TestJWTHandler_ClaimsValidation(t *testing.T) {
-	t.Parallel()
+	// Configuration-dependent test - cannot run in parallel
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Create JWT handler directly for unit testing
@@ -339,7 +339,7 @@ func TestJWTHandler_ClaimsValidation(t *testing.T) {
 
 // TestJWTHandler_ErrorHandling tests JWT error handling functionality
 func TestJWTHandler_ErrorHandling(t *testing.T) {
-	t.Parallel()
+	// Configuration-dependent test - cannot run in parallel
 	// REQ-SEC-001: JWT token-based authentication for all API access
 
 	// Test invalid secret key
@@ -361,7 +361,7 @@ func TestJWTHandler_ErrorHandling(t *testing.T) {
 // TestJWTHandler_TokenValidation_ErrorPaths tests all JWT validation error paths
 // CRITICAL SECURITY TEST: Comprehensive error path coverage prevents vulnerabilities
 func TestJWTHandler_TokenValidation_ErrorPaths(t *testing.T) {
-	t.Parallel()
+	// Configuration-dependent test - cannot run in parallel
 
 	jwtHandler := TestJWTHandler(t)
 

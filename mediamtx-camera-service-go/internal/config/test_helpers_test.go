@@ -17,6 +17,8 @@ type TestConfigHelper struct {
 }
 
 // NewTestConfigHelper creates a new test configuration helper
+// DEPRECATED: use testutils.NewFixtureLoader and testutils.NewDirectoryManager instead.
+// This function will be removed in a future version.
 func NewTestConfigHelper(t *testing.T) *TestConfigHelper {
 	// Get the fixtures path relative to the project root
 	projectRoot := getProjectRoot()
@@ -52,10 +54,12 @@ func (h *TestConfigHelper) CreateTempConfigFile(content string) string {
 func (h *TestConfigHelper) CreateTestDirectories() {
 	// Create directories that the config validation expects to exist
 	dirs := []string{
-		"/tmp/mediamtx.yml",
-		"/tmp/recordings",
-		"/tmp/snapshots",
-		"/tmp/camera-service.log",
+		"/tmp/test-mediamtx-config.yml",
+		"/tmp/test-recordings",
+		"/tmp/test-snapshots",
+		"/tmp/test-camera-service.log",
+		"/tmp/test-api-keys.json",
+		"/tmp/test-backups/keys",
 	}
 
 	for _, dir := range dirs {

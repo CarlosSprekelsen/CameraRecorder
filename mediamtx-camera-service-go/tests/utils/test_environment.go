@@ -41,12 +41,15 @@ type WebSocketTestEnvironmentManager struct {
 }
 
 // GetWebSocketTestEnvironment returns an isolated test environment
+// DEPRECATED: use testutils.SetupTest(t, "config_websocket_test.yaml") instead.
+// This function will be removed in a future version.
 // FIXED: Uses UniversalTestSetup pattern for proper resource management
 func GetWebSocketTestEnvironment(t *testing.T) *WebSocketTestEnvironmentManager {
 	// REQ-TEST-001: Test environment setup and management
 
-	// FIXED: Use good pattern from internal/testutils
-	setup := testutils.SetupTest(t, "config_websocket_test.yaml")
+	// DEPRECATED: Use single canonical fixture instead of config_websocket_test.yaml
+	// TODO: Remove config_websocket_test.yaml and use config_valid_complete.yaml
+	setup := testutils.SetupTest(t, "config_valid_complete.yaml")
 
 	return &WebSocketTestEnvironmentManager{
 		setup: setup,
@@ -54,6 +57,8 @@ func GetWebSocketTestEnvironment(t *testing.T) *WebSocketTestEnvironmentManager 
 }
 
 // CleanupWebSocketTestEnvironment cleans up the test environment
+// DEPRECATED: use testutils.SetupTest(t, "config_websocket_test.yaml") instead.
+// This function will be removed in a future version.
 // FIXED: Uses UniversalTestSetup cleanup pattern
 func CleanupWebSocketTestEnvironment(t *testing.T, manager *WebSocketTestEnvironmentManager) {
 	// REQ-TEST-003: Resource cleanup and isolation

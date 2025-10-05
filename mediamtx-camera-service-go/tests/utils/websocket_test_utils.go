@@ -102,12 +102,16 @@ func getTestConfigPath(t *testing.T) string {
 }
 
 // SetupWebSocketTestEnvironment creates an isolated test environment
+// SetupWebSocketTestEnvironment creates a WebSocket test environment
+// DEPRECATED: use testutils.SetupTest(t, "config_websocket_test.yaml") instead.
+// This function will be removed in a future version.
 // FIXED: Uses UniversalTestSetup pattern for proper resource management
 func SetupWebSocketTestEnvironment(t *testing.T) *WebSocketTestEnvironment {
 	// REQ-TEST-001: Test environment setup and management
 
-	// FIXED: Use good pattern from internal/testutils
-	setup := testutils.SetupTest(t, "config_websocket_test.yaml")
+	// DEPRECATED: Use single canonical fixture instead of config_websocket_test.yaml
+	// TODO: Remove config_websocket_test.yaml and use config_valid_complete.yaml
+	setup := testutils.SetupTest(t, "config_valid_complete.yaml")
 	configManager := setup.GetConfigManager()
 	logger := setup.GetLogger()
 
@@ -125,6 +129,8 @@ func SetupWebSocketTestEnvironment(t *testing.T) *WebSocketTestEnvironment {
 }
 
 // TeardownWebSocketTestEnvironment cleans up the test environment
+// DEPRECATED: use testutils.SetupTest(t, "config_websocket_test.yaml") instead.
+// This function will be removed in a future version.
 // FIXED: Uses UniversalTestSetup cleanup pattern
 func TeardownWebSocketTestEnvironment(t *testing.T, env *WebSocketTestEnvironment) {
 	// REQ-TEST-001: Test environment cleanup

@@ -291,29 +291,12 @@ func TestCameraMonitor_EdgeCases_Comprehensive(t *testing.T) {
 		asserter.AssertMonitorStart()
 		asserter.AssertMonitorReadiness()
 
-		// Test with extreme parameters
-		extremeCases := []struct {
-			name   string
-			device string
-			output string
-			format string
-			width  int
-			height int
-		}{
-			{"zero_dimensions", "/dev/video0", "/tmp/test1.jpg", "mjpeg", 0, 0},
-			{"negative_dimensions", "/dev/video0", "/tmp/test2.jpg", "mjpeg", -1, -1},
-			{"very_large_dimensions", "/dev/video0", "/tmp/test3.jpg", "mjpeg", 10000, 10000},
-			{"empty_format", "/dev/video0", "/tmp/test4.jpg", "", 640, 480},
-			{"empty_output", "/dev/video0", "", "mjpeg", 640, 480},
-			{"empty_device", "", "/tmp/test5.jpg", "mjpeg", 640, 480},
-		}
+		// Test with extreme parameters using centralized cases
+		extremeCases := MakeExtremeCases(t)
 
 		for _, tc := range extremeCases {
-			t.Run(tc.name, func(t *testing.T) {
-				args := asserter.GetMonitor().buildV4L2SnapshotArgs(tc.device, tc.output, tc.format, tc.width, tc.height)
-				assert.NotEmpty(t, args, "Snapshot args should not be empty even with extreme parameters")
-				assert.Contains(t, args, tc.device, "Args should contain device path")
-				assert.Contains(t, args, tc.output, "Args should contain output path")
+			t.Run(tc.Name, func(t *testing.T) {
+				AssertSnapshotArgs(t, asserter.GetMonitor(), tc)
 			})
 		}
 
