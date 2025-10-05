@@ -47,3 +47,8 @@ func (s *SecurityHelper) GenerateOperatorToken() (string, error) {
 func (s *SecurityHelper) GenerateViewerToken() (string, error) {
 	return s.GenerateTestToken(UniversalTestUserID, "viewer", 24*time.Hour)
 }
+
+// GetJWTHandler returns the JWT handler for direct access when needed
+func (s *SecurityHelper) GetJWTHandler() *security.JWTHandler {
+	return s.jwtHandler
+}

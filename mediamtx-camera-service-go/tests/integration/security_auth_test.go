@@ -247,7 +247,7 @@ func TestSecurity_SessionManagement_ReqSEC003(t *testing.T) {
 
 				// Validate expired sessions rejected
 				// Create expired token by generating with very short expiry
-				expiredToken, err := asserter.jwtHandler.GenerateToken(tt.userID, "user", -1) // Negative hours = expired
+				expiredToken, err := asserter.jwtHandler.GenerateToken(tt.userID, "operator", -1) // Negative hours = expired
 				if err == nil {
 					_, err = asserter.jwtHandler.ValidateToken(expiredToken)
 					assert.Error(t, err, "Expired token should be rejected")
@@ -284,7 +284,7 @@ func TestSecurity_ErrorPropagation_ReqSEC004(t *testing.T) {
 			if tt.name == "valid_token" {
 				// Generate valid token for this test case
 				var err error
-				token, err = asserter.AssertJWTAuthentication(ctx, "test_user", "user")
+				token, err = asserter.AssertJWTAuthentication(ctx, "test_user", "operator")
 				require.NoError(t, err, "Should generate valid token")
 			} else {
 				token = tt.token
