@@ -15,11 +15,12 @@ Key Principles:
 package e2e
 
 import (
-	"testing"
-	"time"
+    "strings"
+    "testing"
+    "time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
-	testutilsshared "github.com/camerarecorder/mediamtx-camera-service-go/tests/testutils"
+    "github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
+    testutilsshared "github.com/camerarecorder/mediamtx-camera-service-go/tests/testutils"
 )
 
 // E2EFixture provides E2E testing utilities backed by real server and clients
@@ -63,11 +64,22 @@ func NewE2EFixture(t *testing.T) *E2EFixture {
 
 // ConnectAndAuthenticate establishes connection and authenticates
 func (a *E2EFixture) ConnectAndAuthenticate(role string) error {
-	// Connect using proven client
-	err := a.client.Connect()
-	if err != nil {
-		return err
-	}
+    // Connect with small retry to avoid race with server listen
+    var err error
+    for i := 0; i < 10; i++ {
+        err = a.client.Connect()
+        if err == nil {
+            break
+        }
+        if strings.Contains(err.Error(), "connection refused") {
+            time.Sleep(100 * time.Millisecond)
+            continue
+        }
+        return err
+    }
+    if err != nil {
+        return err
+    }
 
 	// Get JWT token using proven helper
 	token, err := a.secHelper.GenerateTestToken(testutils.UniversalTestUserID, role, 24*time.Hour)
