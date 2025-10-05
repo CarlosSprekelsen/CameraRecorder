@@ -20,12 +20,29 @@ Coverage Target: 65% E2E coverage milestone
 package e2e
 
 import (
-	"testing"
-	"time"
+    "strings"
+    "testing"
+    "time"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+    "github.com/stretchr/testify/assert"
+    "github.com/stretchr/testify/require"
 )
+
+// retryGetSystemHealth calls GetSystemHealth with brief retries to avoid transient
+// method registration window right after server start.
+func retryGetSystemHealth(t *testing.T, c *testutils.WebSocketTestClient) (*testutils.JSONRPCResponse, error) {
+    t.Helper()
+    var resp *testutils.JSONRPCResponse
+    var err error
+    for i := 0; i < 10; i++ {
+        resp, err = c.GetSystemHealth()
+        if err == nil && !(resp != nil && resp.Error != nil && strings.Contains(strings.ToLower(resp.Error.Message), "method not found")) {
+            return resp, err
+        }
+        time.Sleep(100 * time.Millisecond)
+    }
+    return resp, err
+}
 
 func TestSystemHealthCheckWorkflow(t *testing.T) {
     t.Parallel()
@@ -35,8 +52,8 @@ func TestSystemHealthCheckWorkflow(t *testing.T) {
 	err := fixture.ConnectAndAuthenticate(RoleAdmin)
 	require.NoError(t, err)
 
-	// Get system health status using proven client method
-	healthResp, err := fixture.client.GetSystemHealth()
+    // Get system health status using proven client method (with brief retry)
+    healthResp, err := retryGetSystemHealth(t, fixture.client)
 	require.NoError(t, err)
 	require.Nil(t, healthResp.Error)
 
@@ -123,7 +140,7 @@ func TestHealthMonitoringOverTime(t *testing.T) {
 
 	// Monitor health over time (3 checks with 2-second intervals)
 	for i := 0; i < 3; i++ {
-		healthResp, err := fixture.client.GetSystemHealth()
+        healthResp, err := retryGetSystemHealth(t, fixture.client)
 		require.NoError(t, err)
 		require.Nil(t, healthResp.Error)
 
@@ -185,7 +202,7 @@ func TestHealthWithStressTest(t *testing.T) {
 	}
 
 	// Check health after stress operations
-	healthResp, err := fixture.client.GetSystemHealth()
+    healthResp, err := retryGetSystemHealth(t, fixture.client)
 	require.NoError(t, err)
 	require.Nil(t, healthResp.Error)
 

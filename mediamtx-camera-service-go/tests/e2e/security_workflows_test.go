@@ -33,7 +33,6 @@ import (
 )
 
 func TestAuthenticationSuccessWorkflow(t *testing.T) {
-    t.Parallel()
 	fixture := NewE2EFixture(t)
 
 	// Connect and authenticate using proven flow
@@ -51,7 +50,6 @@ func TestAuthenticationSuccessWorkflow(t *testing.T) {
 }
 
 func TestAuthenticationFailureWorkflow(t *testing.T) {
-    t.Parallel()
 	fixture := NewE2EFixture(t)
 
 	// Connect but don't authenticate
@@ -97,10 +95,10 @@ func TestRoleBasedAuthorizationWorkflow(t *testing.T) {
 	err = fixture.ConnectAndAuthenticate(RoleOperator)
 	require.NoError(t, err, "Operator should authenticate successfully")
 
-    // Operator can access operator-only endpoints (example: list recordings)
-    // Use a read-only check to keep this test parallel-safe
-    _, err = fixture.client.ListRecordings()
-    require.NoError(t, err, "Operator should access recordings list")
+	// Operator can access operator-only endpoints (example: list recordings)
+	// Use a read-only check to keep this test parallel-safe
+	_, err = fixture.client.ListRecordings()
+	require.NoError(t, err, "Operator should access recordings list")
 
 	// Operator cannot access metrics
 	opMetricsResp, err := fixture.client.GetSystemMetrics()
@@ -114,8 +112,8 @@ func TestRoleBasedAuthorizationWorkflow(t *testing.T) {
 	err = fixture.ConnectAndAuthenticate(RoleAdmin)
 	require.NoError(t, err, "Admin should authenticate successfully")
 
-    // Admin can do everything (read-only check here)
-    adminMetricsResp, err := fixture.client.GetSystemMetrics()
+	// Admin can do everything (read-only check here)
+	adminMetricsResp, err := fixture.client.GetSystemMetrics()
 	require.NoError(t, err, "Admin should access metrics")
 	require.Nil(t, adminMetricsResp.Error)
 
@@ -125,7 +123,6 @@ func TestRoleBasedAuthorizationWorkflow(t *testing.T) {
 }
 
 func TestSessionManagementWorkflow(t *testing.T) {
-    t.Parallel()
 	fixture := NewE2EFixture(t)
 
 	// Create first session
@@ -202,27 +199,27 @@ func TestTokenExpiryWorkflow(t *testing.T) {
 }
 
 func TestSecurityWorkflowsIntegration(t *testing.T) {
-    fixture := NewE2EFixture(t)
-    
-    // Viewer permissions (read-only)
-    err := fixture.ConnectAndAuthenticate(RoleViewer)
-    require.NoError(t, err)
-    _, err = fixture.client.GetCameraList()
-    require.NoError(t, err)
-    fixture.client.Close()
-    
-    // Operator permissions (read-only checks only in this parallel-safe test)
-    err = fixture.ConnectAndAuthenticate(RoleOperator)
-    require.NoError(t, err)
-    _, err = fixture.client.GetCameraList()
-    require.NoError(t, err)
-    fixture.client.Close()
-    
-    // Admin permissions (read-only checks only)
-    err = fixture.ConnectAndAuthenticate(RoleAdmin)
-    require.NoError(t, err)
-    _, err = fixture.client.GetCameraList()
-    require.NoError(t, err)
-    _, err = fixture.client.GetSystemMetrics()
-    require.NoError(t, err)
+	fixture := NewE2EFixture(t)
+
+	// Viewer permissions (read-only)
+	err := fixture.ConnectAndAuthenticate(RoleViewer)
+	require.NoError(t, err)
+	_, err = fixture.client.GetCameraList()
+	require.NoError(t, err)
+	fixture.client.Close()
+
+	// Operator permissions (read-only checks only in this parallel-safe test)
+	err = fixture.ConnectAndAuthenticate(RoleOperator)
+	require.NoError(t, err)
+	_, err = fixture.client.GetCameraList()
+	require.NoError(t, err)
+	fixture.client.Close()
+
+	// Admin permissions (read-only checks only)
+	err = fixture.ConnectAndAuthenticate(RoleAdmin)
+	require.NoError(t, err)
+	_, err = fixture.client.GetCameraList()
+	require.NoError(t, err)
+	_, err = fixture.client.GetSystemMetrics()
+	require.NoError(t, err)
 }
