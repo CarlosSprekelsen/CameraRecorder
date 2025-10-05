@@ -52,8 +52,8 @@ func TestSystemHealthCheckWorkflow(t *testing.T) {
 	err := fixture.ConnectAndAuthenticate(RoleAdmin)
 	require.NoError(t, err)
 
-    // Get system health status using proven client method (with brief retry)
-    healthResp, err := retryGetSystemHealth(t, fixture.client)
+    // Get system status (admin) using correct API method
+    healthResp, err := fixture.client.GetStatus()
 	require.NoError(t, err)
 	require.Nil(t, healthResp.Error)
 
@@ -140,7 +140,7 @@ func TestHealthMonitoringOverTime(t *testing.T) {
 
 	// Monitor health over time (3 checks with 2-second intervals)
 	for i := 0; i < 3; i++ {
-        healthResp, err := retryGetSystemHealth(t, fixture.client)
+        healthResp, err := fixture.client.GetStatus()
 		require.NoError(t, err)
 		require.Nil(t, healthResp.Error)
 
@@ -202,7 +202,7 @@ func TestHealthWithStressTest(t *testing.T) {
 	}
 
 	// Check health after stress operations
-    healthResp, err := retryGetSystemHealth(t, fixture.client)
+    healthResp, err := fixture.client.GetStatus()
 	require.NoError(t, err)
 	require.Nil(t, healthResp.Error)
 

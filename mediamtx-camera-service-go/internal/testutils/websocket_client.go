@@ -285,6 +285,16 @@ func (c *WebSocketTestClient) GetSystemMetrics() (*JSONRPCResponse, error) {
 	return c.SendJSONRPC("get_system_metrics", nil)
 }
 
+// GetStatus gets full system status (admin)
+func (c *WebSocketTestClient) GetStatus() (*JSONRPCResponse, error) {
+    return c.SendJSONRPC("get_status", nil)
+}
+
+// GetSystemStatus gets viewer-accessible system readiness
+func (c *WebSocketTestClient) GetSystemStatus() (*JSONRPCResponse, error) {
+    return c.SendJSONRPC("get_system_status", nil)
+}
+
 // Close closes the WebSocket connection
 func (c *WebSocketTestClient) Close() {
 	if c.conn != nil {
