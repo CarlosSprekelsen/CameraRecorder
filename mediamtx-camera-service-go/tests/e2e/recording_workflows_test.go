@@ -35,34 +35,42 @@ import (
 func TestBasicRecordingLifecycle(t *testing.T) {
 	asserter := NewE2EWorkflowAsserter(t)
 	dvh := testutils.NewDataValidationHelper(t)
-	
+
 	// Connect and authenticate
 	err := asserter.ConnectAndAuthenticate("operator")
 	require.NoError(t, err)
-	
+
 	// Start recording using proven client method
 	startResp, err := asserter.StartRecording("camera0")
 	require.NoError(t, err)
 	require.Nil(t, startResp.Error)
-	
+
 	result := startResp.Result.(map[string]interface{})
-	recordingPath := result["filename"].(string)
-	
+	basename := result["filename"].(string)
+	cfg := asserter.setup.GetConfigManager().GetConfig()
+	base := cfg.MediaMTX.RecordingsPath
+	if base == "" {
+		base = cfg.Storage.DefaultPath
+	}
+	format := cfg.Recording.RecordFormat
+	useSubdirs := cfg.Recording.UseDeviceSubdirs
+	recordingPath := testutils.BuildRecordingFilePath(base, "camera0", basename, useSubdirs, format)
+
 	// Wait for file creation using testutils
 	success := dvh.WaitForFileCreation(recordingPath, testutils.DefaultTestTimeout, "recording file")
 	require.True(t, success, "Recording file should be created")
-	
+
 	// Verify file growing
 	initialSize := getRecordingFileSize(t, recordingPath)
-	time.Sleep(2 * time.Second) // Allow recording
+	time.Sleep(testutils.UniversalTimeoutShort)
 	finalSize := getRecordingFileSize(t, recordingPath)
 	assert.Greater(t, finalSize, initialSize, "File should be growing")
-	
+
 	// Stop recording using proven client method
 	stopResp, err := asserter.StopRecording("camera0")
 	require.NoError(t, err)
 	require.Nil(t, stopResp.Error)
-	
+
 	// Verify final file
 	dvh.AssertFileExists(recordingPath, testutils.UniversalMinRecordingFileSize, "final recording")
 }
@@ -70,32 +78,42 @@ func TestBasicRecordingLifecycle(t *testing.T) {
 func TestRecordingWithDurationParameter(t *testing.T) {
 	asserter := NewE2EWorkflowAsserter(t)
 	dvh := testutils.NewDataValidationHelper(t)
-	
+
 	// Connect and authenticate
 	err := asserter.ConnectAndAuthenticate("operator")
 	require.NoError(t, err)
-	
+
 	// Start recording with 5 second duration using proven client method
 	startResp, err := asserter.StartRecordingWithDuration("camera0", 5)
 	require.NoError(t, err)
 	require.Nil(t, startResp.Error)
-	
+
 	result := startResp.Result.(map[string]interface{})
-	recordingPath := result["filename"].(string)
-	
+	basename := result["filename"].(string)
+	cfg := asserter.setup.GetConfigManager().GetConfig()
+	base := cfg.MediaMTX.RecordingsPath
+	if base == "" {
+		base = cfg.Storage.DefaultPath
+	}
+	format := cfg.Recording.RecordFormat
+	useSubdirs := cfg.Recording.UseDeviceSubdirs
+	recordingPath := testutils.BuildRecordingFilePath(base, "camera0", basename, useSubdirs, format)
+
 	// Wait for file creation
 	success := dvh.WaitForFileCreation(recordingPath, testutils.DefaultTestTimeout, "recording file")
 	require.True(t, success)
-	
-	// Wait for duration + buffer
-	time.Sleep(7 * time.Second)
-	
+
+	// Wait for duration + small buffer
+	time.Sleep(testutils.UniversalTimeoutVeryLong)
+
 	// Verify recording stopped automatically
 	stopResp, err := asserter.StopRecording("camera0")
 	require.NoError(t, err)
-	// Should either succeed or fail (if already stopped)
-	assert.True(t, stopResp.Error == nil || stopResp.Error != nil)
-	
+	// If already stopped, server may return an error; log and proceed
+	if stopResp.Error != nil {
+		t.Logf("stop_recording returned error (possibly already stopped): %v", stopResp.Error)
+	}
+
 	// Verify final file
 	dvh.AssertFileExists(recordingPath, testutils.UniversalMinRecordingFileSize, "final recording")
 }
@@ -103,39 +121,63 @@ func TestRecordingWithDurationParameter(t *testing.T) {
 func TestMultipleCameraRecording(t *testing.T) {
 	asserter := NewE2EWorkflowAsserter(t)
 	dvh := testutils.NewDataValidationHelper(t)
-	
+
 	// Connect and authenticate
 	err := asserter.ConnectAndAuthenticate("operator")
 	require.NoError(t, err)
-	
+
 	// Start recording from camera0
 	startResp0, err := asserter.StartRecording("camera0")
 	require.NoError(t, err)
 	require.Nil(t, startResp0.Error)
-	recordingPath0 := startResp0.Result.(map[string]interface{})["filename"].(string)
-	
+	var recordingPath0 string
+	{
+		r0 := startResp0.Result.(map[string]interface{})
+		basename0 := r0["filename"].(string)
+		cfg := asserter.setup.GetConfigManager().GetConfig()
+		base := cfg.MediaMTX.RecordingsPath
+		if base == "" {
+			base = cfg.Storage.DefaultPath
+		}
+		format := cfg.Recording.RecordFormat
+		useSubdirs := cfg.Recording.UseDeviceSubdirs
+		recordingPath0 = testutils.BuildRecordingFilePath(base, "camera0", basename0, useSubdirs, format)
+	}
+
 	// Start recording from camera1
 	startResp1, err := asserter.StartRecording("camera1")
 	require.NoError(t, err)
 	require.Nil(t, startResp1.Error)
-	recordingPath1 := startResp1.Result.(map[string]interface{})["filename"].(string)
-	
+	var recordingPath1 string
+	{
+		r1 := startResp1.Result.(map[string]interface{})
+		basename1 := r1["filename"].(string)
+		cfg := asserter.setup.GetConfigManager().GetConfig()
+		base := cfg.MediaMTX.RecordingsPath
+		if base == "" {
+			base = cfg.Storage.DefaultPath
+		}
+		format := cfg.Recording.RecordFormat
+		useSubdirs := cfg.Recording.UseDeviceSubdirs
+		recordingPath1 = testutils.BuildRecordingFilePath(base, "camera1", basename1, useSubdirs, format)
+	}
+
 	// Wait for both files to be created
 	success0 := dvh.WaitForFileCreation(recordingPath0, testutils.DefaultTestTimeout, "recording file 0")
 	success1 := dvh.WaitForFileCreation(recordingPath1, testutils.DefaultTestTimeout, "recording file 1")
 	require.True(t, success0 && success1, "Both recording files should be created")
-	
+
 	// Verify both files are growing
-	time.Sleep(2 * time.Second)
+	time.Sleep(testutils.UniversalTimeoutShort)
 	size0 := getRecordingFileSize(t, recordingPath0)
 	size1 := getRecordingFileSize(t, recordingPath1)
 	assert.Greater(t, size0, int64(0), "Camera0 recording should have content")
 	assert.Greater(t, size1, int64(0), "Camera1 recording should have content")
-	
+
 	// Stop both recordings
 	asserter.StopRecording("camera0")
 	asserter.StopRecording("camera1")
-	
+
 	// Verify final files
 	dvh.AssertFileExists(recordingPath0, testutils.UniversalMinRecordingFileSize, "final recording 0")
 	dvh.AssertFileExists(recordingPath1, testutils.UniversalMinRecordingFileSize, "final recording 1")
@@ -143,42 +185,41 @@ func TestMultipleCameraRecording(t *testing.T) {
 
 func TestRecordingListWorkflow(t *testing.T) {
 	asserter := NewE2EWorkflowAsserter(t)
-	
+
 	// Connect and authenticate
 	err := asserter.ConnectAndAuthenticate("operator")
 	require.NoError(t, err)
-	
+
 	// Create a recording first
 	startResp, err := asserter.StartRecording("camera0")
 	require.NoError(t, err)
 	require.Nil(t, startResp.Error)
-	
+
 	// Wait a moment then stop
-	time.Sleep(1 * time.Second)
+	time.Sleep(testutils.UniversalTimeoutShort)
 	stopResp, err := asserter.StopRecording("camera0")
 	require.NoError(t, err)
 	require.Nil(t, stopResp.Error)
-	
+
 	// List recordings using proven client method
 	listResp, err := asserter.ListRecordings()
 	require.NoError(t, err)
 	require.Nil(t, listResp.Error)
-	
+
 	result := listResp.Result.(map[string]interface{})
 	require.Contains(t, result, "files")
 	recordings := result["files"].([]interface{})
-	
+
 	// Verify at least one recording exists
 	assert.NotEmpty(t, recordings, "Should have at least one recording")
-	
-	// Verify recording structure
+
+	// Verify recording structure (per API spec)
 	for _, recording := range recordings {
 		rec := recording.(map[string]interface{})
-		assert.Contains(t, rec, "device", "Recording should have device field")
-		assert.Contains(t, rec, "file_path", "Recording should have file_path field")
-		assert.Contains(t, rec, "start_time", "Recording should have start_time field")
-		assert.Contains(t, rec, "duration", "Recording should have duration field")
+		assert.Contains(t, rec, "filename", "Recording should have filename field")
 		assert.Contains(t, rec, "file_size", "Recording should have file_size field")
+		assert.Contains(t, rec, "modified_time", "Recording should have modified_time field")
+		assert.Contains(t, rec, "download_url", "Recording should have download_url field")
 	}
 }
 

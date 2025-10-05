@@ -16,8 +16,10 @@ package e2e
 
 import (
 	"testing"
+	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
+	testutilsshared "github.com/camerarecorder/mediamtx-camera-service-go/tests/testutils"
 )
 
 // E2EWorkflowAsserter provides E2E workflow testing using shared infrastructure
@@ -25,24 +27,27 @@ import (
 type E2EWorkflowAsserter struct {
 	t            *testing.T
 	setup        *testutils.UniversalTestSetup
-	serverHelper *sharedutils.WebSocketServerHelper
+	serverHelper *testutilsshared.WebSocketServerHelper
 	client       *testutils.WebSocketTestClient
+	secHelper    *testutils.SecurityHelper
 }
 
 // NewE2EWorkflowAsserter creates E2E workflow asserter using shared infrastructure
 func NewE2EWorkflowAsserter(t *testing.T) *E2EWorkflowAsserter {
 	// Use shared test infrastructure from tests/testutils/
 	setup := testutils.SetupTest(t, "config_valid_complete.yaml")
-	serverHelper := sharedutils.NewWebSocketServerHelper(t, setup)
+	serverHelper := testutilsshared.NewWebSocketServerHelper(t, setup)
 
 	// Create WebSocket client using the shared server URL
 	client := testutils.NewWebSocketTestClient(t, serverHelper.GetServerURL())
+	secHelper := testutils.NewSecurityHelper(t, setup)
 
 	asserter := &E2EWorkflowAsserter{
 		t:            t,
 		setup:        setup,
 		serverHelper: serverHelper,
 		client:       client,
+		secHelper:    secHelper,
 	}
 
 	t.Cleanup(func() { asserter.Cleanup() })
@@ -58,7 +63,7 @@ func (a *E2EWorkflowAsserter) ConnectAndAuthenticate(role string) error {
 	}
 
 	// Get JWT token using proven helper
-	token, err := a.helper.GetJWTToken(role)
+	token, err := a.secHelper.GenerateTestToken(testutils.UniversalTestUserID, role, 24*time.Hour)
 	if err != nil {
 		return err
 	}
