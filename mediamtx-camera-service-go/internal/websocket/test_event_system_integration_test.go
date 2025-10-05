@@ -26,7 +26,6 @@ package websocket
 import (
 	"testing"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -96,7 +95,7 @@ func TestEventSystem_UnsubscribeEvents_Integration(t *testing.T) {
 	require.NoError(t, err, "Initial subscription should succeed")
 
 	// Test unsubscribe_events method
-	response, err := asserter.client.UnsubscribeEvents([]string{"recording_started", "recording_stopped"})
+	response, err := asserter.client.UnsubscribeEvents()
 	require.NoError(t, err, "unsubscribe_events should succeed")
 	require.NotNil(t, response, "Response should not be nil")
 
@@ -225,7 +224,7 @@ func TestEventSystem_ProgressiveReadiness_Integration(t *testing.T) {
 
 	// Test Progressive Readiness: event system should be available immediately
 	serverURL := asserter.helper.GetServerURL()
-	client := testutils.NewWebSocketTestClient(t, serverURL)
+	client := NewWebSocketTestClient(t, serverURL)
 	defer client.Close()
 
 	err := client.Connect()

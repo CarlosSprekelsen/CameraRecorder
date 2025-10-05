@@ -31,11 +31,13 @@ type CameraMonitorIntegrationAsserter struct {
 	monitor   camera.CameraMonitor
 }
 
-// NewCameraMonitorIntegrationAsserter creates a new camera monitor integration asserter
+// NewCameraMonitorIntegrationAsserter creates asserter for camera monitor integration.
+// Follows eager start pattern: starts monitor and waits for readiness before returning.
+// Monitor is fully operational when asserter is returned to test.
 func NewCameraMonitorIntegrationAsserter(t *testing.T) *CameraMonitorIntegrationAsserter {
 	setup := testutils.SetupTest(t, "config_valid_complete.yaml")
 	lifecycle := testutils.NewServiceLifecycle(setup)
-	
+
 	monitor, err := camera.NewHybridCameraMonitor(
 		setup.GetConfigManager(),
 		setup.GetLogger(),
@@ -44,23 +46,23 @@ func NewCameraMonitorIntegrationAsserter(t *testing.T) *CameraMonitorIntegration
 		&camera.RealDeviceInfoParser{},
 	)
 	require.NoError(t, err)
-	
+
 	ctx, cancel := setup.GetStandardContextWithTimeout(testutils.UniversalTimeoutLong)
 	defer cancel()
-	
+
 	// Use shared lifecycle helper
 	err = lifecycle.StartServiceWithCleanup(t, monitor, func(ctx context.Context) error {
 		return monitor.Start(ctx)
 	})
 	require.NoError(t, err)
-	
+
 	// Use shared readiness helper
-	err = lifecycle.WaitForServiceReady(ctx, 
+	err = lifecycle.WaitForServiceReady(ctx,
 		func() bool { return monitor.IsReady() },
 		"camera monitor ready",
 	)
 	require.NoError(t, err)
-	
+
 	return &CameraMonitorIntegrationAsserter{
 		setup:     setup,
 		lifecycle: lifecycle,

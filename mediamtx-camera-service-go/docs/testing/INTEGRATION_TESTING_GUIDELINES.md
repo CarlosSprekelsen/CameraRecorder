@@ -101,6 +101,79 @@ Integration tests validate component integration within application boundaries. 
 - Always use descriptive subtest names
 - Maintain test isolation between subtests
 
+## Table-Driven Test Examples for Integration
+
+### Example 1: Component State Transitions
+
+```go
+func TestComponent_StateTransitions_ReqXXX001(t *testing.T) {
+    asserter := NewComponentAsserter(t)
+    ctx, cancel := asserter.setup.GetStandardContext()
+    defer cancel()
+    
+    tests := []struct {
+        name          string
+        initialState  string
+        action        string
+        expectedState string
+        expectError   bool
+    }{
+        {"idle_to_active", "idle", "start", "active", false},
+        {"active_to_idle", "active", "stop", "idle", false},
+        {"idle_to_error", "idle", "invalid", "error", true},
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            err := asserter.AssertStateTransition(ctx, tt.initialState, tt.action)
+            if tt.expectError {
+                require.Error(t, err)
+            } else {
+                require.NoError(t, err)
+                state := asserter.GetCurrentState()
+                assert.Equal(t, tt.expectedState, state)
+            }
+        })
+    }
+}
+```
+
+### Example 2: Cross-Component Integration
+
+```go
+func TestComponents_DataFlow_ReqXXX002(t *testing.T) {
+    sourceAsserter := NewSourceAsserter(t)
+    sinkAsserter := NewSinkAsserter(t)
+    ctx, cancel := sourceAsserter.setup.GetStandardContext()
+    defer cancel()
+    
+    tests := []struct {
+        name        string
+        sourceData  interface{}
+        expectError bool
+    }{
+        {"valid_data", validPayload, false},
+        {"invalid_data", invalidPayload, true},
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            // Send from source
+            err := sourceAsserter.AssertDataSent(ctx, tt.sourceData)
+            require.NoError(t, err)
+            
+            // Verify received at sink
+            err = sinkAsserter.AssertDataReceived(ctx, tt.sourceData)
+            if tt.expectError {
+                require.Error(t, err)
+            } else {
+                require.NoError(t, err)
+            }
+        })
+    }
+}
+```
+
 **Test Function Structure Requirements:**
 - Start with requirements comment: REQ-XXX-NNN
 - Setup using testutils.SetupTest first
@@ -221,6 +294,120 @@ Integration tests validate component integration within application boundaries. 
 - Enables consistent validation across tests
 - Reduces test file line counts dramatically
 - Makes tests readable and maintainable
+
+## Asserter Lifecycle Patterns
+
+### Constructor Contract - Eager Start Pattern (Mandatory)
+
+All asserters MUST follow eager start pattern for consistency:
+
+**Pattern:**
+```go
+func NewComponentAsserter(t *testing.T) *ComponentAsserter {
+    setup := testutils.SetupTest(t, "config_valid_complete.yaml")
+    
+    // Create component
+    component := CreateComponent(setup)
+    
+    // Start component if stateful
+    if needsStartup {
+        lifecycle := testutils.NewServiceLifecycle(setup)
+        err := lifecycle.StartServiceWithCleanup(t, component, startFunc)
+        require.NoError(t, err)
+        
+        err = lifecycle.WaitForServiceReady(ctx, readyFunc, "component ready")
+        require.NoError(t, err)
+    }
+    
+    return &ComponentAsserter{
+        setup: setup,
+        component: component,
+    }
+}
+```
+
+**Stateful Components:** Camera monitor, stream manager (start in constructor)
+
+**Stateless Components:** JWT handler, config manager (no startup needed)
+
+**External Services:** MediaMTX client (readiness check only, no start)
+
+**Rationale:** Component must be ready when asserter returns. Test functions should not manage component lifecycle.
+
+## Asserter Method Signature Pattern
+
+### Return Error Pattern (Mandatory)
+
+All asserter methods MUST return error for test to handle:
+
+**Pattern:**
+```go
+func (a *ComponentAsserter) AssertSomething(ctx context.Context, params) error {
+    // Validation logic
+    if invalid {
+        return fmt.Errorf("validation failed: %v", details)
+    }
+    return nil
+}
+
+// Test usage:
+err := asserter.AssertSomething(ctx, params)
+require.NoError(t, err, "Something should be valid")
+```
+
+**Rationale:**
+- Asserter does not control test failure (test does)
+- Composable - asserters can call other asserters
+- Testable - asserter methods can be unit tested
+- Error messages under test control
+
+**Anti-Pattern - Do Not Use:**
+```go
+// BAD: Takes testing.T, calls require internally
+func (a *ComponentAsserter) AssertSomething(t *testing.T, ctx context.Context, params) {
+    t.Helper()
+    require.True(t, condition) // Asserter controls test failure
+}
+```
+
+## Shared Validation Strategy
+
+### When to Extract to Testutils
+
+Extract validation logic to testutils when 2+ asserters need same validation:
+
+**Criteria:**
+- Same validation logic duplicated in 2+ asserters
+- Validation is domain-agnostic (not specific to one component)
+- Validation has clear single responsibility
+
+**Location:** `internal/testutils/validators.go` (create if needed)
+
+**Example:**
+```go
+// internal/testutils/validators.go
+func ValidateMediaMTXPathExists(client MediaMTXClientInterface, pathName string) error {
+    ctx, cancel := context.WithTimeout(context.Background(), UniversalTimeoutShort)
+    defer cancel()
+    
+    _, err := client.Get(ctx, fmt.Sprintf("/v3/config/paths/get/%s", pathName))
+    return err
+}
+
+// Usage in multiple asserters:
+func (a *CameraMonitorAsserter) assertPathReady(pathName string) error {
+    return testutils.ValidateMediaMTXPathExists(a.mediamtxClient, pathName)
+}
+
+func (a *StreamManagerAsserter) assertPathConfigured(pathName string) error {
+    return testutils.ValidateMediaMTXPathExists(a.mediamtxClient, pathName)
+}
+```
+
+**Do Not Extract If:**
+- Only used by one asserter
+- Validation is component-specific
+- Would require complex parameters
 
 ---
 

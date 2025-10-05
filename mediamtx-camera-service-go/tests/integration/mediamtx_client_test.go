@@ -34,7 +34,9 @@ type MediaMTXClientIntegrationAsserter struct {
 	client mediamtx.MediaMTXClient
 }
 
-// NewMediaMTXClientIntegrationAsserter creates a new MediaMTX client integration asserter
+// NewMediaMTXClientIntegrationAsserter creates asserter for MediaMTX client integration.
+// Note: MediaMTX is external service - constructor verifies readiness, does not start service.
+// This follows eager start pattern for external dependencies (verify ready before returning).
 func NewMediaMTXClientIntegrationAsserter(t *testing.T) *MediaMTXClientIntegrationAsserter {
 	setup := testutils.SetupTest(t, "config_valid_complete.yaml")
 	helper := testutils.NewMediaMTXHelper(setup)

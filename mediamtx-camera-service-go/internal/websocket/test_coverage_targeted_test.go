@@ -53,7 +53,7 @@ func TestTargetedCoverage_DeleteRecording(t *testing.T) {
 	cameraID := asserter.helper.GetTestCameraID()
 
 	// Start recording
-	startResponse, err := asserter.client.StartRecordingWithOptions(cameraID, 30, "fmp4")
+	startResponse, err := asserter.client.StartRecording(cameraID, 30, "fmp4")
 	require.NoError(t, err, "start_recording should succeed")
 	require.NotNil(t, startResponse, "Start recording response should not be nil")
 	asserter.client.AssertJSONRPCResponse(startResponse, false)

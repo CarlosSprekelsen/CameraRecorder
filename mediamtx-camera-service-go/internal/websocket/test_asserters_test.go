@@ -39,7 +39,7 @@ import (
 type WebSocketIntegrationAsserter struct {
 	t      *testing.T
 	helper *WebSocketTestHelper
-	client *testutils.WebSocketTestClient
+	client *WebSocketTestClient
 }
 
 // NewWebSocketIntegrationAsserter creates a new WebSocket integration asserter
@@ -51,7 +51,7 @@ func GetSharedWebSocketAsserter(t *testing.T) *WebSocketIntegrationAsserter {
 	require.NoError(t, err, "Failed to create real WebSocket server")
 
 	// Create WebSocket client
-	client := testutils.NewWebSocketTestClient(t, helper.GetServerURL())
+	client := NewWebSocketTestClient(t, helper.GetServerURL())
 
 	asserter := &WebSocketIntegrationAsserter{
 		t:      t,
@@ -183,7 +183,7 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingWorkflow() error {
 	cameraID := testutils.GetTestCameraID()
 
 	// Test start_recording
-	response, err := a.client.StartRecordingWithOptions(cameraID, 10, "mp4")
+	response, err := a.client.StartRecording(cameraID, 10, "mp4")
 	require.NoError(a.t, err, "start_recording should succeed")
 
 	a.client.AssertJSONRPCResponse(response, false)
@@ -234,7 +234,7 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingWorkflow() error {
 	err = a.client.Authenticate(authToken)
 	require.NoError(a.t, err, "Re-authentication should succeed")
 
-	response, err = a.client.ListRecordingsWithPagination(50, 0)
+	response, err = a.client.ListRecordings(50, 0)
 	require.NoError(a.t, err, "list_recordings should succeed")
 
 	a.client.AssertJSONRPCResponse(response, false)
@@ -260,7 +260,7 @@ func (a *WebSocketIntegrationAsserter) AssertSnapshotWorkflow() error {
 	filename := "test_snapshot_" + time.Now().Format("2006-01-02_15-04-05") + ".jpg"
 
 	// Test take_snapshot
-	response, err := a.client.TakeSnapshotWithFilename(cameraID, filename)
+	response, err := a.client.TakeSnapshot(cameraID, filename)
 	require.NoError(a.t, err, "take_snapshot should succeed")
 
 	a.client.AssertJSONRPCResponse(response, false)
@@ -286,7 +286,7 @@ func (a *WebSocketIntegrationAsserter) AssertSnapshotWorkflow() error {
 	}
 
 	// Test list_snapshots
-	response, err = a.client.ListSnapshotsWithPagination(50, 0)
+	response, err = a.client.ListSnapshots(50, 0)
 	require.NoError(a.t, err, "list_snapshots should succeed")
 
 	a.client.AssertJSONRPCResponse(response, false)
@@ -373,13 +373,13 @@ func (a *WebSocketIntegrationAsserter) AssertFileLifecycleWorkflow() error {
 	// Step 1: Take snapshot and validate creation
 	err = dvh.AssertFileCreated(func() error {
 		// Use a simple filename for the API call, but V4L2 will create its own name
-		_, err := a.client.TakeSnapshotWithFilename(cameraID, "lifecycle_test.jpg")
+		_, err := a.client.TakeSnapshot(cameraID, "lifecycle_test.jpg")
 		return err
 	}, actualSnapshotPath, 1000, "Snapshot lifecycle creation")
 	require.NoError(a.t, err, "Snapshot should be created successfully")
 
 	// Step 2: List snapshots and validate it appears
-	response, err := a.client.ListSnapshotsWithPagination(50, 0)
+	response, err := a.client.ListSnapshots(50, 0)
 	require.NoError(a.t, err, "List snapshots should succeed")
 	require.NotNil(a.t, response.Result, "List snapshots should return results")
 
@@ -394,7 +394,7 @@ func (a *WebSocketIntegrationAsserter) AssertFileLifecycleWorkflow() error {
 	// Step 1: Start recording and validate API response
 	// CRITICAL: Use unlimited recording (duration=0) to avoid race condition with auto-stop timer
 	// MediaMTX creates recording files asynchronously
-	_, err = a.client.StartRecordingWithOptions(cameraID, 0, "mp4")
+	_, err = a.client.StartRecording(cameraID, 0, "mp4")
 	require.NoError(a.t, err, "Start recording should succeed")
 
 	// Note: StartRecording response contains predicted filename, but MediaMTX may create file with different timestamp
@@ -471,10 +471,10 @@ func (a *WebSocketIntegrationAsserter) AssertFileLifecycleWorkflow() error {
 	}, 5*time.Second, 500*time.Millisecond, "StopRecording should complete within timeout")
 
 	// Step 4: List recordings and validate it appears (with retry logic)
-	var listResponse *testutils.JSONRPCResponse
+	var listResponse *JSONRPCResponse
 	var listErr error
 	for i := 0; i < 3; i++ {
-		listResponse, listErr = a.client.ListRecordingsWithPagination(50, 0)
+		listResponse, listErr = a.client.ListRecordings(50, 0)
 		if listErr == nil {
 			break
 		}
@@ -623,7 +623,7 @@ func (a *WebSocketIntegrationAsserter) AssertPerformanceRequirements() error {
 	start = time.Now()
 	// FIXED: Use testutils instead of hardcoded helper method
 	cameraID := testutils.GetTestCameraID()
-	_, err = a.client.TakeSnapshotWithFilename(cameraID, "perf_test.jpg")
+	_, err = a.client.TakeSnapshot(cameraID, "perf_test.jpg")
 	require.NoError(a.t, err, "take_snapshot should succeed")
 	controlTime := time.Since(start)
 	require.Less(a.t, controlTime, 2*time.Second,
@@ -720,7 +720,7 @@ func (a *WebSocketIntegrationAsserter) AssertTier0DirectV4L2Capture() error {
 	err := a.authenticateAsOperator()
 	require.NoError(a.t, err, "Authentication should succeed")
 
-	response, err := a.client.TakeSnapshotWithFilename("camera0", "tier0_test.jpg")
+	response, err := a.client.TakeSnapshot("camera0", "tier0_test.jpg")
 	require.NoError(a.t, err, "Tier 0 snapshot should succeed")
 
 	a.client.AssertJSONRPCResponse(response, false)
@@ -744,7 +744,7 @@ func (a *WebSocketIntegrationAsserter) AssertTier1FFmpegDirectCapture() error {
 	err := a.authenticateAsOperator()
 	require.NoError(a.t, err, "Authentication should succeed")
 
-	response, err := a.client.TakeSnapshotWithFilename("camera0", "tier1_test.jpg")
+	response, err := a.client.TakeSnapshot("camera0", "tier1_test.jpg")
 	require.NoError(a.t, err, "Tier 1 snapshot should succeed")
 
 	a.client.AssertJSONRPCResponse(response, false)
@@ -766,7 +766,7 @@ func (a *WebSocketIntegrationAsserter) AssertTier2RTSPReuse() error {
 	err := a.authenticateAsOperator()
 	require.NoError(a.t, err, "Authentication should succeed")
 
-	response, err := a.client.TakeSnapshotWithFilename("camera0", "tier2_test.jpg")
+	response, err := a.client.TakeSnapshot("camera0", "tier2_test.jpg")
 	require.NoError(a.t, err, "Tier 2 snapshot should succeed")
 
 	a.client.AssertJSONRPCResponse(response, false)
@@ -782,7 +782,7 @@ func (a *WebSocketIntegrationAsserter) AssertTier3StreamActivation() error {
 	err := a.authenticateAsOperator()
 	require.NoError(a.t, err, "Authentication should succeed")
 
-	response, err := a.client.TakeSnapshotWithFilename("camera0", "tier3_test.jpg")
+	response, err := a.client.TakeSnapshot("camera0", "tier3_test.jpg")
 	require.NoError(a.t, err, "Tier 3 snapshot should succeed")
 
 	a.client.AssertJSONRPCResponse(response, false)
@@ -803,7 +803,7 @@ func (a *WebSocketIntegrationAsserter) AssertCustomFilenameSnapshot() error {
 
 	customFilename := "custom_snapshot_" + time.Now().Format("20060102_150405") + ".jpg"
 
-	response, err := a.client.TakeSnapshotWithFilename("camera0", customFilename)
+	response, err := a.client.TakeSnapshot("camera0", customFilename)
 	require.NoError(a.t, err, "Custom filename snapshot should succeed")
 
 	a.client.AssertJSONRPCResponse(response, false)
@@ -820,7 +820,7 @@ func (a *WebSocketIntegrationAsserter) AssertConcurrentSnapshotCaptures() error 
 	// Test multiple concurrent snapshot captures with SEPARATE WebSocket connections
 	// CRITICAL: Each goroutine needs its own WebSocket connection to avoid concurrent write panic
 	const numConcurrent = 3
-	responses := make(chan *testutils.JSONRPCResponse, numConcurrent)
+	responses := make(chan *JSONRPCResponse, numConcurrent)
 	errors := make(chan error, numConcurrent)
 
 	// Use WaitGroup to ensure all goroutines complete before returning
@@ -832,7 +832,7 @@ func (a *WebSocketIntegrationAsserter) AssertConcurrentSnapshotCaptures() error 
 			defer wg.Done()
 
 			// Create dedicated WebSocket client for this goroutine
-			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate this client
@@ -855,7 +855,7 @@ func (a *WebSocketIntegrationAsserter) AssertConcurrentSnapshotCaptures() error 
 			}
 
 			// Use dedicated client for snapshot operation
-			response, err := client.TakeSnapshotWithFilename("camera0", fmt.Sprintf("concurrent_test_%d.jpg", index))
+			response, err := client.TakeSnapshot("camera0", fmt.Sprintf("concurrent_test_%d.jpg", index))
 			if err != nil {
 				errors <- err
 				return
@@ -901,13 +901,13 @@ func (a *WebSocketIntegrationAsserter) AssertSnapshotFileManagement() error {
 	require.NoError(a.t, err, "Authentication should succeed")
 
 	// Take a snapshot first
-	response, err := a.client.TakeSnapshotWithFilename("camera0", "file_mgmt_test.jpg")
+	response, err := a.client.TakeSnapshot("camera0", "file_mgmt_test.jpg")
 	require.NoError(a.t, err, "Snapshot should succeed")
 
 	a.client.AssertJSONRPCResponse(response, false)
 
 	// List snapshots to verify file exists
-	listResponse, err := a.client.ListSnapshotsWithPagination(50, 0)
+	listResponse, err := a.client.ListSnapshots(50, 0)
 	require.NoError(a.t, err, "list_snapshots should succeed")
 
 	a.client.AssertJSONRPCResponse(listResponse, false)
@@ -933,7 +933,7 @@ func (a *WebSocketIntegrationAsserter) AssertSnapshotFileCleanup() error {
 	require.NoError(a.t, err, "Authentication should succeed")
 
 	// Take a snapshot for cleanup test
-	response, err := a.client.TakeSnapshotWithFilename("camera0", "cleanup_test.jpg")
+	response, err := a.client.TakeSnapshot("camera0", "cleanup_test.jpg")
 	require.NoError(a.t, err, "Snapshot should succeed")
 
 	a.client.AssertJSONRPCResponse(response, false)
@@ -961,7 +961,7 @@ func (a *WebSocketIntegrationAsserter) AssertSnapshotStorageInfo() error {
 // AssertInvalidDeviceSnapshot validates error handling for invalid devices
 func (a *WebSocketIntegrationAsserter) AssertInvalidDeviceSnapshot() error {
 	// Test with invalid device
-	response, err := a.client.TakeSnapshotWithFilename("invalid_camera", "invalid_test.jpg")
+	response, err := a.client.TakeSnapshot("invalid_camera", "invalid_test.jpg")
 
 	// Should get an error response
 	require.Error(a.t, err, "Invalid device should return error")
@@ -978,7 +978,7 @@ func (a *WebSocketIntegrationAsserter) AssertInvalidDeviceSnapshot() error {
 // AssertUnauthorizedSnapshotAccess validates authorization for snapshot operations
 func (a *WebSocketIntegrationAsserter) AssertUnauthorizedSnapshotAccess() error {
 	// Test without authentication (viewer role cannot take snapshots)
-	response, err := a.client.TakeSnapshotWithFilename("camera0", "unauthorized_test.jpg")
+	response, err := a.client.TakeSnapshot("camera0", "unauthorized_test.jpg")
 
 	// Should get authentication error
 	require.Error(a.t, err, "Unauthorized access should return error")
@@ -997,7 +997,7 @@ func (a *WebSocketIntegrationAsserter) AssertNetworkErrorRecovery() error {
 	// Test network error recovery by attempting operation after potential network issues
 	// This is a simplified test - real network error simulation would require more setup
 
-	response, err := a.client.TakeSnapshotWithFilename("camera0", "recovery_test.jpg")
+	response, err := a.client.TakeSnapshot("camera0", "recovery_test.jpg")
 	require.NoError(a.t, err, "Snapshot should succeed after network recovery")
 
 	a.client.AssertJSONRPCResponse(response, false)
@@ -1023,7 +1023,7 @@ func (a *WebSocketIntegrationAsserter) AssertSnapshotPerformanceBenchmarks() err
 
 	for i := 0; i < numSnapshots; i++ {
 		start := time.Now()
-		response, err := a.client.TakeSnapshotWithFilename("camera0", fmt.Sprintf("benchmark_%d.jpg", i))
+		response, err := a.client.TakeSnapshot("camera0", fmt.Sprintf("benchmark_%d.jpg", i))
 		duration := time.Since(start)
 		totalDuration += duration
 
@@ -1045,7 +1045,7 @@ func (a *WebSocketIntegrationAsserter) AssertSnapshotPerformanceBenchmarks() err
 func (a *WebSocketIntegrationAsserter) AssertSnapshotLoadTesting() error {
 	// Test snapshot operations under load with SERIALIZED access (V4L2 limitation)
 	const numLoadTests = 5 // Reduced for serialized testing
-	responses := make(chan *testutils.JSONRPCResponse, numLoadTests)
+	responses := make(chan *JSONRPCResponse, numLoadTests)
 	errors := make(chan error, numLoadTests)
 
 	start := time.Now()
@@ -1055,7 +1055,7 @@ func (a *WebSocketIntegrationAsserter) AssertSnapshotLoadTesting() error {
 	for i := 0; i < numLoadTests; i++ {
 		go func(index int) {
 			// Create dedicated WebSocket client for this goroutine
-			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate this client
@@ -1083,7 +1083,7 @@ func (a *WebSocketIntegrationAsserter) AssertSnapshotLoadTesting() error {
 			time.Sleep(staggeredDelay)
 
 			// Use dedicated client for snapshot operation
-			response, err := client.TakeSnapshotWithFilename("camera0", fmt.Sprintf("load_test_%d.jpg", index))
+			response, err := client.TakeSnapshot("camera0", fmt.Sprintf("load_test_%d.jpg", index))
 			if err != nil {
 				errors <- err
 				return
@@ -1151,7 +1151,7 @@ func (a *WebSocketIntegrationAsserter) AssertStatelessRecordingArchitecture() er
 
 	// Test stateless recording - no local session state
 	// Start recording
-	startResponse, err := a.client.StartRecordingWithOptions("camera0", 60, "fmp4")
+	startResponse, err := a.client.StartRecording("camera0", 60, "fmp4")
 	require.NoError(a.t, err, "Start recording should succeed")
 
 	a.client.AssertJSONRPCResponse(startResponse, false)
@@ -1195,7 +1195,7 @@ func (a *WebSocketIntegrationAsserter) AssertMediaMTXSourceOfTruth() error {
 	require.NoError(a.t, err, "Authentication should succeed")
 
 	// Start recording
-	_, err = a.client.StartRecordingWithOptions("camera0", 30, "fmp4")
+	_, err = a.client.StartRecording("camera0", 30, "fmp4")
 	require.NoError(a.t, err, "Start recording should succeed")
 
 	// Query recording status - should come from MediaMTX
@@ -1238,7 +1238,7 @@ func (a *WebSocketIntegrationAsserter) AssertStartRecording() error {
 	}
 
 	for _, tc := range testCases {
-		response, err := a.client.StartRecordingWithOptions("camera0", tc.duration, tc.format)
+		response, err := a.client.StartRecording("camera0", tc.duration, tc.format)
 		require.NoError(a.t, err, "Start recording should succeed for %s", tc.name)
 
 		a.client.AssertJSONRPCResponse(response, false)
@@ -1272,7 +1272,7 @@ func (a *WebSocketIntegrationAsserter) AssertStopRecording() error {
 	// No readiness checks needed - just try operations immediately
 
 	// Start recording first
-	_, err = a.client.StartRecordingWithOptions("camera0", 60, "fmp4")
+	_, err = a.client.StartRecording("camera0", 60, "fmp4")
 	require.NoError(a.t, err, "Start recording should succeed")
 
 	// Stop recording
@@ -1312,10 +1312,10 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingStatus() error {
 	// CRITICAL: Use Progressive Readiness to handle MediaMTX API race condition
 	// The issue is that MediaMTX API state changes are not immediately consistent
 	// Use require.Eventually to wait for API to be ready instead of fixed retry loop
-	var startResponse *testutils.JSONRPCResponse
+	var startResponse *JSONRPCResponse
 	require.Eventually(a.t, func() bool {
 		var err error
-		startResponse, err = a.client.StartRecordingWithOptions("camera0", 30, "fmp4")
+		startResponse, err = a.client.StartRecording("camera0", 30, "fmp4")
 		if err == nil {
 			return true // Success
 		}
@@ -1370,7 +1370,7 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingDurationManagement() error
 	durations := []int{10, 30, 60, 120}
 
 	for _, duration := range durations {
-		response, err := a.client.StartRecordingWithOptions("camera0", duration, "fmp4")
+		response, err := a.client.StartRecording("camera0", duration, "fmp4")
 		require.NoError(a.t, err, "Start recording should succeed for duration %d", duration)
 
 		a.client.AssertJSONRPCResponse(response, false)
@@ -1399,7 +1399,7 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingFormatSupport() error {
 	formats := []string{"fmp4", "mp4", "mkv"}
 
 	for _, format := range formats {
-		response, err := a.client.StartRecordingWithOptions("camera0", 30, format)
+		response, err := a.client.StartRecording("camera0", 30, format)
 		require.NoError(a.t, err, "Start recording should succeed for format %s", format)
 
 		a.client.AssertJSONRPCResponse(response, false)
@@ -1429,7 +1429,7 @@ func (a *WebSocketIntegrationAsserter) AssertSTANAG4609Compliance() error {
 	require.NoError(a.t, err, "Authentication should succeed")
 
 	// Test STANAG 4609 compliance with fmp4 format
-	response, err := a.client.StartRecordingWithOptions("camera0", 60, "fmp4")
+	response, err := a.client.StartRecording("camera0", 60, "fmp4")
 	require.NoError(a.t, err, "STANAG 4609 recording should succeed")
 
 	a.client.AssertJSONRPCResponse(response, false)
@@ -1458,7 +1458,7 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingFileManagement() error {
 	require.NoError(a.t, err, "Authentication should succeed")
 
 	// Start recording to create a file
-	_, err = a.client.StartRecordingWithOptions("camera0", 30, "fmp4")
+	_, err = a.client.StartRecording("camera0", 30, "fmp4")
 	require.NoError(a.t, err, "Start recording should succeed")
 
 	// Stop recording
@@ -1466,7 +1466,7 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingFileManagement() error {
 	require.NoError(a.t, err, "Stop recording should succeed")
 
 	// List recordings to verify file exists
-	listResponse, err := a.client.ListRecordingsWithPagination(50, 0)
+	listResponse, err := a.client.ListRecordings(50, 0)
 	require.NoError(a.t, err, "list_recordings should succeed")
 
 	a.client.AssertJSONRPCResponse(listResponse, false)
@@ -1505,7 +1505,7 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingFileListing() error {
 	}
 
 	for _, tc := range testCases {
-		response, err := a.client.ListRecordingsWithPagination(tc.limit, tc.offset)
+		response, err := a.client.ListRecordings(tc.limit, tc.offset)
 		require.NoError(a.t, err, "list_recordings should succeed for limit=%d, offset=%d", tc.limit, tc.offset)
 
 		a.client.AssertJSONRPCResponse(response, false)
@@ -1533,7 +1533,7 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingFileCleanup() error {
 	require.NoError(a.t, err, "Authentication should succeed")
 
 	// Start and stop recording to create a file
-	_, err = a.client.StartRecordingWithOptions("camera0", 30, "fmp4")
+	_, err = a.client.StartRecording("camera0", 30, "fmp4")
 	require.NoError(a.t, err, "Start recording should succeed")
 
 	stopResponse, err := a.client.StopRecording("camera0")
@@ -1555,7 +1555,7 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingFileCleanup() error {
 func (a *WebSocketIntegrationAsserter) AssertConcurrentRecordings() error {
 	// Test concurrent recordings with SERIALIZED access (MediaMTX/V4L2 limitation)
 	const numConcurrent = 3
-	responses := make(chan *testutils.JSONRPCResponse, numConcurrent)
+	responses := make(chan *JSONRPCResponse, numConcurrent)
 	errors := make(chan error, numConcurrent)
 
 	// Use WaitGroup to ensure all goroutines complete before returning
@@ -1567,7 +1567,7 @@ func (a *WebSocketIntegrationAsserter) AssertConcurrentRecordings() error {
 			defer wg.Done()
 
 			// Create dedicated WebSocket client for this goroutine
-			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate this client
@@ -1593,7 +1593,7 @@ func (a *WebSocketIntegrationAsserter) AssertConcurrentRecordings() error {
 			time.Sleep(time.Duration(index*200) * time.Millisecond)
 
 			// Use dedicated client for recording operation (use camera0 for all concurrent tests)
-			response, err := client.StartRecordingWithOptions("camera0", 30, "fmp4")
+			response, err := client.StartRecording("camera0", 30, "fmp4")
 			if err != nil {
 				errors <- err
 				return
@@ -1664,7 +1664,7 @@ func (a *WebSocketIntegrationAsserter) AssertConcurrentRecordings() error {
 	// Cleanup - stop all recordings using dedicated clients
 	for i := 0; i < numConcurrent; i++ {
 		// Create cleanup client for each recording
-		cleanupClient := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+		cleanupClient := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 		defer cleanupClient.Close()
 
 		err := cleanupClient.Connect()
@@ -1710,7 +1710,7 @@ func (a *WebSocketIntegrationAsserter) AssertMultipleCamerasRecording() error {
 	cameras := []string{"camera0", "camera1", "camera2"}
 
 	for _, camera := range cameras {
-		response, err := a.client.StartRecordingWithOptions(camera, 30, "fmp4")
+		response, err := a.client.StartRecording(camera, 30, "fmp4")
 		require.NoError(a.t, err, "Start recording should succeed for %s", camera)
 
 		a.client.AssertJSONRPCResponse(response, false)
@@ -1740,7 +1740,7 @@ func (a *WebSocketIntegrationAsserter) AssertInvalidDeviceRecording() error {
 	require.NoError(a.t, err, "Authentication should succeed")
 
 	// Test with invalid device
-	response, err := a.client.StartRecordingWithOptions("invalid_camera", 30, "fmp4")
+	response, err := a.client.StartRecording("invalid_camera", 30, "fmp4")
 
 	// Should get an error response
 	require.Error(a.t, err, "Invalid device should return error")
@@ -1761,7 +1761,7 @@ func (a *WebSocketIntegrationAsserter) AssertUnauthorizedRecordingAccess() error
 	require.NoError(a.t, err, "WebSocket connection should succeed")
 
 	// Test without authentication (viewer role cannot start recordings)
-	response, err := a.client.StartRecordingWithOptions("camera0", 30, "fmp4")
+	response, err := a.client.StartRecording("camera0", 30, "fmp4")
 
 	// Should get authentication error
 	require.Error(a.t, err, "Unauthorized access should return error")
@@ -1788,7 +1788,7 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingNetworkErrorRecovery() err
 	require.NoError(a.t, err, "Authentication should succeed")
 
 	// Test network error recovery by attempting operation after potential network issues
-	response, err := a.client.StartRecordingWithOptions("camera0", 30, "fmp4")
+	response, err := a.client.StartRecording("camera0", 30, "fmp4")
 	require.NoError(a.t, err, "Recording should succeed after network recovery")
 
 	a.client.AssertJSONRPCResponse(response, false)
@@ -1814,7 +1814,7 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingPerformanceTargets() error
 
 	// Test recording performance targets (<2s for V4L2 hardware operations)
 	start := time.Now()
-	response, err := a.client.StartRecordingWithOptions("camera0", 30, "fmp4")
+	response, err := a.client.StartRecording("camera0", 30, "fmp4")
 	duration := time.Since(start)
 
 	require.NoError(a.t, err, "Recording should succeed")
@@ -1842,7 +1842,7 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingPerformanceTargets() error
 func (a *WebSocketIntegrationAsserter) AssertRecordingLoadTesting() error {
 	// Test recording operations under load with SERIALIZED access (MediaMTX limitation)
 	const numLoadTests = 3 // Reduced for serialized testing
-	responses := make(chan *testutils.JSONRPCResponse, numLoadTests)
+	responses := make(chan *JSONRPCResponse, numLoadTests)
 	errors := make(chan error, numLoadTests)
 
 	start := time.Now()
@@ -1852,7 +1852,7 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingLoadTesting() error {
 	for i := 0; i < numLoadTests; i++ {
 		go func(index int) {
 			// Create dedicated WebSocket client for this goroutine
-			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate this client
@@ -1878,7 +1878,7 @@ func (a *WebSocketIntegrationAsserter) AssertRecordingLoadTesting() error {
 			time.Sleep(time.Duration(index*200) * time.Millisecond)
 
 			// Use dedicated client for recording operation (use camera0 for all concurrent tests)
-			response, err := client.StartRecordingWithOptions("camera0", 30, "fmp4")
+			response, err := client.StartRecording("camera0", 30, "fmp4")
 			if err != nil {
 				errors <- err
 				return
@@ -2262,7 +2262,7 @@ func (a *WebSocketIntegrationAsserter) AssertInvalidParametersHandling() error {
 	require.NoError(a.t, err, "Authentication should succeed")
 
 	// Test invalid parameters (e.g., invalid device name)
-	_, err = a.client.TakeSnapshotWithFilename("invalid_device", "test.jpg")
+	_, err = a.client.TakeSnapshot("invalid_device", "test.jpg")
 	require.Error(a.t, err, "Invalid device should return error")
 
 	a.t.Log("✅ Invalid parameters handling validated")
@@ -2376,11 +2376,11 @@ func (a *WebSocketIntegrationAsserter) AssertErrorRecoveryPatterns() error {
 func (a *WebSocketIntegrationAsserter) AssertConcurrentClientPerformance() error {
 	// Test concurrent client performance
 	const numClients = 5
-	clients := make([]*testutils.WebSocketTestClient, numClients)
+	clients := make([]*WebSocketTestClient, numClients)
 
 	// Create multiple clients
 	for i := 0; i < numClients; i++ {
-		clients[i] = testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+		clients[i] = NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 		defer clients[i].Close()
 
 		err := clients[i].Connect()
@@ -2431,7 +2431,7 @@ func (a *WebSocketIntegrationAsserter) AssertLoadTestingPerformance() error {
 	a.t.Log("Testing concurrent load performance...")
 
 	const numConcurrent = 10
-	responses := make(chan *testutils.JSONRPCResponse, numConcurrent)
+	responses := make(chan *JSONRPCResponse, numConcurrent)
 	errors := make(chan error, numConcurrent)
 
 	concurrentStart := time.Now()
@@ -2440,7 +2440,7 @@ func (a *WebSocketIntegrationAsserter) AssertLoadTestingPerformance() error {
 	for i := 0; i < numConcurrent; i++ {
 		go func(index int) {
 			// Create dedicated client for this goroutine
-			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -2546,7 +2546,7 @@ func (a *WebSocketIntegrationAsserter) AssertStressTestingPerformance() error {
 	a.t.Log("Testing extreme concurrent load...")
 
 	const numStressClients = 20
-	responses := make(chan *testutils.JSONRPCResponse, numStressClients)
+	responses := make(chan *JSONRPCResponse, numStressClients)
 	errors := make(chan error, numStressClients)
 
 	stressStart := time.Now()
@@ -2555,7 +2555,7 @@ func (a *WebSocketIntegrationAsserter) AssertStressTestingPerformance() error {
 	for i := 0; i < numStressClients; i++ {
 		go func(index int) {
 			// Create dedicated client for this goroutine
-			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -2676,7 +2676,7 @@ func (a *WebSocketIntegrationAsserter) AssertMemoryLeakDetection() error {
 		require.NoError(a.t, err, "Camera list should succeed")
 
 		// Test repeated snapshot operations
-		_, err = a.client.TakeSnapshotWithFilename("camera0", fmt.Sprintf("memory_test_%d.jpg", i))
+		_, err = a.client.TakeSnapshot("camera0", fmt.Sprintf("memory_test_%d.jpg", i))
 		if err != nil {
 			a.t.Logf("Snapshot %d failed (expected): %v", i, err)
 		}
@@ -2759,7 +2759,7 @@ func (a *WebSocketIntegrationAsserter) AssertThroughputBenchmarks() error {
 	a.t.Log("Testing concurrent throughput...")
 
 	const numConcurrent = 15
-	responses := make(chan *testutils.JSONRPCResponse, numConcurrent)
+	responses := make(chan *JSONRPCResponse, numConcurrent)
 	errors := make(chan error, numConcurrent)
 
 	concurrentStart := time.Now()
@@ -2768,7 +2768,7 @@ func (a *WebSocketIntegrationAsserter) AssertThroughputBenchmarks() error {
 	for i := 0; i < numConcurrent; i++ {
 		go func(index int) {
 			// Create dedicated client for this goroutine
-			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -2869,7 +2869,7 @@ func (a *WebSocketIntegrationAsserter) AssertScalabilityTesting() error {
 	for _, numClients := range scalabilityLevels {
 		a.t.Logf("Testing scalability with %d concurrent clients...", numClients)
 
-		responses := make(chan *testutils.JSONRPCResponse, numClients)
+		responses := make(chan *JSONRPCResponse, numClients)
 		errors := make(chan error, numClients)
 
 		levelStart := time.Now()
@@ -2878,7 +2878,7 @@ func (a *WebSocketIntegrationAsserter) AssertScalabilityTesting() error {
 		for i := 0; i < numClients; i++ {
 			go func(index int) {
 				// Create dedicated client for this goroutine
-				client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+				client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 				defer client.Close()
 
 				// Connect and authenticate
@@ -3045,7 +3045,7 @@ func (a *WebSocketIntegrationAsserter) AssertResourceUtilizationValidation() err
 	a.t.Log("Testing resource utilization under concurrent load...")
 
 	const numConcurrent = 12
-	responses := make(chan *testutils.JSONRPCResponse, numConcurrent)
+	responses := make(chan *JSONRPCResponse, numConcurrent)
 	errors := make(chan error, numConcurrent)
 
 	concurrentStart := time.Now()
@@ -3054,7 +3054,7 @@ func (a *WebSocketIntegrationAsserter) AssertResourceUtilizationValidation() err
 	for i := 0; i < numConcurrent; i++ {
 		go func(index int) {
 			// Create dedicated client for this goroutine
-			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -3251,7 +3251,7 @@ func (a *WebSocketIntegrationAsserter) AssertPerformanceRegressionTesting() erro
 	a.t.Log("Testing concurrent performance regression...")
 
 	const numConcurrent = 8
-	responses := make(chan *testutils.JSONRPCResponse, numConcurrent)
+	responses := make(chan *JSONRPCResponse, numConcurrent)
 	errors := make(chan error, numConcurrent)
 
 	concurrentStart := time.Now()
@@ -3260,7 +3260,7 @@ func (a *WebSocketIntegrationAsserter) AssertPerformanceRegressionTesting() erro
 	for i := 0; i < numConcurrent; i++ {
 		go func(index int) {
 			// Create dedicated client for this goroutine
-			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -3430,7 +3430,7 @@ func (a *WebSocketIntegrationAsserter) AssertPerformanceBaselineEstablishment() 
 	a.t.Log("Establishing concurrent performance baseline...")
 
 	const numConcurrent = 10
-	responses := make(chan *testutils.JSONRPCResponse, numConcurrent)
+	responses := make(chan *JSONRPCResponse, numConcurrent)
 	errors := make(chan error, numConcurrent)
 
 	concurrentStart := time.Now()
@@ -3439,7 +3439,7 @@ func (a *WebSocketIntegrationAsserter) AssertPerformanceBaselineEstablishment() 
 	for i := 0; i < numConcurrent; i++ {
 		go func(index int) {
 			// Create dedicated client for this goroutine
-			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -3565,10 +3565,10 @@ func (a *WebSocketIntegrationAsserter) AssertResourceCleanup() error {
 func (a *WebSocketIntegrationAsserter) AssertConcurrentSessionHandling() error {
 	// Test concurrent session handling
 	const numSessions = 3
-	clients := make([]*testutils.WebSocketTestClient, numSessions)
+	clients := make([]*WebSocketTestClient, numSessions)
 
 	for i := 0; i < numSessions; i++ {
-		clients[i] = testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+		clients[i] = NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 		defer clients[i].Close()
 
 		err := clients[i].Connect()
@@ -3647,13 +3647,13 @@ func (a *WebSocketIntegrationAsserter) AssertSessionTimeoutHandling() error {
 
 	// Create multiple clients to simulate concurrent sessions
 	const numConcurrentSessions = 5
-	responses := make(chan *testutils.JSONRPCResponse, numConcurrentSessions)
+	responses := make(chan *JSONRPCResponse, numConcurrentSessions)
 	errors := make(chan error, numConcurrentSessions)
 
 	for i := 0; i < numConcurrentSessions; i++ {
 		go func(index int) {
 			// Create dedicated client for this session
-			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -3772,13 +3772,13 @@ func (a *WebSocketIntegrationAsserter) AssertIdleTimeoutHandling() error {
 
 	// Create multiple clients to simulate concurrent idle sessions
 	const numConcurrentIdleSessions = 4
-	responses := make(chan *testutils.JSONRPCResponse, numConcurrentIdleSessions)
+	responses := make(chan *JSONRPCResponse, numConcurrentIdleSessions)
 	errors := make(chan error, numConcurrentIdleSessions)
 
 	for i := 0; i < numConcurrentIdleSessions; i++ {
 		go func(index int) {
 			// Create dedicated client for this idle session
-			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -3910,13 +3910,13 @@ func (a *WebSocketIntegrationAsserter) AssertReconnectionHandling() error {
 
 	// Create multiple clients to simulate concurrent reconnections
 	const numConcurrentReconnections = 6
-	responses := make(chan *testutils.JSONRPCResponse, numConcurrentReconnections)
+	responses := make(chan *JSONRPCResponse, numConcurrentReconnections)
 	errors := make(chan error, numConcurrentReconnections)
 
 	for i := 0; i < numConcurrentReconnections; i++ {
 		go func(index int) {
 			// Create dedicated client for this reconnection
-			client := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+			client := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -4026,8 +4026,8 @@ func (a *WebSocketIntegrationAsserter) AssertComprehensiveSessionManagement() er
 	a.t.Log("Testing session establishment and authentication persistence...")
 
 	// Create multiple clients to simulate different sessions
-	client1 := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
-	client2 := testutils.NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+	client1 := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
+	client2 := NewWebSocketTestClient(a.t, a.helper.GetServerURL())
 
 	// Establish session 1
 	err := client1.Connect()
@@ -4066,13 +4066,13 @@ func (a *WebSocketIntegrationAsserter) AssertComprehensiveSessionManagement() er
 	a.t.Log("Testing session persistence during operations...")
 
 	// Perform operations on client 1
-	_, err = client1.TakeSnapshotWithFilename("camera0", "session_test_1.jpg")
+	_, err = client1.TakeSnapshot("camera0", "session_test_1.jpg")
 	if err != nil {
 		a.t.Logf("Client 1 snapshot failed (expected): %v", err)
 	}
 
 	// Perform operations on client 2
-	_, err = client2.TakeSnapshotWithFilename("camera0", "session_test_2.jpg")
+	_, err = client2.TakeSnapshot("camera0", "session_test_2.jpg")
 	if err != nil {
 		a.t.Logf("Client 2 snapshot failed (expected): %v", err)
 	}

@@ -1,59 +1,32 @@
 /*
-WebSocket Test Utilities - FIXED Resource Management
+WebSocket Test Utilities - Message Utilities Only
 
-Provides shared test utilities for WebSocket module testing,
-using the good patterns from internal/testutils and eliminating
-resource management issues.
+Provides message utilities for WebSocket testing.
+For WebSocket server creation, use tests/testutils/websocket_server.go
+This file contains only message utilities.
 
 Requirements Coverage:
 - REQ-API-001: WebSocket JSON-RPC 2.0 API endpoint
 - REQ-API-002: JSON-RPC 2.0 protocol implementation
 - REQ-API-003: Request/response message handling
-- REQ-TEST-001: Test environment setup and management
-- REQ-TEST-002: Performance optimization for test execution
 
-FIXED ISSUES:
-- Eliminated duplicate mutex instances (leverages shared infrastructure)
-- Proper resource cleanup using UniversalTestSetup pattern
-- Progressive Readiness compliance
-- No global shared state (each test gets isolated resources)
-
-Test Categories: Unit/Integration
+Test Categories: Unit/Integration/E2E
 API Documentation Reference: docs/api/json_rpc_methods.md
 */
 
 package testutils
 
 import (
-	"context"
 	"fmt"
 	"net"
-	"os"
-	"path/filepath"
 	"testing"
-	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/websocket"
 	gorilla "github.com/gorilla/websocket"
 	"github.com/stretchr/testify/require"
 )
 
-// FIXED: Removed global shared state - each test gets isolated resources
-// This eliminates mutex duplication and resource leaks
-
-// WebSocketTestEnvironment represents an isolated test environment
-// FIXED: Each test gets its own environment - no shared state
-type WebSocketTestEnvironment struct {
-	Server     *websocket.WebSocketServer
-	Config     *config.Config
-	TempDir    string
-	Logger     *logging.Logger
-	ConfigPath string
-	Setup      *testutils.UniversalTestSetup // FIXED: Use good pattern from testutils
-}
+// Message utilities for WebSocket testing - no server management here
 
 // GetFreePort returns a free port for testing using port 0 for automatic OS assignment
 func GetFreePort() int {
@@ -73,87 +46,7 @@ func GetFreePort() int {
 	return port
 }
 
-// getTestConfigPath finds the WebSocket test configuration file in fixtures
-func getTestConfigPath(t *testing.T) string {
-	// Start from current directory and walk up to find project root
-	dir, err := os.Getwd()
-	require.NoError(t, err, "Failed to get current directory")
-
-	for {
-		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
-			// Found project root, look for WebSocket test config
-			configPath := filepath.Join(dir, "tests", "fixtures", "config_websocket_test.yaml")
-			if _, err := os.Stat(configPath); err == nil {
-				return configPath
-			}
-			break
-		}
-
-		parent := filepath.Dir(dir)
-		if parent == dir {
-			// Reached root directory
-			break
-		}
-		dir = parent
-	}
-
-	require.Fail(t, "Could not find WebSocket test configuration file in fixtures")
-	return ""
-}
-
-// SetupWebSocketTestEnvironment creates an isolated test environment
-// SetupWebSocketTestEnvironment creates a WebSocket test environment
-// DEPRECATED: use testutils.SetupTest(t, "config_websocket_test.yaml") instead.
-// This function will be removed in a future version.
-// FIXED: Uses UniversalTestSetup pattern for proper resource management
-func SetupWebSocketTestEnvironment(t *testing.T) *WebSocketTestEnvironment {
-	// REQ-TEST-001: Test environment setup and management
-
-	// DEPRECATED: Use single canonical fixture instead of config_websocket_test.yaml
-	// TODO: Remove config_websocket_test.yaml and use config_valid_complete.yaml
-	setup := testutils.SetupTest(t, "config_valid_complete.yaml")
-	configManager := setup.GetConfigManager()
-	logger := setup.GetLogger()
-
-	// FIXED: Use UniversalTestSetup for proper resource management
-	// Tests should use shared infrastructure pattern directly
-
-	return &WebSocketTestEnvironment{
-		Server:     nil, // FIXED: Tests should use shared infrastructure directly
-		Config:     configManager.GetConfig(),
-		TempDir:    "", // FIXED: Use UniversalTestSetup for temp dir management
-		Logger:     logger,
-		ConfigPath: "",    // FIXED: Use UniversalTestSetup for config management
-		Setup:      setup, // FIXED: Leverage good pattern from testutils
-	}
-}
-
-// TeardownWebSocketTestEnvironment cleans up the test environment
-// DEPRECATED: use testutils.SetupTest(t, "config_websocket_test.yaml") instead.
-// This function will be removed in a future version.
-// FIXED: Uses UniversalTestSetup cleanup pattern
-func TeardownWebSocketTestEnvironment(t *testing.T, env *WebSocketTestEnvironment) {
-	// REQ-TEST-001: Test environment cleanup
-
-	if env != nil {
-		// FIXED: Use UniversalTestSetup cleanup (proper resource management)
-		if env.Setup != nil {
-			env.Setup.Cleanup() // This handles all cleanup properly
-		}
-
-		// Clean up WebSocket server
-		if env.Server != nil {
-			ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-			defer cancel()
-			if err := env.Server.Stop(ctx); err != nil {
-				t.Logf("Warning: Failed to stop WebSocket server: %v", err)
-			}
-		}
-	}
-}
-
-// FIXED: Removed createIsolatedWebSocketServer - use shared infrastructure instead
-// This eliminates duplicate server creation and leverages existing good patterns
+// Server management functions removed - use tests/testutils/websocket_server.go instead
 
 // NewTestClient creates a test WebSocket client connection
 func NewTestClient(t *testing.T, server *websocket.WebSocketServer) *gorilla.Conn {

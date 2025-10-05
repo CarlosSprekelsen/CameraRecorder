@@ -139,7 +139,7 @@ func TestWebSocket_ConcurrentClients_Integration(t *testing.T) {
 	// Create multiple concurrent clients
 	for i := 0; i < numClients; i++ {
 		go func(clientID int) {
-			client := testutils.NewWebSocketTestClient(t, asserter.helper.GetServerURL())
+			client := NewWebSocketTestClient(t, asserter.helper.GetServerURL())
 			defer client.Close()
 
 			// Connect and authenticate
@@ -191,7 +191,7 @@ func TestWebSocket_SessionManagement_Integration(t *testing.T) {
 	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test session management workflow
-	client := testutils.NewWebSocketTestClient(t, asserter.helper.GetServerURL())
+	client := NewWebSocketTestClient(t, asserter.helper.GetServerURL())
 	defer client.Close()
 
 	// Connect and authenticate
@@ -226,7 +226,7 @@ func TestWebSocket_OpenRPCCompliance_Integration(t *testing.T) {
 	asserter := GetSharedWebSocketAsserter(t)
 
 	// Test OpenRPC API compliance
-	client := testutils.NewWebSocketTestClient(t, asserter.helper.GetServerURL())
+	client := NewWebSocketTestClient(t, asserter.helper.GetServerURL())
 	defer client.Close()
 
 	// Connect and authenticate
@@ -250,11 +250,11 @@ func TestWebSocket_OpenRPCCompliance_Integration(t *testing.T) {
 	require.NoError(t, err, "get_camera_status should succeed")
 	client.AssertJSONRPCResponse(response, false)
 
-	response, err = client.ListRecordingsWithPagination(50, 0)
+	response, err = client.ListRecordings(50, 0)
 	require.NoError(t, err, "list_recordings should succeed")
 	client.AssertJSONRPCResponse(response, false)
 
-	response, err = client.ListSnapshotsWithPagination(50, 0)
+	response, err = client.ListSnapshots(50, 0)
 	require.NoError(t, err, "list_snapshots should succeed")
 	client.AssertJSONRPCResponse(response, false)
 
@@ -279,7 +279,7 @@ func TestWebSocket_ProgressiveReadiness_Performance(t *testing.T) {
 	for i := 0; i < numConnections; i++ {
 		go func() {
 			start := time.Now()
-			client := testutils.NewWebSocketTestClient(t, helper.GetServerURL())
+			client := NewWebSocketTestClient(t, helper.GetServerURL())
 			defer client.Close()
 
 			err := client.Connect()

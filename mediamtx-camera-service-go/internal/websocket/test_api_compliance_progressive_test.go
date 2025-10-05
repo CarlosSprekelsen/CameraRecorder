@@ -35,7 +35,7 @@ func TestAPICompliance_AllMethods(t *testing.T) {
 	require.NoError(t, err, "Failed to create WebSocket server")
 
 	// Create test client using existing patterns
-	client := testutils.NewWebSocketTestClient(t, helper.baseURL)
+	client := NewWebSocketTestClient(t, helper.baseURL)
 	err = client.Connect()
 	require.NoError(t, err, "Failed to connect WebSocket client")
 	defer client.Close()
@@ -45,7 +45,7 @@ func TestAPICompliance_AllMethods(t *testing.T) {
 }
 
 // testAllMethodsWithExistingPatterns tests all methods using existing test patterns
-func testAllMethodsWithExistingPatterns(t *testing.T, helper *WebSocketTestHelper, client *testutils.WebSocketTestClient) {
+func testAllMethodsWithExistingPatterns(t *testing.T, helper *WebSocketTestHelper, client *WebSocketTestClient) {
 	// Test core methods using existing test patterns
 	t.Run("CoreMethods", func(t *testing.T) {
 		testPingWithExistingPatterns(t, client)
@@ -111,7 +111,7 @@ func testAllMethodsWithExistingPatterns(t *testing.T, helper *WebSocketTestHelpe
 }
 
 // testPingWithExistingPatterns tests ping method using existing test patterns
-func testPingWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testPingWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for ping operation
 	response, err := client.SendJSONRPC("ping", map[string]interface{}{})
 	require.NoError(t, err, "Ping should succeed")
@@ -120,7 +120,7 @@ func testPingWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestC
 }
 
 // testAuthenticateWithExistingPatterns tests authenticate method using existing test patterns
-func testAuthenticateWithExistingPatterns(t *testing.T, helper *WebSocketTestHelper, client *testutils.WebSocketTestClient) {
+func testAuthenticateWithExistingPatterns(t *testing.T, helper *WebSocketTestHelper, client *WebSocketTestClient) {
 	// Generate test JWT token using existing patterns
 	token, err := helper.GetJWTToken("admin")
 	require.NoError(t, err, "Should generate JWT token successfully")
@@ -135,7 +135,7 @@ func testAuthenticateWithExistingPatterns(t *testing.T, helper *WebSocketTestHel
 }
 
 // testGetCameraListWithExistingPatterns tests get_camera_list method using existing test patterns
-func testGetCameraListWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testGetCameraListWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for get_camera_list operation
 	response, err := client.SendJSONRPC("get_camera_list", map[string]interface{}{})
 	require.NoError(t, err, "GetCameraList should succeed")
@@ -144,7 +144,7 @@ func testGetCameraListWithExistingPatterns(t *testing.T, client *testutils.WebSo
 }
 
 // testGetCameraStatusWithExistingPatterns tests get_camera_status method using existing test patterns
-func testGetCameraStatusWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testGetCameraStatusWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for get_camera_status operation
 	response, err := client.SendJSONRPC("get_camera_status", map[string]interface{}{
 		"device": "camera0",
@@ -160,7 +160,7 @@ func testGetCameraStatusWithExistingPatterns(t *testing.T, client *testutils.Web
 }
 
 // testGetStatusWithExistingPatterns tests get_status method using existing test patterns
-func testGetStatusWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testGetStatusWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for get_status operation
 	response, err := client.SendJSONRPC("get_status", map[string]interface{}{})
 	require.NoError(t, err, "GetStatus should succeed")
@@ -169,7 +169,7 @@ func testGetStatusWithExistingPatterns(t *testing.T, client *testutils.WebSocket
 }
 
 // testGetSystemStatusWithExistingPatterns tests get_system_status method using existing test patterns
-func testGetSystemStatusWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testGetSystemStatusWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for get_system_status operation
 	response, err := client.SendJSONRPC("get_system_status", map[string]interface{}{})
 	require.NoError(t, err, "GetSystemStatus should succeed")
@@ -178,7 +178,7 @@ func testGetSystemStatusWithExistingPatterns(t *testing.T, client *testutils.Web
 }
 
 // testGetServerInfoWithExistingPatterns tests get_server_info method using existing test patterns
-func testGetServerInfoWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testGetServerInfoWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for get_server_info operation
 	response, err := client.SendJSONRPC("get_server_info", map[string]interface{}{})
 	require.NoError(t, err, "GetServerInfo should succeed")
@@ -187,7 +187,7 @@ func testGetServerInfoWithExistingPatterns(t *testing.T, client *testutils.WebSo
 }
 
 // testGetStorageInfoWithExistingPatterns tests get_storage_info method using existing test patterns
-func testGetStorageInfoWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testGetStorageInfoWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for get_storage_info operation
 	response, err := client.SendJSONRPC("get_storage_info", map[string]interface{}{})
 	require.NoError(t, err, "GetStorageInfo should succeed")
@@ -196,7 +196,7 @@ func testGetStorageInfoWithExistingPatterns(t *testing.T, client *testutils.WebS
 }
 
 // testStartRecordingWithExistingPatterns tests start_recording method using existing test patterns
-func testStartRecordingWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testStartRecordingWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for start_recording operation
 	response, err := client.SendJSONRPC("start_recording", map[string]interface{}{
 		"device": "camera0",
@@ -212,7 +212,7 @@ func testStartRecordingWithExistingPatterns(t *testing.T, client *testutils.WebS
 }
 
 // testStopRecordingWithExistingPatterns tests stop_recording method using existing test patterns
-func testStopRecordingWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testStopRecordingWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for stop_recording operation
 	response, err := client.SendJSONRPC("stop_recording", map[string]interface{}{
 		"device": "camera0",
@@ -228,7 +228,7 @@ func testStopRecordingWithExistingPatterns(t *testing.T, client *testutils.WebSo
 }
 
 // testListRecordingsWithExistingPatterns tests list_recordings method using existing test patterns
-func testListRecordingsWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testListRecordingsWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for list_recordings operation
 	response, err := client.SendJSONRPC("list_recordings", map[string]interface{}{})
 	require.NoError(t, err, "ListRecordings should succeed")
@@ -237,7 +237,7 @@ func testListRecordingsWithExistingPatterns(t *testing.T, client *testutils.WebS
 }
 
 // testGetRecordingInfoWithExistingPatterns tests get_recording_info method using existing test patterns
-func testGetRecordingInfoWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testGetRecordingInfoWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for get_recording_info operation
 	response, err := client.SendJSONRPC("get_recording_info", map[string]interface{}{
 		"filename": "test_recording.mp4",
@@ -253,7 +253,7 @@ func testGetRecordingInfoWithExistingPatterns(t *testing.T, client *testutils.We
 }
 
 // testDeleteRecordingWithExistingPatterns tests delete_recording method using existing test patterns
-func testDeleteRecordingWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testDeleteRecordingWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for delete_recording operation
 	response, err := client.SendJSONRPC("delete_recording", map[string]interface{}{
 		"filename": "test_recording.mp4",
@@ -269,7 +269,7 @@ func testDeleteRecordingWithExistingPatterns(t *testing.T, client *testutils.Web
 }
 
 // testTakeSnapshotWithExistingPatterns tests take_snapshot method using existing test patterns
-func testTakeSnapshotWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testTakeSnapshotWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for take_snapshot operation
 	response, err := client.SendJSONRPC("take_snapshot", map[string]interface{}{
 		"device": "camera0",
@@ -285,7 +285,7 @@ func testTakeSnapshotWithExistingPatterns(t *testing.T, client *testutils.WebSoc
 }
 
 // testListSnapshotsWithExistingPatterns tests list_snapshots method using existing test patterns
-func testListSnapshotsWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testListSnapshotsWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for list_snapshots operation
 	response, err := client.SendJSONRPC("list_snapshots", map[string]interface{}{})
 	require.NoError(t, err, "ListSnapshots should succeed")
@@ -294,7 +294,7 @@ func testListSnapshotsWithExistingPatterns(t *testing.T, client *testutils.WebSo
 }
 
 // testGetSnapshotInfoWithExistingPatterns tests get_snapshot_info method using existing test patterns
-func testGetSnapshotInfoWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testGetSnapshotInfoWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for get_snapshot_info operation
 	response, err := client.SendJSONRPC("get_snapshot_info", map[string]interface{}{
 		"filename": "test_snapshot.jpg",
@@ -310,7 +310,7 @@ func testGetSnapshotInfoWithExistingPatterns(t *testing.T, client *testutils.Web
 }
 
 // testDeleteSnapshotWithExistingPatterns tests delete_snapshot method using existing test patterns
-func testDeleteSnapshotWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testDeleteSnapshotWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for delete_snapshot operation
 	response, err := client.SendJSONRPC("delete_snapshot", map[string]interface{}{
 		"filename": "test_snapshot.jpg",
@@ -326,7 +326,7 @@ func testDeleteSnapshotWithExistingPatterns(t *testing.T, client *testutils.WebS
 }
 
 // testStartStreamingWithExistingPatterns tests start_streaming method using existing test patterns
-func testStartStreamingWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testStartStreamingWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for start_streaming operation
 	response, err := client.SendJSONRPC("start_streaming", map[string]interface{}{
 		"device": "camera0",
@@ -342,7 +342,7 @@ func testStartStreamingWithExistingPatterns(t *testing.T, client *testutils.WebS
 }
 
 // testStopStreamingWithExistingPatterns tests stop_streaming method using existing test patterns
-func testStopStreamingWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testStopStreamingWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for stop_streaming operation
 	response, err := client.SendJSONRPC("stop_streaming", map[string]interface{}{
 		"device": "camera0",
@@ -358,7 +358,7 @@ func testStopStreamingWithExistingPatterns(t *testing.T, client *testutils.WebSo
 }
 
 // testGetStreamURLWithExistingPatterns tests get_stream_url method using existing test patterns
-func testGetStreamURLWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testGetStreamURLWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for get_stream_url operation
 	response, err := client.SendJSONRPC("get_stream_url", map[string]interface{}{
 		"device": "camera0",
@@ -374,7 +374,7 @@ func testGetStreamURLWithExistingPatterns(t *testing.T, client *testutils.WebSoc
 }
 
 // testGetStreamStatusWithExistingPatterns tests get_stream_status method using existing test patterns
-func testGetStreamStatusWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testGetStreamStatusWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for get_stream_status operation
 	response, err := client.SendJSONRPC("get_stream_status", map[string]interface{}{
 		"device": "camera0",
@@ -390,7 +390,7 @@ func testGetStreamStatusWithExistingPatterns(t *testing.T, client *testutils.Web
 }
 
 // testDiscoverExternalStreamsWithExistingPatterns tests discover_external_streams method using existing test patterns
-func testDiscoverExternalStreamsWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testDiscoverExternalStreamsWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for discover_external_streams operation
 	response, err := client.SendJSONRPC("discover_external_streams", map[string]interface{}{})
 	require.NoError(t, err, "DiscoverExternalStreams should succeed")
@@ -399,7 +399,7 @@ func testDiscoverExternalStreamsWithExistingPatterns(t *testing.T, client *testu
 }
 
 // testAddExternalStreamWithExistingPatterns tests add_external_stream method using existing test patterns
-func testAddExternalStreamWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testAddExternalStreamWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for add_external_stream operation
 	response, err := client.SendJSONRPC("add_external_stream", map[string]interface{}{
 		"stream_url":  "rtsp://example.com/stream",
@@ -412,7 +412,7 @@ func testAddExternalStreamWithExistingPatterns(t *testing.T, client *testutils.W
 }
 
 // testRemoveExternalStreamWithExistingPatterns tests remove_external_stream method using existing test patterns
-func testRemoveExternalStreamWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testRemoveExternalStreamWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for remove_external_stream operation
 	response, err := client.SendJSONRPC("remove_external_stream", map[string]interface{}{
 		"stream_url": "rtsp://example.com/stream",
@@ -423,7 +423,7 @@ func testRemoveExternalStreamWithExistingPatterns(t *testing.T, client *testutil
 }
 
 // testGetExternalStreamsWithExistingPatterns tests get_external_streams method using existing test patterns
-func testGetExternalStreamsWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testGetExternalStreamsWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for get_external_streams operation
 	response, err := client.SendJSONRPC("get_external_streams", map[string]interface{}{})
 	require.NoError(t, err, "GetExternalStreams should succeed")
@@ -432,7 +432,7 @@ func testGetExternalStreamsWithExistingPatterns(t *testing.T, client *testutils.
 }
 
 // testSetDiscoveryIntervalWithExistingPatterns tests set_discovery_interval method using existing test patterns
-func testSetDiscoveryIntervalWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testSetDiscoveryIntervalWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for set_discovery_interval operation
 	response, err := client.SendJSONRPC("set_discovery_interval", map[string]interface{}{
 		"scan_interval": 30,
@@ -443,7 +443,7 @@ func testSetDiscoveryIntervalWithExistingPatterns(t *testing.T, client *testutil
 }
 
 // testSubscribeEventsWithExistingPatterns tests subscribe_events method using existing test patterns
-func testSubscribeEventsWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testSubscribeEventsWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for subscribe_events operation
 	response, err := client.SendJSONRPC("subscribe_events", map[string]interface{}{
 		"topics": []string{"camera_status_update", "recording_status_update"},
@@ -454,7 +454,7 @@ func testSubscribeEventsWithExistingPatterns(t *testing.T, client *testutils.Web
 }
 
 // testUnsubscribeEventsWithExistingPatterns tests unsubscribe_events method using existing test patterns
-func testUnsubscribeEventsWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testUnsubscribeEventsWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for unsubscribe_events operation
 	response, err := client.SendJSONRPC("unsubscribe_events", map[string]interface{}{
 		"topics": []string{"camera_status_update"},
@@ -465,7 +465,7 @@ func testUnsubscribeEventsWithExistingPatterns(t *testing.T, client *testutils.W
 }
 
 // testGetSubscriptionStatsWithExistingPatterns tests get_subscription_stats method using existing test patterns
-func testGetSubscriptionStatsWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testGetSubscriptionStatsWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for get_subscription_stats operation
 	response, err := client.SendJSONRPC("get_subscription_stats", map[string]interface{}{})
 	require.NoError(t, err, "GetSubscriptionStats should succeed")
@@ -474,7 +474,7 @@ func testGetSubscriptionStatsWithExistingPatterns(t *testing.T, client *testutil
 }
 
 // testSetRetentionPolicyWithExistingPatterns tests set_retention_policy method using existing test patterns
-func testSetRetentionPolicyWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testSetRetentionPolicyWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for set_retention_policy operation
 	response, err := client.SendJSONRPC("set_retention_policy", map[string]interface{}{
 		"policy_type": "time_based",
@@ -486,7 +486,7 @@ func testSetRetentionPolicyWithExistingPatterns(t *testing.T, client *testutils.
 }
 
 // testCleanupOldFilesWithExistingPatterns tests cleanup_old_files method using existing test patterns
-func testCleanupOldFilesWithExistingPatterns(t *testing.T, client *testutils.WebSocketTestClient) {
+func testCleanupOldFilesWithExistingPatterns(t *testing.T, client *WebSocketTestClient) {
 	// Use existing test patterns for cleanup_old_files operation
 	response, err := client.SendJSONRPC("cleanup_old_files", map[string]interface{}{})
 	require.NoError(t, err, "CleanupOldFiles should succeed")

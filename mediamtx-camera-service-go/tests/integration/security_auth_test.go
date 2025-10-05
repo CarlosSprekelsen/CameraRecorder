@@ -32,7 +32,9 @@ type SecurityIntegrationAsserter struct {
 	jwtHandler     *security.JWTHandler
 }
 
-// NewSecurityIntegrationAsserter creates a new security integration asserter
+// NewSecurityIntegrationAsserter creates asserter for security integration.
+// Note: JWT handler is stateless - no startup required.
+// Constructor creates handler in ready state per eager start pattern.
 func NewSecurityIntegrationAsserter(t *testing.T) *SecurityIntegrationAsserter {
 	setup := testutils.SetupTest(t, "config_valid_complete.yaml")
 

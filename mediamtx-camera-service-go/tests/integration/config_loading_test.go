@@ -31,7 +31,9 @@ type ConfigLoadingIntegrationAsserter struct {
 	setup *testutils.UniversalTestSetup
 }
 
-// NewConfigLoadingIntegrationAsserter creates a new config loading integration asserter
+// NewConfigLoadingIntegrationAsserter creates asserter for configuration loading integration.
+// Note: Config manager is stateless - no startup required.
+// Constructor creates manager in ready state per eager start pattern.
 func NewConfigLoadingIntegrationAsserter(t *testing.T) *ConfigLoadingIntegrationAsserter {
 	// Use testutils.SetupTest with valid config fixture
 	setup := testutils.SetupTest(t, "config_valid_complete.yaml")
