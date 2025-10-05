@@ -62,8 +62,8 @@ func (a *SecurityIntegrationAsserter) Cleanup() {
 
 // AssertJWTAuthentication validates JWT token authentication
 func (a *SecurityIntegrationAsserter) AssertJWTAuthentication(ctx context.Context, userID, role string) (string, error) {
-	// Generate token with 24 hour expiry
-	token, err := a.jwtHandler.GenerateToken(userID, role, 24)
+	// Generate token with universal expiry hours
+	token, err := a.jwtHandler.GenerateToken(userID, role, testutils.UniversalJWTExpiryHours)
 	if err != nil {
 		return "", err
 	}
@@ -148,24 +148,27 @@ func TestSecurity_JWTAuthentication_ReqSEC001(t *testing.T) {
 		expectError bool
 		description string
 	}{
-		{"valid_admin_token", "admin_user", "admin", false, "Valid admin token"},
-		{"valid_user_token", "regular_user", "user", false, "Valid user token"},
-		{"valid_viewer_token", "viewer_user", "viewer", false, "Valid viewer token"},
+		{"valid_admin_token", testutils.UniversalTestUserID, testutils.UniversalTestUserRole, false, "Valid admin token"},
+		{"valid_operator_token", testutils.UniversalTestUserID, "operator", false, "Valid operator token"},
+		{"valid_viewer_token", testutils.UniversalTestUserID, "viewer", false, "Valid viewer token"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Use AssertionHelper for consistent assertions
+			ah := testutils.NewAssertionHelper(t)
+
 			token, err := asserter.AssertJWTAuthentication(ctx, tt.userID, tt.role)
 
 			if tt.expectError {
 				require.Error(t, err, "Authentication should fail: %s", tt.description)
 			} else {
-				require.NoError(t, err, "Authentication should succeed: %s", tt.description)
+				ah.AssertNoErrorWithContext(err, tt.description)
 				require.NotEmpty(t, token, "Token should be generated")
 
 				// Validate auth state established
 				claims, err := asserter.jwtHandler.ValidateToken(token)
-				require.NoError(t, err, "Token should be valid")
+				ah.AssertNoErrorWithContext(err, "Token validation")
 				assert.Equal(t, tt.userID, claims.UserID, "User ID should match")
 				assert.Equal(t, tt.role, claims.Role, "Role should match")
 
@@ -185,12 +188,15 @@ func TestSecurity_AuthorizationBoundaries_ReqSEC002(t *testing.T) {
 	ctx, cancel := asserter.setup.GetStandardContext()
 	defer cancel()
 
-	// Create tokens for different roles
-	adminToken, err := asserter.AssertJWTAuthentication(ctx, "admin_user", "admin")
-	require.NoError(t, err, "Admin token should be created")
+	// Use AssertionHelper for consistent assertions
+	ah := testutils.NewAssertionHelper(t)
 
-	userToken, err := asserter.AssertJWTAuthentication(ctx, "regular_user", "user")
-	require.NoError(t, err, "User token should be created")
+	// Create tokens for different roles
+	adminToken, err := asserter.AssertJWTAuthentication(ctx, testutils.UniversalTestUserID, testutils.UniversalTestUserRole)
+	ah.AssertNoErrorWithContext(err, "Admin token creation")
+
+	operatorToken, err := asserter.AssertJWTAuthentication(ctx, testutils.UniversalTestUserID, "operator")
+	ah.AssertNoErrorWithContext(err, "Operator token creation")
 
 	// Table-driven test for authorization boundaries
 	tests := []struct {
@@ -200,10 +206,10 @@ func TestSecurity_AuthorizationBoundaries_ReqSEC002(t *testing.T) {
 		expectSuccess bool
 		description   string
 	}{
-		{"admin_access_admin", adminToken, "admin", true, "Admin should access admin resources"},
-		{"admin_access_user", adminToken, "user", true, "Admin should access user resources"},
-		{"user_access_user", userToken, "user", true, "User should access user resources"},
-		{"user_access_admin", userToken, "admin", false, "User should not access admin resources"},
+		{"admin_access_admin", adminToken, testutils.UniversalTestUserRole, true, "Admin should access admin resources"},
+		{"admin_access_operator", adminToken, "operator", true, "Admin should access operator resources"},
+		{"operator_access_operator", operatorToken, "operator", true, "Operator should access operator resources"},
+		{"operator_access_admin", operatorToken, testutils.UniversalTestUserRole, false, "Operator should not access admin resources"},
 	}
 
 	for _, tt := range tests {

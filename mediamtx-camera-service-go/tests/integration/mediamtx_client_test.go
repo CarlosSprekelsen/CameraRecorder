@@ -20,7 +20,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/assert"
@@ -42,7 +41,8 @@ func NewMediaMTXClientIntegrationAsserter(t *testing.T) *MediaMTXClientIntegrati
 	configManager := setup.GetConfigManager()
 	config := configManager.GetConfig()
 
-	logger := logging.GetLogger("mediamtx-integration-test")
+	// Use setup logger instead of creating new one
+	logger := setup.GetLogger()
 	client := mediamtx.NewClient("http://localhost:9997/v3", &config.MediaMTX, logger)
 
 	asserter := &MediaMTXClientIntegrationAsserter{
@@ -150,12 +150,15 @@ func TestMediaMTXClient_PathOperations_ReqMTX001(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Use AssertionHelper for consistent assertions
+			ah := testutils.NewAssertionHelper(t)
+
 			err := asserter.AssertPathOperation(ctx, tt.operation, tt.pathName)
 
 			if tt.expectError {
 				require.Error(t, err, "Operation should fail: %s", tt.operation)
 			} else {
-				require.NoError(t, err, "Operation should succeed: %s", tt.operation)
+				ah.AssertNoErrorWithContext(err, tt.operation)
 			}
 
 			// Validate HTTP request was sent and response was processed
@@ -167,6 +170,9 @@ func TestMediaMTXClient_PathOperations_ReqMTX001(t *testing.T) {
 // TestMediaMTXClient_ConnectionPooling_ReqMTX002 validates connection pooling
 // REQ-MTX-001: MediaMTX service integration via HTTP REST API
 func TestMediaMTXClient_ConnectionPooling_ReqMTX002(t *testing.T) {
+	// Use AssertionHelper for consistent assertions
+	ah := testutils.NewAssertionHelper(t)
+
 	asserter := NewMediaMTXClientIntegrationAsserter(t)
 	ctx, cancel := asserter.setup.GetStandardContext()
 	defer cancel()
@@ -176,15 +182,15 @@ func TestMediaMTXClient_ConnectionPooling_ReqMTX002(t *testing.T) {
 	err := asserter.AssertConnectionPooling(ctx, concurrentRequests)
 
 	// Validate all requests succeeded (connection pooling working)
-	require.NoError(t, err, "Concurrent requests should succeed with connection pooling")
+	ah.AssertNoErrorWithContext(err, "Concurrent requests")
 
 	// Validate that requests completed efficiently
 	start := time.Now()
 	err = asserter.AssertConnectionPooling(ctx, concurrentRequests)
 	duration := time.Since(start)
 
-	require.NoError(t, err, "Second batch should also succeed")
-	assert.Less(t, duration, 5*time.Second, "Connection pooling should be efficient")
+	ah.AssertNoErrorWithContext(err, "Second batch requests")
+	assert.Less(t, duration, testutils.UniversalTimeoutLong, "Connection pooling should be efficient")
 }
 
 // TestMediaMTXClient_ErrorHandling_ReqMTX003 validates error handling
@@ -210,6 +216,9 @@ func TestMediaMTXClient_ErrorHandling_ReqMTX003(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Use AssertionHelper for consistent assertions
+			ah := testutils.NewAssertionHelper(t)
+
 			var err error
 
 			switch tt.method {
@@ -224,7 +233,7 @@ func TestMediaMTXClient_ErrorHandling_ReqMTX003(t *testing.T) {
 				// Validate error contains diagnostic details
 				assert.Contains(t, err.Error(), "failed", "Error should contain diagnostic details")
 			} else {
-				require.NoError(t, err, "Request should succeed: %s", tt.path)
+				ah.AssertNoErrorWithContext(err, tt.path)
 			}
 		})
 	}
@@ -233,18 +242,21 @@ func TestMediaMTXClient_ErrorHandling_ReqMTX003(t *testing.T) {
 // TestMediaMTXClient_HealthMonitoring_ReqMTX004 validates health monitoring
 // REQ-MTX-004: Health monitoring via MediaMTX status endpoints
 func TestMediaMTXClient_HealthMonitoring_ReqMTX004(t *testing.T) {
+	// Use AssertionHelper for consistent assertions
+	ah := testutils.NewAssertionHelper(t)
+
 	asserter := NewMediaMTXClientIntegrationAsserter(t)
 	ctx, cancel := asserter.setup.GetStandardContext()
 	defer cancel()
 
 	// Test basic health check
 	err := asserter.client.HealthCheck(ctx)
-	require.NoError(t, err, "Health check should succeed")
+	ah.AssertNoErrorWithContext(err, "Health check")
 
 	// Test detailed health status
 	healthStatus, err := asserter.client.GetDetailedHealth(ctx)
-	require.NoError(t, err, "Detailed health check should succeed")
-	require.NotNil(t, healthStatus, "Health status should be returned")
+	ah.AssertNoErrorWithContext(err, "Detailed health check")
+	ah.AssertNotNilWithContext(healthStatus, "Health status")
 
 	// Validate health status structure
 	assert.NotEmpty(t, healthStatus, "Health status should contain data")
@@ -255,5 +267,5 @@ func TestMediaMTXClient_HealthMonitoring_ReqMTX004(t *testing.T) {
 	duration := time.Since(start)
 
 	require.NoError(t, err, "Health check should be reliable")
-	assert.Less(t, duration, 2*time.Second, "Health check should be fast")
+	assert.Less(t, duration, testutils.UniversalTimeoutShort, "Health check should be fast")
 }

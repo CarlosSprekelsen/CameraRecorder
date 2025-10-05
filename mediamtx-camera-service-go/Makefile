@@ -49,6 +49,19 @@ test-coverage:
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "✅ Coverage report generated: coverage.html"
 
+# Integration Tests (cross-package coverage)
+integration-cover:
+	@echo "🧪 Running integration tests with coverage..."
+	@mkdir -p coverage/integration
+	@go test ./tests/integration/... -coverpkg=./internal/... -coverprofile=coverage/integration/integration.out -v
+	@go tool cover -func=coverage/integration/integration.out | tail -1
+
+integration-cover-html:
+	@mkdir -p coverage/integration
+	@go test ./tests/integration/... -coverpkg=./internal/... -coverprofile=coverage/integration/integration.out -v
+	@go tool cover -html=coverage/integration/integration.out -o coverage/integration/integration.html
+	@echo "✅ HTML: coverage/integration/integration.html"
+
 # Clean build artifacts
 clean:
 	@echo "🧹 Cleaning build artifacts..."
