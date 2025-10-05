@@ -250,11 +250,11 @@ func TestWebSocket_OpenRPCCompliance_Integration(t *testing.T) {
 	require.NoError(t, err, "get_camera_status should succeed")
 	client.AssertJSONRPCResponse(response, false)
 
-	response, err = client.ListRecordings(50, 0)
+	response, err = client.ListRecordingsWithPagination(50, 0)
 	require.NoError(t, err, "list_recordings should succeed")
 	client.AssertJSONRPCResponse(response, false)
 
-	response, err = client.ListSnapshots(50, 0)
+	response, err = client.ListSnapshotsWithPagination(50, 0)
 	require.NoError(t, err, "list_snapshots should succeed")
 	client.AssertJSONRPCResponse(response, false)
 

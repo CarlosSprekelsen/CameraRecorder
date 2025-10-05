@@ -31,6 +31,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -1246,7 +1247,7 @@ func TestWebSocket_API_Contract_Validation_Integration(t *testing.T) {
 		require.NoError(t, err, "Authentication should succeed")
 
 		// Test start recording with contract validation
-		response, err := asserter.client.StartRecording("camera0", 30, "fmp4")
+		response, err := asserter.client.StartRecordingWithOptions("camera0", 30, "fmp4")
 		require.NoError(t, err, "Start recording should succeed")
 
 		// Validate response structure using contract validators
@@ -1281,7 +1282,7 @@ func TestWebSocket_API_Contract_Validation_Integration(t *testing.T) {
 		require.NoError(t, err, "Authentication should succeed")
 
 		// Test take snapshot with contract validation
-		response, err := asserter.client.TakeSnapshot("camera0", "contract_test.jpg")
+		response, err := asserter.client.TakeSnapshotWithFilename("camera0", "contract_test.jpg")
 
 		// Handle both success and failure cases for contract validation
 		if err != nil {
@@ -1313,7 +1314,7 @@ func TestWebSocket_API_Contract_Validation_Integration(t *testing.T) {
 		require.NoError(t, err, "Authentication should succeed")
 
 		// Test invalid camera ID to trigger error response
-		response, err := asserter.client.TakeSnapshot("invalid_camera", "error_test.jpg")
+		response, err := asserter.client.TakeSnapshotWithFilename("invalid_camera", "error_test.jpg")
 		require.NoError(t, err, "Should receive error response without panic")
 
 		// Validate error response structure
@@ -1350,12 +1351,12 @@ func TestWebSocket_Event_Integration_Integration(t *testing.T) {
 		asserter.client.AssertJSONRPCResponse(cameraList, false)
 
 		// Test snapshot operation that triggers events
-		snapshotResponse, err := asserter.client.TakeSnapshot("camera0", "event_test.jpg")
+		snapshotResponse, err := asserter.client.TakeSnapshotWithFilename("camera0", "event_test.jpg")
 		require.NoError(t, err, "Take snapshot should work")
 		asserter.client.AssertJSONRPCResponse(snapshotResponse, false)
 
 		// Test recording operations that trigger events
-		startResponse, err := asserter.client.StartRecording("camera0", 30, "fmp4")
+		startResponse, err := asserter.client.StartRecordingWithOptions("camera0", 30, "fmp4")
 		require.NoError(t, err, "Start recording should work")
 		asserter.client.AssertJSONRPCResponse(startResponse, false)
 

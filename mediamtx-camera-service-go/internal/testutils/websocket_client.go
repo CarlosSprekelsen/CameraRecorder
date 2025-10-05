@@ -3,7 +3,7 @@ WebSocket Test Client - Universal Testing Utility
 
 Provides universal WebSocket client functionality for all test types:
 - Integration tests
-- E2E tests  
+- E2E tests
 - Any test needing WebSocket connectivity
 
 This is the single source of truth for WebSocket testing infrastructure.
@@ -197,6 +197,16 @@ func (c *WebSocketTestClient) StartRecording(device string) (*JSONRPCResponse, e
 	return c.SendJSONRPC("start_recording", params)
 }
 
+// StartRecordingWithOptions starts recording with duration and format
+func (c *WebSocketTestClient) StartRecordingWithOptions(device string, duration int, format string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{
+		"device":   device,
+		"duration": duration,
+		"format":   format,
+	}
+	return c.SendJSONRPC("start_recording", params)
+}
+
 // StartRecordingWithDuration starts recording with duration
 func (c *WebSocketTestClient) StartRecordingWithDuration(device string, duration int) (*JSONRPCResponse, error) {
 	params := map[string]interface{}{
@@ -217,9 +227,27 @@ func (c *WebSocketTestClient) ListRecordings() (*JSONRPCResponse, error) {
 	return c.SendJSONRPC("list_recordings", nil)
 }
 
+// ListRecordingsWithPagination lists recordings with pagination
+func (c *WebSocketTestClient) ListRecordingsWithPagination(limit, offset int) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{
+		"limit":  limit,
+		"offset": offset,
+	}
+	return c.SendJSONRPC("list_recordings", params)
+}
+
 // TakeSnapshot takes snapshot
 func (c *WebSocketTestClient) TakeSnapshot(device string) (*JSONRPCResponse, error) {
 	params := map[string]interface{}{"device": device}
+	return c.SendJSONRPC("take_snapshot", params)
+}
+
+// TakeSnapshotWithFilename takes snapshot with custom filename
+func (c *WebSocketTestClient) TakeSnapshotWithFilename(device string, filename string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{
+		"device":   device,
+		"filename": filename,
+	}
 	return c.SendJSONRPC("take_snapshot", params)
 }
 
@@ -236,6 +264,15 @@ func (c *WebSocketTestClient) TakeSnapshotWithFormat(device string, format strin
 // ListSnapshots lists snapshots
 func (c *WebSocketTestClient) ListSnapshots() (*JSONRPCResponse, error) {
 	return c.SendJSONRPC("list_snapshots", nil)
+}
+
+// ListSnapshotsWithPagination lists snapshots with pagination
+func (c *WebSocketTestClient) ListSnapshotsWithPagination(limit, offset int) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{
+		"limit":  limit,
+		"offset": offset,
+	}
+	return c.SendJSONRPC("list_snapshots", params)
 }
 
 // GetSystemHealth gets system health
@@ -272,12 +309,101 @@ func (c *WebSocketTestClient) AssertJSONRPCResponse(response *JSONRPCResponse, e
 // AssertCameraListResult validates camera list result structure
 func (c *WebSocketTestClient) AssertCameraListResult(result interface{}) {
 	require.NotNil(c.t, result, "Camera list result should not be nil")
-	
+
 	resultMap, ok := result.(map[string]interface{})
 	require.True(c.t, ok, "Camera list result should be a map")
 	require.Contains(c.t, resultMap, "cameras", "Camera list should contain 'cameras' field")
-	
+
 	cameras, ok := resultMap["cameras"].([]interface{})
 	require.True(c.t, ok, "Cameras field should be an array")
 	require.NotEmpty(c.t, cameras, "Camera list should not be empty")
+}
+
+// DeleteSnapshot deletes a snapshot
+func (c *WebSocketTestClient) DeleteSnapshot(filename string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{"filename": filename}
+	return c.SendJSONRPC("delete_snapshot", params)
+}
+
+// DeleteRecording deletes a recording
+func (c *WebSocketTestClient) DeleteRecording(filename string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{"filename": filename}
+	return c.SendJSONRPC("delete_recording", params)
+}
+
+// AssertCameraListResultAPICompliant validates camera list result structure for API compliance
+func (c *WebSocketTestClient) AssertCameraListResultAPICompliant(result interface{}) {
+	require.NotNil(c.t, result, "Camera list result should not be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(c.t, ok, "Camera list result should be a map")
+	require.Contains(c.t, resultMap, "cameras", "Camera list should contain 'cameras' field")
+
+	cameras, ok := resultMap["cameras"].([]interface{})
+	require.True(c.t, ok, "Cameras field should be an array")
+	require.NotEmpty(c.t, cameras, "Camera list should not be empty")
+}
+
+// AssertCameraStatusResultAPICompliant validates camera status result structure for API compliance
+func (c *WebSocketTestClient) AssertCameraStatusResultAPICompliant(result interface{}) {
+	require.NotNil(c.t, result, "Camera status result should not be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(c.t, ok, "Camera status result should be a map")
+	require.Contains(c.t, resultMap, "device", "Camera status should contain 'device' field")
+	require.Contains(c.t, resultMap, "status", "Camera status should contain 'status' field")
+}
+
+// AssertCameraCapabilitiesResultAPICompliant validates camera capabilities result structure for API compliance
+func (c *WebSocketTestClient) AssertCameraCapabilitiesResultAPICompliant(result interface{}) {
+	require.NotNil(c.t, result, "Camera capabilities result should not be nil")
+
+	resultMap, ok := result.(map[string]interface{})
+	require.True(c.t, ok, "Camera capabilities result should be a map")
+	require.Contains(c.t, resultMap, "formats", "Camera capabilities should contain 'formats' field")
+	require.Contains(c.t, resultMap, "resolutions", "Camera capabilities should contain 'resolutions' field")
+}
+
+// SubscribeEvents subscribes to event notifications
+func (c *WebSocketTestClient) SubscribeEvents(events []string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{"events": events}
+	return c.SendJSONRPC("subscribe_events", params)
+}
+
+// StartStreaming starts streaming
+func (c *WebSocketTestClient) StartStreaming(device string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{"device": device}
+	return c.SendJSONRPC("start_streaming", params)
+}
+
+// StopStreaming stops streaming
+func (c *WebSocketTestClient) StopStreaming(device string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{"device": device}
+	return c.SendJSONRPC("stop_streaming", params)
+}
+
+// UnsubscribeEvents unsubscribes from event notifications
+func (c *WebSocketTestClient) UnsubscribeEvents(events []string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{"events": events}
+	return c.SendJSONRPC("unsubscribe_events", params)
+}
+
+// GetSubscriptionStats gets subscription statistics
+func (c *WebSocketTestClient) GetSubscriptionStats() (*JSONRPCResponse, error) {
+	return c.SendJSONRPC("get_subscription_stats", nil)
+}
+
+// AddExternalStream adds an external stream
+func (c *WebSocketTestClient) AddExternalStream(url string, name string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{
+		"url":  url,
+		"name": name,
+	}
+	return c.SendJSONRPC("add_external_stream", params)
+}
+
+// RemoveExternalStream removes an external stream
+func (c *WebSocketTestClient) RemoveExternalStream(url string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{"url": url}
+	return c.SendJSONRPC("remove_external_stream", params)
 }

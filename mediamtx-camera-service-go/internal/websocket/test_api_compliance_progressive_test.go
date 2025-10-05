@@ -35,7 +35,7 @@ func TestAPICompliance_AllMethods(t *testing.T) {
 	require.NoError(t, err, "Failed to create WebSocket server")
 
 	// Create test client using existing patterns
-	client := testutils.Newtestutils.WebSocketTestClient(t, helper.baseURL)
+	client := testutils.NewWebSocketTestClient(t, helper.baseURL)
 	err = client.Connect()
 	require.NoError(t, err, "Failed to connect WebSocket client")
 	defer client.Close()
