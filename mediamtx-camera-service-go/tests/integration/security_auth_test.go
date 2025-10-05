@@ -27,21 +27,21 @@ import (
 
 // SecurityIntegrationAsserter handles security integration validation
 type SecurityIntegrationAsserter struct {
-	setup         *testutils.UniversalTestSetup
+	setup          *testutils.UniversalTestSetup
 	securityHelper *testutils.SecurityHelper
-	jwtHandler    *security.JWTHandler
+	jwtHandler     *security.JWTHandler
 }
 
 // NewSecurityIntegrationAsserter creates a new security integration asserter
 func NewSecurityIntegrationAsserter(t *testing.T) *SecurityIntegrationAsserter {
 	setup := testutils.SetupTest(t, "config_valid_complete.yaml")
-	
+
 	securityHelper := testutils.NewSecurityHelper(t, setup)
-	
+
 	return &SecurityIntegrationAsserter{
 		setup:          setup,
 		securityHelper: securityHelper,
-		jwtHandler:     securityHelper.jwtHandler,
+		jwtHandler:     securityHelper.GetJWTHandler(),
 	}
 }
 
