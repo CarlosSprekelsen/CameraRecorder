@@ -26,59 +26,51 @@ import (
 
 // CameraMonitorIntegrationAsserter handles camera monitor integration validation
 type CameraMonitorIntegrationAsserter struct {
-	setup   *testutils.UniversalTestSetup
-	monitor camera.CameraMonitor
+	setup     *testutils.UniversalTestSetup
+	lifecycle *testutils.ServiceLifecycle
+	monitor   camera.CameraMonitor
 }
 
 // NewCameraMonitorIntegrationAsserter creates a new camera monitor integration asserter
 func NewCameraMonitorIntegrationAsserter(t *testing.T) *CameraMonitorIntegrationAsserter {
-	// Use testutils.SetupTest with valid config fixture
 	setup := testutils.SetupTest(t, "config_valid_complete.yaml")
-
-	// Create real camera monitor using loaded configuration
-	configManager := setup.GetConfigManager()
-	_ = configManager.GetConfig() // Use config to avoid unused variable
-	logger := setup.GetLogger()
-
-	// Create real camera monitor with actual V4L2 device interaction
-	deviceChecker := &camera.RealDeviceChecker{}
-	commandExecutor := &camera.RealV4L2CommandExecutor{}
-	infoParser := &camera.RealDeviceInfoParser{}
-
-	monitor, err := camera.NewHybridCameraMonitor(configManager, logger, deviceChecker, commandExecutor, infoParser)
-	require.NoError(t, err, "Real camera monitor should be created")
-
-	asserter := &CameraMonitorIntegrationAsserter{
-		setup:   setup,
-		monitor: monitor,
-	}
-
-	// Register cleanup
-	t.Cleanup(func() {
-		asserter.Cleanup()
+	lifecycle := testutils.NewServiceLifecycle(setup)
+	
+	monitor, err := camera.NewHybridCameraMonitor(
+		setup.GetConfigManager(),
+		setup.GetLogger(),
+		&camera.RealDeviceChecker{},
+		&camera.RealV4L2CommandExecutor{},
+		&camera.RealDeviceInfoParser{},
+	)
+	require.NoError(t, err)
+	
+	ctx, cancel := setup.GetStandardContextWithTimeout(testutils.UniversalTimeoutLong)
+	defer cancel()
+	
+	// Use shared lifecycle helper
+	err = lifecycle.StartServiceWithCleanup(t, monitor, func(ctx context.Context) error {
+		return monitor.Start(ctx)
 	})
-
-	return asserter
-}
-
-// Cleanup performs cleanup of all resources
-func (a *CameraMonitorIntegrationAsserter) Cleanup() {
-	if a.monitor != nil {
-		// Stop monitor gracefully using setup context helper
-		ctx, cancel := a.setup.GetStandardContextWithTimeout(testutils.UniversalTimeoutShort)
-		defer cancel()
-		a.monitor.Stop(ctx)
+	require.NoError(t, err)
+	
+	// Use shared readiness helper
+	err = lifecycle.WaitForServiceReady(ctx, 
+		func() bool { return monitor.IsReady() },
+		"camera monitor ready",
+	)
+	require.NoError(t, err)
+	
+	return &CameraMonitorIntegrationAsserter{
+		setup:     setup,
+		lifecycle: lifecycle,
+		monitor:   monitor,
 	}
 }
 
 // AssertDeviceDiscovery validates device discovery integration
 func (a *CameraMonitorIntegrationAsserter) AssertDeviceDiscovery(ctx context.Context) error {
-	// Start monitor
-	err := a.monitor.Start(ctx)
-	if err != nil {
-		return err
-	}
-
+	// Monitor is already started in constructor - just validate discovery
 	// Wait for discovery to complete using testutils timeout
 	timeout := testutils.UniversalTimeoutShort
 	time.Sleep(timeout)
@@ -103,11 +95,7 @@ func (a *CameraMonitorIntegrationAsserter) AssertEventNotification(ctx context.C
 	}
 	a.monitor.AddEventHandler(handler)
 
-	// Start monitor to trigger events
-	err := a.monitor.Start(ctx)
-	if err != nil {
-		return err
-	}
+	// Monitor is already started in constructor
 
 	// Wait for events
 	select {
@@ -125,11 +113,7 @@ func (a *CameraMonitorIntegrationAsserter) AssertEventNotification(ctx context.C
 
 // AssertCapabilityDetection validates capability detection integration
 func (a *CameraMonitorIntegrationAsserter) AssertCapabilityDetection(ctx context.Context, devicePath string) error {
-	// Start monitor
-	err := a.monitor.Start(ctx)
-	if err != nil {
-		return err
-	}
+	// Monitor is already started in constructor
 
 	// Get device capabilities
 	device, found := a.monitor.GetDevice(devicePath)
@@ -147,11 +131,7 @@ func (a *CameraMonitorIntegrationAsserter) AssertCapabilityDetection(ctx context
 
 // AssertStateSync validates state synchronization
 func (a *CameraMonitorIntegrationAsserter) AssertStateSync(ctx context.Context) error {
-	// Start monitor
-	err := a.monitor.Start(ctx)
-	if err != nil {
-		return err
-	}
+	// Monitor is already started in constructor
 
 	// Get initial state
 	initialCameras := a.monitor.GetConnectedCameras()

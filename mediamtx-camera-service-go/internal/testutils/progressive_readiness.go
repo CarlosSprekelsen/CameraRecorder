@@ -19,6 +19,7 @@ Design Principles:
 package testutils
 
 import (
+	"context"
 	"fmt"
 	"testing"
 	"time"
@@ -120,5 +121,33 @@ func AssertProgressiveReadiness[T any](
 		t.Logf("✅ PROGRESSIVE READINESS SUCCESS: Operation succeeded immediately")
 	} else {
 		t.Logf("⚠️  PROGRESSIVE READINESS FALLBACK: Operation needed readiness event (acceptable)")
+	}
+}
+
+// WaitForCondition polls condition function until true or timeout
+func WaitForCondition(
+	ctx context.Context,
+	condition func() bool,
+	timeout time.Duration,
+	description string,
+) error {
+	deadline := time.Now().Add(timeout)
+	ticker := time.NewTicker(100 * time.Millisecond)
+	defer ticker.Stop()
+	
+	for {
+		// Check timeout FIRST
+		if time.Now().After(deadline) {
+			return fmt.Errorf("timeout waiting for %s after %v", description, timeout)
+		}
+		
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context cancelled while waiting for %s: %w", description, ctx.Err())
+		case <-ticker.C:
+			if condition() {
+				return nil
+			}
+		}
 	}
 }

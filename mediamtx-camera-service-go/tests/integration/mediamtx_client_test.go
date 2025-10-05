@@ -16,6 +16,7 @@ package integration
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -29,39 +30,33 @@ import (
 // MediaMTXClientIntegrationAsserter handles MediaMTX client integration validation
 type MediaMTXClientIntegrationAsserter struct {
 	setup  *testutils.UniversalTestSetup
+	helper *testutils.MediaMTXHelper
 	client mediamtx.MediaMTXClient
 }
 
 // NewMediaMTXClientIntegrationAsserter creates a new MediaMTX client integration asserter
 func NewMediaMTXClientIntegrationAsserter(t *testing.T) *MediaMTXClientIntegrationAsserter {
-	// Use testutils.SetupTest with valid config fixture
 	setup := testutils.SetupTest(t, "config_valid_complete.yaml")
-
-	// Create MediaMTX client using loaded configuration
-	configManager := setup.GetConfigManager()
-	config := configManager.GetConfig()
-
-	// Use setup logger instead of creating new one
+	helper := testutils.NewMediaMTXHelper(setup)
+	
+	config := setup.GetConfigManager().GetConfig()
 	logger := setup.GetLogger()
-	client := mediamtx.NewClient("http://localhost:9997/v3", &config.MediaMTX, logger)
-
-	asserter := &MediaMTXClientIntegrationAsserter{
+	
+	// Use helper for URL - reads from config
+	baseURL := helper.GetMediaMTXBaseURL()
+	client := mediamtx.NewClient(baseURL, &config.MediaMTX, logger)
+	
+	ctx, cancel := setup.GetStandardContextWithTimeout(testutils.UniversalTimeoutLong)
+	defer cancel()
+	
+	// Use shared readiness helper
+	err := helper.WaitForMediaMTXReady(ctx, client, mediamtx.MediaMTXConfigGlobalGet)
+	helper.SkipIfMediaMTXUnavailable(t, err)
+	
+	return &MediaMTXClientIntegrationAsserter{
 		setup:  setup,
+		helper: helper,
 		client: client,
-	}
-
-	// Register cleanup
-	t.Cleanup(func() {
-		asserter.Cleanup()
-	})
-
-	return asserter
-}
-
-// Cleanup performs cleanup of all resources
-func (a *MediaMTXClientIntegrationAsserter) Cleanup() {
-	if a.client != nil {
-		a.client.Close()
 	}
 }
 
@@ -75,23 +70,23 @@ func (a *MediaMTXClientIntegrationAsserter) AssertPathOperation(ctx context.Cont
 			"runOnInit": "echo 'test path created'",
 		}
 		data, _ := json.Marshal(pathConfig)
-		_, err := a.client.Post(ctx, "/v3/config/paths/"+pathName, data)
+		_, err := a.client.Post(ctx, fmt.Sprintf(mediamtx.MediaMTXConfigPathsAdd, pathName), data)
 		return err
 	case "list":
-		_, err := a.client.Get(ctx, "/v3/config/paths")
+		_, err := a.client.Get(ctx, mediamtx.MediaMTXConfigPathsList)
 		return err
 	case "get":
-		_, err := a.client.Get(ctx, "/v3/config/paths/"+pathName)
+		_, err := a.client.Get(ctx, fmt.Sprintf(mediamtx.MediaMTXConfigPathsGet, pathName))
 		return err
 	case "patch":
 		patchConfig := map[string]interface{}{
 			"runOnInit": "echo 'test path patched'",
 		}
 		data, _ := json.Marshal(patchConfig)
-		err := a.client.Patch(ctx, "/v3/config/paths/"+pathName, data)
+		err := a.client.Patch(ctx, fmt.Sprintf(mediamtx.MediaMTXConfigPathsPatch, pathName), data)
 		return err
 	case "delete":
-		err := a.client.Delete(ctx, "/v3/config/paths/"+pathName)
+		err := a.client.Delete(ctx, fmt.Sprintf(mediamtx.MediaMTXConfigPathsDelete, pathName))
 		return err
 	default:
 		return nil
@@ -108,7 +103,7 @@ func (a *MediaMTXClientIntegrationAsserter) AssertConnectionPooling(ctx context.
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			_, err := a.client.Get(ctx, "/v3/config/global")
+			_, err := a.client.Get(ctx, mediamtx.MediaMTXConfigGlobalGet)
 			results <- err
 		}()
 	}
@@ -209,9 +204,9 @@ func TestMediaMTXClient_ErrorHandling_ReqMTX003(t *testing.T) {
 		expectError bool
 		errorCode   int
 	}{
-		{"invalid_path", "/v3/config/paths/nonexistent", "GET", nil, true, 404},
-		{"malformed_request", "/v3/config/paths/test", "POST", []byte("invalid json"), true, 400},
-		{"valid_request", "/v3/config/global", "GET", nil, false, 0},
+		{"invalid_path", fmt.Sprintf(mediamtx.MediaMTXConfigPathsGet, "nonexistent"), "GET", nil, true, 404},
+		{"malformed_request", fmt.Sprintf(mediamtx.MediaMTXConfigPathsAdd, "test"), "POST", []byte("invalid json"), true, 400},
+		{"valid_request", mediamtx.MediaMTXConfigGlobalGet, "GET", nil, false, 0},
 	}
 
 	for _, tt := range tests {

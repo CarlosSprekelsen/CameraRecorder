@@ -17,6 +17,7 @@ import (
 	"context"
 	"fmt"
 	"testing"
+	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/security"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
@@ -26,45 +27,28 @@ import (
 
 // SecurityIntegrationAsserter handles security integration validation
 type SecurityIntegrationAsserter struct {
-	setup      *testutils.UniversalTestSetup
-	jwtHandler *security.JWTHandler
+	setup         *testutils.UniversalTestSetup
+	securityHelper *testutils.SecurityHelper
+	jwtHandler    *security.JWTHandler
 }
 
 // NewSecurityIntegrationAsserter creates a new security integration asserter
 func NewSecurityIntegrationAsserter(t *testing.T) *SecurityIntegrationAsserter {
-	// Use testutils.SetupTest with valid config fixture
 	setup := testutils.SetupTest(t, "config_valid_complete.yaml")
-
-	// Create JWT handler using loaded configuration
-	configManager := setup.GetConfigManager()
-	config := configManager.GetConfig()
-
-	logger := setup.GetLogger()
-	jwtHandler, err := security.NewJWTHandler(config.Security.JWTSecretKey, logger)
-	require.NoError(t, err, "JWT handler should be created")
-
-	asserter := &SecurityIntegrationAsserter{
-		setup:      setup,
-		jwtHandler: jwtHandler,
+	
+	securityHelper := testutils.NewSecurityHelper(t, setup)
+	
+	return &SecurityIntegrationAsserter{
+		setup:          setup,
+		securityHelper: securityHelper,
+		jwtHandler:     securityHelper.jwtHandler,
 	}
-
-	// Register cleanup
-	t.Cleanup(func() {
-		asserter.Cleanup()
-	})
-
-	return asserter
-}
-
-// Cleanup performs cleanup of all resources
-func (a *SecurityIntegrationAsserter) Cleanup() {
-	// JWT handler doesn't need explicit cleanup
 }
 
 // AssertJWTAuthentication validates JWT token authentication
 func (a *SecurityIntegrationAsserter) AssertJWTAuthentication(ctx context.Context, userID, role string) (string, error) {
-	// Generate token with universal expiry hours
-	token, err := a.jwtHandler.GenerateToken(userID, role, testutils.UniversalJWTExpiryHours)
+	// Generate token using SecurityHelper
+	token, err := a.securityHelper.GenerateTestToken(userID, role, 24*time.Hour)
 	if err != nil {
 		return "", err
 	}
@@ -94,15 +78,14 @@ func (a *SecurityIntegrationAsserter) AssertAuthorizationBoundary(ctx context.Co
 		return err
 	}
 
-	// Check authorization by comparing roles
-	// Admin has access to everything, user only to user resources
+	// Check authorization using real role hierarchy: admin > operator > viewer
 	hasAccess := false
-	if requiredRole == "admin" && claims.Role == "admin" {
-		hasAccess = true
-	} else if requiredRole == "user" && (claims.Role == "admin" || claims.Role == "user") {
-		hasAccess = true
-	} else if requiredRole == "viewer" {
-		hasAccess = true // Everyone can view
+	if claims.Role == "admin" {
+		hasAccess = true // Admin has access to everything
+	} else if claims.Role == "operator" && (requiredRole == "operator" || requiredRole == "viewer") {
+		hasAccess = true // Operator can access operator and viewer resources
+	} else if claims.Role == "viewer" && requiredRole == "viewer" {
+		hasAccess = true // Viewer can only access viewer resources
 	}
 
 	if !hasAccess {
@@ -115,7 +98,7 @@ func (a *SecurityIntegrationAsserter) AssertAuthorizationBoundary(ctx context.Co
 // AssertSessionLifecycle validates session management
 func (a *SecurityIntegrationAsserter) AssertSessionLifecycle(ctx context.Context, userID string) error {
 	// Create session (token)
-	token, err := a.jwtHandler.GenerateToken(userID, "user", 24)
+	token, err := a.jwtHandler.GenerateToken(userID, "operator", 24)
 	if err != nil {
 		return err
 	}
@@ -255,7 +238,7 @@ func TestSecurity_SessionManagement_ReqSEC003(t *testing.T) {
 				require.NoError(t, err, "Session should succeed: %s", tt.description)
 
 				// Validate session state tracked
-				token, err := asserter.jwtHandler.GenerateToken(tt.userID, "user", 24)
+				token, err := asserter.jwtHandler.GenerateToken(tt.userID, "operator", 24)
 				require.NoError(t, err, "Token generation should succeed")
 
 				claims, err := asserter.jwtHandler.ValidateToken(token)
