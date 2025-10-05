@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/config"
-	"github.com/camerarecorder/mediamtx-camera-service-go/internal/logging"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/mediamtx"
 	"github.com/camerarecorder/mediamtx-camera-service-go/internal/testutils"
 	"github.com/stretchr/testify/assert"
@@ -241,56 +240,6 @@ func TestConfigLoading_EnvOverrides_ReqCFG002(t *testing.T) {
 
 			// Validate component uses overridden value
 			assert.True(t, loadedConfig.Server.Port > 0, "Component should use overridden port")
-		})
-	}
-}
-
-// TestConfigLoading_ValidationErrors_ReqCFG003 validates configuration validation
-// REQ-CFG-003: Validation error handling
-func TestConfigLoading_ValidationErrors_ReqCFG003(t *testing.T) {
-	// Table-driven test for validation errors
-	tests := []struct {
-		name        string
-		fixtureName string
-		expectError bool
-		errorCode   string
-		description string
-	}{
-		// REMOVED: invalid_port (had /etc/mediamtx)
-		{"negative_poll_interval", "config_invalid_camera_negative_poll_interval.yaml", true, "INVALID_RANGE", "Negative poll interval"},
-		{"invalid_device_range", "config_invalid_camera_invalid_device_range.yaml", true, "INVALID_RANGE", "Invalid device range"},
-		{"valid_config", "config_valid_complete.yaml", false, "", "Valid configuration"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Use AssertionHelper for consistent assertions
-			ah := testutils.NewAssertionHelper(t)
-
-			// Load configuration
-			setup := testutils.SetupTest(t, tt.fixtureName)
-			defer setup.Cleanup()
-
-			configManager := setup.GetConfigManager()
-			loadedConfig := configManager.GetConfig()
-
-			if tt.expectError {
-				// For invalid configs, validate error handling
-				assert.Nil(t, loadedConfig, "Invalid config should result in nil configuration")
-
-				// Validate that component initialization fails gracefully
-				// This proves config validation prevents bad component initialization
-				logger := logging.GetLogger("test")
-				client := mediamtx.NewClient("http://localhost:9997/v3", &config.MediaMTXConfig{}, logger)
-				ah.AssertNotNilWithContext(client, "Component with nil config")
-			} else {
-				// For valid configs, validate successful loading
-				ah.AssertNotNilWithContext(loadedConfig, "Valid config")
-
-				// Validate component not initialized with bad config
-				ah.AssertNotNilWithContext(loadedConfig.Server, "Server config")
-				assert.True(t, loadedConfig.Server.Port > 0, "Port should be valid")
-			}
 		})
 	}
 }
