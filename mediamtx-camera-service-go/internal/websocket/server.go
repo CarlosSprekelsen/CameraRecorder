@@ -1022,23 +1022,10 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 	}
 
 	// Find method handler with mutex-protected lookup
-	s.logger.WithFields(logging.Fields{
-		"client_id": client.ClientID,
-		"method":    request.Method,
-		"action":    "method_lookup",
-	}).Info("Looking up method handler")
 
 	s.methodsMutex.RLock()
 	handler, exists := s.methods[request.Method]
 	s.methodsMutex.RUnlock()
-
-	s.logger.WithFields(logging.Fields{
-		"client_id":    client.ClientID,
-		"method":       request.Method,
-		"exists":       exists,
-		"handler_type": fmt.Sprintf("%T", handler),
-		"action":       "method_lookup_result",
-	}).Info("Method lookup completed")
 
 	if !exists {
 		s.logger.WithFields(logging.Fields{
@@ -1075,20 +1062,10 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 	// PROGRESSIVE READINESS ARCHITECTURE: Remove blocking system readiness check
 	// Each operation implements its own Progressive Readiness pattern with fallback behavior
 	// This follows the architectural requirement: "System accepts connections immediately"
-	s.logger.WithFields(logging.Fields{
-		"client_id": client.ClientID,
-		"method":    request.Method,
-		"action":    "progressive_readiness_enabled",
-	}).Info("Progressive Readiness: Attempting operation with potential fallback")
 
 	// Security extensions: Permission check
 	// Skip permission check for authenticate and ping methods
 	if request.Method != "authenticate" && request.Method != "ping" {
-		s.logger.WithFields(logging.Fields{
-			"client_id": client.ClientID,
-			"method":    request.Method,
-			"action":    "permission_check",
-		}).Info("Checking method permissions")
 
 		if err := s.checkMethodPermissions(client, request.Method); err != nil {
 			s.logger.WithFields(logging.Fields{
@@ -1106,12 +1083,6 @@ func (s *WebSocketServer) handleRequest(request *JsonRpcRequest, client *ClientC
 	}
 
 	// Call method handler
-	s.logger.WithFields(logging.Fields{
-		"client_id": client.ClientID,
-		"method":    request.Method,
-		"action":    "calling_handler",
-	}).Info("Calling method handler")
-
 	response, err := handler(request.Params, client)
 	if err != nil {
 		// Update error metrics with atomic operation

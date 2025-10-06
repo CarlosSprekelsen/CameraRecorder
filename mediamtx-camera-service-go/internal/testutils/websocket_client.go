@@ -282,17 +282,17 @@ func (c *WebSocketTestClient) GetSystemHealth() (*JSONRPCResponse, error) {
 
 // GetSystemMetrics gets system metrics
 func (c *WebSocketTestClient) GetSystemMetrics() (*JSONRPCResponse, error) {
-    return c.SendJSONRPC("get_metrics", nil)
+	return c.SendJSONRPC("get_metrics", nil)
 }
 
 // GetStatus gets full system status (admin)
 func (c *WebSocketTestClient) GetStatus() (*JSONRPCResponse, error) {
-    return c.SendJSONRPC("get_status", nil)
+	return c.SendJSONRPC("get_status", nil)
 }
 
 // GetSystemStatus gets viewer-accessible system readiness
 func (c *WebSocketTestClient) GetSystemStatus() (*JSONRPCResponse, error) {
-    return c.SendJSONRPC("get_system_status", nil)
+	return c.SendJSONRPC("get_system_status", nil)
 }
 
 // Close closes the WebSocket connection
@@ -375,8 +375,8 @@ func (c *WebSocketTestClient) AssertCameraCapabilitiesResultAPICompliant(result 
 }
 
 // SubscribeEvents subscribes to event notifications
-func (c *WebSocketTestClient) SubscribeEvents(events []string) (*JSONRPCResponse, error) {
-	params := map[string]interface{}{"events": events}
+func (c *WebSocketTestClient) SubscribeEvents(topics []string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{"topics": topics}
 	return c.SendJSONRPC("subscribe_events", params)
 }
 
@@ -393,8 +393,8 @@ func (c *WebSocketTestClient) StopStreaming(device string) (*JSONRPCResponse, er
 }
 
 // UnsubscribeEvents unsubscribes from event notifications
-func (c *WebSocketTestClient) UnsubscribeEvents(events []string) (*JSONRPCResponse, error) {
-	params := map[string]interface{}{"events": events}
+func (c *WebSocketTestClient) UnsubscribeEvents(topics []string) (*JSONRPCResponse, error) {
+	params := map[string]interface{}{"topics": topics}
 	return c.SendJSONRPC("unsubscribe_events", params)
 }
 

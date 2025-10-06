@@ -77,7 +77,7 @@ type SimpleHealthMonitor struct {
 	healthMutex     sync.RWMutex
 }
 
-// NewHealthMonitor creates a new simplified MediaMTX health monitor
+// NewHealthMonitor creates a new MediaMTX health monitor
 func NewHealthMonitor(client MediaMTXClient, config *config.MediaMTXConfig, configIntegration *ConfigIntegration, logger *logging.Logger) HealthMonitor {
 	return &SimpleHealthMonitor{
 		client:            client,
@@ -171,7 +171,7 @@ func (h *SimpleHealthMonitor) shouldNotifyWithDebounce(status string) bool {
 
 // Start starts the health monitoring
 func (h *SimpleHealthMonitor) Start(ctx context.Context) error {
-	h.logger.Info("Starting simplified MediaMTX health monitor")
+	h.logger.Info("Starting MediaMTX health monitor")
 
 	// Create cancellable context
 	h.ctx, h.cancel = context.WithCancel(ctx)
@@ -183,7 +183,6 @@ func (h *SimpleHealthMonitor) Start(ctx context.Context) error {
 
 // Stop stops the health monitoring
 func (h *SimpleHealthMonitor) Stop(ctx context.Context) error {
-	h.logger.Info("Stopping simplified MediaMTX health monitor")
 
 	// Cancel context first - this interrupts checkHealth immediately!
 	if h.cancel != nil {
@@ -205,7 +204,7 @@ func (h *SimpleHealthMonitor) Stop(ctx context.Context) error {
 		h.logger.Warn("Health monitor shutdown timeout, forcing stop")
 	}
 
-	h.logger.Info("simplified MediaMTX health monitor stopped")
+	h.logger.Info("MediaMTX health monitor stopped")
 	return nil
 }
 
